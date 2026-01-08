@@ -1,0 +1,360 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime
+from typing import Optional
+from uuid import UUID
+
+from ...core.database import get_db
+from ...core.security import get_admin_user
+from ...models.models import (
+    User, Entity, KYCDocument, UserSession, Trade, UserRole,
+    DocumentStatus, KYCStatus
+)
+from ...schemas.schemas import (
+    MessageResponse,
+    KYCDocumentResponse,
+    KYCDocumentReview,
+    UserSessionResponse,
+    UserApprovalRequest
+)
+from ...services.email_service import email_service
+
+router = APIRouter(prefix="/backoffice", tags=["Backoffice"])
+
+
+@router.get("/pending-users")
+async def get_pending_users(
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get users awaiting approval (pending status with submitted KYC).
+    Admin only.
+    """
+    # Get pending users who have submitted KYC
+    query = (
+        select(User)
+        .where(User.role == UserRole.PENDING)
+        .where(User.is_active == True)
+        .order_by(User.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    users = result.scalars().all()
+
+    pending_list = []
+    for user in users:
+        # Count documents
+        doc_count_query = select(func.count()).select_from(KYCDocument).where(
+            KYCDocument.user_id == user.id
+        )
+        doc_result = await db.execute(doc_count_query)
+        doc_count = doc_result.scalar()
+
+        # Get entity name if exists
+        entity_name = None
+        if user.entity_id:
+            entity_result = await db.execute(
+                select(Entity).where(Entity.id == user.entity_id)
+            )
+            entity = entity_result.scalar_one_or_none()
+            if entity:
+                entity_name = entity.name
+
+        pending_list.append({
+            "id": str(user.id),
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "entity_name": entity_name,
+            "documents_count": doc_count,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        })
+
+    return pending_list
+
+
+@router.put("/users/{user_id}/approve", response_model=MessageResponse)
+async def approve_user(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Approve a pending user. Changes role from PENDING to APPROVED.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role != UserRole.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User is not pending approval (current role: {user.role.value})"
+        )
+
+    # Update user role
+    user.role = UserRole.APPROVED
+
+    # Update entity KYC status if exists
+    if user.entity_id:
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == user.entity_id)
+        )
+        entity = entity_result.scalar_one_or_none()
+        if entity:
+            entity.kyc_status = KYCStatus.APPROVED
+            entity.kyc_approved_at = datetime.utcnow()
+            entity.kyc_approved_by = admin_user.id
+            entity.verified = True
+
+    await db.commit()
+
+    # Send approval email
+    try:
+        await email_service.send_account_approved(user.email, user.first_name)
+    except Exception:
+        pass  # Don't fail if email fails
+
+    return MessageResponse(message=f"User {user.email} has been approved")
+
+
+@router.put("/users/{user_id}/reject", response_model=MessageResponse)
+async def reject_user(
+    user_id: str,
+    rejection: UserApprovalRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reject a pending user.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update entity KYC status if exists
+    if user.entity_id:
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == user.entity_id)
+        )
+        entity = entity_result.scalar_one_or_none()
+        if entity:
+            entity.kyc_status = KYCStatus.REJECTED
+
+    # Deactivate user account
+    user.is_active = False
+
+    await db.commit()
+
+    return MessageResponse(message=f"User {user.email} has been rejected")
+
+
+@router.put("/users/{user_id}/fund", response_model=MessageResponse)
+async def fund_user(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Mark a user as funded. Changes role from APPROVED to FUNDED.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role not in [UserRole.APPROVED, UserRole.PENDING]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User cannot be funded (current role: {user.role.value})"
+        )
+
+    user.role = UserRole.FUNDED
+    await db.commit()
+
+    # Send funding confirmation email
+    try:
+        await email_service.send_account_funded(user.email, user.first_name)
+    except Exception:
+        pass
+
+    return MessageResponse(message=f"User {user.email} has been marked as funded")
+
+
+@router.get("/kyc-documents")
+async def get_all_kyc_documents(
+    user_id: Optional[str] = None,
+    status: Optional[str] = None,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all KYC documents, optionally filtered by user or status.
+    Admin only.
+    """
+    query = select(KYCDocument).order_by(KYCDocument.created_at.desc())
+
+    if user_id:
+        query = query.where(KYCDocument.user_id == UUID(user_id))
+
+    if status:
+        query = query.where(KYCDocument.status == DocumentStatus(status))
+
+    result = await db.execute(query)
+    documents = result.scalars().all()
+
+    docs_with_user = []
+    for doc in documents:
+        # Get user info
+        user_result = await db.execute(
+            select(User).where(User.id == doc.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        docs_with_user.append({
+            "id": str(doc.id),
+            "user_id": str(doc.user_id),
+            "user_email": user.email if user else None,
+            "user_name": f"{user.first_name or ''} {user.last_name or ''}".strip() if user else None,
+            "entity_id": str(doc.entity_id) if doc.entity_id else None,
+            "document_type": doc.document_type.value,
+            "file_name": doc.file_name,
+            "status": doc.status.value,
+            "reviewed_at": doc.reviewed_at.isoformat() if doc.reviewed_at else None,
+            "notes": doc.notes,
+            "created_at": doc.created_at.isoformat()
+        })
+
+    return docs_with_user
+
+
+@router.put("/kyc-documents/{document_id}/review", response_model=MessageResponse)
+async def review_kyc_document(
+    document_id: str,
+    review: KYCDocumentReview,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Review (approve/reject) a KYC document.
+    Admin only.
+    """
+    result = await db.execute(
+        select(KYCDocument).where(KYCDocument.id == UUID(document_id))
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    document.status = review.status
+    document.reviewed_at = datetime.utcnow()
+    document.reviewed_by = admin_user.id
+    if review.notes:
+        document.notes = review.notes
+
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Document has been {review.status.value}"
+    )
+
+
+@router.get("/users/{user_id}/sessions")
+async def get_user_sessions(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get a user's session history.
+    Admin only.
+    """
+    query = (
+        select(UserSession)
+        .where(UserSession.user_id == UUID(user_id))
+        .order_by(UserSession.started_at.desc())
+        .limit(100)
+    )
+
+    result = await db.execute(query)
+    sessions = result.scalars().all()
+
+    return [
+        {
+            "id": str(s.id),
+            "ip_address": s.ip_address,
+            "user_agent": s.user_agent,
+            "started_at": s.started_at.isoformat() if s.started_at else None,
+            "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            "duration_seconds": s.duration_seconds,
+            "is_active": s.is_active
+        }
+        for s in sessions
+    ]
+
+
+@router.get("/users/{user_id}/trades")
+async def get_user_trades(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get a user's trading history.
+    Admin only.
+    """
+    # Get user's entity
+    user_result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = user_result.scalar_one_or_none()
+
+    if not user or not user.entity_id:
+        return []
+
+    # Get trades where user's entity is buyer or seller
+    query = (
+        select(Trade)
+        .where(
+            (Trade.buyer_entity_id == user.entity_id) |
+            (Trade.seller_entity_id == user.entity_id)
+        )
+        .order_by(Trade.created_at.desc())
+        .limit(100)
+    )
+
+    result = await db.execute(query)
+    trades = result.scalars().all()
+
+    return [
+        {
+            "id": str(t.id),
+            "trade_type": t.trade_type.value,
+            "certificate_type": t.certificate_type.value,
+            "quantity": float(t.quantity),
+            "price_per_unit": float(t.price_per_unit),
+            "total_value": float(t.total_value),
+            "status": t.status.value,
+            "is_buyer": str(t.buyer_entity_id) == str(user.entity_id),
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+            "completed_at": t.completed_at.isoformat() if t.completed_at else None
+        }
+        for t in trades
+    ]

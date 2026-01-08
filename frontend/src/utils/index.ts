@@ -1,0 +1,143 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Combine class names with Tailwind merge
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Format currency
+export function formatCurrency(
+  value: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+// Format large numbers with abbreviations
+export function formatCompact(value: number): string {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  return value.toFixed(0);
+}
+
+// Format percentage
+export function formatPercent(value: number, decimals: number = 2): string {
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(decimals)}%`;
+}
+
+// Format quantity with proper thousand separators
+export function formatQuantity(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+// Relative time format
+export function formatRelativeTime(date: string | Date): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return then.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+// Generate gradient based on value
+export function getPriceChangeColor(change: number): string {
+  if (change > 0) return 'text-emerald-600';
+  if (change < 0) return 'text-red-500';
+  return 'text-navy-500';
+}
+
+// Get certificate type color
+export function getCertificateColor(type: 'EUA' | 'CEA'): {
+  bg: string;
+  text: string;
+  border: string;
+} {
+  if (type === 'EUA') {
+    return {
+      bg: 'bg-blue-100',
+      text: 'text-blue-700',
+      border: 'border-blue-200',
+    };
+  }
+  return {
+    bg: 'bg-amber-100',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+  };
+}
+
+// Validate email
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Check if corporate email (not personal)
+export function isCorporateEmail(email: string): boolean {
+  const personalDomains = [
+    'gmail.com',
+    'yahoo.com',
+    'hotmail.com',
+    'outlook.com',
+    'aol.com',
+    'icloud.com',
+    'mail.com',
+    'protonmail.com',
+  ];
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain ? !personalDomains.includes(domain) : false;
+}
+
+// Truncate text
+export function truncate(text: string, length: number): string {
+  if (text.length <= length) return text;
+  return `${text.slice(0, length)}...`;
+}
+
+// Debounce function
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+// Generate random ID
+export function generateId(): string {
+  return Math.random().toString(36).substring(2, 9);
+}
+
+// Sleep utility
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

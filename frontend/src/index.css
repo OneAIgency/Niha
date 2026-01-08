@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-navy-50 dark:bg-navy-950 text-navy-900 dark:text-white antialiased transition-colors duration-300;
+  }
+
+  * {
+    @apply border-navy-200 dark:border-navy-700;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg border border-white/20 dark:border-navy-700/50 shadow-lg;
+  }
+
+  .glass-dark {
+    @apply bg-navy-900/80 backdrop-blur-lg border border-white/10;
+  }
+
+  .card {
+    @apply bg-white dark:bg-navy-800 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-700 p-6;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-navy-900;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 focus:ring-emerald-500 shadow-lg shadow-emerald-500/25;
+  }
+
+  .btn-secondary {
+    @apply btn bg-navy-900 dark:bg-navy-700 text-white hover:bg-navy-800 dark:hover:bg-navy-600 focus:ring-navy-500;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-navy-200 dark:border-navy-600 text-navy-700 dark:text-navy-200 hover:bg-navy-50 dark:hover:bg-navy-700 focus:ring-navy-500;
+  }
+
+  .btn-ghost {
+    @apply btn text-navy-600 dark:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-700 focus:ring-navy-500;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400;
+  }
+
+  .price-up {
+    @apply text-emerald-600 dark:text-emerald-400;
+  }
+
+  .price-down {
+    @apply text-red-500 dark:text-red-400;
+  }
+
+  .stat-card {
+    @apply bg-gradient-to-br from-white to-navy-50 dark:from-navy-800 dark:to-navy-900 rounded-2xl p-6 border border-navy-100 dark:border-navy-700;
+  }
+
+  .table-row {
+    @apply border-b border-navy-100 dark:border-navy-700 hover:bg-navy-50 dark:hover:bg-navy-800 transition-colors;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold text-navy-900 dark:text-white mb-2;
+  }
+
+  .section-subtitle {
+    @apply text-navy-500 dark:text-navy-400 text-lg;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-emerald-600;
+  }
+
+  .animate-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Custom scrollbar for main content */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Price ticker animation */
+.ticker-wrapper {
+  overflow: hidden;
+}
+
+.ticker-content {
+  display: flex;
+  animation: ticker 30s linear infinite;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Glowing effect for CTAs */
+.glow-effect {
+  position: relative;
+}
+
+.glow-effect::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+  filter: blur(10px);
+}
+
+.glow-effect:hover::before {
+  opacity: 0.5;
+}
+
+/* Number counter animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.count-animation {
+  animation: countUp 0.5s ease-out forwards;
+}

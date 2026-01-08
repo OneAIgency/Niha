@@ -1,0 +1,13 @@
+export { LandingPage } from './LandingPage';
+export { ContactPage } from './ContactPage';
+export { LoginPage } from './LoginPage';
+export { MarketplacePage } from './MarketplacePage';
+export { SwapPage } from './SwapPage';
+export { HowItWorksPage } from './HowItWorksPage';
+export { DashboardPage } from './DashboardPage';
+export { ProfilePage } from './ProfilePage';
+export { SettingsPage } from './SettingsPage';
+export { UsersPage } from './UsersPage';
+export { BackofficePage } from './BackofficePage';
+export { default as OnboardingPage } from './OnboardingPage';
+export { LearnMorePage } from './LearnMorePage';
