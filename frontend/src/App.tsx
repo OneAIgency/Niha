@@ -3,7 +3,7 @@ import { Layout } from './components/layout';
 import {
   ContactPage,
   LoginPage,
-  MarketplacePage,
+  CashMarketPage,
   SwapPage,
   HowItWorksPage,
   DashboardPage,
@@ -141,10 +141,10 @@ function App() {
             }
           />
           <Route
-            path="/marketplace"
+            path="/cash-market"
             element={
               <DashboardRoute>
-                <MarketplacePage />
+                <CashMarketPage />
               </DashboardRoute>
             }
           />

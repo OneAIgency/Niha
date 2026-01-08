@@ -9,7 +9,6 @@ import {
   Eye,
   MapPin,
   Activity,
-  DollarSign,
   ArrowRightLeft,
   Search,
   X,
@@ -101,7 +100,6 @@ export function BackofficePage() {
   // KYC state
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KYCDocument[]>([]);
-  const [selectedKycUser, setSelectedKycUser] = useState<string | null>(null);
 
   // User details state
   const [selectedUser, setSelectedUser] = useState<SelectedUserDetails | null>(null);
@@ -127,7 +125,16 @@ export function BackofficePage() {
           backofficeApi.getPendingUsers(),
           backofficeApi.getKYCDocuments()
         ]);
-        setKycUsers(users);
+        // Map User[] to KYCUser[] format
+        setKycUsers(users.map(u => ({
+          id: u.id,
+          email: u.email,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          entity_name: undefined,
+          documents_count: 0,
+          created_at: u.last_login || new Date().toISOString(),
+        })));
         setKycDocuments(docs);
       }
     } catch (err) {
@@ -222,9 +229,12 @@ export function BackofficePage() {
             first_name: user.first_name,
             last_name: user.last_name,
             role: user.role,
-            entity_name: user.entity_name
+            entity_name: undefined
           },
-          sessions,
+          sessions: sessions.map(s => ({
+            ...s,
+            is_active: !s.ended_at
+          })),
           trades
         });
       } else {

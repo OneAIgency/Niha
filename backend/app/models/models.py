@@ -97,6 +97,18 @@ class SwapStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class OrderSide(str, enum.Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class OrderStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELLED = "CANCELLED"
+
+
 class Entity(Base):
     __tablename__ = "entities"
 
@@ -301,3 +313,39 @@ class UserSession(Base):
     is_active = Column(Boolean, default=True)
 
     user = relationship("User", back_populates="sessions")
+
+
+class Order(Base):
+    """Cash market orders for EUA/CEA trading"""
+    __tablename__ = "orders"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
+    side = Column(SQLEnum(OrderSide), nullable=False)
+    price = Column(Numeric(18, 4), nullable=False)
+    quantity = Column(Numeric(18, 2), nullable=False)
+    filled_quantity = Column(Numeric(18, 2), default=0)
+    status = Column(SQLEnum(OrderStatus), default=OrderStatus.OPEN)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    entity = relationship("Entity")
+    buy_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.buy_order_id", back_populates="buy_order")
+    sell_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.sell_order_id", back_populates="sell_order")
+
+
+class CashMarketTrade(Base):
+    """Executed trades from the cash market matching engine"""
+    __tablename__ = "cash_market_trades"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    buy_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
+    sell_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
+    price = Column(Numeric(18, 4), nullable=False)
+    quantity = Column(Numeric(18, 2), nullable=False)
+    executed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    buy_order = relationship("Order", foreign_keys=[buy_order_id], back_populates="buy_trades")
+    sell_order = relationship("Order", foreign_keys=[sell_order_id], back_populates="sell_trades")

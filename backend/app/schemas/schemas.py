@@ -38,6 +38,18 @@ class SwapStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class OrderSide(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class OrderStatus(str, Enum):
+    OPEN = "OPEN"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELLED = "CANCELLED"
+
+
 class TradeStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
@@ -437,3 +449,81 @@ class PendingUserResponse(BaseModel):
 class PaginatedResponse(BaseModel):
     data: List[Any]
     pagination: Dict[str, int]
+
+
+# Cash Market Order Schemas
+class OrderCreate(BaseModel):
+    certificate_type: CertificateType
+    side: OrderSide
+    price: float = Field(..., gt=0)
+    quantity: float = Field(..., gt=0)
+
+
+class OrderResponse(BaseModel):
+    id: UUID
+    entity_id: UUID
+    certificate_type: str
+    side: str
+    price: float
+    quantity: float
+    filled_quantity: float
+    remaining_quantity: float
+    status: str
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class OrderBookLevel(BaseModel):
+    price: float
+    quantity: float
+    order_count: int
+    cumulative_quantity: float
+
+
+class OrderBookResponse(BaseModel):
+    certificate_type: str
+    bids: List[OrderBookLevel]
+    asks: List[OrderBookLevel]
+    spread: Optional[float]
+    best_bid: Optional[float]
+    best_ask: Optional[float]
+    last_price: Optional[float]
+    volume_24h: float
+    change_24h: float
+
+
+class MarketDepthPoint(BaseModel):
+    price: float
+    cumulative_quantity: float
+
+
+class MarketDepthResponse(BaseModel):
+    certificate_type: str
+    bids: List[MarketDepthPoint]
+    asks: List[MarketDepthPoint]
+
+
+class CashMarketTradeResponse(BaseModel):
+    id: UUID
+    certificate_type: str
+    price: float
+    quantity: float
+    side: str  # BUY if taker was buyer, SELL if taker was seller
+    executed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MarketStatsResponse(BaseModel):
+    certificate_type: str
+    last_price: float
+    change_24h: float
+    high_24h: float
+    low_24h: float
+    volume_24h: float
+    total_bids: int
+    total_asks: int

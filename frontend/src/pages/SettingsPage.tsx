@@ -67,7 +67,20 @@ export function SettingsPage() {
         adminApi.getActivityStats(),
       ]);
       setSources(sourcesData);
-      setActivityStats(statsData as ActivityStats);
+      // Map the users_by_role from Record<UserRole, number> to expected format
+      const mappedStats: ActivityStats = {
+        total_users: statsData.total_users,
+        users_by_role: {
+          admin: (statsData.users_by_role as Record<string, number>)['ADMIN'] || 0,
+          funded: (statsData.users_by_role as Record<string, number>)['FUNDED'] || 0,
+          approved: (statsData.users_by_role as Record<string, number>)['APPROVED'] || 0,
+          pending: (statsData.users_by_role as Record<string, number>)['PENDING'] || 0,
+        },
+        active_sessions: statsData.active_sessions,
+        logins_today: statsData.logins_today,
+        avg_session_duration: statsData.avg_session_duration,
+      };
+      setActivityStats(mappedStats);
 
       // Try to load market overview
       try {

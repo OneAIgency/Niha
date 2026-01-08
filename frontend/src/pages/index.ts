@@ -2,6 +2,7 @@ export { LandingPage } from './LandingPage';
 export { ContactPage } from './ContactPage';
 export { LoginPage } from './LoginPage';
 export { MarketplacePage } from './MarketplacePage';
+export { CashMarketPage } from './CashMarketPage';
 export { SwapPage } from './SwapPage';
 export { HowItWorksPage } from './HowItWorksPage';
 export { DashboardPage } from './DashboardPage';

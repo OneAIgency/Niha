@@ -55,7 +55,7 @@ export function Header() {
   const navLinks = isAuthenticated
     ? [
         { href: '/dashboard', label: 'Dashboard' },
-        { href: '/marketplace', label: 'Marketplace' },
+        { href: '/cash-market', label: 'Cash Market' },
         { href: '/swap', label: 'Swap Center' },
         { href: '/how-it-works', label: 'How It Works' },
       ]

@@ -212,3 +212,71 @@ export interface PortfolioSummary {
   pending_swaps: number;
   completed_trades: number;
 }
+
+// Cash Market Types
+export type OrderSide = 'BUY' | 'SELL';
+export type OrderStatus = 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
+
+export interface Order {
+  id: string;
+  entity_id: string;
+  certificate_type: CertificateType;
+  side: OrderSide;
+  price: number;
+  quantity: number;
+  filled_quantity: number;
+  remaining_quantity: number;
+  status: OrderStatus;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface OrderBookLevel {
+  price: number;
+  quantity: number;
+  order_count: number;
+  cumulative_quantity: number;
+}
+
+export interface OrderBook {
+  certificate_type: CertificateType;
+  bids: OrderBookLevel[];
+  asks: OrderBookLevel[];
+  spread: number | null;
+  best_bid: number | null;
+  best_ask: number | null;
+  last_price: number | null;
+  volume_24h: number;
+  change_24h: number;
+}
+
+export interface MarketDepthPoint {
+  price: number;
+  cumulative_quantity: number;
+}
+
+export interface MarketDepth {
+  certificate_type: CertificateType;
+  bids: MarketDepthPoint[];
+  asks: MarketDepthPoint[];
+}
+
+export interface CashMarketTrade {
+  id: string;
+  certificate_type: CertificateType;
+  price: number;
+  quantity: number;
+  side: OrderSide;
+  executed_at: string;
+}
+
+export interface CashMarketStats {
+  certificate_type: CertificateType;
+  last_price: number;
+  change_24h: number;
+  high_24h: number;
+  low_24h: number;
+  volume_24h: number;
+  total_bids: number;
+  total_asks: number;
+}

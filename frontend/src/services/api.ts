@@ -13,7 +13,15 @@ import type {
   ActivityLog,
   KYCDocument,
   ScrapingSource,
+  ScrapeLibrary,
   UserSession,
+  CertificateType,
+  OrderSide,
+  Order,
+  OrderBook,
+  MarketDepth,
+  CashMarketTrade,
+  CashMarketStats,
 } from '../types';
 
 // Use relative URL to leverage Vite's proxy in development
@@ -454,6 +462,57 @@ export const onboardingApi = {
 
   submit: async (): Promise<MessageResponse> => {
     const { data } = await api.post('/onboarding/submit');
+    return data;
+  },
+};
+
+// Cash Market API
+export const cashMarketApi = {
+  getOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
+    const { data } = await api.get(`/cash-market/orderbook/${certificateType}`);
+    return data;
+  },
+
+  getMarketDepth: async (certificateType: CertificateType): Promise<MarketDepth> => {
+    const { data } = await api.get(`/cash-market/depth/${certificateType}`);
+    return data;
+  },
+
+  getRecentTrades: async (
+    certificateType: CertificateType,
+    limit: number = 50
+  ): Promise<CashMarketTrade[]> => {
+    const { data } = await api.get(`/cash-market/trades/${certificateType}`, {
+      params: { limit },
+    });
+    return data;
+  },
+
+  getMarketStats: async (certificateType: CertificateType): Promise<CashMarketStats> => {
+    const { data } = await api.get(`/cash-market/stats/${certificateType}`);
+    return data;
+  },
+
+  placeOrder: async (order: {
+    certificate_type: CertificateType;
+    side: OrderSide;
+    price: number;
+    quantity: number;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.post('/cash-market/orders', order);
+    return data;
+  },
+
+  getMyOrders: async (params?: {
+    status?: string;
+    certificate_type?: CertificateType;
+  }): Promise<Order[]> => {
+    const { data } = await api.get('/cash-market/orders/my', { params });
+    return data;
+  },
+
+  cancelOrder: async (orderId: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/cash-market/orders/${orderId}`);
     return data;
   },
 };
