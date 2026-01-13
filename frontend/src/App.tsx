@@ -13,6 +13,7 @@ import {
   SettingsPage,
   UsersPage,
   BackofficePage,
+  SetupPasswordPage,
   Onboarding1Page,
   LearnMorePage,
   OnboardingIndexPage,
@@ -49,11 +50,16 @@ function RoleProtectedRoute({
 }) {
   const { isAuthenticated, user } = useAuthStore();
 
+  // Debug logging
+  console.log('RoleProtectedRoute check:', { isAuthenticated, userRole: user?.role, allowedRoles, redirectTo });
+
   if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (!user || !allowedRoles.includes(user.role)) {
+    console.log('Role check failed:', { user, hasRole: user?.role, includes: user ? allowedRoles.includes(user.role) : false });
     return <Navigate to={redirectTo} replace />;
   }
 
@@ -270,6 +276,7 @@ function App() {
         {/* Auth routes (no layout) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/verify" element={<LoginPage />} />
+        <Route path="/setup-password" element={<SetupPasswordPage />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />

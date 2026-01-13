@@ -17,8 +17,11 @@ import {
   AlertCircle,
   Wifi,
   WifiOff,
+  Trash2,
+  UserPlus,
 } from 'lucide-react';
 import { Button, Card, Badge } from '../components/common';
+import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
 import { adminApi, backofficeApi } from '../services/api';
 import { cn, formatRelativeTime, formatCurrency, formatQuantity } from '../utils';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
@@ -154,6 +157,9 @@ export function BackofficePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Approve/Invite Modal state
+  const [approveModalRequest, setApproveModalRequest] = useState<ContactRequest | null>(null);
+
   useEffect(() => {
     // Contact requests are now loaded via realtime hook, only load other tabs
     if (activeTab !== 'requests') {
@@ -236,18 +242,6 @@ export function BackofficePage() {
     }
   };
 
-  const handleApproveRequest = async (requestId: string) => {
-    setActionLoading(requestId);
-    try {
-      await adminApi.updateContactRequest(requestId, { status: 'enrolled' });
-      // WebSocket will broadcast the update and refresh the store automatically
-    } catch (err) {
-      console.error('Failed to approve request:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const handleRejectRequest = async (requestId: string) => {
     setActionLoading(requestId);
     try {
@@ -258,6 +252,26 @@ export function BackofficePage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!confirm('Are you sure you want to delete this contact request?')) return;
+
+    setActionLoading(`delete-${requestId}`);
+    try {
+      await adminApi.deleteContactRequest(requestId);
+      // WebSocket will broadcast deletion and update the store automatically
+    } catch (err) {
+      console.error('Failed to delete request:', err);
+      setError('Failed to delete contact request');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveModalSuccess = () => {
+    // Refresh the list after successful user creation
+    refreshContactRequests();
   };
 
   const handleApproveKYC = async (userId: string) => {
@@ -524,6 +538,15 @@ export function BackofficePage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleDeleteRequest(request.id)}
+                            loading={actionLoading === `delete-${request.id}`}
+                            className="text-navy-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleRejectRequest(request.id)}
                             loading={actionLoading === request.id}
                             className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -534,10 +557,10 @@ export function BackofficePage() {
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={() => handleApproveRequest(request.id)}
+                            onClick={() => setApproveModalRequest(request)}
                             loading={actionLoading === request.id}
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <UserPlus className="w-4 h-4" />
                             Approve & Invite
                           </Button>
                         </div>
@@ -944,6 +967,29 @@ export function BackofficePage() {
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Approve & Invite Modal */}
+        {approveModalRequest && (
+          <ApproveInviteModal
+            contactRequest={{
+              id: approveModalRequest.id,
+              entity_name: approveModalRequest.entity_name,
+              contact_email: approveModalRequest.contact_email,
+              contact_name: approveModalRequest.contact_name,
+              position: approveModalRequest.position,
+              reference: approveModalRequest.reference,
+              request_type: approveModalRequest.request_type,
+              nda_file_name: approveModalRequest.nda_file_name,
+              submitter_ip: approveModalRequest.submitter_ip,
+              status: approveModalRequest.status as 'pending' | 'approved' | 'rejected' | 'enrolled',
+              notes: approveModalRequest.notes,
+              created_at: approveModalRequest.created_at,
+            }}
+            isOpen={!!approveModalRequest}
+            onClose={() => setApproveModalRequest(null)}
+            onSuccess={handleApproveModalSuccess}
+          />
         )}
       </div>
     </div>

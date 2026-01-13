@@ -88,11 +88,35 @@ api.interceptors.request.use((config) => {
 // Handle auth errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    // 401 = invalid/expired token
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    // 403 with "Not authenticated" = missing token (HTTPBearer)
+    if (error.response?.status === 403) {
+      let detail = error.response?.data?.detail;
+
+      // Handle blob responses (e.g., file downloads)
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          detail = json.detail;
+        } catch {
+          // Not JSON, ignore
+        }
+      }
+
+      if (detail === 'Not authenticated') {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -117,6 +141,29 @@ export const authApi = {
   logout: async (): Promise<void> => {
     await api.post('/auth/logout');
     localStorage.removeItem('token');
+  },
+
+  // Validate invitation token
+  validateInvitation: async (token: string): Promise<{
+    valid: boolean;
+    email: string;
+    first_name: string;
+    last_name: string;
+  }> => {
+    const { data } = await api.get(`/auth/validate-invitation/${token}`);
+    return data;
+  },
+
+  // Setup password from invitation
+  setupPassword: async (
+    token: string,
+    password: string,
+    confirmPassword: string
+  ): Promise<{ access_token: string; user: User }> => {
+    const { data } = await api.post('/auth/setup-password', null, {
+      params: { token, password, confirm_password: confirmPassword }
+    });
+    return data;
   },
 };
 
@@ -399,6 +446,50 @@ export const adminApi = {
 
   updateContactRequest: async (id: string, update: any): Promise<MessageResponse> => {
     const { data } = await api.put(`/admin/contact-requests/${id}`, update);
+    return data;
+  },
+
+  // Delete contact request
+  deleteContactRequest: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/admin/contact-requests/${id}`);
+    return data;
+  },
+
+  // Create user from contact request (approve & invite)
+  createUserFromRequest: async (
+    requestId: string,
+    userData: {
+      email: string;
+      first_name: string;
+      last_name: string;
+      mode: 'manual' | 'invitation';
+      password?: string;
+      position?: string;
+    }
+  ): Promise<{
+    message: string;
+    success: boolean;
+    user: {
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      role: string;
+      entity_id: string;
+      creation_method: string;
+    };
+  }> => {
+    const { data } = await api.post('/admin/users/create-from-request', null, {
+      params: {
+        request_id: requestId,
+        email: userData.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        mode: userData.mode,
+        password: userData.password,
+        position: userData.position,
+      }
+    });
     return data;
   },
 

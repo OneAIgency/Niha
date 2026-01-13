@@ -172,6 +172,9 @@ class User(Base):
     must_change_password = Column(Boolean, default=True)
     invitation_token = Column(String(100), nullable=True)
     invitation_sent_at = Column(DateTime, nullable=True)
+    invitation_expires_at = Column(DateTime, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    creation_method = Column(String(20), nullable=True)  # 'manual' or 'invitation'
     last_login = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

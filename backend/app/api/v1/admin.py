@@ -17,7 +17,7 @@ from ...models.models import (
     ContactRequest, ContactStatus, Entity, User, Trade, UserRole,
     ActivityLog, UserSession, ScrapingSource, CertificateType,
     Certificate, CertificateStatus, SwapRequest, SwapStatus,
-    AuthenticationAttempt
+    AuthenticationAttempt, Jurisdiction, KYCStatus
 )
 from ...schemas.schemas import (
     ContactRequestUpdate, MessageResponse, UserResponse, UserCreate,
@@ -36,6 +36,7 @@ async def get_contact_requests(
     status: Optional[str] = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    admin_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -91,6 +92,7 @@ async def get_contact_requests(
 async def update_contact_request(
     request_id: str,
     update: ContactRequestUpdate,
+    admin_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -133,6 +135,165 @@ async def update_contact_request(
     }))
 
     return {"message": "Contact request updated", "success": True}
+
+
+@router.delete("/contact-requests/{request_id}")
+async def delete_contact_request(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a contact request permanently.
+    Admin only.
+    """
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact = result.scalar_one_or_none()
+
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    await db.delete(contact)
+    await db.commit()
+
+    # Broadcast deletion to backoffice WebSocket
+    asyncio.create_task(backoffice_ws_manager.broadcast("request_deleted", {
+        "id": str(request_id)
+    }))
+
+    return {"message": "Contact request deleted", "success": True}
+
+
+@router.post("/users/create-from-request")
+async def create_user_from_contact_request(
+    request_id: str = Query(..., description="Contact request ID"),
+    email: str = Query(..., description="User email"),
+    first_name: str = Query(..., description="First name"),
+    last_name: str = Query(..., description="Last name"),
+    mode: str = Query(..., description="Creation mode: 'manual' or 'invitation'"),
+    password: Optional[str] = Query(None, description="Password (required for manual mode)"),
+    position: Optional[str] = Query(None, description="Position/title"),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new user from an approved contact request.
+    Supports two modes:
+    - 'manual': Admin provides password, user can login immediately
+    - 'invitation': Send email invitation, user sets own password
+    Admin only.
+    """
+    from datetime import timedelta
+
+    # Get contact request
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    # Check email uniqueness
+    existing = await db.execute(
+        select(User).where(User.email == email.lower())
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Create entity from contact request
+    entity = Entity(
+        name=contact_request.entity_name,
+        jurisdiction=Jurisdiction.OTHER,
+        kyc_status=KYCStatus.PENDING
+    )
+    db.add(entity)
+    await db.flush()
+
+    if mode == "manual":
+        # Manual creation with password
+        if not password or len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password required and must be at least 8 characters")
+
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=hash_password(password),
+            role=UserRole.PENDING,
+            entity_id=entity.id,
+            position=position,
+            must_change_password=False,
+            is_active=True,
+            creation_method="manual",
+            created_by=admin_user.id
+        )
+    else:
+        # Send invitation
+        invitation_token = secrets.token_urlsafe(32)
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            role=UserRole.PENDING,
+            entity_id=entity.id,
+            position=position,
+            invitation_token=invitation_token,
+            invitation_sent_at=datetime.utcnow(),
+            invitation_expires_at=datetime.utcnow() + timedelta(days=7),
+            must_change_password=True,
+            is_active=False,  # Activate when password is set
+            creation_method="invitation",
+            created_by=admin_user.id
+        )
+
+    db.add(user)
+
+    # Update contact request status
+    contact_request.status = ContactStatus.ENROLLED
+
+    await db.commit()
+    await db.refresh(user)
+
+    # Send invitation email if applicable
+    if mode == "invitation":
+        try:
+            await email_service.send_invitation(
+                user.email,
+                user.first_name,
+                user.invitation_token
+            )
+        except Exception as e:
+            # Log but don't fail - user is created
+            pass
+
+    # Broadcast updates
+    asyncio.create_task(backoffice_ws_manager.broadcast("request_updated", {
+        "id": str(contact_request.id),
+        "status": "enrolled"
+    }))
+    asyncio.create_task(backoffice_ws_manager.broadcast("user_created", {
+        "id": str(user.id),
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role.value
+    }))
+
+    return {
+        "message": f"User created successfully via {mode}",
+        "success": True,
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": user.role.value,
+            "entity_id": str(entity.id),
+            "creation_method": mode
+        }
+    }
 
 
 @router.get("/contact-requests/{request_id}/nda")

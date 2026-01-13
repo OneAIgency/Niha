@@ -175,7 +175,7 @@ class EmailService:
     async def send_invitation(self, to_email: str, first_name: str, invitation_token: str) -> bool:
         """Send invitation email to new user with password setup link"""
         name = first_name or "there"
-        setup_url = f"http://localhost:5173/auth/setup-password?token={invitation_token}"
+        setup_url = f"http://localhost:5173/setup-password?token={invitation_token}"
         subject = "Welcome to Nihao Carbon Trading Platform"
         html_content = f"""
         <!DOCTYPE html>

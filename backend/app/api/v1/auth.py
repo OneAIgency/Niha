@@ -10,6 +10,7 @@ from ...core.security import (
     create_access_token,
     verify_token,
     verify_password,
+    hash_password,
     RedisManager
 )
 from ...models.models import User, Entity, AuthenticationAttempt, AuthMethod
@@ -228,6 +229,97 @@ async def logout():
     return MessageResponse(
         message="Successfully logged out",
         success=True
+    )
+
+
+@router.get("/validate-invitation/{token}")
+async def validate_invitation_token(
+    token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Check if invitation token is valid.
+    Returns user info if valid for the setup password page.
+    """
+    result = await db.execute(
+        select(User).where(User.invitation_token == token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Invalid invitation link")
+
+    if user.invitation_expires_at and user.invitation_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Invitation link has expired")
+
+    return {
+        "valid": True,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }
+
+
+@router.post("/setup-password", response_model=TokenResponse)
+async def setup_password_from_invitation(
+    token: str,
+    password: str,
+    confirm_password: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Set password from invitation link.
+    Password requirements:
+    - Minimum 8 characters
+    - At least 1 uppercase letter
+    - At least 1 special character
+    """
+    import re
+
+    # Validate passwords match
+    if password != confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    # Validate password strength
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not re.search(r'[A-Z]', password):
+        raise HTTPException(status_code=400, detail="Password must contain at least 1 uppercase letter")
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]', password):
+        raise HTTPException(status_code=400, detail="Password must contain at least 1 special character")
+
+    # Find user by invitation token
+    result = await db.execute(
+        select(User).where(User.invitation_token == token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired invitation link")
+
+    # Check expiration
+    if user.invitation_expires_at and user.invitation_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Invitation link has expired")
+
+    # Set password and activate
+    user.password_hash = hash_password(password)
+    user.invitation_token = None  # Clear token
+    user.invitation_expires_at = None
+    user.must_change_password = False
+    user.is_active = True
+    user.last_login = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(user)
+
+    # Create access token
+    access_token = create_access_token(
+        data={"sub": str(user.id), "email": user.email}
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        user=UserResponse.model_validate(user)
     )
 
 
