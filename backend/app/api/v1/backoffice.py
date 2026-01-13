@@ -549,16 +549,18 @@ async def get_all_deposits(
             "entity_id": str(dep.entity_id),
             "entity_name": entity.name if entity else None,
             "user_email": user_email,
-            "amount": float(dep.amount),
-            "currency": dep.currency.value,
+            "reported_amount": float(dep.reported_amount) if dep.reported_amount else None,
+            "reported_currency": dep.reported_currency.value if dep.reported_currency else None,
+            "amount": float(dep.amount) if dep.amount else None,
+            "currency": dep.currency.value if dep.currency else None,
             "wire_reference": dep.wire_reference,
             "bank_reference": dep.bank_reference,
             "status": dep.status.value,
-            "reported_at": dep.reported_at.isoformat() if dep.reported_at else None,
-            "confirmed_at": dep.confirmed_at.isoformat() if dep.confirmed_at else None,
+            "reported_at": (dep.reported_at.isoformat() + "Z") if dep.reported_at else None,
+            "confirmed_at": (dep.confirmed_at.isoformat() + "Z") if dep.confirmed_at else None,
             "confirmed_by": str(dep.confirmed_by) if dep.confirmed_by else None,
             "notes": dep.notes,
-            "created_at": dep.created_at.isoformat()
+            "created_at": dep.created_at.isoformat() + "Z"
         })
 
     return deposits_with_entity
@@ -682,17 +684,150 @@ async def get_deposit(
         "id": str(deposit.id),
         "entity_id": str(deposit.entity_id),
         "entity_name": entity.name if entity else None,
-        "amount": float(deposit.amount),
-        "currency": deposit.currency.value,
+        "reported_amount": float(deposit.reported_amount) if deposit.reported_amount else None,
+        "reported_currency": deposit.reported_currency.value if deposit.reported_currency else None,
+        "amount": float(deposit.amount) if deposit.amount else None,
+        "currency": deposit.currency.value if deposit.currency else None,
         "wire_reference": deposit.wire_reference,
         "bank_reference": deposit.bank_reference,
         "status": deposit.status.value,
-        "reported_at": deposit.reported_at.isoformat() if deposit.reported_at else None,
-        "confirmed_at": deposit.confirmed_at.isoformat() if deposit.confirmed_at else None,
+        "reported_at": (deposit.reported_at.isoformat() + "Z") if deposit.reported_at else None,
+        "confirmed_at": (deposit.confirmed_at.isoformat() + "Z") if deposit.confirmed_at else None,
         "confirmed_by": str(deposit.confirmed_by) if deposit.confirmed_by else None,
         "notes": deposit.notes,
-        "created_at": deposit.created_at.isoformat()
+        "created_at": deposit.created_at.isoformat() + "Z"
     }
+
+
+@router.put("/deposits/{deposit_id}/confirm", response_model=MessageResponse)
+async def confirm_pending_deposit(
+    deposit_id: str,
+    confirmation: DepositConfirm,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Confirm a pending deposit with actual received amount.
+    Updates entity balance and upgrades users to FUNDED status.
+    Admin only.
+    """
+    # Get deposit with row lock
+    result = await db.execute(
+        select(Deposit)
+        .where(Deposit.id == UUID(deposit_id))
+        .with_for_update()
+    )
+    deposit = result.scalar_one_or_none()
+
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+
+    if deposit.status != DepositStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deposit is not pending (current status: {deposit.status.value})"
+        )
+
+    # Get entity with row lock
+    entity_result = await db.execute(
+        select(Entity)
+        .where(Entity.id == deposit.entity_id)
+        .with_for_update()
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Validate and set confirmed amount
+    confirmed_amount = Decimal(str(confirmation.amount))
+    if confirmed_amount <= 0:
+        raise HTTPException(status_code=400, detail="Confirmed amount must be positive")
+    if confirmed_amount > MAX_DEPOSIT_AMOUNT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})"
+        )
+
+    confirmed_currency = Currency(confirmation.currency.value)
+
+    # Update deposit with confirmed values
+    deposit.amount = confirmed_amount
+    deposit.currency = confirmed_currency
+    deposit.status = DepositStatus.CONFIRMED
+    deposit.confirmed_at = datetime.utcnow()
+    deposit.confirmed_by = admin_user.id
+    if confirmation.notes:
+        deposit.notes = confirmation.notes
+
+    # Update entity balance
+    entity.balance_amount = (entity.balance_amount or Decimal('0')) + confirmed_amount
+    entity.balance_currency = confirmed_currency
+    entity.total_deposited = (entity.total_deposited or Decimal('0')) + confirmed_amount
+
+    # Upgrade users from APPROVED to FUNDED
+    users_result = await db.execute(
+        select(User).where(User.entity_id == entity.id)
+    )
+    users = users_result.scalars().all()
+
+    upgraded_count = 0
+    for user in users:
+        if user.role == UserRole.APPROVED:
+            user.role = UserRole.FUNDED
+            upgraded_count += 1
+
+    await db.commit()
+
+    # Send notification emails
+    for user in users:
+        try:
+            await email_service.send_account_funded(user.email, user.first_name)
+        except Exception:
+            pass
+
+    # Broadcast WebSocket event
+    await backoffice_ws_manager.broadcast("deposit_confirmed", {
+        "deposit_id": str(deposit.id),
+        "entity_id": str(entity.id),
+        "entity_name": entity.name,
+        "amount": float(confirmed_amount),
+        "currency": confirmed_currency.value
+    })
+
+    return MessageResponse(
+        message=f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
+    )
+
+
+@router.put("/deposits/{deposit_id}/reject", response_model=MessageResponse)
+async def reject_pending_deposit(
+    deposit_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reject a pending deposit.
+    Admin only.
+    """
+    result = await db.execute(
+        select(Deposit).where(Deposit.id == UUID(deposit_id))
+    )
+    deposit = result.scalar_one_or_none()
+
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+
+    if deposit.status != DepositStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deposit is not pending (current status: {deposit.status.value})"
+        )
+
+    deposit.status = DepositStatus.REJECTED
+    await db.commit()
+
+    return MessageResponse(message="Deposit rejected")
 
 
 @router.get("/entities/{entity_id}/balance")

@@ -408,9 +408,12 @@ class Deposit(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
-    # Deposit details
-    amount = Column(Numeric(18, 2), nullable=False)
-    currency = Column(SQLEnum(Currency), nullable=False)
+    # User-reported deposit details (what user says they sent)
+    reported_amount = Column(Numeric(18, 2), nullable=True)
+    reported_currency = Column(SQLEnum(Currency), nullable=True)
+    # Confirmed deposit details (what backoffice actually received)
+    amount = Column(Numeric(18, 2), nullable=True)  # Actual confirmed amount
+    currency = Column(SQLEnum(Currency), nullable=True)  # Actual confirmed currency
     wire_reference = Column(String(100), nullable=True)  # Bank wire reference
     bank_reference = Column(String(100), nullable=True)  # Our internal reference
     # Status tracking

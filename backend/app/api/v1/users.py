@@ -3,6 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
 from typing import Optional
+from decimal import Decimal
+from uuid import UUID
+import secrets
+import string
 
 from ...core.database import get_db
 from ...core.security import (
@@ -11,14 +15,17 @@ from ...core.security import (
     verify_password,
     validate_password_strength
 )
-from ...models.models import User, Entity, ActivityLog, UserSession
+from ...models.models import User, Entity, ActivityLog, UserSession, Deposit, DepositStatus, Currency, UserRole
 from ...schemas.schemas import (
     UserResponse,
     UserProfileUpdate,
     PasswordChange,
     MessageResponse,
     ActivityLogResponse,
-    UserSessionResponse
+    UserSessionResponse,
+    UserDepositReport,
+    DepositResponse,
+    Currency as SchemaCurrency
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -200,4 +207,147 @@ async def get_my_entity(
         "verified": entity.verified,
         "kyc_status": entity.kyc_status.value,
         "created_at": entity.created_at.isoformat()
+    }
+
+
+# ==================== Deposit Reporting (APPROVED Users) ====================
+
+@router.post("/me/deposits/report", response_model=MessageResponse)
+async def report_deposit(
+    deposit_data: UserDepositReport,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Report a wire transfer deposit (APPROVED users only).
+    Creates a pending deposit that backoffice will confirm when funds arrive.
+    """
+    # Only APPROVED users can report deposits
+    if current_user.role != UserRole.APPROVED:
+        raise HTTPException(
+            status_code=403,
+            detail="Only APPROVED users can report deposits. Complete KYC verification first."
+        )
+
+    if not current_user.entity_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User must be associated with an entity to report deposits"
+        )
+
+    # Generate bank reference
+    bank_ref = f"DEP-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}"
+
+    # Create pending deposit
+    deposit = Deposit(
+        entity_id=current_user.entity_id,
+        reported_amount=Decimal(str(deposit_data.amount)),
+        reported_currency=Currency(deposit_data.currency.value),
+        wire_reference=deposit_data.wire_reference,
+        bank_reference=bank_ref,
+        status=DepositStatus.PENDING,
+        reported_at=datetime.utcnow()
+    )
+
+    db.add(deposit)
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Deposit of {deposit_data.amount} {deposit_data.currency.value} reported. Reference: {bank_ref}. Awaiting confirmation."
+    )
+
+
+@router.get("/me/deposits")
+async def get_my_deposits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current user's entity deposits.
+    """
+    if not current_user.entity_id:
+        return []
+
+    query = (
+        select(Deposit)
+        .where(Deposit.entity_id == current_user.entity_id)
+        .order_by(Deposit.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    deposits = result.scalars().all()
+
+    return [
+        {
+            "id": str(d.id),
+            "entity_id": str(d.entity_id),
+            "reported_amount": float(d.reported_amount) if d.reported_amount else None,
+            "reported_currency": d.reported_currency.value if d.reported_currency else None,
+            "amount": float(d.amount) if d.amount else None,
+            "currency": d.currency.value if d.currency else None,
+            "wire_reference": d.wire_reference,
+            "bank_reference": d.bank_reference,
+            "status": d.status.value,
+            "reported_at": d.reported_at.isoformat() + "Z" if d.reported_at else None,
+            "confirmed_at": d.confirmed_at.isoformat() + "Z" if d.confirmed_at else None,
+            "notes": d.notes,
+            "created_at": d.created_at.isoformat() + "Z"
+        }
+        for d in deposits
+    ]
+
+
+@router.get("/me/entity/balance")
+async def get_my_entity_balance(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current user's entity balance.
+    """
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User not associated with an entity")
+
+    result = await db.execute(
+        select(Entity).where(Entity.id == current_user.entity_id)
+    )
+    entity = result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Count confirmed deposits
+    deposit_count_result = await db.execute(
+        select(func.count()).select_from(Deposit).where(
+            Deposit.entity_id == entity.id,
+            Deposit.status == DepositStatus.CONFIRMED
+        )
+    )
+    deposit_count = deposit_count_result.scalar()
+
+    return {
+        "entity_id": str(entity.id),
+        "entity_name": entity.name,
+        "balance_amount": float(entity.balance_amount) if entity.balance_amount else 0,
+        "balance_currency": entity.balance_currency.value if entity.balance_currency else None,
+        "total_deposited": float(entity.total_deposited) if entity.total_deposited else 0,
+        "deposit_count": deposit_count
+    }
+
+
+@router.get("/me/funding-instructions")
+async def get_funding_instructions(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get wire transfer instructions for funding.
+    """
+    return {
+        "bank_name": "Nihao Group International Bank",
+        "account_name": "Nihao Carbon Trading Ltd",
+        "iban": "LU12 3456 7890 1234 5678",
+        "swift_bic": "NIHALU2X",
+        "reference_instructions": "Please include your entity name and the reference number provided after reporting your deposit.",
+        "supported_currencies": ["EUR", "USD", "CNY", "HKD"],
+        "processing_time": "1-3 business days after funds arrive"
     }

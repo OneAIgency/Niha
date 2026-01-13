@@ -430,6 +430,31 @@ export const usersApi = {
     const { data } = await api.get('/users/me/sessions');
     return data;
   },
+
+  // Deposit reporting (APPROVED users)
+  reportDeposit: async (amount: number, currency: string, wire_reference?: string): Promise<MessageResponse> => {
+    const { data } = await api.post('/users/me/deposits/report', {
+      amount,
+      currency,
+      wire_reference,
+    });
+    return data;
+  },
+
+  getMyDeposits: async (): Promise<any[]> => {
+    const { data } = await api.get('/users/me/deposits');
+    return data;
+  },
+
+  getMyEntityBalance: async (): Promise<any> => {
+    const { data } = await api.get('/users/me/entity/balance');
+    return data;
+  },
+
+  getFundingInstructions: async (): Promise<any> => {
+    const { data } = await api.get('/users/me/funding-instructions');
+    return data;
+  },
 };
 
 // Admin API
@@ -757,6 +782,35 @@ export const backofficeApi = {
 
   getEntityBalance: async (entityId: string): Promise<EntityBalance> => {
     const { data } = await api.get(`/backoffice/entities/${entityId}/balance`);
+    return data;
+  },
+
+  // Confirm pending deposit with actual received amount
+  confirmDeposit: async (
+    depositId: string,
+    amount: number,
+    currency: string,
+    notes?: string
+  ): Promise<MessageResponse> => {
+    const { data } = await api.put(`/backoffice/deposits/${depositId}/confirm`, {
+      amount,
+      currency,
+      notes,
+    });
+    return data;
+  },
+
+  // Reject pending deposit
+  rejectDeposit: async (depositId: string): Promise<MessageResponse> => {
+    const { data } = await api.put(`/backoffice/deposits/${depositId}/reject`);
+    return data;
+  },
+
+  // Get all pending deposits
+  getPendingDeposits: async (): Promise<any[]> => {
+    const { data } = await api.get('/backoffice/deposits', {
+      params: { status: 'pending' },
+    });
     return data;
   },
 };

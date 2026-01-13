@@ -48,7 +48,12 @@ export function formatQuantity(value: number): string {
 // Relative time format
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date();
-  const then = new Date(date);
+  // Ensure UTC interpretation if no timezone present in ISO string
+  let dateString = typeof date === 'string' ? date : date.toISOString();
+  if (typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') && !date.includes('-', 10)) {
+    dateString = date + 'Z';
+  }
+  const then = new Date(dateString);
   const diffMs = now.getTime() - then.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);

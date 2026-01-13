@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, Sun, Moon, Settings, Users, Briefcase, ChevronDown } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
 import { useAuthStore, usePricesStore, useUIStore } from '../../stores/useStore';
@@ -29,6 +29,8 @@ export function Header() {
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
   const isAdmin = user?.role === 'ADMIN';
+  const isFunded = user?.role === 'FUNDED';
+  const isApproved = user?.role === 'APPROVED';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -52,17 +54,47 @@ export function Header() {
     navigate('/');
   };
 
-  const navLinks = isAuthenticated
-    ? [
+  // Build navigation links based on user role
+  const navLinks = useMemo(() => {
+    if (!isAuthenticated) {
+      return [
+        { href: '/how-it-works', label: 'How It Works' },
+        { href: '/contact', label: 'Contact' },
+      ];
+    }
+
+    // APPROVED users - only see Funding
+    if (isApproved) {
+      return [
+        { href: '/funding', label: 'Funding' },
+        { href: '/how-it-works', label: 'How It Works' },
+      ];
+    }
+
+    // FUNDED users - Dashboard and Cash Market (no Swap)
+    if (isFunded) {
+      return [
+        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/cash-market', label: 'Cash Market' },
+        { href: '/how-it-works', label: 'How It Works' },
+      ];
+    }
+
+    // ADMIN users - full access including Swap
+    if (isAdmin) {
+      return [
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/cash-market', label: 'Cash Market' },
         { href: '/swap', label: 'Swap Center' },
         { href: '/how-it-works', label: 'How It Works' },
-      ]
-    : [
-        { href: '/how-it-works', label: 'How It Works' },
-        { href: '/contact', label: 'Contact' },
       ];
+    }
+
+    // Default (PENDING or unknown) - minimal navigation
+    return [
+      { href: '/how-it-works', label: 'How It Works' },
+    ];
+  }, [isAuthenticated, isApproved, isFunded, isAdmin]);
 
   return (
     <header

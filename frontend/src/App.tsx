@@ -13,6 +13,7 @@ import {
   SettingsPage,
   UsersPage,
   BackofficePage,
+  FundingPage,
   SetupPasswordPage,
   Onboarding1Page,
   LearnMorePage,
@@ -88,6 +89,48 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// APPROVED users Route - only funding access
+function ApprovedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Only APPROVED users can access funding page
+  if (user?.role !== 'APPROVED') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// FUNDED users Route - cash market access only (no swap)
+function FundedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // PENDING users go to onboarding
+  if (user?.role === 'PENDING') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // APPROVED users go to funding
+  if (user?.role === 'APPROVED') {
+    return <Navigate to="/funding" replace />;
+  }
+
+  // Only FUNDED and ADMIN can access
+  if (user?.role !== 'FUNDED' && user?.role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Route for funded/approved users with dashboard access
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore();
@@ -99,6 +142,11 @@ function DashboardRoute({ children }: { children: React.ReactNode }) {
   // Pending users go to onboarding
   if (user?.role === 'PENDING') {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // APPROVED users go to funding page
+  if (user?.role === 'APPROVED') {
+    return <Navigate to="/funding" replace />;
   }
 
   return <>{children}</>;
@@ -204,7 +252,17 @@ function App() {
             }
           />
 
-          {/* Protected - Approved, Funded, Admin (dashboard access) */}
+          {/* APPROVED users - Funding page only */}
+          <Route
+            path="/funding"
+            element={
+              <ApprovedRoute>
+                <FundingPage />
+              </ApprovedRoute>
+            }
+          />
+
+          {/* Protected - Funded, Admin (dashboard access) */}
           <Route
             path="/dashboard"
             element={
@@ -213,36 +271,38 @@ function App() {
               </DashboardRoute>
             }
           />
+          {/* FUNDED and ADMIN - Cash Market access */}
           <Route
             path="/cash-market"
             element={
-              <DashboardRoute>
+              <FundedRoute>
                 <CeaCashMarketPage />
-              </DashboardRoute>
+              </FundedRoute>
             }
           />
           <Route
             path="/cash-market-old"
             element={
-              <DashboardRoute>
+              <FundedRoute>
                 <CashMarketPage />
-              </DashboardRoute>
+              </FundedRoute>
             }
           />
+          {/* ADMIN only - Swap Center access */}
           <Route
             path="/swap"
             element={
-              <DashboardRoute>
+              <AdminRoute>
                 <CeaSwapMarketPage />
-              </DashboardRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/swap-old"
             element={
-              <DashboardRoute>
+              <AdminRoute>
                 <SwapPage />
-              </DashboardRoute>
+              </AdminRoute>
             }
           />
 

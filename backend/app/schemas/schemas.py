@@ -608,26 +608,34 @@ class DepositCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class UserDepositReport(BaseModel):
+    """User reports a wire transfer they've made (APPROVED users only)"""
+    amount: float = Field(..., gt=0, description="Amount sent in wire transfer")
+    currency: Currency = Field(..., description="Currency of wire transfer")
+    wire_reference: Optional[str] = Field(None, max_length=100, description="Bank wire reference number")
+
+
 class DepositConfirm(BaseModel):
-    """Backoffice confirms a pending deposit"""
-    amount: float = Field(..., gt=0)
-    currency: Currency
-    wire_reference: Optional[str] = Field(None, max_length=100)
-    notes: Optional[str] = None
+    """Backoffice confirms a pending deposit with actual received amount"""
+    amount: float = Field(..., gt=0, description="Actual amount received")
+    currency: Currency = Field(..., description="Actual currency received")
+    notes: Optional[str] = Field(None, description="Admin notes")
 
 
 class DepositResponse(BaseModel):
     id: UUID
     entity_id: UUID
-    amount: float
-    currency: str
-    wire_reference: Optional[str]
-    bank_reference: Optional[str]
+    reported_amount: Optional[float] = None
+    reported_currency: Optional[str] = None
+    amount: Optional[float] = None  # Confirmed amount
+    currency: Optional[str] = None  # Confirmed currency
+    wire_reference: Optional[str] = None
+    bank_reference: Optional[str] = None
     status: str
-    reported_at: Optional[datetime]
-    confirmed_at: Optional[datetime]
-    confirmed_by: Optional[UUID]
-    notes: Optional[str]
+    reported_at: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+    confirmed_by: Optional[UUID] = None
+    notes: Optional[str] = None
     created_at: datetime
 
     class Config:
