@@ -129,7 +129,7 @@ export function MarketplacePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-navy-900 dark:text-white font-mono">
-                  {prices ? formatCurrency(prices.cea.price_eur || prices.cea.price * 0.13, 'EUR') : '---'}
+                  {prices ? formatCurrency(prices.cea.price_eur || prices.cea.price * 0.127, 'EUR') : '---'}
                 </p>
                 <p className="text-sm text-navy-500 dark:text-navy-400">Market Price</p>
               </div>

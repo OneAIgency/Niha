@@ -1,3 +1,5 @@
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,6 +101,393 @@
 
   .section-subtitle {
     @apply text-navy-500 dark:text-navy-400 text-lg;
+  }
+
+  /* ========================================
+     LAYOUT COMPONENTS
+     ======================================== */
+  .page-container {
+    @apply min-h-screen bg-navy-50 dark:bg-navy-900;
+  }
+
+  .page-container-dark {
+    @apply min-h-screen bg-slate-950;
+  }
+
+  .content-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .content-container-narrow {
+    @apply max-w-6xl mx-auto px-6;
+  }
+
+  .section-spacing {
+    @apply py-8 md:py-10;
+  }
+
+  /* ========================================
+     TYPOGRAPHY COMPONENTS
+     ======================================== */
+  .page-title {
+    @apply text-3xl font-bold text-navy-900 dark:text-white;
+  }
+
+  .page-title-sm {
+    @apply text-2xl font-semibold text-navy-900 dark:text-white tracking-tight;
+  }
+
+  .section-heading {
+    @apply text-xl font-bold text-navy-900 dark:text-white;
+  }
+
+  .section-label {
+    @apply text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 font-medium;
+  }
+
+  .text-value {
+    @apply font-mono font-semibold text-navy-900 dark:text-white;
+  }
+
+  .text-value-lg {
+    @apply font-mono font-bold text-xl text-navy-900 dark:text-white;
+  }
+
+  .text-value-2xl {
+    @apply font-mono font-bold text-2xl text-navy-900 dark:text-white;
+  }
+
+  .text-muted {
+    @apply text-navy-500 dark:text-navy-400;
+  }
+
+  .text-label {
+    @apply text-sm text-navy-600 dark:text-navy-400;
+  }
+
+  /* ========================================
+     TABLE COMPONENTS
+     ======================================== */
+  .table-container {
+    @apply bg-white dark:bg-navy-800 rounded-xl overflow-hidden border border-navy-100 dark:border-navy-700;
+  }
+
+  .table-container-dark {
+    @apply bg-slate-900/50 rounded-xl overflow-hidden;
+  }
+
+  .table-header {
+    @apply text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 font-medium;
+  }
+
+  .table-header-cell {
+    @apply px-5 py-4 text-left font-medium text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400;
+  }
+
+  .table-header-cell-right {
+    @apply px-5 py-4 text-right font-medium text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400;
+  }
+
+  .table-row-hover {
+    @apply border-b border-navy-100 dark:border-navy-700/50 hover:bg-navy-50 dark:hover:bg-navy-700/50 transition-colors;
+  }
+
+  .table-row-dark {
+    @apply border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors;
+  }
+
+  .table-cell {
+    @apply px-5 py-4;
+  }
+
+  .table-cell-mono {
+    @apply px-5 py-4 font-mono;
+  }
+
+  /* Grid Tables (Order Book style) */
+  .grid-table-header {
+    @apply grid text-xs text-navy-500 dark:text-navy-400 px-4 py-2 border-b border-navy-100 dark:border-navy-700/50;
+  }
+
+  .grid-table-row {
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-navy-50 dark:hover:bg-navy-800/50 transition-colors;
+  }
+
+  .grid-table-row-bid {
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors;
+  }
+
+  .grid-table-row-ask {
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors;
+  }
+
+  /* ========================================
+     DEPTH BAR COMPONENTS
+     ======================================== */
+  .depth-bar-bid {
+    @apply absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/20;
+  }
+
+  .depth-bar-ask {
+    @apply absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/20;
+  }
+
+  /* ========================================
+     CERTIFICATE BADGE COMPONENTS
+     ======================================== */
+  .cert-badge-eua {
+    @apply px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded;
+  }
+
+  .cert-badge-cea {
+    @apply px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded;
+  }
+
+  .cert-badge-eua-lg {
+    @apply px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold rounded-xl border border-blue-200 dark:border-blue-800;
+  }
+
+  .cert-badge-cea-lg {
+    @apply px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold rounded-xl border border-amber-200 dark:border-amber-800;
+  }
+
+  /* ========================================
+     TAB COMPONENTS
+     ======================================== */
+  .tab-group {
+    @apply flex gap-1;
+  }
+
+  .tab-button {
+    @apply px-3 py-1.5 text-sm rounded-lg transition-colors;
+  }
+
+  .tab-button-active {
+    @apply bg-slate-800 text-white;
+  }
+
+  .tab-button-inactive {
+    @apply text-slate-500 hover:text-slate-300;
+  }
+
+  .tab-toggle {
+    @apply flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600;
+  }
+
+  .tab-toggle-item {
+    @apply px-4 py-2 text-sm font-semibold transition-colors;
+  }
+
+  .tab-toggle-item-active-eua {
+    @apply bg-blue-500 text-white;
+  }
+
+  .tab-toggle-item-active-cea {
+    @apply bg-amber-500 text-white;
+  }
+
+  .tab-toggle-item-inactive {
+    @apply bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700;
+  }
+
+  /* Buy/Sell Tabs */
+  .trade-tab {
+    @apply flex-1 py-3 text-sm font-semibold transition-colors;
+  }
+
+  .trade-tab-buy-active {
+    @apply bg-emerald-500 text-white;
+  }
+
+  .trade-tab-buy-inactive {
+    @apply bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20;
+  }
+
+  .trade-tab-sell-active {
+    @apply bg-red-500 text-white;
+  }
+
+  .trade-tab-sell-inactive {
+    @apply bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-red-50 dark:hover:bg-red-900/20;
+  }
+
+  /* ========================================
+     STAT CARD COMPONENTS
+     ======================================== */
+  .stat-card-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+  }
+
+  .stat-card-icon-emerald {
+    @apply bg-emerald-100 dark:bg-emerald-900/30;
+  }
+
+  .stat-card-icon-blue {
+    @apply bg-blue-100 dark:bg-blue-900/30;
+  }
+
+  .stat-card-icon-amber {
+    @apply bg-amber-100 dark:bg-amber-900/30;
+  }
+
+  .stat-card-icon-purple {
+    @apply bg-purple-100 dark:bg-purple-900/30;
+  }
+
+  .stat-card-icon-red {
+    @apply bg-red-100 dark:bg-red-900/30;
+  }
+
+  .stat-card-value {
+    @apply text-3xl font-bold text-navy-900 dark:text-white;
+  }
+
+  .stat-card-label {
+    @apply text-sm text-navy-500 dark:text-navy-400;
+  }
+
+  /* ========================================
+     PRICE DISPLAY COMPONENTS
+     ======================================== */
+  .price-positive {
+    @apply text-emerald-600 dark:text-emerald-400;
+  }
+
+  .price-negative {
+    @apply text-red-500 dark:text-red-400;
+  }
+
+  .price-neutral {
+    @apply text-navy-500 dark:text-navy-400;
+  }
+
+  /* ========================================
+     STATUS COMPONENTS
+     ======================================== */
+  .status-available {
+    @apply text-xs text-emerald-500;
+  }
+
+  .status-pending {
+    @apply text-xs text-amber-500/70;
+  }
+
+  .status-locked {
+    @apply text-xs text-amber-500/70;
+  }
+
+  .status-complete {
+    @apply text-xs text-emerald-500;
+  }
+
+  .status-cancelled {
+    @apply text-xs text-red-500;
+  }
+
+  /* ========================================
+     PROGRESS COMPONENTS
+     ======================================== */
+  .progress-track {
+    @apply h-1 bg-slate-800 rounded-full overflow-hidden;
+  }
+
+  .progress-track-light {
+    @apply h-1 bg-navy-200 dark:bg-slate-800 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-emerald-500 rounded-full;
+  }
+
+  .progress-fill-gradient {
+    @apply h-full bg-gradient-to-r from-amber-500 to-violet-500 rounded-full;
+  }
+
+  /* ========================================
+     SKELETON LOADERS
+     ======================================== */
+  .skeleton {
+    @apply animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+  }
+
+  .skeleton-text {
+    @apply h-4 animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+  }
+
+  .skeleton-text-lg {
+    @apply h-6 animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+  }
+
+  .skeleton-avatar {
+    @apply w-12 h-12 animate-pulse bg-navy-100 dark:bg-navy-700 rounded-xl;
+  }
+
+  .skeleton-card {
+    @apply p-4 animate-pulse bg-navy-50 dark:bg-navy-700/50 rounded-xl;
+  }
+
+  /* ========================================
+     FORM COMPONENTS
+     ======================================== */
+  .form-input {
+    @apply w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
+  }
+
+  .form-input-lg {
+    @apply w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2;
+  }
+
+  .form-helper {
+    @apply text-xs text-navy-500 dark:text-navy-400 mt-1;
+  }
+
+  .form-error {
+    @apply text-xs text-red-500 mt-1;
+  }
+
+  /* ========================================
+     CTA / HIGHLIGHT COMPONENTS
+     ======================================== */
+  .cta-gradient {
+    @apply bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800;
+  }
+
+  .highlight-box {
+    @apply p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl;
+  }
+
+  .info-box {
+    @apply p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800;
+  }
+
+  /* ========================================
+     DIVIDERS
+     ======================================== */
+  .divider-vertical {
+    @apply w-px h-10 bg-navy-200 dark:bg-navy-700;
+  }
+
+  .divider-horizontal {
+    @apply h-px bg-navy-200 dark:bg-navy-700;
+  }
+
+  .divider-vertical-sm {
+    @apply w-px h-4 bg-navy-200 dark:bg-navy-700;
+  }
+
+  /* ========================================
+     EMPTY STATES
+     ======================================== */
+  .empty-state {
+    @apply flex flex-col items-center justify-center h-32 text-navy-400 dark:text-navy-500;
+  }
+
+  .empty-state-lg {
+    @apply flex flex-col items-center justify-center h-64 text-navy-400 dark:text-navy-500;
   }
 }
 

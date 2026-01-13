@@ -16,6 +16,7 @@ export { SetupPasswordPage } from './SetupPasswordPage';
 export { default as Onboarding1Page } from './Onboarding1Page';
 export { default as OnboardingPage } from './OnboardingPage';
 export { LearnMorePage } from './LearnMorePage';
+export { ComponentShowcasePage } from './ComponentShowcasePage';
 
 // Onboarding sub-pages
 export {

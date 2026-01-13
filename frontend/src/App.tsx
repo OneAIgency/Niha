@@ -23,6 +23,7 @@ import {
   EuaHoldersPage,
   EuEntitiesPage,
   StrategicAdvantagePage,
+  ComponentShowcasePage,
 } from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -327,6 +328,16 @@ function App() {
               <AdminRoute>
                 <BackofficePage />
               </AdminRoute>
+            }
+          />
+
+          {/* Component Showcase - Design System Reference */}
+          <Route
+            path="/components"
+            element={
+              <ProtectedRoute>
+                <ComponentShowcasePage />
+              </ProtectedRoute>
             }
           />
         </Route>

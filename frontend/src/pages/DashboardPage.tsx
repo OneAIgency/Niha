@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight,
-  Leaf,
   ArrowRightLeft,
-  Wallet,
-  Clock,
-  CheckCircle2,
-  FileText,
-  CreditCard,
-  Shield,
   Loader2,
+  LayoutDashboard,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 import { usePrices } from '../hooks/usePrices';
 import { usersApi } from '../services/api';
+import {
+  StatCard,
+  DataTable,
+  Tabs,
+  ProgressBar,
+  type Column,
+  type Tab,
+} from '../components/common';
 
 interface EntityBalance {
   entity_id: string;
@@ -43,10 +46,11 @@ const MOCK_HOLDINGS = [
     asset: 'EUR',
     balance: 0,
     locked: 5000000,
-    avgPrice: null,
+    avgPrice: null as number | null,
     value: 0,
     status: 'locked',
-    statusText: 'Locked in order'
+    statusText: 'Locked in order',
+    pending: 0,
   },
   {
     asset: 'CEA',
@@ -55,17 +59,18 @@ const MOCK_HOLDINGS = [
     avgPrice: 88.50,
     value: 4975000,
     status: 'available',
-    statusText: 'Available'
+    statusText: 'Available',
+    pending: 0,
   },
   {
     asset: 'EUA',
     balance: 0,
     locked: 0,
     pending: 39357,
-    avgPrice: null,
+    avgPrice: null as number | null,
     value: 0,
     status: 'pending',
-    statusText: 'Pending delivery'
+    statusText: 'Pending delivery',
   },
 ];
 
@@ -93,36 +98,132 @@ const MOCK_TRANSACTIONS = [
   { id: 'NDA01', date: '2026-01-02', type: 'NDA', details: 'NDA approved', status: 'done', ref: '-' },
 ];
 
+// Holdings table columns
+const holdingsColumns: Column<typeof MOCK_HOLDINGS[0]>[] = [
+  {
+    key: 'asset',
+    header: 'Asset',
+    render: (value) => <span className="text-white">{value}</span>,
+  },
+  {
+    key: 'balance',
+    header: 'Balance',
+    align: 'right',
+    cellClassName: 'font-mono',
+    render: (value, row) => (
+      <>
+        {row.asset === 'EUR' ? (
+          <span className="text-slate-400">€{value.toLocaleString()}</span>
+        ) : (
+          <span className={row.asset === 'CEA' ? 'text-amber-400' : 'text-blue-400'}>
+            {value.toLocaleString()}
+          </span>
+        )}
+        {row.pending && row.pending > 0 && (
+          <div className="status-pending">+{row.pending.toLocaleString()} pending</div>
+        )}
+      </>
+    ),
+  },
+  {
+    key: 'avgPrice',
+    header: 'Avg Price',
+    align: 'right',
+    cellClassName: 'font-mono text-slate-500',
+    render: (value) => value ? `€${(value * 0.127).toFixed(2)}` : '—',
+  },
+  {
+    key: 'value',
+    header: 'Value',
+    align: 'right',
+    cellClassName: 'font-mono text-white',
+    render: (value) => value > 0 ? `€${value.toLocaleString()}` : '—',
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    align: 'right',
+    render: (_, row) => (
+      <span className={
+        row.status === 'available' ? 'status-available' :
+        row.status === 'locked' ? 'status-pending' : 'status-pending'
+      }>
+        {row.statusText}
+      </span>
+    ),
+  },
+];
+
+// Transaction table columns
+const transactionColumns: Column<typeof MOCK_TRANSACTIONS[0]>[] = [
+  {
+    key: 'date',
+    header: 'Date',
+    cellClassName: 'text-slate-500 font-mono text-xs',
+  },
+  {
+    key: 'type',
+    header: 'Type',
+    render: (value) => <span className="text-white">{value}</span>,
+  },
+  {
+    key: 'details',
+    header: 'Details',
+    cellClassName: 'text-slate-400',
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    render: (value) => (
+      <span className={value === 'done' ? 'status-available' : 'status-pending'}>
+        {value === 'done' ? 'Complete' : 'Pending'}
+      </span>
+    ),
+  },
+];
+
+// History tabs
+const historyTabs: Tab[] = [
+  { id: 'open', label: 'Open' },
+  { id: 'history', label: 'All' },
+];
+
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { prices } = usePrices();
-  const [activeTab, setActiveTab] = useState<'open' | 'history'>('open');
+  const [activeTab, setActiveTab] = useState<string>('open');
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch real balance data for FUNDED users
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
-        try {
-          setLoadingBalance(true);
-          const balance = await usersApi.getMyEntityBalance();
-          setEntityBalance(balance);
-        } catch (error) {
-          console.error('Failed to fetch balance:', error);
-        } finally {
-          setLoadingBalance(false);
-        }
-      } else {
-        setLoadingBalance(false);
+  // Fetch balance data
+  const fetchBalance = useCallback(async () => {
+    if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
+      try {
+        const balance = await usersApi.getMyEntityBalance();
+        setEntityBalance(balance);
+      } catch (error) {
+        console.error('Failed to fetch balance:', error);
       }
-    };
-
-    fetchBalance();
+    }
   }, [user?.role]);
 
-  // Determine if user is a FUNDED user (can only access Cash Market)
-  const isFundedUser = user?.role === 'FUNDED';
+  // Initial fetch
+  useEffect(() => {
+    const init = async () => {
+      setLoadingBalance(true);
+      await fetchBalance();
+      setLoadingBalance(false);
+    };
+    init();
+  }, [fetchBalance]);
+
+  // Refresh handler
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchBalance();
+    setIsRefreshing(false);
+  }, [fetchBalance]);
 
   // Format helpers
   const formatNumber = (num: number, decimals = 0) => {
@@ -136,350 +237,208 @@ export function DashboardPage() {
     return `${currency}${formatNumber(amount)}`;
   };
 
+  // Get cash display value
+  const getCashValue = () => {
+    if (loadingBalance) return '';
+    if (entityBalance) {
+      const symbol = entityBalance.balance_currency === 'EUR' ? '€' : entityBalance.balance_currency || '€';
+      return `${symbol}${formatNumber(entityBalance.balance_amount, 2)}`;
+    }
+    return formatCurrency(MOCK_ACCOUNT.eur_balance);
+  };
+
+  // Get cash subtitle
+  const getCashSubtitle = () => {
+    if (entityBalance) return 'Available';
+    if (MOCK_ACCOUNT.eur_locked > 0) return `${formatCurrency(MOCK_ACCOUNT.eur_locked)} locked`;
+    return 'Available';
+  };
+
+  // Filter transactions based on active tab
+  const filteredTransactions = MOCK_TRANSACTIONS.filter(
+    tx => activeTab === 'history' || tx.status === 'pending'
+  );
+
   return (
-    <div className="min-h-screen bg-slate-950 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              Welcome back{user?.first_name ? `, ${user.first_name}` : ''}
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Here's your carbon trading portfolio overview
-            </p>
-          </div>
-          <div className="mt-4 md:mt-0 flex items-center gap-4">
-            {prices && (
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
-                  <span className="text-blue-400">EUA</span>
-                  <span className="text-white font-mono">€{prices.eua.price.toFixed(2)}</span>
-                  <span className={prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                    {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
-                  <span className="text-amber-400">CEA</span>
-                  <span className="text-white font-mono">€{(prices.cea.price * 0.127).toFixed(2)}</span>
-                  <span className={prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                    {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(1)}%
-                  </span>
-                </div>
+    <div className="min-h-screen bg-slate-950">
+      {/* Header Bar - Matching Market Pages */}
+      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <LayoutDashboard className="w-5 h-5 text-emerald-500" />
               </div>
-            )}
+              <div>
+                <h1 className="text-xl font-bold text-white">Portfolio Overview</h1>
+                <p className="text-sm text-slate-400">Your account summary</p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-6 text-sm">
+              {prices && (
+                <>
+                  <div>
+                    <span className="text-slate-400 mr-2">EUA</span>
+                    <span className="font-bold font-mono text-white">
+                      €{prices.eua.price.toFixed(2)}
+                    </span>
+                    <span className={`ml-2 flex items-center gap-0.5 inline-flex ${
+                      prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    }`}>
+                      {prices.eua.change_24h >= 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 mr-2">CEA</span>
+                    <span className="font-bold font-mono text-white">
+                      €{(prices.cea.price_eur || prices.cea.price * 0.127).toFixed(2)}
+                    </span>
+                    <span className={`ml-2 flex items-center gap-0.5 inline-flex ${
+                      prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    }`}>
+                      {prices.cea.change_24h >= 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(2)}%
+                    </span>
+                  </div>
+                </>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleRefresh}
+                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </motion.button>
+            </div>
           </div>
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto p-6">
         {/* Account Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-400 text-sm">Cash Balance</span>
-              <CreditCard className="w-4 h-4 text-slate-500" />
-            </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             {loadingBalance ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+              <div className="bg-slate-900 rounded-xl border border-slate-800 p-5">
+                <div className="text-slate-500 text-xs uppercase tracking-wider mb-3">Cash</div>
+                <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
               </div>
-            ) : entityBalance ? (
-              <>
-                <div className="text-2xl font-bold text-emerald-400 font-mono">
-                  {entityBalance.balance_currency === 'EUR' ? '€' : entityBalance.balance_currency || '€'}
-                  {formatNumber(entityBalance.balance_amount, 2)}
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Available for trading
-                </div>
-              </>
             ) : (
-              <>
-                <div className="text-2xl font-bold text-white font-mono">
-                  {formatCurrency(MOCK_ACCOUNT.eur_balance)}
-                </div>
-                {MOCK_ACCOUNT.eur_locked > 0 && (
-                  <div className="text-xs text-amber-400 mt-1">
-                    {formatCurrency(MOCK_ACCOUNT.eur_locked)} locked
-                  </div>
-                )}
-              </>
+              <StatCard
+                title="Cash"
+                value={getCashValue()}
+                subtitle={getCashSubtitle()}
+                subtitleVariant={MOCK_ACCOUNT.eur_locked > 0 && !entityBalance ? 'warning' : 'default'}
+                variant="minimal"
+                className="border border-slate-800"
+              />
             )}
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-400 text-sm">CEA Balance</span>
-              <Leaf className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="text-2xl font-bold text-amber-400 font-mono">
-              {formatNumber(MOCK_ACCOUNT.cea_balance)}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">tonnes</div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+            <StatCard
+              title="CEA"
+              value={formatNumber(MOCK_ACCOUNT.cea_balance)}
+              valueColor="amber"
+              subtitle="tonnes CO₂"
+              variant="minimal"
+              className="border border-slate-800"
+            />
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-400 text-sm">EUA Balance</span>
-              <span className="text-lg">🇪🇺</span>
-            </div>
-            <div className="text-2xl font-bold text-blue-400 font-mono">
-              {formatNumber(MOCK_ACCOUNT.eua_balance)}
-            </div>
-            {MOCK_ACCOUNT.eua_pending > 0 && (
-              <div className="text-xs text-amber-400 mt-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatNumber(MOCK_ACCOUNT.eua_pending)} pending
-              </div>
-            )}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            <StatCard
+              title="EUA"
+              value={formatNumber(MOCK_ACCOUNT.eua_balance)}
+              valueColor="blue"
+              subtitle={MOCK_ACCOUNT.eua_pending > 0 ? `+${formatNumber(MOCK_ACCOUNT.eua_pending)} pending` : 'tonnes CO₂'}
+              subtitleVariant={MOCK_ACCOUNT.eua_pending > 0 ? 'warning' : 'default'}
+              variant="minimal"
+              className="border border-slate-800"
+            />
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-400 text-sm">Pending Orders</span>
-              <Clock className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="text-2xl font-bold text-white font-mono">
-              {MOCK_ACCOUNT.pending_orders}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">in progress</div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+            <StatCard
+              title="Orders"
+              value={MOCK_ACCOUNT.pending_orders}
+              subtitle="in progress"
+              variant="minimal"
+              className="border border-slate-800"
+            />
           </motion.div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Holdings Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2"
-          >
-            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-800">
-                <h2 className="font-semibold text-white">Holdings</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-slate-500 border-b border-slate-800">
-                      <th className="text-left px-4 py-3 font-medium">Asset</th>
-                      <th className="text-right px-4 py-3 font-medium">Balance</th>
-                      <th className="text-right px-4 py-3 font-medium">Avg Price</th>
-                      <th className="text-right px-4 py-3 font-medium">Value</th>
-                      <th className="text-right px-4 py-3 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MOCK_HOLDINGS.map((holding) => (
-                      <tr key={holding.asset} className="border-b border-slate-800/50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {holding.asset === 'EUR' && <CreditCard className="w-4 h-4 text-slate-400" />}
-                            {holding.asset === 'CEA' && <Leaf className="w-4 h-4 text-amber-500" />}
-                            {holding.asset === 'EUA' && <span className="text-sm">🇪🇺</span>}
-                            <span className="text-white font-medium">{holding.asset}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono">
-                          {holding.asset === 'EUR' ? (
-                            <span className="text-slate-400">{formatCurrency(holding.balance)}</span>
-                          ) : (
-                            <span className={holding.asset === 'CEA' ? 'text-amber-400' : 'text-blue-400'}>
-                              {formatNumber(holding.balance)} t
-                            </span>
-                          )}
-                          {holding.pending && holding.pending > 0 && (
-                            <div className="text-xs text-amber-400">
-                              +{formatNumber(holding.pending)} pending
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-400">
-                          {holding.avgPrice ? `€${(holding.avgPrice * 0.127).toFixed(2)}` : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-white">
-                          {holding.value > 0 ? formatCurrency(holding.value) : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {holding.status === 'available' && (
-                            <span className="text-emerald-400 text-xs flex items-center justify-end gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              {holding.statusText}
-                            </span>
-                          )}
-                          {holding.status === 'locked' && (
-                            <span className="text-amber-400 text-xs flex items-center justify-end gap-1">
-                              <Shield className="w-3 h-3" />
-                              {holding.statusText}
-                            </span>
-                          )}
-                          {holding.status === 'pending' && (
-                            <span className="text-amber-400 text-xs flex items-center justify-end gap-1">
-                              <Clock className="w-3 h-3" />
-                              {holding.statusText}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {/* Holdings Table */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-800">
+              <h2 className="font-semibold text-white">Holdings</h2>
             </div>
-          </motion.div>
-
-          {/* Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-4">
-              <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
-              <div className="space-y-3">
-                <Link to="/cash-market">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                          <Leaf className="w-5 h-5 text-amber-500" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-white">Buy CEA</h3>
-                          <p className="text-sm text-slate-400">Cash Market</p>
-                        </div>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </motion.div>
-                </Link>
-
-                {/* Swap is only available for ADMIN users, not FUNDED users */}
-                {!isFundedUser && (
-                  <Link to="/swap">
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl hover:bg-violet-500/20 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                            <ArrowRightLeft className="w-5 h-5 text-violet-500" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-white">Swap CEA → EUA</h3>
-                            <p className="text-sm text-slate-400">Swap Market</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </motion.div>
-                  </Link>
-                )}
-
-                {/* For FUNDED users, show info about their trading access */}
-                {isFundedUser && entityBalance && entityBalance.balance_amount > 0 && (
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                        <Wallet className="w-5 h-5 text-emerald-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white">Ready to Trade</h3>
-                        <p className="text-sm text-slate-400">
-                          {entityBalance.balance_currency === 'EUR' ? '€' : entityBalance.balance_currency}
-                          {formatNumber(entityBalance.balance_amount, 2)} available
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </div>
+            <DataTable
+              columns={holdingsColumns}
+              data={MOCK_HOLDINGS}
+              variant="dark"
+              rowKey="asset"
+              className="border-none rounded-none"
+            />
+          </div>
+        </motion.div>
 
         {/* Pending Orders */}
         {MOCK_PENDING_ORDERS.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25 }}
+            className="mb-6"
           >
             <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                <h2 className="font-semibold text-white">Pending Orders</h2>
-                <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
-                  {MOCK_PENDING_ORDERS.length} active
-                </span>
+              <div className="px-4 py-3 border-b border-slate-800">
+                <h2 className="font-semibold text-white">Active Orders</h2>
               </div>
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-3">
                 {MOCK_PENDING_ORDERS.map((order) => (
-                  <div key={order.id} className="bg-slate-800/50 rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                          <ArrowRightLeft className="w-5 h-5 text-violet-500" />
-                        </div>
+                  <div key={order.id} className="bg-slate-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <ArrowRightLeft className="w-4 h-4 text-slate-500" />
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{order.typeLabel}</span>
-                            <span className="text-xs text-slate-500">#{order.id}</span>
-                          </div>
-                          <p className="text-sm text-slate-400">{order.details}</p>
+                          <span className="text-white font-medium">{order.typeLabel}</span>
+                          <span className="text-slate-600 text-sm ml-3">{order.details}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-amber-400 text-sm flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {order.status === 'pending' ? 'Processing' : order.status}
-                        </span>
-                        <span className="text-xs text-slate-500">ETA: {order.eta}</span>
+                        <span className="status-pending">ETA {order.eta}</span>
                       </div>
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                        <span>Progress</span>
-                        <span>{order.progress}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${order.progress}%` }}
-                          transition={{ duration: 1, ease: 'easeOut' }}
-                          className="h-full bg-gradient-to-r from-amber-500 to-violet-500 rounded-full"
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Registry transfer in progress...
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <ProgressBar
+                        value={order.progress}
+                        variant="success"
+                        size="sm"
+                        animated
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-slate-500 font-mono w-10">{order.progress}%</span>
                     </div>
                   </div>
                 ))}
@@ -490,84 +449,29 @@ export function DashboardPage() {
 
         {/* Transaction History */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="mt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
         >
           <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="font-semibold text-white">Transaction History</h2>
-              <div className="flex rounded-lg overflow-hidden border border-slate-700">
-                <button
-                  onClick={() => setActiveTab('open')}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    activeTab === 'open'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Open Orders
-                </button>
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    activeTab === 'history'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  History
-                </button>
-              </div>
+              <h2 className="font-semibold text-white">History</h2>
+              <Tabs
+                tabs={historyTabs}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="pills"
+                size="sm"
+              />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-slate-500 border-b border-slate-800">
-                    <th className="text-left px-4 py-3 font-medium">Date</th>
-                    <th className="text-left px-4 py-3 font-medium">Type</th>
-                    <th className="text-left px-4 py-3 font-medium">Details</th>
-                    <th className="text-left px-4 py-3 font-medium">Status</th>
-                    <th className="text-left px-4 py-3 font-medium">Reference</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MOCK_TRANSACTIONS
-                    .filter(tx => activeTab === 'history' || tx.status === 'pending')
-                    .map((tx) => (
-                    <tr key={tx.id} className="border-b border-slate-800/50">
-                      <td className="px-4 py-3 text-slate-400">{tx.date}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {tx.type === 'SWAP' && <ArrowRightLeft className="w-4 h-4 text-violet-400" />}
-                          {tx.type === 'BUY CEA' && <Leaf className="w-4 h-4 text-amber-400" />}
-                          {tx.type === 'DEPOSIT' && <Wallet className="w-4 h-4 text-emerald-400" />}
-                          {tx.type === 'KYC' && <Shield className="w-4 h-4 text-blue-400" />}
-                          {tx.type === 'NDA' && <FileText className="w-4 h-4 text-slate-400" />}
-                          <span className="text-white">{tx.type}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-300">{tx.details}</td>
-                      <td className="px-4 py-3">
-                        {tx.status === 'done' ? (
-                          <span className="text-emerald-400 flex items-center gap-1 text-xs">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Done
-                          </span>
-                        ) : (
-                          <span className="text-amber-400 flex items-center gap-1 text-xs">
-                            <Clock className="w-3 h-3" />
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-500 text-xs">{tx.ref}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={transactionColumns}
+              data={filteredTransactions}
+              variant="dark"
+              rowKey="id"
+              emptyMessage="No transactions"
+              className="border-none rounded-none"
+            />
           </div>
         </motion.div>
       </div>
