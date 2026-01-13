@@ -14,7 +14,7 @@ import {
   Calendar,
   Layers,
 } from 'lucide-react';
-import { OnboardingLayout, colors } from '@/components/onboarding';
+import { OnboardingLayout, colors, LivePriceComparison } from '@/components/onboarding';
 
 // EU ETS Phase Data
 const euEtsPhases = [
@@ -415,20 +415,7 @@ export default function MarketOverviewPage() {
           <p className="text-lg mb-6" style={{ color: colors.textSecondary }}>
             The European Union Emissions Trading System (EU ETS) and China's national carbon market together cover over <strong style={{ color: colors.textPrimary }}>6.1 billion tonnes of CO2</strong> emissions annually, representing the world's two largest carbon markets. Despite their scale, fundamental differences in market design, pricing, and accessibility create significant arbitrage opportunities for sophisticated participants.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-              <div className="text-3xl font-extrabold" style={{ color: colors.secondaryLight }}>EUR 88/t</div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>EU EUA Current Price</div>
-            </div>
-            <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-              <div className="text-3xl font-extrabold" style={{ color: colors.danger }}>CNY 63/t</div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>China CEA Current Price (~EUR 8)</div>
-            </div>
-            <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-              <div className="text-3xl font-extrabold" style={{ color: colors.success }}>7-10x</div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>Price Differential</div>
-            </div>
-          </div>
+          <LivePriceComparison />
         </div>
       </section>
 
