@@ -344,6 +344,22 @@ const economicValue = {
     { category: 'Verification Cost', traditional: 'High', nihao: 'Low (automated)', improvement: '50% - 70%' },
     { category: 'Buyer Access', traditional: 'Limited', nihao: 'Global', improvement: '10x - 100x' },
   ],
+  institutionalValue: [
+    { category: 'Portfolio Risk Reduction', traditional: 'High volatility exposure', nihao: 'Hedging tools + diversification', improvement: '40% - 60% risk reduction' },
+    { category: 'Market Access Cost', traditional: 'Multiple platform fees', nihao: 'Single unified platform', improvement: '50% - 70% cost reduction' },
+    { category: 'Due Diligence Time', traditional: '4-8 weeks per project', nihao: '1-2 weeks (AI-assisted)', improvement: '70% - 85% faster' },
+    { category: 'Settlement Risk', traditional: 'T+2 to T+5 exposure', nihao: 'Real-time DvP settlement', improvement: '100% elimination' },
+    { category: 'Market Depth Access', traditional: 'Fragmented liquidity', nihao: '€33B daily EU ETS access', improvement: '10x - 100x liquidity' },
+    { category: 'Compliance Reporting', traditional: 'Manual compilation', nihao: 'Automated reporting', improvement: '60% - 80% effort reduction' },
+  ],
+  regulatorValue: [
+    { category: 'Market Surveillance Efficiency', traditional: 'Manual oversight', nihao: 'Real-time automated monitoring', improvement: '70% - 90% efficiency gain' },
+    { category: 'Audit Trail Completeness', traditional: '60% - 70% visibility', nihao: '100% transparent records', improvement: '100% audit coverage' },
+    { category: 'Double-Counting Detection', traditional: 'Post-hoc discovery', nihao: 'Real-time prevention', improvement: '100% prevention rate' },
+    { category: 'Cross-Border Coordination', traditional: 'Bilateral negotiations', nihao: 'Standardized API reporting', improvement: '80% faster coordination' },
+    { category: 'Compliance Violation Detection', traditional: 'Weeks to months', nihao: 'Real-time alerts', improvement: '95% faster detection' },
+    { category: 'Market Integrity Score', traditional: 'Low confidence', nihao: 'High integrity assurance', improvement: 'Qualitative improvement' },
+  ],
   marketProjections: {
     vcm: [
       { year: '2025', value: '$1.6 - $4.04 billion' },
@@ -1140,6 +1156,66 @@ const EconomicValueSection = () => (
           </thead>
           <tbody>
             {economicValue.developerSavings.map((row, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
+                <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
+                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
+                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.nihao}</td>
+                <td className="px-4 py-3 text-center font-bold" style={{ color: colors.success }}>{row.improvement}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Institutional Investors Value Table */}
+    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.secondary }}>
+        <Landmark className="w-5 h-5" />
+        Value Analysis: For Institutional Investors & Financial Institutions
+      </h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ backgroundColor: colors.bgCard }}>
+              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Value Category</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional Market</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Improvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            {economicValue.institutionalValue.map((row, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
+                <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
+                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
+                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.nihao}</td>
+                <td className="px-4 py-3 text-center font-bold" style={{ color: colors.success }}>{row.improvement}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* Regulators & Standards Bodies Value Table */}
+    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.accent }}>
+        <Shield className="w-5 h-5" />
+        Value Analysis: For Regulators & Standards Bodies
+      </h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ backgroundColor: colors.bgCard }}>
+              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Oversight Category</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional Market</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
+              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Efficiency Gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            {economicValue.regulatorValue.map((row, i) => (
               <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
                 <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
                 <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
