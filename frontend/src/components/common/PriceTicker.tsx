@@ -20,18 +20,7 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
   }, [prices?.updated_at]);
 
   if (!prices) {
-    return (
-      <div className="flex items-center gap-8">
-        <div className="animate-pulse flex items-center gap-4">
-          <div className="h-4 w-20 bg-navy-200 dark:bg-navy-700 rounded"></div>
-          <div className="h-6 w-24 bg-navy-200 dark:bg-navy-700 rounded"></div>
-        </div>
-        <div className="animate-pulse flex items-center gap-4">
-          <div className="h-4 w-20 bg-navy-200 dark:bg-navy-700 rounded"></div>
-          <div className="h-6 w-24 bg-navy-200 dark:bg-navy-700 rounded"></div>
-        </div>
-      </div>
-    );
+    return null; // Hide ticker while loading instead of showing placeholders
   }
 
   const getTrendIcon = (change: number) => {
