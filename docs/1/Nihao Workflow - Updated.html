@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nihao Operational Workflow - Live Trading Model</title>
+    <style>
+        :root {
+            --color-bg-primary: #0f1419;
+            --color-bg-secondary: #1a1f2e;
+            --color-bg-tertiary: #252d3d;
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #a0aec0;
+            --color-primary: #2db8c6;
+            --color-primary-hover: #1d9aa6;
+            --color-accent-green: #48bb78;
+            --color-accent-orange: #ed8936;
+            --color-accent-red: #f56565;
+            --color-border: #3a4556;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+            border-bottom: 2px solid var(--color-primary);
+            padding: 40px 0;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: var(--color-primary);
+        }
+
+        header p {
+            color: var(--color-text-secondary);
+            font-size: 1.1em;
+        }
+
+        .version-info {
+            color: var(--color-text-secondary);
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+
+        nav {
+            background-color: var(--color-bg-secondary);
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--color-border);
+            z-index: 1000;
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        nav a {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: var(--color-bg-tertiary);
+            color: var(--color-primary);
+            text-decoration: none;
+            border-radius: 5px;
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        nav a:hover {
+            background-color: var(--color-primary);
+            color: var(--color-bg-primary);
+            border-color: var(--color-primary);
+        }
+
+        section {
+            margin-bottom: 50px;
+            background-color: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 30px;
+        }
+
+        h2 {
+            font-size: 2em;
+            color: var(--color-primary);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        h3 {
+            font-size: 1.5em;
+            color: var(--color-text-primary);
+            margin: 25px 0 15px 0;
+            padding-left: 10px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        h4 {
+            font-size: 1.2em;
+            color: var(--color-primary);
+            margin: 15px 0 10px 0;
+        }
+
+        .timeline-item {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: var(--color-bg-tertiary);
+            border-left: 4px solid var(--color-accent-green);
+            border-radius: 5px;
+        }
+
+        .timeline-item.pending {
+            border-left-color: var(--color-accent-orange);
+        }
+
+        .timeline-item.complete {
+            border-left-color: var(--color-accent-green);
+        }
+
+        .timeline-item.failed {
+            border-left-color: var(--color-accent-red);
+        }
+
+        .timeline-item h5 {
+            margin: 0 0 10px 0;
+            color: var(--color-text-primary);
+            font-size: 1.05em;
+        }
+
+        .timeline-item .time {
+            color: var(--color-text-secondary);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .process-flow {
+            background-color: var(--color-bg-tertiary);
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 1px solid var(--color-border);
+        }
+
+        .process-flow pre {
+            overflow-x: auto;
+            background-color: var(--color-bg-primary);
+            padding: 15px;
+            border-radius: 5px;
+            color: var(--color-primary);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .email-template {
+            background-color: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+
+        .email-template .subject {
+            color: var(--color-accent-green);
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .email-template .body {
+            color: var(--color-text-secondary);
+            line-height: 1.8;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px 5px 5px 0;
+        }
+
+        .status-complete {
+            background-color: rgba(72, 187, 120, 0.2);
+            color: var(--color-accent-green);
+            border: 1px solid var(--color-accent-green);
+        }
+
+        .status-pending {
+            background-color: rgba(237, 137, 54, 0.2);
+            color: var(--color-accent-orange);
+            border: 1px solid var(--color-accent-orange);
+        }
+
+        .status-failed {
+            background-color: rgba(245, 101, 101, 0.2);
+            color: var(--color-accent-red);
+            border: 1px solid var(--color-accent-red);
+        }
+
+        .stat-box {
+            display: inline-block;
+            background-color: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin: 10px 10px 10px 0;
+            min-width: 200px;
+        }
+
+        .stat-box .label {
+            color: var(--color-text-secondary);
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .value {
+            color: var(--color-primary);
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .comparison-table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th {
+            background-color: var(--color-bg-tertiary);
+            color: var(--color-primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--color-border);
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+        }
+
+        .comparison-table tr:hover {
+            background-color: var(--color-bg-tertiary);
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(45, 184, 198, 0.1) 0%, rgba(45, 184, 198, 0.05) 100%);
+            border-left: 4px solid var(--color-primary);
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .highlight-box strong {
+            color: var(--color-primary);
+        }
+
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        li {
+            margin: 8px 0;
+            color: var(--color-text-secondary);
+        }
+
+        li strong {
+            color: var(--color-text-primary);
+        }
+
+        .code-block {
+            background-color: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .code-block code {
+            color: var(--color-primary);
+            line-height: 1.5;
+        }
+
+        footer {
+            background-color: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border);
+            padding: 30px 0;
+            margin-top: 50px;
+            text-align: center;
+            color: var(--color-text-secondary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--color-primary);
+            color: var(--color-bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+
+            h3 {
+                font-size: 1.2em;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            nav a {
+                display: block;
+                text-align: center;
+            }
+
+            .stat-box {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>NIHAO CARBON PLATFORM</h1>
+            <p>Operational Workflow Guide - Live Trading Model</p>
+            <div class="version-info">
+                <strong>VERSION 2.0 | January 8, 2026</strong><br>
+                Production-Ready Workflow Documentation | Marketplace CEA + Swap Center + Direct Execution
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#deposits">Deposits</a></li>
+                <li><a href="#marketplace">Marketplace</a></li>
+                <li><a href="#swap">Swap Center</a></li>
+                <li><a href="#timeline">Timeline</a></li>
+                <li><a href="#communications">Communications</a></li>
+                <li><a href="#benchmark">Benchmarks</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+
+            <!-- EXECUTIVE SUMMARY -->
+            <section id="overview">
+                <h2>Executive Summary</h2>
+                
+                <div class="highlight-box">
+                    <strong>Platform Operating Model: LIVE, REAL-TIME, CLIENT-DIRECTED</strong>
+                    <ul style="margin-top: 15px;">
+                        <li>NO Pre-Trade approval delays</li>
+                        <li>NO mandatory acceptance windows</li>
+                        <li>Direct order placement by Client → Immediate execution by Nihao</li>
+                        <li>All settlement handled transparently through Nihao intermediation</li>
+                        <li>Automated status updates and lifecycle communications</li>
+                        <li>Dynamic status dashboard accessible 24/7</li>
+                    </ul>
+                </div>
+
+                <h3>Client Journey - Three-Phase Model</h3>
+                <h4>Phase 1: Account & Funding</h4>
+                <ol>
+                    <li>Client completes KYC/AML verification</li>
+                    <li>Fund Escrow Account (deposit EUR/USD)</li>
+                    <li>AML hold period (1-2 business days)</li>
+                    <li>Funds cleared and ready for trading</li>
+                </ol>
+
+                <h4>Phase 2: CEA Marketplace Acquisition</h4>
+                <ol>
+                    <li>Browse Marketplace CEA (real-time listings)</li>
+                    <li>Place buy order (immediate execution)</li>
+                    <li>CEA transfer initiated from seller</li>
+                    <li>CEA received at Nihao custody (2-3 business days)</li>
+                    <li>Client receives CEA custody confirmation</li>
+                </ol>
+
+                <h4>Phase 3: CEA-to-EUA Swap Execution</h4>
+                <ol>
+                    <li>Browse Swap Center (real-time swap offers)</li>
+                    <li>Execute swap order (immediate matching)</li>
+                    <li>CEA transferred to swap counterparty</li>
+                    <li>EUA received from counterparty at Nihao</li>
+                    <li>EUA delivered to Client's Union Registry account (T+3 to T+5)</li>
+                    <li>Transaction complete, compliance-ready</li>
+                </ol>
+
+                <div class="stat-box">
+                    <div class="label">Phase 1 Timeline</div>
+                    <div class="value">5-7 business days</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Phase 2 Timeline</div>
+                    <div class="value">2-3 business days</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Phase 3 Timeline</div>
+                    <div class="value">3-5 business days</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Total Platform Lifecycle</div>
+                    <div class="value">10-15 business days</div>
+                </div>
+
+            </section>
+
+            <!-- PHASE 1: ACCOUNT & FUNDING -->
+            <section id="deposits">
+                <h2>Phase 1: Account & Funding</h2>
+
+                <h3>1.1 Client KYC/AML Verification</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">1-2 business days</div>
+                </div>
+
+                <p><strong>Client Action:</strong></p>
+                <div class="process-flow">
+                    <pre>Logs into Nihao Platform
+    └── Navigates to "Account Setup" → "KYC/AML"
+    └── Provides personal/corporate identification
+    └── Submits proof of address and source of funds
+    └── Completes compliance questionnaire
+    └── System processes documents (automated + manual review)</pre>
+                </div>
+
+                <p><strong>Nihao Verification Process:</strong></p>
+                <ul>
+                    <li>Document authentication (ID verification)</li>
+                    <li>Background screening (PEP/sanctions checks)</li>
+                    <li>Source of funds verification</li>
+                    <li>Risk assessment classification</li>
+                    <li>Final approval by compliance team</li>
+                </ul>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ Your KYC/AML Verification is Complete</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Your KYC/AML verification has been successfully completed.<br><br>
+<strong>VERIFICATION STATUS: ✓ APPROVED</strong><br>
+Verification Date: [Date]<br>
+Compliance Level: Standard Client<br><br>
+Your account is now fully enabled for trading. You can proceed with account funding.<br><br>
+<strong>NEXT STEP:</strong><br>
+Navigate to "Account" → "Deposit Funds" to fund your escrow account.<br><br>
+Best regards,<br>
+Nihao Compliance Team
+                    </div>
+                </div>
+
+                <h3>1.2 Client Initiates Deposit</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">Immediate (same day)</div>
+                </div>
+
+                <p><strong>Client Action:</strong></p>
+                <div class="process-flow">
+                    <pre>Logs into Nihao Platform
+    └── Navigates to "Account" → "Deposit Funds"
+    └── Selects currency (EUR, USD, GBP) and amount
+    └── Confirms bank wire details provided by Nihao
+    └── Initiates wire transfer from their bank</pre>
+                </div>
+
+                <p><strong>Platform Display (Real-time):</strong></p>
+                <div class="process-flow">
+                    <pre>Deposit amount: [EUR/USD amount]
+Status: "PENDING - Awaiting Bank Confirmation"
+Wire reference: Unique deposit ID (e.g., DEP-2026-001-AA)
+Estimated arrival: 2-5 business days
+Escrow Account balance: Still showing previous balance</pre>
+                </div>
+
+                <h3>1.2 Nihao Receives Wire Transfer</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">2-5 business days</div>
+                </div>
+
+                <p><strong>Bank Transfer Path:</strong></p>
+                <div class="process-flow">
+                    <pre>Client's bank sends SWIFT wire
+    └── Wire travels through 1-3 intermediary banks (routing)
+    └── Nihao's bank receives wire at Escrow Account
+    └── Bank matches wire to deposit reference number
+    └── Funds cleared and available (1-2 business days post-receipt)</pre>
+                </div>
+
+                <h3>1.3 AML Hold Period & Account Clearance</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">1-2 business days</div>
+                </div>
+
+                <table class="comparison-table">
+                    <tr>
+                        <th>Deposit Type</th>
+                        <th>Hold Duration</th>
+                        <th>Purpose</th>
+                    </tr>
+                    <tr>
+                        <td><strong>First Deposit (≥EUR 50,000)</strong></td>
+                        <td>2 business days</td>
+                        <td>Enhanced AML screening and counterparty verification</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Subsequent Deposits (<24 months)</strong></td>
+                        <td>1 business day</td>
+                        <td>Routine AML verification for verified customers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Large Deposits (>EUR 500,000)</strong></td>
+                        <td>3 business days</td>
+                        <td>Senior compliance review, source of funds verification</td>
+                    </tr>
+                </table>
+
+                <h3>1.4 Funds Cleared & Ready for Trading</h3>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ Your Nihao Escrow Account is Ready for Trading</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Your deposit of EUR [amount] has been successfully received, verified, and cleared.<br><br>
+<strong>Account Status: ✓ CLEARED & READY</strong><br><br>
+Available Balance: EUR [amount]<br>
+Account Reference: ACC-[XXXXX]<br>
+Last Updated: [Date] [Time] HK time<br>
+Currency: EUR<br><br>
+Your account is now fully enabled for trading in both the Marketplace CEA and Swap Center.<br><br>
+<strong>PHASE 1 COMPLETE ✓</strong><br>
+You have successfully completed account setup and funding. Proceed to Phase 2: Marketplace CEA acquisition.<br><br>
+<strong>NEXT STEPS - PHASE 2:</strong><br>
+1. Log into your Nihao Platform account<br>
+2. Navigate to "MARKETPLACE CEA"<br>
+3. Browse available CEA listings (real-time pricing)<br>
+4. Select CEA and place buy orders<br>
+5. Your orders execute immediately<br>
+6. CEA will arrive at Nihao custody within 2-3 business days<br><br>
+<strong>DASHBOARD:</strong><br>
+Your account dashboard is accessible 24/7 with live status on all orders, transfers, and account activity.<br><br>
+Questions? Contact: support@nihaogroup.hk or +852 3062 3366<br><br>
+Best regards,<br>
+Nihao Trading Team
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- PHASE 2: MARKETPLACE CEA ACQUISITION -->
+            <section id="marketplace">
+                <h2>Phase 2: Marketplace CEA - Buy Orders & Execution</h2>
+
+                <div class="highlight-box">
+                    <strong>Client browses available CEA listings from Nihao's verified seller network. Client selects listings and places buy orders. Nihao executes purchases immediately on Client's behalf. CEA transferred to Nihao custody for Client.</strong>
+                </div>
+
+                <h3>2.1 Client Browses Marketplace CEA</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">Real-time (immediate viewing)</div>
+                </div>
+
+                <p><strong>Platform Display (Marketplace):</strong></p>
+                <div class="process-flow">
+                    <pre>Header: "CEA Marketplace - 50 Active Listings"
+Current Market Price: EUR 10.14 per CEA
+Daily Volume: 35 trades today
+Exchange Rate: 8.68 CEA per 1 EUA
+
+Filter Options:
+├─ Quantity range: [slider 0-100,000 tCO2e]
+├─ Price range: EUR [slider]
+├─ Vintage: 2024-2025 (dropdown)
+├─ Seller rating: 4+ stars (checkbox)
+└─ Delivery timeline: 1-3 days (checkbox)</pre>
+                </div>
+
+                <h3>2.2 Client Selects & Places Buy Order</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">Real-time (immediate execution)</div>
+                </div>
+
+                <p><strong>Order Placement Modal Example:</strong></p>
+                <div class="code-block">
+                    <code>
+Seller: SC Trading (★★★★★ 4.8 stars)<br>
+Listing ID: SC-597756<br>
+Vintage: 2025<br><br>
+Available Quantity: 1,082.86 tCO2e<br>
+Unit Price: EUR 12.96<br>
+TOTAL COST: EUR 14,031.56<br><br>
+AVAILABLE FUNDS: EUR 50,000.00<br>
+Remaining after order: EUR 35,968.44<br><br>
+[PLACE ORDER]
+                    </code>
+                </div>
+
+                <h3>2.3 Nihao Executes Buy Order (IMMEDIATE)</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">0-5 minutes</div>
+                </div>
+
+                <div class="timeline-item complete">
+                    <h5>✓ Step 1: Order Capture (1-2 minutes)</h5>
+                    <div class="time">Immediate upon client submission</div>
+                    <ul>
+                        <li>Nihao Platform receives Client order</li>
+                        <li>System validates all requirements (funds, KYC, seller availability)</li>
+                        <li>Validation: PASSED</li>
+                        <li>Status: Order confirmed, settlement initiated</li>
+                    </ul>
+                </div>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ CEA Buy Order Confirmed - Order ID: ORD-2026-001234-CEA</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Your buy order has been CONFIRMED and settlement has been initiated.<br><br>
+<strong>ORDER DETAILS:</strong><br>
+Order ID: ORD-2026-001234-CEA<br>
+Seller: SC Trading<br>
+Quantity: 1,082.86 tCO2e (vintage 2025)<br>
+Price: EUR 12.96 per unit<br>
+Total Cost: EUR 14,031.56<br>
+Status: SETTLEMENT INITIATED<br><br>
+<strong>FUNDS STATUS:</strong><br>
+Amount Reserved: EUR 14,031.56<br>
+Remaining Available: EUR 35,968.44<br>
+Total Account Balance: EUR 50,000.00<br><br>
+<strong>WHAT HAPPENS NEXT:</strong><br>
+Today (T+0): Order confirmed, settlement initiated<br>
+Tomorrow (T+1): Nihao coordinates CEA transfer with seller<br>
+Day 2 (T+2): CEA transfer in progress<br>
+Day 3 (T+3): CEA arrives at Nihao custody<br><br>
+Best regards,<br>
+Nihao Trading Desk
+                    </div>
+                </div>
+
+                <div class="timeline-item complete">
+                    <h5>✓ Step 2: Fund Encumbrance (2-3 minutes)</h5>
+                    <ul>
+                        <li>Nihao Finance encumbers Client funds</li>
+                        <li>Amount: EUR 14,031.56 (immediately reserved)</li>
+                        <li>Remaining available balance: EUR 35,968.44</li>
+                        <li>Status: "FUNDS RESERVED - NOT AVAILABLE FOR OTHER TRADES"</li>
+                    </ul>
+                </div>
+
+                <h3>2.4 CEA Transfer - Seller to Nihao (T+1 to T+3)</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">1-3 business days</div>
+                </div>
+
+                <div class="timeline-item pending">
+                    <h5>T+1 (Tomorrow) - Seller Initiates Transfer</h5>
+                    <ul>
+                        <li>Seller logs into registry system</li>
+                        <li>Seller initiates transfer: 1,082.86 tCO2e to Nihao's registry account</li>
+                        <li>Transfer reference: TRF-SC-597756-001</li>
+                        <li>Registry receives transfer request</li>
+                        <li>Status: "TRANSFER INITIATED"</li>
+                    </ul>
+                </div>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ⚡ CEA Transfer In Progress - Order ORD-2026-001234-CEA</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+The CEA transfer has been INITIATED by the seller SC Trading.<br><br>
+<strong>TRANSFER STATUS:</strong><br>
+Transfer Reference: TRF-SC-597756-001<br>
+Status: IN REGISTRY PROCESSING<br>
+Quantity: 1,082.86 tCO2e<br>
+Destination: Nihao Custody Account<br>
+Expected Arrival: T+2 or T+3 (by end of week)<br><br>
+THE TRANSFER PROCESS:<br>
+1. Seller submits transfer in registry (✓ DONE T+1)<br>
+2. Registry validates transfer details (IN PROGRESS)<br>
+3. Registry processes and transfers CEA<br>
+4. Nihao's registry account receives CEA (EXPECTED T+2-T+3)<br>
+5. Nihao confirms receipt (will send confirmation email)<br><br>
+Best regards,<br>
+Nihao Settlement Team
+                    </div>
+                </div>
+
+                <div class="timeline-item complete">
+                    <h5>✓ T+2-T+3: CEA Arrives at Nihao Custody</h5>
+                    <ul>
+                        <li>Registry processes and completes transfer</li>
+                        <li>Nihao's registry account receives 1,082.86 tCO2e</li>
+                        <li>Nihao verifies receipt (quantity, vintage, compliance)</li>
+                        <li>Status: "CEA RECEIVED AT NIHAO CUSTODY"</li>
+                    </ul>
+                </div>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ CEA RECEIVED - Ready for Swap! Order ORD-2026-001234-CEA</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Congratulations! Your CEA has been successfully received at Nihao custody.<br><br>
+<strong>CEA RECEIPT CONFIRMED:</strong><br>
+Quantity: 1,082.86 tCO2e<br>
+Vintage: 2025<br>
+Reference: SET-2026-001234-CEA<br>
+Received: [Date] [Time] HK time<br>
+Status: ✓ IN NIHAO CUSTODY<br><br>
+<strong>YOUR ACCOUNT UPDATE:</strong><br>
+CEA Available for Swap: 1,082.86 tCO2e<br>
+CEA Available in Platform: Click "Swap Center" to view<br>
+EUR Remaining in Account: EUR 35,968.44<br><br>
+<strong>WHAT TO DO NEXT:</strong><br>
+Navigate to "Swap Center" and browse available EUA swap offers. We recommend swapping while rates are favorable.<br><br>
+Best regards,<br>
+Nihao Trading Team
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- PHASE 3: CEA-TO-EUA SWAP EXECUTION -->
+            <section id="swap">
+                <h2>Phase 3: Swap Center - CEA to EUA Execution</h2>
+
+                <div class="highlight-box">
+                    <strong>PHASE 2 MILESTONE: CEA now in Nihao custody. Client proceeds to Phase 3: browse Swap Center for EUA counterparties. Client selects swap offer and places swap order. Nihao executes swap immediately on Client's behalf.</strong>
+                </div>
+
+                <h3>3.1 Client Browses Swap Center</h3>
+                <div class="stat-box">
+                    <div class="label">Timeline</div>
+                    <div class="value">Real-time (immediate viewing)</div>
+                </div>
+
+                <p><strong>Platform Display (Swap Center):</strong></p>
+                <div class="process-flow">
+                    <pre>Header: "Swap Center - Live CEA ↔ EUA Swaps"
+Current Market Rate: 8.68 CEA per 1 EUA
+Open Swaps: 21 active swap requests
+Matched Today: 9 successful swaps completed
+Platform Fee: 0.5% on each side</pre>
+                </div>
+
+                <p><strong>ACTIVE SWAP OFFERS (sample):</strong></p>
+                <div class="code-block">
+                    <code>
+Swap Offer #1: BE-416498<br>
+├─ Direction: CEA → EUA<br>
+├─ Rate: 0.1689 EUA per CEA (5.92 CEA per EUA)<br>
+├─ Quantity: 138.71 CEA → 23.43 EUA<br>
+├─ Counterparty: EU Energy Trading Ltd (★★★★★ 4.8 stars)<br>
+├─ Settlement: T+2 (Express)<br>
+└─ Platform Fee: 0.5%<br><br>
+Swap Offer #2: LM-289396 ← RECOMMENDED<br>
+├─ Direction: CEA → EUA<br>
+├─ Rate: 0.1170 EUA per CEA (8.55 CEA per EUA)<br>
+├─ Quantity: 7,024.88 CEA → 822.18 EUA<br>
+├─ Counterparty: Nihao Liquidity Provider (★★★★★ 5.0 stars)<br>
+├─ Settlement: T+2 (Express)<br>
+└─ Platform Fee: 0.5%
+                    </code>
+                </div>
+
+                <h3>3.2 Client Selects & Places Swap Order</h3>
+
+                <p><strong>Swap Confirmation Modal:</strong></p>
+                <div class="code-block">
+                    <code>
+YOU SEND: 1,082.86 tCO2e CEA (Vintage 2025)<br><br>
+SWAP RATE: 0.1170 EUA per CEA<br>
+(or 8.55 CEA per 1 EUA)<br><br>
+YOU RECEIVE: 126.69 EUA<br><br>
+PLATFORM FEE:<br>
+Fee on Swap Value: 0.5%<br>
+EUR Value of Swap: ~EUR 13,929<br>
+Platform Fee: EUR 69.65 (0.5%)<br>
+Final EUA Received: 126.11 EUA<br><br>
+SETTLEMENT TIMELINE:<br>
+Settlement Speed: Express (T+2)<br>
+├─ T+0: Swap confirmed<br>
+├─ T+1: CEA transfer to counterparty<br>
+├─ T+2: EUA transfer to Nihao custody<br>
+└─ T+5: EUA delivered to your registry
+                    </code>
+                </div>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ Swap Confirmed - CEA→EUA Swap ID: SWP-2026-005678-CEA-EUA</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Your swap order has been CONFIRMED and settlement has been initiated.<br><br>
+<strong>SWAP DETAILS:</strong><br>
+Swap ID: SWP-2026-005678-CEA-EUA<br>
+Direction: CEA → EUA<br>
+Counterparty: Nihao Liquidity Provider<br>
+Status: SETTLEMENT INITIATED<br><br>
+<strong>YOU SEND:</strong><br>
+Quantity: 1,082.86 tCO2e<br>
+Vintage: 2025<br><br>
+<strong>YOU RECEIVE:</strong><br>
+Quantity: 126.69 EUA (before fees)<br>
+Platform Fee: 0.58 EUA (0.5%)<br>
+Net Quantity: 126.11 EUA<br><br>
+<strong>SETTLEMENT TIMELINE:</strong><br>
+Today (T+0): Swap confirmed<br>
+Tomorrow (T+1): CEA transfer from Nihao to counterparty initiated<br>
+Day 2 (T+2): EUA transfer from counterparty to Nihao initiated<br>
+Day 5 (T+5): EUA delivered to your Union Registry account<br><br>
+Best regards,<br>
+Nihao Trading Team
+                    </div>
+                </div>
+
+                <h3>3.4 CEA Transfer Out - Nihao to Counterparty (T+1)</h3>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ⚡ CEA Transfer Complete - Your Swap in Progress (SWP-2026-005678)</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Your CEA transfer has been INITIATED and is in progress to the counterparty.<br><br>
+<strong>CEA TRANSFER STATUS:</strong><br>
+Transfer Reference: TRF-SWAP-005678-OUT<br>
+Status: IN REGISTRY PROCESSING<br>
+Quantity: 1,082.86 tCO2e (Vintage 2025)<br>
+Expected: Complete T+1-T+2<br><br>
+<strong>SWAP PROGRESS:</strong><br>
+[✓] Swap confirmed (T+0)<br>
+[✓] CEA transfer initiated (T+1) ← YOU ARE HERE<br>
+[ ] EUA counterparty receives CEA (T+1-T+2)<br>
+[ ] EUA counterparty transfers EUA to Nihao (T+2)<br>
+[ ] Nihao receives EUA (T+2-T+3)<br>
+[ ] Nihao transfers EUA to your registry (T+3-T+5)<br>
+[ ] ✓ EUA in your account (final T+5)<br><br>
+Best regards,<br>
+Nihao Settlement Team
+                    </div>
+                </div>
+
+                <h3>3.5 EUA Transfer In - Counterparty to Nihao (T+2-T+3)</h3>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ EUA RECEIVED - Final Transfer to Your Registry (SWP-2026-005678)</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+Great news! The EUA has been successfully received at Nihao custody.<br><br>
+<strong>EUA RECEIPT CONFIRMED:</strong><br>
+Quantity: 126.69 EUA<br>
+Status: Received and verified at Nihao<br>
+Received: [Date] [Time] HK time<br><br>
+<strong>FINAL STEP - YOUR REGISTRY TRANSFER:</strong><br>
+Nihao is now initiating the final transfer of your EUA to your Union Registry account.<br><br>
+Transfer Details:<br>
+├─ From: Nihao Registry Account (EU Union Registry)<br>
+├─ To: Your Union Registry Account [XX-OPR-YYYY-XXXX]<br>
+├─ Quantity: 126.69 EUA<br>
+├─ Initiated: [Date] Today<br>
+└─ Expected Arrival: T+3 to T+5 (registry processing)<br><br>
+Best regards,<br>
+Nihao Settlement Team
+                    </div>
+                </div>
+
+                <h3>3.6 Final EUA Delivery - Nihao to Client's Registry (T+3 to T+5)</h3>
+
+                <div class="email-template">
+                    <div class="subject">SUBJECT: ✓ SWAP COMPLETE - Your EUA is in Your Union Registry Account!</div>
+                    <div class="body">
+Dear [Client Name],<br><br>
+EXCELLENT NEWS! Your swap has been successfully completed.<br><br>
+Your 126.11 EUA are now in your Union Registry account and ready to use!<br><br>
+<strong>SWAP COMPLETION SUMMARY:</strong><br>
+Swap ID: SWP-2026-005678-CEA-EUA<br>
+Status: ✓ COMPLETE<br>
+Completion Date: [Date] [Time]<br><br>
+YOU SENT: 1,082.86 tCO2e CEA (Vintage 2025)<br>
+YOU RECEIVED: 126.11 EUA (net of 0.5% platform fee)<br>
+SWAP RATE: 0.1170 EUA per CEA (8.55 CEA per EUA)<br>
+EUR VALUE: Approximately EUR 11,064 @ current rate<br><br>
+<strong>YOUR UNION REGISTRY ACCOUNT:</strong><br>
+Account ID: [XX-OPR-YYYY-XXXX]<br>
+EUA Arrived: [Date] [Time]<br>
+Current Holdings: 126.11 EUA (Verified ✓)<br>
+Status: READY FOR USE<br><br>
+<strong>WHAT YOU CAN DO NOW:</strong><br>
+1. SURRENDER FOR COMPLIANCE<br>
+2. HOLD FOR FUTURE USE<br>
+3. TRANSFER TO ANOTHER ACCOUNT<br>
+4. TRADE AGAIN<br><br>
+Thank you for trading with Nihao!<br><br>
+Best regards,<br>
+Nihao Trading Team
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- TIMELINE -->
+            <section id="timeline">
+                <h2>Phase Overview: Complete Workflow Timeline</h2>
+
+                <h3>Full Lifecycle - Time Breakdown</h3>
+
+                <table class="comparison-table">
+                    <tr>
+                        <th>Phase</th>
+                        <th>Key Milestone</th>
+                        <th>Duration</th>
+                        <th>Emails</th>
+                        <th>Completion Gate</th>
+                    </tr>
+                    <tr>
+                        <td><strong>PHASE 1<br>Account & Funding</strong></td>
+                        <td>KYC + Deposit + AML Hold</td>
+                        <td>6-9 business days</td>
+                        <td>5 emails</td>
+                        <td>✓ Funds Cleared</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PHASE 2<br>CEA Marketplace</strong></td>
+                        <td>Buy Order + CEA Transfer</td>
+                        <td>2-3 business days</td>
+                        <td>3 emails</td>
+                        <td>✓ CEA in Custody</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PHASE 3<br>CEA-to-EUA Swap</strong></td>
+                        <td>Swap + EUA Delivery</td>
+                        <td>3-5 business days</td>
+                        <td>4 emails</td>
+                        <td>✓ EUA in Registry</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TOTAL JOURNEY</strong></td>
+                        <td>Deposit → EUA in Registry</td>
+                        <td><strong>11-17 business days</strong></td>
+                        <td><strong>12 emails</strong></td>
+                        <td><strong>✓ Compliance Ready</strong></td>
+                    </tr>
+                </table>
+
+                <h3>Communication Cadence</h3>
+                <div class="stat-box">
+                    <div class="label">Total Communications</div>
+                    <div class="value">10 emails</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Time Span</div>
+                    <div class="value">2-3 weeks</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Average Frequency</div>
+                    <div class="value">1 email every 1-2 business days</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Real-time Dashboard</div>
+                    <div class="value">24/7 live status</div>
+                </div>
+
+            </section>
+
+            <!-- COMMUNICATIONS -->
+            <section id="communications">
+                <h2>Communication Schedule - All Phases</h2>
+
+                <h3>The 12 Client Communications Over 2-3 Weeks</h3>
+
+                <div class="timeline-item complete">
+                    <h5>Email 1 - KYC/AML VERIFICATION APPROVED (T+0-T+2)</h5>
+                    <span class="status-indicator status-complete">Account Active</span>
+                    <p style="margin-top: 10px;">Verification complete, account enabled, ready for funding</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 2 - DEPOSIT INITIATED (T+2-T+3)</h5>
+                    <span class="status-indicator status-pending">Wire Instructions</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 1:</strong> Wire details, reference number, estimated arrival (2-5 days)</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 3 - DEPOSIT RECEIVED (T+5-T+8)</h5>
+                    <span class="status-indicator status-pending">On Hold</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 1:</strong> Confirmation of arrival, AML hold period explanation, release date</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 4 - FUNDS CLEARED (T+9)</h5>
+                    <span class="status-indicator status-complete">✓ Phase 1 Complete</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 1 COMPLETE:</strong> Available balance, Phase 2 marketplace link, next steps</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 5 - CEA BUY ORDER CONFIRMED (T+9)</h5>
+                    <span class="status-indicator status-complete">Order Placed</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 2:</strong> Order ID, seller details, price, settlement timeline</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 6 - CEA TRANSFER INITIATED (T+10-T+11)</h5>
+                    <span class="status-indicator status-pending">In Progress</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 2:</strong> Transfer reference, current status, estimated arrival (T+2-T+3)</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 7 - CEA RECEIVED AT NIHAO (T+12-T+13)</h5>
+                    <span class="status-indicator status-complete">✓ Phase 2 Complete</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 2 COMPLETE:</strong> Receipt confirmation, quantity verified, ready for Phase 3</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 8 - SWAP ORDER CONFIRMED (T+13)</h5>
+                    <span class="status-indicator status-complete">Swap Placed</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 3:</strong> Swap ID, direction (CEA→EUA), rate, quantities, settlement timeline</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 9 - CEA TRANSFER INITIATED (T+14-T+15)</h5>
+                    <span class="status-indicator status-pending">Swap In Progress</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 3:</strong> CEA transfer reference, status, expected EUA return timeline</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 10 - EUA RECEIVED AT NIHAO (T+16-T+17)</h5>
+                    <span class="status-indicator status-pending">Final Transfer</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 3:</strong> EUA receipt confirmed, final registry transfer initiated</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 11 - EUA IN REGISTRY (T+18-T+20)</h5>
+                    <span class="status-indicator status-complete">✓ Phase 3 Complete</span>
+                    <p style="margin-top: 10px;"><strong>PHASE 3 COMPLETE:</strong> EUA verified in registry account, compliance ready</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Email 12 - TRANSACTION COMPLETE (T+20)</h5>
+                    <span class="status-indicator status-complete">✓ All Complete</span>
+                    <p style="margin-top: 10px;"><strong>END TO END:</strong> All phases complete, what to do next (surrender/hold/trade)</p>
+                </div>
+
+            </section>
+
+            <!-- BENCHMARK -->
+            <section id="benchmark">
+                <h2>Industry Benchmarks & Comparison</h2>
+
+                <h3>Realistic Timing by Stage</h3>
+
+                <h4>Stage 1: CEA Marketplace Purchase</h4>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Component</th>
+                        <th>Nihao Platform</th>
+                        <th>Industry Std</th>
+                        <th>Speed Advantage</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Browse Time</strong></td>
+                        <td>Real-time (immediate)</td>
+                        <td>3-5 days (manual)</td>
+                        <td>100% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Order Execution</strong></td>
+                        <td>&lt;5 minutes</td>
+                        <td>1-2 hours (manual)</td>
+                        <td>90% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Settlement</strong></td>
+                        <td>2-3 business days</td>
+                        <td>3-5 business days</td>
+                        <td>30% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TOTAL</strong></td>
+                        <td><strong>2-3 days</strong></td>
+                        <td><strong>3-5 days</strong></td>
+                        <td><strong>30% faster</strong></td>
+                    </tr>
+                </table>
+
+                <h4>Stage 2: CEA-to-EUA Swap</h4>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Component</th>
+                        <th>Nihao Platform</th>
+                        <th>Industry Std</th>
+                        <th>Speed Advantage</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Rate Discovery</strong></td>
+                        <td>Real-time (automatic)</td>
+                        <td>1-2 days (phone)</td>
+                        <td>90% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Swap Execution</strong></td>
+                        <td>&lt;5 minutes</td>
+                        <td>2-4 hours (negotiation)</td>
+                        <td>95% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Settlement</strong></td>
+                        <td>3-5 business days</td>
+                        <td>4-7 business days</td>
+                        <td>20% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TOTAL</strong></td>
+                        <td><strong>3-5 days</strong></td>
+                        <td><strong>4-7 days</strong></td>
+                        <td><strong>20% faster</strong></td>
+                    </tr>
+                </table>
+
+                <h3>Full Cycle Comparison (Deposit to EUA in Registry)</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Traditional Market</th>
+                        <th>Nihao Platform</th>
+                        <th>Speed Gain</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Account Funding</strong></td>
+                        <td>5-7 days</td>
+                        <td>5-7 days</td>
+                        <td>Baseline</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CEA Purchase</strong></td>
+                        <td>3-5 days</td>
+                        <td>2-3 days</td>
+                        <td>30% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CEA-to-EUA Swap</strong></td>
+                        <td>4-7 days</td>
+                        <td>3-5 days</td>
+                        <td>20% faster</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TOTAL CYCLE</strong></td>
+                        <td><strong>15-25 days</strong></td>
+                        <td><strong>10-15 days</strong></td>
+                        <td><strong>25% faster</strong></td>
+                    </tr>
+                </table>
+
+                <h3>Key Differentiators</h3>
+                <div class="highlight-box">
+                    <strong>Counterparty Risk:</strong> Nihao platform = LOW (pre-vetted). Traditional = HIGH (unvetted sellers)
+                </div>
+                <div class="highlight-box">
+                    <strong>Transparency:</strong> Nihao platform = HIGH (real-time 24/7). Traditional = LOW (behind-the-scenes)
+                </div>
+                <div class="highlight-box">
+                    <strong>Communication:</strong> Nihao platform = Automated immediate. Traditional = Manual with delays
+                </div>
+                <div class="highlight-box">
+                    <strong>Regulatory Compliance:</strong> Nihao platform = Integrated KYC/AML/Monitoring. Traditional = Manual procedures
+                </div>
+
+            </section>
+
+            <!-- SETTLEMENT PROTECTION -->
+            <section>
+                <h2>Settlement Failure Protection</h2>
+
+                <div class="highlight-box">
+                    <strong>Three-Level Settlement Failure Remedies guarantee ZERO financial loss to client.</strong>
+                </div>
+
+                <h3>Level 1: Cure Attempt (First 24 hours)</h3>
+                <div class="code-block">
+                    <code>
+Action: Investigation + reconnection with counterparty<br>
+Cost to Client: EUR 0.00<br>
+Success Rate: 95% (most delays resolved within 24 hours)<br>
+Timeline: Next business day status update<br>
+Outcome: Settlement completes OR escalate to Level 2
+                    </code>
+                </div>
+
+                <h3>Level 2: Secondary Market Remedy (Days 2-5)</h3>
+                <div class="code-block">
+                    <code>
+Action: Nihao sources replacement CEA/EUA from market<br>
+Cost to Client: EUR 0.00<br>
+Nihao Absorption: Up to 2% premium on market price<br>
+Timeline: 2-3 business days<br>
+Outcome: Client receives exact quantity promised OR escalate to Level 3
+                    </code>
+                </div>
+
+                <h3>Level 3: Full Refund (Day 6+)</h3>
+                <div class="code-block">
+                    <code>
+Action: Full refund of all amounts + waive all fees<br>
+Cost to Client: EUR 0.00<br>
+Nihao Absorption: 100% of all losses<br>
+Timeline: Same day processing<br>
+Outcome: Client account fully restored, transaction unwound
+                    </code>
+                </div>
+
+            </section>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><strong>NIHAO OPERATIONAL WORKFLOW GUIDE v2.0</strong></p>
+            <p>Production-Ready Workflow Documentation | January 8, 2026</p>
+            <p style="margin-top: 20px;">
+                <strong>Support Contact:</strong><br>
+                Email: support@nihaogroup.hk<br>
+                Phone: +852 3062 3366<br>
+                Hours: 24/5 (Monday-Friday extended hours)
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                Copyright © 2026 Italy Nihao Group Limited (HK). All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Add active state to navigation
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('nav a');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.style.backgroundColor = '#2db8c6';
+                    link.style.color = '#0f1419';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

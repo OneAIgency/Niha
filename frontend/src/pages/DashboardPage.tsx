@@ -1,408 +1,499 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  TrendingUp,
   ArrowRight,
-  RefreshCw,
-  ShoppingCart,
+  Leaf,
   ArrowRightLeft,
   Wallet,
-  Activity,
-  Bell,
-  ExternalLink,
+  Clock,
+  CheckCircle2,
+  FileText,
+  CreditCard,
+  Shield,
 } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from 'recharts';
-import { Button, Card, Badge, PriceTicker } from '../components/common';
-import { usePrices, usePriceHistory } from '../hooks/usePrices';
 import { useAuthStore } from '../stores/useStore';
-import { marketplaceApi } from '../services/api';
-import { cn, formatCurrency, formatQuantity, formatRelativeTime } from '../utils';
+import { usePrices } from '../hooks/usePrices';
 
-// Mock portfolio data (would come from API in production)
-const mockPortfolio = {
-  eua_holdings: 5000,
-  cea_holdings: 15000,
-  pending_swaps: 2,
-  completed_trades: 12,
+// Mock user account data - in production this would come from API
+const MOCK_ACCOUNT = {
+  eur_balance: 0,
+  eur_locked: 5000000,
+  cea_balance: 443014,
+  cea_pending: 0,
+  eua_balance: 0,
+  eua_pending: 39357,
+  pending_orders: 1,
 };
 
-const mockRecentTrades = [
-  { id: 1, type: 'buy', cert: 'CEA', quantity: 2500, price: 14.2, date: new Date(Date.now() - 3600000) },
-  { id: 2, type: 'swap', cert: 'EUA→CEA', quantity: 1000, price: 5.8, date: new Date(Date.now() - 86400000) },
-  { id: 3, type: 'buy', cert: 'CEA', quantity: 5000, price: 13.95, date: new Date(Date.now() - 172800000) },
+// Mock holdings data
+const MOCK_HOLDINGS = [
+  {
+    asset: 'EUR',
+    balance: 0,
+    locked: 5000000,
+    avgPrice: null,
+    value: 0,
+    status: 'locked',
+    statusText: 'Locked in order'
+  },
+  {
+    asset: 'CEA',
+    balance: 443014,
+    locked: 0,
+    avgPrice: 88.50,
+    value: 4975000,
+    status: 'available',
+    statusText: 'Available'
+  },
+  {
+    asset: 'EUA',
+    balance: 0,
+    locked: 0,
+    pending: 39357,
+    avgPrice: null,
+    value: 0,
+    status: 'pending',
+    statusText: 'Pending delivery'
+  },
 ];
 
-const mockNotifications = [
-  { id: 1, message: 'New CEA listing matches your criteria', time: '2h ago', type: 'info' },
-  { id: 2, message: 'Your swap request has been matched!', time: '1d ago', type: 'success' },
-  { id: 3, message: 'Price alert: EUA dropped below €74', time: '2d ago', type: 'warning' },
+// Mock pending orders
+const MOCK_PENDING_ORDERS = [
+  {
+    id: 'SWAP-20260113-0015',
+    date: '2026-01-13',
+    type: 'SWAP',
+    typeLabel: 'CEA → EUA',
+    details: '443,014 CEA → 39,357 EUA',
+    ratio: '1:11.2',
+    status: 'pending',
+    progress: 40,
+    eta: '10 days',
+  },
+];
+
+// Mock transaction history
+const MOCK_TRANSACTIONS = [
+  { id: 'SW001', date: '2026-01-13', type: 'SWAP', details: '443,014 CEA → 39,357 EUA', status: 'pending', ref: 'SWAP-20260113-0015' },
+  { id: 'TX001', date: '2026-01-10', type: 'BUY CEA', details: '€5,000,000 → 443,014 CEA', status: 'done', ref: 'CEA-20260110-0042' },
+  { id: 'DP001', date: '2026-01-08', type: 'DEPOSIT', details: '€5,000,000', status: 'done', ref: 'DEP-20260108-001' },
+  { id: 'KYC01', date: '2026-01-05', type: 'KYC', details: 'Account approved', status: 'done', ref: '-' },
+  { id: 'NDA01', date: '2026-01-02', type: 'NDA', details: 'NDA approved', status: 'done', ref: '-' },
 ];
 
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { prices } = usePrices();
-  const { history } = usePriceHistory(365 * 24); // 1 year in hours
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // Stats fetched for future use in dashboard
-        await marketplaceApi.getStats();
-      } catch (err) {
-        console.error('Failed to fetch stats:', err);
-      }
-    };
-    fetchStats();
-  }, []);
+  const [activeTab, setActiveTab] = useState<'open' | 'history'>('open');
 
-  // Calculate portfolio value
-  const portfolioValue =
-    prices
-      ? mockPortfolio.eua_holdings * prices.eua.price_usd +
-        mockPortfolio.cea_holdings * prices.cea.price_usd
-      : 0;
+  // Format helpers
+  const formatNumber = (num: number, decimals = 0) => {
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  };
 
-  // Format chart data - show every Nth point to avoid overcrowding
-  const chartData = history?.eua?.filter((_: any, i: number) => i % Math.max(1, Math.floor((history?.eua?.length || 1) / 60)) === 0)
-    .map((item: any, index: number) => {
-      const filteredCea = history.cea?.filter((_: any, i: number) => i % Math.max(1, Math.floor((history?.cea?.length || 1) / 60)) === 0);
-      return {
-        time: new Date(item.timestamp).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        }),
-        eua: item.price,
-        cea: filteredCea?.[index]?.price || 0,
-      };
-    }) || [];
+  const formatCurrency = (amount: number, currency = '€') => {
+    return `${currency}${formatNumber(amount)}`;
+  };
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen bg-slate-950 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-navy-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-white">
               Welcome back{user?.first_name ? `, ${user.first_name}` : ''}
             </h1>
-            <p className="text-navy-600 dark:text-navy-300 mt-1">
-              Here's what's happening with your carbon portfolio
+            <p className="text-slate-400 mt-1">
+              Here's your carbon trading portfolio overview
             </p>
           </div>
-          <div className="mt-4 md:mt-0">
-            <PriceTicker prices={prices} variant="compact" />
+          <div className="mt-4 md:mt-0 flex items-center gap-4">
+            {prices && (
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
+                  <span className="text-blue-400">EUA</span>
+                  <span className="text-white font-mono">€{prices.eua.price.toFixed(2)}</span>
+                  <span className={prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                    {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
+                  <span className="text-amber-400">CEA</span>
+                  <span className="text-white font-mono">¥{prices.cea.price.toFixed(2)}</span>
+                  <span className={prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                    {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Portfolio Overview */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        {/* Account Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
           >
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-emerald-100 text-sm">Portfolio Value</p>
-                  <p className="text-3xl font-bold mt-1 font-mono">
-                    {formatCurrency(portfolioValue, 'USD')}
-                  </p>
-                  <p className="text-emerald-200 text-sm mt-2 flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" />
-                    +2.4% today
-                  </p>
-                </div>
-                <Wallet className="w-8 h-8 text-emerald-200" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">EUR Balance</span>
+              <CreditCard className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="text-2xl font-bold text-white font-mono">
+              {formatCurrency(MOCK_ACCOUNT.eur_balance)}
+            </div>
+            {MOCK_ACCOUNT.eur_locked > 0 && (
+              <div className="text-xs text-amber-400 mt-1">
+                {formatCurrency(MOCK_ACCOUNT.eur_locked)} locked
               </div>
-            </Card>
+            )}
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
           >
-            <Card>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-navy-500 dark:text-navy-400 text-sm">EUA Holdings</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white mt-1">
-                    {formatQuantity(mockPortfolio.eua_holdings)}
-                  </p>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mt-2">
-                    ≈ {formatCurrency(mockPortfolio.eua_holdings * (prices?.eua.price_usd || 0), 'USD')}
-                  </p>
-                </div>
-                <Badge variant="eua">EUA</Badge>
-              </div>
-            </Card>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">CEA Balance</span>
+              <Leaf className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-2xl font-bold text-amber-400 font-mono">
+              {formatNumber(MOCK_ACCOUNT.cea_balance)}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">tonnes</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
           >
-            <Card>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-navy-500 dark:text-navy-400 text-sm">CEA Holdings</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white mt-1">
-                    {formatQuantity(mockPortfolio.cea_holdings)}
-                  </p>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mt-2">
-                    ≈ {formatCurrency(mockPortfolio.cea_holdings * (prices?.cea.price_usd || 0), 'USD')}
-                  </p>
-                </div>
-                <Badge variant="cea">CEA</Badge>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">EUA Balance</span>
+              <span className="text-lg">🇪🇺</span>
+            </div>
+            <div className="text-2xl font-bold text-blue-400 font-mono">
+              {formatNumber(MOCK_ACCOUNT.eua_balance)}
+            </div>
+            {MOCK_ACCOUNT.eua_pending > 0 && (
+              <div className="text-xs text-amber-400 mt-1 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatNumber(MOCK_ACCOUNT.eua_pending)} pending
               </div>
-            </Card>
+            )}
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="bg-slate-900 rounded-xl border border-slate-800 p-4"
           >
-            <Card>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-navy-500 dark:text-navy-400 text-sm">Active Swaps</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white mt-1">
-                    {mockPortfolio.pending_swaps}
-                  </p>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mt-2">
-                    {mockPortfolio.completed_trades} completed
-                  </p>
-                </div>
-                <RefreshCw className="w-6 h-6 text-purple-500" />
-              </div>
-            </Card>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-sm">Pending Orders</span>
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-2xl font-bold text-white font-mono">
+              {MOCK_ACCOUNT.pending_orders}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">in progress</div>
           </motion.div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Price Chart */}
+        {/* Main Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Holdings Table */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             className="lg:col-span-2"
           >
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white">Price Chart (1 year) — EUR/tCO2</h2>
-                <div className="flex items-center gap-4 text-sm text-navy-600 dark:text-navy-300">
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full" />
-                    EUA (€)
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 bg-amber-500 rounded-full" />
-                    CEA (€)
-                  </span>
-                </div>
+            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-800">
+                <h2 className="font-semibold text-white">Holdings</h2>
               </div>
-
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="euaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="ceaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="time"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: '#64748b' }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: '#64748b' }}
-                      domain={['auto', 'auto']}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#0f172a',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="eua"
-                      stroke="#3b82f6"
-                      fill="url(#euaGradient)"
-                      strokeWidth={2}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="cea"
-                      stroke="#f59e0b"
-                      fill="url(#ceaGradient)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-slate-500 border-b border-slate-800">
+                      <th className="text-left px-4 py-3 font-medium">Asset</th>
+                      <th className="text-right px-4 py-3 font-medium">Balance</th>
+                      <th className="text-right px-4 py-3 font-medium">Avg Price</th>
+                      <th className="text-right px-4 py-3 font-medium">Value</th>
+                      <th className="text-right px-4 py-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {MOCK_HOLDINGS.map((holding) => (
+                      <tr key={holding.asset} className="border-b border-slate-800/50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {holding.asset === 'EUR' && <CreditCard className="w-4 h-4 text-slate-400" />}
+                            {holding.asset === 'CEA' && <Leaf className="w-4 h-4 text-amber-500" />}
+                            {holding.asset === 'EUA' && <span className="text-sm">🇪🇺</span>}
+                            <span className="text-white font-medium">{holding.asset}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {holding.asset === 'EUR' ? (
+                            <span className="text-slate-400">{formatCurrency(holding.balance)}</span>
+                          ) : (
+                            <span className={holding.asset === 'CEA' ? 'text-amber-400' : 'text-blue-400'}>
+                              {formatNumber(holding.balance)} t
+                            </span>
+                          )}
+                          {holding.pending && holding.pending > 0 && (
+                            <div className="text-xs text-amber-400">
+                              +{formatNumber(holding.pending)} pending
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-slate-400">
+                          {holding.avgPrice ? `¥${holding.avgPrice}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-white">
+                          {holding.value > 0 ? formatCurrency(holding.value) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {holding.status === 'available' && (
+                            <span className="text-emerald-400 text-xs flex items-center justify-end gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              {holding.statusText}
+                            </span>
+                          )}
+                          {holding.status === 'locked' && (
+                            <span className="text-amber-400 text-xs flex items-center justify-end gap-1">
+                              <Shield className="w-3 h-3" />
+                              {holding.statusText}
+                            </span>
+                          )}
+                          {holding.status === 'pending' && (
+                            <span className="text-amber-400 text-xs flex items-center justify-end gap-1">
+                              <Clock className="w-3 h-3" />
+                              {holding.statusText}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </Card>
+            </div>
           </motion.div>
 
-          {/* Notifications */}
+          {/* Quick Actions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white">Notifications</h2>
-                <Bell className="w-5 h-5 text-navy-400" />
-              </div>
-
-              <div className="space-y-4">
-                {mockNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="flex items-start gap-3 p-3 bg-navy-50 dark:bg-navy-900/50 rounded-lg"
+            <div className="bg-slate-900 rounded-xl border border-slate-800 p-4">
+              <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
+              <div className="space-y-3">
+                <Link to="/cash-market">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition-colors cursor-pointer group"
                   >
-                    <div
-                      className={cn(
-                        'w-2 h-2 rounded-full mt-2',
-                        notification.type === 'success' && 'bg-emerald-500',
-                        notification.type === 'info' && 'bg-blue-500',
-                        notification.type === 'warning' && 'bg-amber-500'
-                      )}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm text-navy-900 dark:text-white">{notification.message}</p>
-                      <p className="text-xs text-navy-400 mt-1">{notification.time}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                          <Leaf className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-white">Buy CEA</h3>
+                          <p className="text-sm text-slate-400">Cash Market</p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  </div>
-                ))}
+                  </motion.div>
+                </Link>
+
+                <Link to="/swap">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl hover:bg-violet-500/20 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                          <ArrowRightLeft className="w-5 h-5 text-violet-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-white">Swap CEA → EUA</h3>
+                          <p className="text-sm text-slate-400">Swap Market</p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </motion.div>
+                </Link>
               </div>
-            </Card>
+            </div>
           </motion.div>
         </div>
 
-        {/* Quick Actions & Recent Trades */}
-        <div className="grid lg:grid-cols-2 gap-8 mt-8">
-          {/* Quick Actions */}
+        {/* Pending Orders */}
+        {MOCK_PENDING_ORDERS.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
+            className="mt-6"
           >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6">Quick Actions</h2>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Link to="/marketplace">
-                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer group">
-                    <ShoppingCart className="w-8 h-8 text-amber-600 dark:text-amber-400 mb-3" />
-                    <h3 className="font-semibold text-navy-900 dark:text-white">Buy CEA</h3>
-                    <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
-                      Browse marketplace listings
-                    </p>
-                    <ArrowRight className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </Link>
-
-                <Link to="/swap">
-                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer group">
-                    <ArrowRightLeft className="w-8 h-8 text-purple-600 dark:text-purple-400 mb-3" />
-                    <h3 className="font-semibold text-navy-900 dark:text-white">Create Swap</h3>
-                    <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
-                      Exchange EUA ↔ CEA
-                    </p>
-                    <ArrowRight className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </Link>
-
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group">
-                  <Activity className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-3" />
-                  <h3 className="font-semibold text-navy-900 dark:text-white">Set Alert</h3>
-                  <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">Price notifications</p>
-                </div>
-
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors cursor-pointer group">
-                  <ExternalLink className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mb-3" />
-                  <h3 className="font-semibold text-navy-900 dark:text-white">Export Report</h3>
-                  <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">Download portfolio PDF</p>
-                </div>
+            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <h2 className="font-semibold text-white">Pending Orders</h2>
+                <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
+                  {MOCK_PENDING_ORDERS.length} active
+                </span>
               </div>
-            </Card>
-          </motion.div>
-
-          {/* Recent Trades */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-          >
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white">Recent Trades</h2>
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                {mockRecentTrades.map((trade) => (
-                  <div
-                    key={trade.id}
-                    className="flex items-center justify-between p-4 bg-navy-50 dark:bg-navy-900/50 rounded-xl"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={cn(
-                          'w-10 h-10 rounded-lg flex items-center justify-center',
-                          trade.type === 'buy' && 'bg-emerald-100 dark:bg-emerald-900/30',
-                          trade.type === 'swap' && 'bg-purple-100 dark:bg-purple-900/30'
-                        )}
-                      >
-                        {trade.type === 'buy' ? (
-                          <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        ) : (
-                          <ArrowRightLeft className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                        )}
+              <div className="p-4 space-y-4">
+                {MOCK_PENDING_ORDERS.map((order) => (
+                  <div key={order.id} className="bg-slate-800/50 rounded-xl p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                          <ArrowRightLeft className="w-5 h-5 text-violet-500" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">{order.typeLabel}</span>
+                            <span className="text-xs text-slate-500">#{order.id}</span>
+                          </div>
+                          <p className="text-sm text-slate-400">{order.details}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-navy-900 dark:text-white">
-                          {trade.type === 'buy' ? 'Purchased' : 'Swapped'} {trade.cert}
-                        </p>
-                        <p className="text-sm text-navy-500 dark:text-navy-400">
-                          {formatQuantity(trade.quantity)} units @ ${trade.price}
-                        </p>
+                      <div className="text-right">
+                        <span className="text-amber-400 text-sm flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {order.status === 'pending' ? 'Processing' : order.status}
+                        </span>
+                        <span className="text-xs text-slate-500">ETA: {order.eta}</span>
                       </div>
                     </div>
-                    <p className="text-sm text-navy-400">
-                      {formatRelativeTime(trade.date.toISOString())}
-                    </p>
+
+                    {/* Progress Bar */}
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                        <span>Progress</span>
+                        <span>{order.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${order.progress}%` }}
+                          transition={{ duration: 1, ease: 'easeOut' }}
+                          className="h-full bg-gradient-to-r from-amber-500 to-violet-500 rounded-full"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Registry transfer in progress...
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
           </motion.div>
-        </div>
+        )}
+
+        {/* Transaction History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="mt-6"
+        >
+          <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+              <h2 className="font-semibold text-white">Transaction History</h2>
+              <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                <button
+                  onClick={() => setActiveTab('open')}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    activeTab === 'open'
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Open Orders
+                </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    activeTab === 'history'
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  History
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-slate-500 border-b border-slate-800">
+                    <th className="text-left px-4 py-3 font-medium">Date</th>
+                    <th className="text-left px-4 py-3 font-medium">Type</th>
+                    <th className="text-left px-4 py-3 font-medium">Details</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="text-left px-4 py-3 font-medium">Reference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MOCK_TRANSACTIONS
+                    .filter(tx => activeTab === 'history' || tx.status === 'pending')
+                    .map((tx) => (
+                    <tr key={tx.id} className="border-b border-slate-800/50">
+                      <td className="px-4 py-3 text-slate-400">{tx.date}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {tx.type === 'SWAP' && <ArrowRightLeft className="w-4 h-4 text-violet-400" />}
+                          {tx.type === 'BUY CEA' && <Leaf className="w-4 h-4 text-amber-400" />}
+                          {tx.type === 'DEPOSIT' && <Wallet className="w-4 h-4 text-emerald-400" />}
+                          {tx.type === 'KYC' && <Shield className="w-4 h-4 text-blue-400" />}
+                          {tx.type === 'NDA' && <FileText className="w-4 h-4 text-slate-400" />}
+                          <span className="text-white">{tx.type}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{tx.details}</td>
+                      <td className="px-4 py-3">
+                        {tx.status === 'done' ? (
+                          <span className="text-emerald-400 flex items-center gap-1 text-xs">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Done
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 flex items-center gap-1 text-xs">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-slate-500 text-xs">{tx.ref}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
