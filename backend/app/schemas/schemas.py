@@ -82,16 +82,21 @@ class ScrapeLibrary(str, Enum):
 class ContactRequestCreate(BaseModel):
     entity_name: str = Field(..., min_length=2, max_length=255)
     contact_email: EmailStr
+    contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
     reference: Optional[str] = Field(None, max_length=255)
+    request_type: str = Field(default="join")  # 'join' or 'nda'
 
 
 class ContactRequestResponse(BaseModel):
     id: UUID
     entity_name: str
     contact_email: str
+    contact_name: Optional[str]
     position: Optional[str]
     reference: Optional[str]
+    request_type: str
+    nda_file_name: Optional[str]
     status: str
     created_at: datetime
 

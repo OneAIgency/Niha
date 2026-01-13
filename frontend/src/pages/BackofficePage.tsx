@@ -24,8 +24,11 @@ interface ContactRequest {
   id: string;
   entity_name: string;
   contact_email: string;
+  contact_name?: string;
   position: string;
   reference?: string;
+  request_type: 'join' | 'nda';
+  nda_file_name?: string;
   status: string;
   notes?: string;
   created_at: string;
@@ -353,6 +356,9 @@ export function BackofficePage() {
                             <h3 className="font-semibold text-navy-900 dark:text-white">
                               {request.entity_name}
                             </h3>
+                            <Badge variant={request.request_type === 'nda' ? 'warning' : 'info'}>
+                              {request.request_type?.toUpperCase() || 'JOIN'}
+                            </Badge>
                             <Badge variant={request.status === 'new' ? 'info' : request.status === 'contacted' ? 'warning' : 'success'}>
                               {request.status.toUpperCase()}
                             </Badge>
@@ -362,14 +368,36 @@ export function BackofficePage() {
                               <span className="text-navy-500 dark:text-navy-400">Contact:</span>
                               <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_email}</span>
                             </div>
+                            {request.contact_name && (
+                              <div>
+                                <span className="text-navy-500 dark:text-navy-400">Name:</span>
+                                <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_name}</span>
+                              </div>
+                            )}
                             <div>
                               <span className="text-navy-500 dark:text-navy-400">Position:</span>
                               <span className="ml-2 text-navy-700 dark:text-navy-200">{request.position}</span>
                             </div>
-                            <div className="col-span-2">
-                              <span className="text-navy-500 dark:text-navy-400">Reference:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200">{request.reference || 'None'}</span>
-                            </div>
+                            {request.reference && (
+                              <div>
+                                <span className="text-navy-500 dark:text-navy-400">Reference:</span>
+                                <span className="ml-2 text-navy-700 dark:text-navy-200">{request.reference}</span>
+                              </div>
+                            )}
+                            {request.nda_file_name && (
+                              <div className="col-span-2">
+                                <span className="text-navy-500 dark:text-navy-400">NDA File:</span>
+                                <a
+                                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/admin/contact-requests/${request.id}/nda`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center gap-1"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  {request.nda_file_name}
+                                </a>
+                              </div>
+                            )}
                           </div>
                           <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
                             <Clock className="w-3 h-3 inline mr-1" />

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 import secrets
+import os
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, hash_password
@@ -61,11 +63,14 @@ async def get_contact_requests(
                 "id": str(r.id),
                 "entity_name": r.entity_name,
                 "contact_email": r.contact_email,
+                "contact_name": r.contact_name,
                 "position": r.position,
                 "reference": r.reference,
-                "status": r.status.value,
+                "request_type": r.request_type or "join",
+                "nda_file_name": r.nda_file_name,
+                "status": r.status.value if r.status else "new",
                 "notes": r.notes,
-                "created_at": r.created_at.isoformat(),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
             }
             for r in requests
         ],
@@ -107,6 +112,37 @@ async def update_contact_request(
     await db.commit()
 
     return {"message": "Contact request updated", "success": True}
+
+
+@router.get("/contact-requests/{request_id}/nda")
+async def download_nda_file(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Download NDA file for a contact request.
+    Admin only.
+    """
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact = result.scalar_one_or_none()
+
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    if not contact.nda_file_path or not contact.nda_file_name:
+        raise HTTPException(status_code=404, detail="No NDA file attached to this request")
+
+    if not os.path.exists(contact.nda_file_path):
+        raise HTTPException(status_code=404, detail="NDA file not found on server")
+
+    return FileResponse(
+        path=contact.nda_file_path,
+        filename=contact.nda_file_name,
+        media_type="application/pdf"
+    )
 
 
 @router.get("/dashboard")

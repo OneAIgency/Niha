@@ -189,8 +189,12 @@ class ContactRequest(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_name = Column(String(255), nullable=False)
     contact_email = Column(String(255), nullable=False)
+    contact_name = Column(String(255), nullable=True)  # Person's name
     position = Column(String(100))
     reference = Column(String(255))
+    request_type = Column(String(50), default="join")  # 'join' or 'nda'
+    nda_file_path = Column(String(500), nullable=True)
+    nda_file_name = Column(String(255), nullable=True)
     status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Loader2, Building2, User, Users, CheckCircle } from 'lucide-react';
+import { Mail, Lock, Loader2, Building2, User, Briefcase, CheckCircle, Upload, FileText } from 'lucide-react';
 import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { isValidEmail } from '../utils';
@@ -308,7 +308,7 @@ function ParticleField() {
 }
 
 export function LoginPage() {
-  const [mode, setMode] = useState<'initial' | 'enter' | 'join'>('initial');
+  const [mode, setMode] = useState<'initial' | 'enter' | 'nda'>('initial');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -316,10 +316,12 @@ export function LoginPage() {
   const [requestSent, setRequestSent] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
-  // Join form fields
-  const [company, setCompany] = useState('');
+  // NDA form fields
+  const [entity, setEntity] = useState('');
+  const [contactName, setContactName] = useState('');
   const [position, setPosition] = useState('');
-  const [reference, setReference] = useState('');
+  const [ndaFile, setNdaFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -390,12 +392,12 @@ export function LoginPage() {
     }
   };
 
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleNDA = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!company.trim()) {
-      setError('Company name is required');
+    if (!entity.trim()) {
+      setError('Entity name is required');
       return;
     }
 
@@ -404,24 +406,52 @@ export function LoginPage() {
       return;
     }
 
+    if (!contactName.trim()) {
+      setError('Your name is required');
+      return;
+    }
+
     if (!position.trim()) {
       setError('Position is required');
       return;
     }
 
+    if (!ndaFile) {
+      setError('Please upload a signed NDA document');
+      return;
+    }
+
+    if (!ndaFile.name.toLowerCase().endsWith('.pdf')) {
+      setError('Only PDF files are allowed');
+      return;
+    }
+
     setLoading(true);
     try {
-      await contactApi.submitRequest({
-        entity_name: company,
+      await contactApi.submitNDARequest({
+        entity_name: entity,
         contact_email: email,
+        contact_name: contactName,
         position: position,
-        reference: reference || undefined,
+        nda_file: ndaFile,
       });
       setRequestSent(true);
     } catch {
       setError('Unable to process request. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        setError('Only PDF files are allowed');
+        return;
+      }
+      setNdaFile(file);
+      setError('');
     }
   };
 
@@ -464,7 +494,7 @@ export function LoginPage() {
             Our team will review your application and contact you at <span className="text-white/60">{email}</span>
           </p>
           <button
-            onClick={() => { setRequestSent(false); setMode('initial'); setCompany(''); setEmail(''); setPosition(''); setReference(''); }}
+            onClick={() => { setRequestSent(false); setMode('initial'); setEntity(''); setEmail(''); setContactName(''); setPosition(''); setNdaFile(null); }}
             className="mt-8 text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
           >
             Submit another request
@@ -529,10 +559,10 @@ export function LoginPage() {
                 ENTER
               </button>
               <button
-                onClick={() => setMode('join')}
+                onClick={() => setMode('nda')}
                 className="w-full py-4 px-8 rounded-lg bg-transparent hover:bg-white/5 border border-white/5 hover:border-white/10 text-white/40 hover:text-white/60 font-light tracking-[0.2em] transition-all duration-300"
               >
-                JOIN
+                NDA
               </button>
             </motion.div>
           )}
@@ -602,10 +632,10 @@ export function LoginPage() {
             </motion.form>
           )}
 
-          {mode === 'join' && (
+          {mode === 'nda' && (
             <motion.form
-              key="join"
-              onSubmit={handleJoin}
+              key="nda"
+              onSubmit={handleNDA}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -613,7 +643,7 @@ export function LoginPage() {
               className="space-y-5"
             >
               <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
-                Request access to join our platform
+                Submit your signed NDA to request access
               </p>
 
               <div className="space-y-3">
@@ -621,9 +651,9 @@ export function LoginPage() {
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                   <input
                     type="text"
-                    placeholder="Company Name"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Entity Name"
+                    value={entity}
+                    onChange={(e) => setEntity(e.target.value)}
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
                   />
                 </div>
@@ -641,21 +671,48 @@ export function LoginPage() {
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                   <input
                     type="text"
-                    placeholder="Position in Company"
+                    placeholder="Your Name"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
+                  />
+                </div>
+                <div className="relative">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <input
+                    type="text"
+                    placeholder="Position in Entity"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
                   />
                 </div>
-                <div className="relative">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type="text"
-                    placeholder="Reference (optional)"
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                  />
+
+                {/* File Upload */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full py-3.5 px-4 bg-white/5 border rounded-lg cursor-pointer transition-colors flex items-center gap-3 ${
+                    ndaFile ? 'border-emerald-500/50' : 'border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {ndaFile ? (
+                    <>
+                      <FileText className="w-4 h-4 text-emerald-400/70" />
+                      <span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-white/30" />
+                      <span className="text-white/30 font-light">Upload Signed NDA (PDF)</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -677,13 +734,13 @@ export function LoginPage() {
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                 ) : (
-                  'REQUEST ACCESS'
+                  'SUBMIT NDA'
                 )}
               </button>
 
               <button
                 type="button"
-                onClick={() => { setMode('initial'); setError(''); }}
+                onClick={() => { setMode('initial'); setError(''); setNdaFile(null); }}
                 className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
               >
                 Back

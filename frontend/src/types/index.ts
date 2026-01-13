@@ -158,8 +158,34 @@ export interface Entity {
 export interface ContactRequest {
   entity_name: string;
   contact_email: string;
+  contact_name?: string;
   position?: string;
   reference?: string;
+  request_type?: 'join' | 'nda';
+}
+
+// NDA Request (for file upload)
+export interface NDARequest {
+  entity_name: string;
+  contact_email: string;
+  contact_name: string;
+  position: string;
+  nda_file: File;
+}
+
+// Contact Request Response (from admin API)
+export interface ContactRequestResponse {
+  id: string;
+  entity_name: string;
+  contact_email: string;
+  contact_name?: string;
+  position?: string;
+  reference?: string;
+  request_type: 'join' | 'nda';
+  nda_file_name?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
 }
 
 // Market Stats
