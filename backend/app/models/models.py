@@ -114,6 +114,19 @@ class OrderStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+class DepositStatus(str, enum.Enum):
+    PENDING = "pending"          # User claims they sent wire
+    CONFIRMED = "confirmed"      # Backoffice confirmed receipt
+    REJECTED = "rejected"        # Wire not received or invalid
+
+
+class Currency(str, enum.Enum):
+    EUR = "EUR"
+    USD = "USD"
+    CNY = "CNY"
+    HKD = "HKD"
+
+
 class Entity(Base):
     __tablename__ = "entities"
 
@@ -127,6 +140,10 @@ class Entity(Base):
     kyc_submitted_at = Column(DateTime, nullable=True)
     kyc_approved_at = Column(DateTime, nullable=True)
     kyc_approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # Balance fields - set by backoffice when confirming deposits
+    balance_amount = Column(Numeric(18, 2), default=0)
+    balance_currency = Column(SQLEnum(Currency), nullable=True)
+    total_deposited = Column(Numeric(18, 2), default=0)  # Lifetime total deposits
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -136,6 +153,7 @@ class Entity(Base):
     sell_trades = relationship("Trade", foreign_keys="Trade.seller_entity_id", back_populates="seller")
     swap_requests = relationship("SwapRequest", back_populates="entity")
     kyc_documents = relationship("KYCDocument", back_populates="entity")
+    deposits = relationship("Deposit", back_populates="entity")
 
 
 class User(Base):
@@ -372,3 +390,29 @@ class AuthenticationAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", back_populates="auth_attempts")
+
+
+class Deposit(Base):
+    """Track wire transfer deposits from entities"""
+    __tablename__ = "deposits"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    # Deposit details
+    amount = Column(Numeric(18, 2), nullable=False)
+    currency = Column(SQLEnum(Currency), nullable=False)
+    wire_reference = Column(String(100), nullable=True)  # Bank wire reference
+    bank_reference = Column(String(100), nullable=True)  # Our internal reference
+    # Status tracking
+    status = Column(SQLEnum(DepositStatus), default=DepositStatus.PENDING)
+    # Timestamps
+    reported_at = Column(DateTime, default=datetime.utcnow)  # When user reported the wire
+    confirmed_at = Column(DateTime, nullable=True)  # When backoffice confirmed
+    # Backoffice tracking
+    confirmed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    notes = Column(Text, nullable=True)  # Admin notes
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    entity = relationship("Entity", back_populates="deposits")
+    confirmed_by_user = relationship("User", foreign_keys=[confirmed_by])

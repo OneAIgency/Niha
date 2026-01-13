@@ -578,3 +578,68 @@ class AdminPasswordReset(BaseModel):
     """Admin can reset user password"""
     new_password: str = Field(..., min_length=8)
     force_change: bool = True  # Force user to change on next login
+
+
+# Deposit Schemas
+class DepositStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class Currency(str, Enum):
+    EUR = "EUR"
+    USD = "USD"
+    CNY = "CNY"
+    HKD = "HKD"
+
+
+class DepositCreate(BaseModel):
+    """Backoffice creates deposit when confirming wire transfer"""
+    entity_id: UUID
+    amount: float = Field(..., gt=0)
+    currency: Currency
+    wire_reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
+
+
+class DepositConfirm(BaseModel):
+    """Backoffice confirms a pending deposit"""
+    amount: float = Field(..., gt=0)
+    currency: Currency
+    wire_reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
+
+
+class DepositResponse(BaseModel):
+    id: UUID
+    entity_id: UUID
+    amount: float
+    currency: str
+    wire_reference: Optional[str]
+    bank_reference: Optional[str]
+    status: str
+    reported_at: Optional[datetime]
+    confirmed_at: Optional[datetime]
+    confirmed_by: Optional[UUID]
+    notes: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntityBalanceResponse(BaseModel):
+    """Entity balance info for dashboard/backoffice"""
+    entity_id: UUID
+    entity_name: str
+    balance_amount: float
+    balance_currency: Optional[str]
+    total_deposited: float
+    deposit_count: int
+
+
+class DepositWithEntityResponse(DepositResponse):
+    """Deposit with entity details for backoffice list"""
+    entity_name: Optional[str] = None
+    user_email: Optional[str] = None

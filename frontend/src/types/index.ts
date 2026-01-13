@@ -325,3 +325,41 @@ export interface AdminPasswordReset {
   new_password: string;
   force_change?: boolean;
 }
+
+// Deposit Types
+export type DepositStatus = 'pending' | 'confirmed' | 'rejected';
+export type Currency = 'EUR' | 'USD' | 'CNY' | 'HKD';
+
+export interface Deposit {
+  id: string;
+  entity_id: string;
+  entity_name?: string;
+  user_email?: string;
+  amount: number;
+  currency: Currency;
+  wire_reference?: string;
+  bank_reference?: string;
+  status: DepositStatus;
+  reported_at?: string;
+  confirmed_at?: string;
+  confirmed_by?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface DepositCreate {
+  entity_id: string;
+  amount: number;
+  currency: Currency;
+  wire_reference?: string;
+  notes?: string;
+}
+
+export interface EntityBalance {
+  entity_id: string;
+  entity_name: string;
+  balance_amount: number;
+  balance_currency?: Currency;
+  total_deposited: number;
+  deposit_count: number;
+}

@@ -63,9 +63,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: niha_frontend
-    environment:
-      - VITE_API_URL=http://192.168.10.42:8000
-      - VITE_WS_URL=ws://192.168.10.42:8000
+    # Environment vars removed - api.ts handles dynamic URL detection
     ports:
       - "5173:5173"
     volumes:

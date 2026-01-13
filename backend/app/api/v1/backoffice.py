@@ -2,21 +2,28 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
+from decimal import Decimal
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
     User, Entity, KYCDocument, UserSession, Trade, UserRole,
-    DocumentStatus, KYCStatus
+    DocumentStatus, KYCStatus, Deposit, DepositStatus, Currency
 )
 from ...schemas.schemas import (
     MessageResponse,
     KYCDocumentResponse,
     KYCDocumentReview,
     UserSessionResponse,
-    UserApprovalRequest
+    UserApprovalRequest,
+    DepositCreate,
+    DepositConfirm,
+    DepositResponse,
+    DepositWithEntityResponse,
+    EntityBalanceResponse,
+    Currency as SchemaCurrency
 )
 from ...services.email_service import email_service
 
@@ -357,4 +364,256 @@ async def get_user_trades(
             "completed_at": t.completed_at.isoformat() if t.completed_at else None
         }
         for t in trades
+    ]
+
+
+# ============== DEPOSIT MANAGEMENT ==============
+
+@router.get("/deposits")
+async def get_all_deposits(
+    status: Optional[str] = None,
+    entity_id: Optional[str] = None,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all deposits, optionally filtered by status or entity.
+    Admin only.
+    """
+    query = select(Deposit).order_by(Deposit.created_at.desc())
+
+    if status:
+        query = query.where(Deposit.status == DepositStatus(status))
+
+    if entity_id:
+        query = query.where(Deposit.entity_id == UUID(entity_id))
+
+    result = await db.execute(query)
+    deposits = result.scalars().all()
+
+    deposits_with_entity = []
+    for dep in deposits:
+        # Get entity info
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == dep.entity_id)
+        )
+        entity = entity_result.scalar_one_or_none()
+
+        # Get primary user email for entity
+        user_email = None
+        if entity:
+            user_result = await db.execute(
+                select(User).where(User.entity_id == entity.id).limit(1)
+            )
+            user = user_result.scalar_one_or_none()
+            user_email = user.email if user else None
+
+        deposits_with_entity.append({
+            "id": str(dep.id),
+            "entity_id": str(dep.entity_id),
+            "entity_name": entity.name if entity else None,
+            "user_email": user_email,
+            "amount": float(dep.amount),
+            "currency": dep.currency.value,
+            "wire_reference": dep.wire_reference,
+            "bank_reference": dep.bank_reference,
+            "status": dep.status.value,
+            "reported_at": dep.reported_at.isoformat() if dep.reported_at else None,
+            "confirmed_at": dep.confirmed_at.isoformat() if dep.confirmed_at else None,
+            "confirmed_by": str(dep.confirmed_by) if dep.confirmed_by else None,
+            "notes": dep.notes,
+            "created_at": dep.created_at.isoformat()
+        })
+
+    return deposits_with_entity
+
+
+@router.post("/deposits", response_model=MessageResponse)
+async def create_deposit(
+    deposit_data: DepositCreate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create and confirm a deposit for an entity.
+    This is used when backoffice receives a wire transfer.
+    Admin only.
+    """
+    # Verify entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == deposit_data.entity_id)
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Generate bank reference
+    import random
+    import string
+    bank_ref = f"DEP-{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
+
+    # Create deposit record
+    deposit = Deposit(
+        entity_id=deposit_data.entity_id,
+        amount=Decimal(str(deposit_data.amount)),
+        currency=Currency(deposit_data.currency.value),
+        wire_reference=deposit_data.wire_reference,
+        bank_reference=bank_ref,
+        status=DepositStatus.CONFIRMED,
+        confirmed_at=datetime.utcnow(),
+        confirmed_by=admin_user.id,
+        notes=deposit_data.notes
+    )
+    db.add(deposit)
+
+    # Update entity balance
+    entity.balance_amount = (entity.balance_amount or Decimal('0')) + Decimal(str(deposit_data.amount))
+    entity.balance_currency = Currency(deposit_data.currency.value)
+    entity.total_deposited = (entity.total_deposited or Decimal('0')) + Decimal(str(deposit_data.amount))
+
+    # Find users for this entity and upgrade to FUNDED if APPROVED
+    users_result = await db.execute(
+        select(User).where(User.entity_id == entity.id)
+    )
+    users = users_result.scalars().all()
+
+    for user in users:
+        if user.role == UserRole.APPROVED:
+            user.role = UserRole.FUNDED
+
+    await db.commit()
+
+    # Send notification email to entity users
+    for user in users:
+        try:
+            await email_service.send_account_funded(user.email, user.first_name)
+        except Exception:
+            pass
+
+    return MessageResponse(
+        message=f"Deposit of {deposit_data.amount} {deposit_data.currency.value} confirmed for {entity.name}. Users upgraded to FUNDED."
+    )
+
+
+@router.get("/deposits/{deposit_id}")
+async def get_deposit(
+    deposit_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get a specific deposit's details.
+    Admin only.
+    """
+    result = await db.execute(
+        select(Deposit).where(Deposit.id == UUID(deposit_id))
+    )
+    deposit = result.scalar_one_or_none()
+
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+
+    # Get entity info
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == deposit.entity_id)
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    return {
+        "id": str(deposit.id),
+        "entity_id": str(deposit.entity_id),
+        "entity_name": entity.name if entity else None,
+        "amount": float(deposit.amount),
+        "currency": deposit.currency.value,
+        "wire_reference": deposit.wire_reference,
+        "bank_reference": deposit.bank_reference,
+        "status": deposit.status.value,
+        "reported_at": deposit.reported_at.isoformat() if deposit.reported_at else None,
+        "confirmed_at": deposit.confirmed_at.isoformat() if deposit.confirmed_at else None,
+        "confirmed_by": str(deposit.confirmed_by) if deposit.confirmed_by else None,
+        "notes": deposit.notes,
+        "created_at": deposit.created_at.isoformat()
+    }
+
+
+@router.get("/entities/{entity_id}/balance")
+async def get_entity_balance(
+    entity_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get an entity's balance and deposit history.
+    Admin only.
+    """
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Count deposits
+    deposit_count_result = await db.execute(
+        select(func.count()).select_from(Deposit).where(
+            Deposit.entity_id == entity.id,
+            Deposit.status == DepositStatus.CONFIRMED
+        )
+    )
+    deposit_count = deposit_count_result.scalar()
+
+    return {
+        "entity_id": str(entity.id),
+        "entity_name": entity.name,
+        "balance_amount": float(entity.balance_amount or 0),
+        "balance_currency": entity.balance_currency.value if entity.balance_currency else None,
+        "total_deposited": float(entity.total_deposited or 0),
+        "deposit_count": deposit_count
+    }
+
+
+@router.get("/users/{user_id}/deposits")
+async def get_user_deposits(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all deposits for a user's entity.
+    Admin only.
+    """
+    # Get user's entity
+    user_result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = user_result.scalar_one_or_none()
+
+    if not user or not user.entity_id:
+        return []
+
+    # Get deposits for entity
+    query = (
+        select(Deposit)
+        .where(Deposit.entity_id == user.entity_id)
+        .order_by(Deposit.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    deposits = result.scalars().all()
+
+    return [
+        {
+            "id": str(d.id),
+            "entity_id": str(d.entity_id),
+            "amount": float(d.amount),
+            "currency": d.currency.value,
+            "wire_reference": d.wire_reference,
+            "bank_reference": d.bank_reference,
+            "status": d.status.value,
+            "confirmed_at": d.confirmed_at.isoformat() if d.confirmed_at else None,
+            "created_at": d.created_at.isoformat()
+        }
+        for d in deposits
     ]

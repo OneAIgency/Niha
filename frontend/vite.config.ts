@@ -14,11 +14,10 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // Use Docker service name for container-to-container communication
+        target: 'http://backend:8000',
         changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:8000',
+        // Enable WebSocket proxying for /api paths (e.g., /api/v1/prices/ws)
         ws: true,
       },
     },

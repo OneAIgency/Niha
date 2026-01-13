@@ -26,11 +26,44 @@ import type {
   AdminUserUpdate,
   AdminPasswordReset,
   AuthenticationAttempt,
+  Deposit,
+  DepositCreate,
+  EntityBalance,
 } from '../types';
 
-// Use relative URL to leverage Vite's proxy in development
-// This ensures requests go through the same origin and avoid CORS issues
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// Dynamic API URL detection for LAN/remote access
+const getApiBaseUrl = (): string => {
+  // If VITE_API_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_URL) {
+    console.log('[API] Using VITE_API_URL:', import.meta.env.VITE_API_URL);
+    return import.meta.env.VITE_API_URL;
+  }
+
+  const { protocol, hostname, port } = window.location;
+  console.log('[API] Detecting URL - protocol:', protocol, 'hostname:', hostname, 'port:', port);
+
+  // If running on Vite dev server (port 5173), use relative URLs
+  // Vite proxy handles forwarding /api requests to the backend
+  if (port === '5173') {
+    console.log('[API] Using relative URLs (Vite dev server proxy)');
+    return '';
+  }
+
+  // Guard against empty hostname
+  if (!hostname) {
+    console.warn('[API] Empty hostname detected, falling back to relative URLs');
+    return '';
+  }
+
+  // For production/other access, construct URL from current hostname
+  // Assume backend runs on port 8000
+  const apiUrl = `${protocol}//${hostname}:8000`;
+  console.log('[API] Constructed API URL:', apiUrl);
+  return apiUrl;
+};
+
+const API_BASE = getApiBaseUrl();
+console.log('[API] Final API_BASE:', API_BASE);
 
 const api = axios.create({
   baseURL: `${API_BASE}/api/v1`,
@@ -109,8 +142,35 @@ export const pricesApi = {
 
   // WebSocket connection for live prices
   connectWebSocket: (onMessage: (prices: Prices) => void): WebSocket => {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    const ws = new WebSocket(`${wsUrl}/api/v1/prices/ws`);
+    const getWsUrl = (): string => {
+      // If VITE_WS_URL is explicitly set, use it
+      if (import.meta.env.VITE_WS_URL) {
+        console.log('[WS] Using VITE_WS_URL:', import.meta.env.VITE_WS_URL);
+        return `${import.meta.env.VITE_WS_URL}/api/v1/prices/ws`;
+      }
+
+      const { protocol, hostname, port } = window.location;
+      console.log('[WS] Detecting URL - protocol:', protocol, 'hostname:', hostname, 'port:', port);
+
+      // If running on Vite dev server (port 5173), use relative WebSocket URL
+      // Vite proxy handles forwarding /api requests (including WebSocket) to the backend
+      if (port === '5173') {
+        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${hostname}:${port}/api/v1/prices/ws`;
+        console.log('[WS] Using Vite proxy WebSocket URL:', wsUrl);
+        return wsUrl;
+      }
+
+      // For production/other access, construct URL from current hostname
+      // Assume backend runs on port 8000
+      const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${hostname}:8000/api/v1/prices/ws`;
+      console.log('[WS] Using direct WebSocket URL:', wsUrl);
+      return wsUrl;
+    };
+
+    const wsUrl = getWsUrl();
+    const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -449,8 +509,32 @@ export const backofficeApi = {
     return data;
   },
 
-  getUserDeposits: async (userId: string): Promise<any[]> => {
+  getUserDeposits: async (userId: string): Promise<Deposit[]> => {
     const { data } = await api.get(`/backoffice/users/${userId}/deposits`);
+    return data;
+  },
+
+  // Deposit Management
+  getDeposits: async (params?: {
+    status?: string;
+    entity_id?: string;
+  }): Promise<Deposit[]> => {
+    const { data } = await api.get('/backoffice/deposits', { params });
+    return data;
+  },
+
+  createDeposit: async (deposit: DepositCreate): Promise<MessageResponse> => {
+    const { data } = await api.post('/backoffice/deposits', deposit);
+    return data;
+  },
+
+  getDeposit: async (depositId: string): Promise<Deposit> => {
+    const { data } = await api.get(`/backoffice/deposits/${depositId}`);
+    return data;
+  },
+
+  getEntityBalance: async (entityId: string): Promise<EntityBalance> => {
+    const { data } = await api.get(`/backoffice/entities/${entityId}/balance`);
     return data;
   },
 };
