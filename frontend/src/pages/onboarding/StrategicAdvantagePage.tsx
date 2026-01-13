@@ -94,7 +94,7 @@ const marketInefficiencies = {
     mitigation: [
       'Delivery versus Payment (DvP) settlement eliminating counterparty default risk',
       'Automated settlement systems ensuring atomic settlement',
-      'Escrow mechanisms protecting both parties during verification periods',
+      'Client account mechanisms protecting both parties during verification periods',
       'Professional clearing and settlement infrastructure comparable to major exchanges',
     ],
   },

@@ -1688,7 +1688,7 @@ const RiskMitigation = () => {
       mitigations: [
         'Nihao pre-qualification of all CEA providers',
         'Staged settlement reduces exposure per tranche',
-        'Escrow arrangements protect both parties',
+        'Client account arrangements protect both parties',
         'Performance bonds available for large transactions',
         'Insurance coverage options',
       ],
