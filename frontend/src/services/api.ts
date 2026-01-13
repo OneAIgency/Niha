@@ -199,6 +199,74 @@ export const pricesApi = {
   },
 };
 
+// Backoffice Realtime Types
+export interface BackofficeWebSocketMessage {
+  type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed';
+  data?: any;
+  message?: string;
+  timestamp: string;
+}
+
+// Backoffice Realtime API
+export const backofficeRealtimeApi = {
+  connectWebSocket: (
+    onMessage: (message: BackofficeWebSocketMessage) => void,
+    onOpen?: () => void,
+    onClose?: () => void,
+    onError?: (error: Event) => void
+  ): WebSocket => {
+    const getWsUrl = (): string => {
+      // If VITE_WS_URL is explicitly set, use it
+      if (import.meta.env.VITE_WS_URL) {
+        return `${import.meta.env.VITE_WS_URL}/api/v1/backoffice/ws`;
+      }
+
+      const { protocol, hostname, port } = window.location;
+
+      // If running on Vite dev server (port 5173), use relative WebSocket URL
+      if (port === '5173') {
+        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${wsProtocol}//${hostname}:${port}/api/v1/backoffice/ws`;
+      }
+
+      // For production/other access, construct URL from current hostname
+      const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${wsProtocol}//${hostname}:8000/api/v1/backoffice/ws`;
+    };
+
+    const wsUrl = getWsUrl();
+    console.log('[Backoffice WS] Connecting to:', wsUrl);
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('[Backoffice WS] Connected');
+      onOpen?.();
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as BackofficeWebSocketMessage;
+        console.log('[Backoffice WS] Message:', data.type);
+        onMessage(data);
+      } catch (err) {
+        console.error('[Backoffice WS] Failed to parse message:', err);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('[Backoffice WS] Disconnected');
+      onClose?.();
+    };
+
+    ws.onerror = (error) => {
+      console.error('[Backoffice WS] Error:', error);
+      onError?.(error);
+    };
+
+    return ws;
+  },
+};
+
 // Marketplace API
 export const marketplaceApi = {
   getCEAListings: async (params?: {
@@ -331,6 +399,43 @@ export const adminApi = {
 
   updateContactRequest: async (id: string, update: any): Promise<MessageResponse> => {
     const { data } = await api.put(`/admin/contact-requests/${id}`, update);
+    return data;
+  },
+
+  // Download NDA file (programmatic download with auth)
+  downloadNDA: async (requestId: string, fileName: string): Promise<void> => {
+    const response = await api.get(`/admin/contact-requests/${requestId}/nda`, {
+      responseType: 'blob'
+    });
+
+    // Create download link
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'nda.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  // IP WHOIS Lookup
+  lookupIP: async (ipAddress: string): Promise<{
+    ip: string;
+    country: string;
+    country_code: string;
+    region: string;
+    city: string;
+    zip: string;
+    lat: number;
+    lon: number;
+    timezone: string;
+    isp: string;
+    org: string;
+    as: string;
+  }> => {
+    const { data } = await api.get(`/admin/ip-lookup/${ipAddress}`);
     return data;
   },
 

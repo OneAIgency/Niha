@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Numeric, Integer, Text, Enum as SQLEnum, JSON
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Numeric, Integer, Text, Enum as SQLEnum, JSON, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import enum
@@ -193,8 +193,11 @@ class ContactRequest(Base):
     position = Column(String(100))
     reference = Column(String(255))
     request_type = Column(String(50), default="join")  # 'join' or 'nda'
-    nda_file_path = Column(String(500), nullable=True)
+    nda_file_path = Column(String(500), nullable=True)  # Deprecated - kept for migration
     nda_file_name = Column(String(255), nullable=True)
+    nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
+    nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
+    submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
     status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Prices, MarketStats } from '../types';
+import type { User, Prices, MarketStats, ContactRequestResponse } from '../types';
 
 // Auth Store
 interface AuthState {
@@ -129,3 +129,43 @@ export const useUIStore = create<UIState>((set, get) => {
     },
   };
 });
+
+// Backoffice Realtime Store
+export type BackofficeConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
+
+interface BackofficeState {
+  contactRequests: ContactRequestResponse[];
+  connectionStatus: BackofficeConnectionStatus;
+  lastUpdated: Date | null;
+  setContactRequests: (requests: ContactRequestResponse[]) => void;
+  addContactRequest: (request: ContactRequestResponse) => void;
+  updateContactRequest: (request: ContactRequestResponse) => void;
+  removeContactRequest: (id: string) => void;
+  setConnectionStatus: (status: BackofficeConnectionStatus) => void;
+}
+
+export const useBackofficeStore = create<BackofficeState>((set) => ({
+  contactRequests: [],
+  connectionStatus: 'disconnected',
+  lastUpdated: null,
+  setContactRequests: (requests) =>
+    set({ contactRequests: requests, lastUpdated: new Date() }),
+  addContactRequest: (request) =>
+    set((state) => ({
+      contactRequests: [request, ...state.contactRequests],
+      lastUpdated: new Date(),
+    })),
+  updateContactRequest: (request) =>
+    set((state) => ({
+      contactRequests: state.contactRequests.map((r) =>
+        r.id === request.id ? request : r
+      ),
+      lastUpdated: new Date(),
+    })),
+  removeContactRequest: (id) =>
+    set((state) => ({
+      contactRequests: state.contactRequests.filter((r) => r.id !== id),
+      lastUpdated: new Date(),
+    })),
+  setConnectionStatus: (status) => set({ connectionStatus: status }),
+}));

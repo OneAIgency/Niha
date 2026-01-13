@@ -1,24 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import os
-import uuid as uuid_module
-import aiofiles
+import asyncio
 
 from ...core.database import get_db
 from ...models.models import ContactRequest, ContactStatus
 from ...schemas.schemas import ContactRequestCreate, ContactRequestResponse, MessageResponse
 from ...services.email_service import email_service
+from .backoffice import backoffice_ws_manager
 
 router = APIRouter(prefix="/contact", tags=["Contact"])
-
-# NDA upload directory
-NDA_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'uploads', 'nda')
-os.makedirs(NDA_UPLOAD_DIR, exist_ok=True)
 
 # Allowed file types and max size for NDA
 ALLOWED_NDA_EXTENSIONS = {'.pdf'}
 MAX_NDA_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP, checking for proxy headers."""
+    # Check X-Forwarded-For first (for proxies/load balancers)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    # Fall back to direct client IP
+    return request.client.host if request.client else None
 
 
 @router.post("/request", response_model=ContactRequestResponse)
@@ -45,6 +51,19 @@ async def create_contact_request(
     await db.commit()
     await db.refresh(contact)
 
+    # Broadcast new contact request to backoffice
+    asyncio.create_task(backoffice_ws_manager.broadcast("new_request", {
+        "id": str(contact.id),
+        "entity_name": contact.entity_name,
+        "contact_email": contact.contact_email,
+        "contact_name": contact.contact_name,
+        "position": contact.position,
+        "reference": contact.reference,
+        "request_type": contact.request_type or "join",
+        "status": contact.status.value if contact.status else "new",
+        "created_at": (contact.created_at.isoformat() + "Z") if contact.created_at else None
+    }))
+
     # Send confirmation email
     await email_service.send_contact_followup(
         request.contact_email,
@@ -56,6 +75,7 @@ async def create_contact_request(
 
 @router.post("/nda-request", response_model=ContactRequestResponse)
 async def create_nda_request(
+    request: Request,
     entity_name: str = Form(...),
     contact_email: str = Form(...),
     contact_name: str = Form(...),
@@ -65,8 +85,11 @@ async def create_nda_request(
 ):
     """
     Submit an NDA request with signed NDA document.
-    Only PDF files allowed.
+    Only PDF files allowed. Stores PDF binary in database.
     """
+    # Capture submitter IP address
+    submitter_ip = get_client_ip(request)
+
     # Validate email format
     if '@' not in contact_email or '.' not in contact_email:
         raise HTTPException(status_code=400, detail="Invalid email format")
@@ -83,29 +106,37 @@ async def create_nda_request(
     if len(content) > MAX_NDA_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-    # Generate unique filename
-    unique_filename = f"{uuid_module.uuid4()}{file_ext}"
-    file_path = os.path.join(NDA_UPLOAD_DIR, unique_filename)
-
-    # Save file
-    async with aiofiles.open(file_path, 'wb') as f:
-        await f.write(content)
-
-    # Create contact request with NDA
+    # Create contact request with NDA - store PDF binary in database
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
         contact_name=contact_name,
         position=position,
         request_type="nda",
-        nda_file_path=file_path,
         nda_file_name=file.filename,
+        nda_file_data=content,  # Store binary in database
+        nda_file_mime_type="application/pdf",
+        submitter_ip=submitter_ip,
         status=ContactStatus.NEW
     )
 
     db.add(contact)
     await db.commit()
     await db.refresh(contact)
+
+    # Broadcast new NDA request to backoffice
+    asyncio.create_task(backoffice_ws_manager.broadcast("new_request", {
+        "id": str(contact.id),
+        "entity_name": contact.entity_name,
+        "contact_email": contact.contact_email,
+        "contact_name": contact.contact_name,
+        "position": contact.position,
+        "request_type": "nda",
+        "nda_file_name": contact.nda_file_name,
+        "submitter_ip": contact.submitter_ip,
+        "status": contact.status.value if contact.status else "new",
+        "created_at": (contact.created_at.isoformat() + "Z") if contact.created_at else None
+    }))
 
     # Send confirmation email
     try:

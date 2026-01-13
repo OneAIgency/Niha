@@ -15,10 +15,13 @@ import {
   Download,
   RefreshCw,
   AlertCircle,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { Button, Card, Badge } from '../components/common';
 import { adminApi, backofficeApi } from '../services/api';
 import { cn, formatRelativeTime, formatCurrency, formatQuantity } from '../utils';
+import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
 
 interface ContactRequest {
   id: string;
@@ -29,9 +32,25 @@ interface ContactRequest {
   reference?: string;
   request_type: 'join' | 'nda';
   nda_file_name?: string;
+  submitter_ip?: string;
   status: string;
   notes?: string;
   created_at: string;
+}
+
+interface IPLookupResult {
+  ip: string;
+  country: string;
+  country_code: string;
+  region: string;
+  city: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  timezone: string;
+  isp: string;
+  org: string;
+  as: string;
 }
 
 interface KYCUser {
@@ -96,9 +115,29 @@ export function BackofficePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Contact requests state
-  const [contactRequests, setContactRequests] = useState<ContactRequest[]>([]);
-  const [contactRequestsCount, setContactRequestsCount] = useState(0);
+  // Use realtime hook for contact requests
+  const {
+    contactRequests: realtimeContactRequests,
+    connectionStatus,
+    refresh: refreshContactRequests,
+  } = useBackofficeRealtime();
+
+  // Map realtime data to local interface
+  const contactRequests: ContactRequest[] = realtimeContactRequests.map(r => ({
+    id: r.id,
+    entity_name: r.entity_name,
+    contact_email: r.contact_email,
+    contact_name: r.contact_name,
+    position: r.position || '',
+    reference: r.reference,
+    request_type: r.request_type,
+    nda_file_name: r.nda_file_name,
+    submitter_ip: r.submitter_ip,
+    status: r.status,
+    notes: r.notes,
+    created_at: r.created_at,
+  }));
+  const contactRequestsCount = contactRequests.length;
 
   // KYC state
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
@@ -107,23 +146,30 @@ export function BackofficePage() {
   // User details state
   const [selectedUser, setSelectedUser] = useState<SelectedUserDetails | null>(null);
   const [showDocumentViewer, setShowDocumentViewer] = useState<{ fileName: string; type: string } | null>(null);
+
+  // IP Lookup Modal state
+  const [ipLookupData, setIpLookupData] = useState<IPLookupResult | null>(null);
+  const [ipLookupLoading, setIpLookupLoading] = useState(false);
+  const [showIpModal, setShowIpModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [activeTab]);
+    // Contact requests are now loaded via realtime hook, only load other tabs
+    if (activeTab !== 'requests') {
+      loadData();
+    } else {
+      // For requests tab, use realtime data
+      setLoading(realtimeContactRequests.length === 0 && connectionStatus === 'connecting');
+    }
+  }, [activeTab, realtimeContactRequests.length, connectionStatus]);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      if (activeTab === 'requests') {
-        const response = await adminApi.getContactRequests({ per_page: 50 });
-        setContactRequests(response.data);
-        setContactRequestsCount(response.pagination.total);
-      } else if (activeTab === 'kyc') {
+      if (activeTab === 'kyc') {
         const [users, docs] = await Promise.all([
           backofficeApi.getPendingUsers(),
           backofficeApi.getKYCDocuments()
@@ -148,12 +194,53 @@ export function BackofficePage() {
     }
   };
 
+  // Handle refresh based on active tab
+  const handleRefresh = () => {
+    if (activeTab === 'requests') {
+      refreshContactRequests();
+    } else {
+      loadData();
+    }
+  };
+
+  // Handle NDA download with authentication
+  const handleDownloadNDA = async (requestId: string, fileName: string) => {
+    setActionLoading(`download-${requestId}`);
+    try {
+      await adminApi.downloadNDA(requestId, fileName);
+    } catch (err) {
+      console.error('Failed to download NDA:', err);
+      setError('Failed to download NDA file');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle IP WHOIS lookup
+  const handleIpLookup = async (ip: string) => {
+    if (!ip || ip === 'null' || ip === 'None') {
+      setError('Invalid IP address');
+      return;
+    }
+    setIpLookupLoading(true);
+    setShowIpModal(true);
+    try {
+      const data = await adminApi.lookupIP(ip);
+      setIpLookupData(data);
+    } catch (err) {
+      console.error('Failed to lookup IP:', err);
+      setIpLookupData(null);
+      setError('Failed to lookup IP address');
+    } finally {
+      setIpLookupLoading(false);
+    }
+  };
+
   const handleApproveRequest = async (requestId: string) => {
     setActionLoading(requestId);
     try {
       await adminApi.updateContactRequest(requestId, { status: 'enrolled' });
-      setContactRequests(prev => prev.filter(r => r.id !== requestId));
-      setContactRequestsCount(prev => prev - 1);
+      // WebSocket will broadcast the update and refresh the store automatically
     } catch (err) {
       console.error('Failed to approve request:', err);
     } finally {
@@ -165,8 +252,7 @@ export function BackofficePage() {
     setActionLoading(requestId);
     try {
       await adminApi.updateContactRequest(requestId, { status: 'rejected' });
-      setContactRequests(prev => prev.filter(r => r.id !== requestId));
-      setContactRequestsCount(prev => prev - 1);
+      // WebSocket will broadcast the update and refresh the store automatically
     } catch (err) {
       console.error('Failed to reject request:', err);
     } finally {
@@ -311,10 +397,30 @@ export function BackofficePage() {
               )}
             </button>
           ))}
+          {/* Connection Status Indicator (only for requests tab) */}
+          {activeTab === 'requests' && (
+            <div className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium',
+              connectionStatus === 'connected' && 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+              connectionStatus === 'connecting' && 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+              connectionStatus === 'disconnected' && 'bg-navy-100 dark:bg-navy-700 text-navy-500 dark:text-navy-400',
+              connectionStatus === 'error' && 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+            )}>
+              {connectionStatus === 'connected' ? (
+                <><Wifi className="w-3 h-3" /> Live</>
+              ) : connectionStatus === 'connecting' ? (
+                <><RefreshCw className="w-3 h-3 animate-spin" /> Connecting...</>
+              ) : connectionStatus === 'error' ? (
+                <><WifiOff className="w-3 h-3" /> Error</>
+              ) : (
+                <><WifiOff className="w-3 h-3" /> Offline</>
+              )}
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={loadData}
+            onClick={handleRefresh}
             className="ml-auto"
             icon={<RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />}
           >
@@ -384,18 +490,28 @@ export function BackofficePage() {
                                 <span className="ml-2 text-navy-700 dark:text-navy-200">{request.reference}</span>
                               </div>
                             )}
+                            {request.submitter_ip && (
+                              <div>
+                                <span className="text-navy-500 dark:text-navy-400">IP:</span>
+                                <button
+                                  onClick={() => handleIpLookup(request.submitter_ip!)}
+                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline font-mono text-xs"
+                                >
+                                  {request.submitter_ip}
+                                </button>
+                              </div>
+                            )}
                             {request.nda_file_name && (
                               <div className="col-span-2">
                                 <span className="text-navy-500 dark:text-navy-400">NDA File:</span>
-                                <a
-                                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/admin/contact-requests/${request.id}/nda`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center gap-1"
+                                <button
+                                  onClick={() => handleDownloadNDA(request.id, request.nda_file_name!)}
+                                  disabled={actionLoading === `download-${request.id}`}
+                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
                                 >
-                                  <Download className="w-3 h-3" />
+                                  <Download className={cn("w-3 h-3", actionLoading === `download-${request.id}` && "animate-spin")} />
                                   {request.nda_file_name}
-                                </a>
+                                </button>
                               </div>
                             )}
                           </div>
@@ -745,6 +861,86 @@ export function BackofficePage() {
                   <p className="text-navy-500 dark:text-navy-400">Document preview would appear here</p>
                   <p className="text-sm text-navy-400">{showDocumentViewer.fileName}</p>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* IP Lookup Modal */}
+        {showIpModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
+                <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-teal-500" />
+                  IP Address Lookup
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowIpModal(false);
+                    setIpLookupData(null);
+                  }}
+                  className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                {ipLookupLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-teal-500" />
+                    <span className="ml-2 text-navy-600 dark:text-navy-300">Looking up IP...</span>
+                  </div>
+                ) : ipLookupData ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">IP Address</span>
+                        <span className="font-mono text-navy-900 dark:text-white">{ipLookupData.ip}</span>
+                      </div>
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">Country</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.country} ({ipLookupData.country_code})</span>
+                      </div>
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">Region</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.region}</span>
+                      </div>
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">City</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.city} {ipLookupData.zip}</span>
+                      </div>
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">Timezone</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.timezone}</span>
+                      </div>
+                      <div>
+                        <span className="text-navy-500 dark:text-navy-400 block">Coordinates</span>
+                        <span className="font-mono text-xs text-navy-900 dark:text-white">{ipLookupData.lat}, {ipLookupData.lon}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-navy-500 dark:text-navy-400 block">ISP</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.isp}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-navy-500 dark:text-navy-400 block">Organization</span>
+                        <span className="text-navy-900 dark:text-white">{ipLookupData.org}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-navy-500 dark:text-navy-400 block">AS</span>
+                        <span className="font-mono text-xs text-navy-900 dark:text-white">{ipLookupData.as}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-navy-500 dark:text-navy-400">
+                    Failed to load IP information
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
@@ -7,8 +8,10 @@ from typing import Optional
 from uuid import UUID
 import secrets
 import os
+import asyncio
 
 from ...core.database import get_db
+from .backoffice import backoffice_ws_manager
 from ...core.security import get_admin_user, hash_password
 from ...models.models import (
     ContactRequest, ContactStatus, Entity, User, Trade, UserRole,
@@ -68,9 +71,10 @@ async def get_contact_requests(
                 "reference": r.reference,
                 "request_type": r.request_type or "join",
                 "nda_file_name": r.nda_file_name,
+                "submitter_ip": r.submitter_ip,
                 "status": r.status.value if r.status else "new",
                 "notes": r.notes,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "created_at": (r.created_at.isoformat() + "Z") if r.created_at else None,
             }
             for r in requests
         ],
@@ -110,6 +114,23 @@ async def update_contact_request(
         contact.agent_id = update.agent_id
 
     await db.commit()
+    await db.refresh(contact)
+
+    # Broadcast contact request update to backoffice
+    asyncio.create_task(backoffice_ws_manager.broadcast("request_updated", {
+        "id": str(contact.id),
+        "entity_name": contact.entity_name,
+        "contact_email": contact.contact_email,
+        "contact_name": contact.contact_name,
+        "position": contact.position,
+        "reference": contact.reference,
+        "request_type": contact.request_type or "join",
+        "nda_file_name": contact.nda_file_name,
+        "submitter_ip": contact.submitter_ip,
+        "status": contact.status.value if contact.status else "new",
+        "notes": contact.notes,
+        "created_at": (contact.created_at.isoformat() + "Z") if contact.created_at else None
+    }))
 
     return {"message": "Contact request updated", "success": True}
 
@@ -122,6 +143,7 @@ async def download_nda_file(
 ):
     """
     Download NDA file for a contact request.
+    Serves PDF from database binary storage.
     Admin only.
     """
     result = await db.execute(
@@ -132,17 +154,76 @@ async def download_nda_file(
     if not contact:
         raise HTTPException(status_code=404, detail="Contact request not found")
 
-    if not contact.nda_file_path or not contact.nda_file_name:
-        raise HTTPException(status_code=404, detail="No NDA file attached to this request")
+    # Check for binary data in database (new storage method)
+    if contact.nda_file_data:
+        return Response(
+            content=contact.nda_file_data,
+            media_type=contact.nda_file_mime_type or "application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{contact.nda_file_name}"'
+            }
+        )
 
-    if not os.path.exists(contact.nda_file_path):
-        raise HTTPException(status_code=404, detail="NDA file not found on server")
+    # Fallback to filesystem for legacy records
+    if contact.nda_file_path and contact.nda_file_name:
+        if os.path.exists(contact.nda_file_path):
+            return FileResponse(
+                path=contact.nda_file_path,
+                filename=contact.nda_file_name,
+                media_type="application/pdf"
+            )
 
-    return FileResponse(
-        path=contact.nda_file_path,
-        filename=contact.nda_file_name,
-        media_type="application/pdf"
-    )
+    raise HTTPException(status_code=404, detail="No NDA file attached to this request")
+
+
+@router.get("/ip-lookup/{ip_address}")
+async def ip_whois_lookup(
+    ip_address: str,
+    admin_user: User = Depends(get_admin_user),
+):
+    """
+    Perform WHOIS/GeoIP lookup for an IP address.
+    Uses ip-api.com (free tier, no API key needed).
+    Admin only.
+    """
+    # Validate IP address format (basic check)
+    if not ip_address or ip_address in ['None', 'null', '']:
+        raise HTTPException(status_code=400, detail="Invalid IP address")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"http://ip-api.com/json/{ip_address}",
+                params={
+                    "fields": "status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
+                }
+            )
+            data = response.json()
+
+        if data.get("status") == "fail":
+            raise HTTPException(
+                status_code=400,
+                detail=data.get("message", "IP lookup failed")
+            )
+
+        return {
+            "ip": data.get("query"),
+            "country": data.get("country"),
+            "country_code": data.get("countryCode"),
+            "region": data.get("regionName"),
+            "city": data.get("city"),
+            "zip": data.get("zip"),
+            "lat": data.get("lat"),
+            "lon": data.get("lon"),
+            "timezone": data.get("timezone"),
+            "isp": data.get("isp"),
+            "org": data.get("org"),
+            "as": data.get("as"),
+        }
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="IP lookup timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"IP lookup failed: {str(e)}")
 
 
 @router.get("/dashboard")

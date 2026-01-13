@@ -40,3 +40,4 @@ redis_data/
 .coverage
 htmlcov/
 .pytest_cache/
+backend/uploads/

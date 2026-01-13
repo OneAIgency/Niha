@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 from decimal import Decimal
+import asyncio
+import json
 
 # Constants for deposit validation
 MAX_DEPOSIT_AMOUNT = Decimal('100000000')  # 100 million max per deposit
@@ -31,6 +33,78 @@ from ...schemas.schemas import (
 from ...services.email_service import email_service
 
 router = APIRouter(prefix="/backoffice", tags=["Backoffice"])
+
+
+# ============== WebSocket Connection Manager ==============
+
+class BackofficeConnectionManager:
+    """Manage WebSocket connections for backoffice realtime updates"""
+
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, event_type: str, data: dict):
+        """Broadcast an event to all connected clients"""
+        message = {
+            "type": event_type,
+            "data": data,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                disconnected.append(connection)
+        # Clean up disconnected clients
+        for conn in disconnected:
+            self.disconnect(conn)
+
+
+# Global connection manager instance
+backoffice_ws_manager = BackofficeConnectionManager()
+
+
+@router.websocket("/ws")
+async def backoffice_websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time backoffice updates.
+    Sends heartbeat every 30 seconds to keep connection alive.
+    Events are pushed when contact requests or other backoffice data changes.
+    """
+    await backoffice_ws_manager.connect(websocket)
+
+    try:
+        # Send initial connection confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "message": "Connected to backoffice realtime updates",
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+        # Keep connection alive with heartbeat
+        while True:
+            await asyncio.sleep(30)
+            try:
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            except Exception:
+                break
+
+    except WebSocketDisconnect:
+        backoffice_ws_manager.disconnect(websocket)
+    except Exception:
+        backoffice_ws_manager.disconnect(websocket)
 
 
 @router.get("/pending-users")

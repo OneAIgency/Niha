@@ -183,9 +183,26 @@ export interface ContactRequestResponse {
   reference?: string;
   request_type: 'join' | 'nda';
   nda_file_name?: string;
+  submitter_ip?: string;
   status: string;
   notes?: string;
   created_at: string;
+}
+
+// IP Lookup Result
+export interface IPLookupResult {
+  ip: string;
+  country: string;
+  country_code: string;
+  region: string;
+  city: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  timezone: string;
+  isp: string;
+  org: string;
+  as: string;
 }
 
 // Market Stats
