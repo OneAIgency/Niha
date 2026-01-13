@@ -45,8 +45,20 @@ async def init_db():
 
 async def create_seed_users():
     """Create default admin and test users if they don't exist"""
+    import os
     from ..models.models import User, UserRole, Entity, Jurisdiction, KYCStatus
     from .security import hash_password
+
+    # Get passwords from environment variables with fallback to defaults for development
+    admin_password = os.environ.get("SEED_ADMIN_PASSWORD", "Admin123!")
+    test_password = os.environ.get("SEED_TEST_PASSWORD", "Test123!")
+
+    # Warn if using default passwords in non-development environments
+    if not settings.DEBUG:
+        if not os.environ.get("SEED_ADMIN_PASSWORD"):
+            logger.warning("Using default admin password in non-DEBUG mode. Set SEED_ADMIN_PASSWORD env var.")
+        if not os.environ.get("SEED_TEST_PASSWORD"):
+            logger.warning("Using default test password in non-DEBUG mode. Set SEED_TEST_PASSWORD env var.")
 
     # Create seed entities first
     seed_entities = [
@@ -69,7 +81,7 @@ async def create_seed_users():
     seed_users = [
         {
             "email": "admin@nihaogroup.com",
-            "password": "Admin123!",
+            "password": admin_password,
             "first_name": "Admin",
             "last_name": "User",
             "role": UserRole.ADMIN,
@@ -79,7 +91,7 @@ async def create_seed_users():
         },
         {
             "email": "eu@eu.ro",
-            "password": "Test123!",
+            "password": test_password,
             "first_name": "Test",
             "last_name": "User",
             "role": UserRole.APPROVED,  # APPROVED so we can test deposit -> FUNDED flow

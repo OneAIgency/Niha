@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 from decimal import Decimal
+
+# Constants for deposit validation
+MAX_DEPOSIT_AMOUNT = Decimal('100000000')  # 100 million max per deposit
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
@@ -221,7 +224,14 @@ async def get_all_kyc_documents(
         query = query.where(KYCDocument.user_id == UUID(user_id))
 
     if status:
-        query = query.where(KYCDocument.status == DocumentStatus(status))
+        try:
+            doc_status = DocumentStatus(status)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DocumentStatus]}"
+            )
+        query = query.where(KYCDocument.status == doc_status)
 
     result = await db.execute(query)
     documents = result.scalars().all()
@@ -383,7 +393,14 @@ async def get_all_deposits(
     query = select(Deposit).order_by(Deposit.created_at.desc())
 
     if status:
-        query = query.where(Deposit.status == DepositStatus(status))
+        try:
+            dep_status = DepositStatus(status)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DepositStatus]}"
+            )
+        query = query.where(Deposit.status == dep_status)
 
     if entity_id:
         query = query.where(Deposit.entity_id == UUID(entity_id))
@@ -439,25 +456,47 @@ async def create_deposit(
     This is used when backoffice receives a wire transfer.
     Admin only.
     """
-    # Verify entity exists
+    # Validate deposit amount
+    deposit_amount = Decimal(str(deposit_data.amount))
+    if deposit_amount <= 0:
+        raise HTTPException(status_code=400, detail="Deposit amount must be positive")
+    if deposit_amount > MAX_DEPOSIT_AMOUNT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deposit amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})"
+        )
+
+    # Verify entity exists with row lock to prevent race conditions
     entity_result = await db.execute(
-        select(Entity).where(Entity.id == deposit_data.entity_id)
+        select(Entity)
+        .where(Entity.id == deposit_data.entity_id)
+        .with_for_update()
     )
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
-    # Generate bank reference
-    import random
+    # Validate currency - cannot mix currencies in the same entity balance
+    deposit_currency = Currency(deposit_data.currency.value)
+    if entity.balance_currency and entity.balance_currency != deposit_currency:
+        if entity.balance_amount and entity.balance_amount > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Currency mismatch: entity has existing balance in {entity.balance_currency.value}, "
+                       f"cannot add {deposit_currency.value}. Please use the same currency or zero the balance first."
+            )
+
+    # Generate bank reference using cryptographically secure random
+    import secrets
     import string
-    bank_ref = f"DEP-{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
+    bank_ref = f"DEP-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}"
 
     # Create deposit record
     deposit = Deposit(
         entity_id=deposit_data.entity_id,
-        amount=Decimal(str(deposit_data.amount)),
-        currency=Currency(deposit_data.currency.value),
+        amount=deposit_amount,
+        currency=deposit_currency,
         wire_reference=deposit_data.wire_reference,
         bank_reference=bank_ref,
         status=DepositStatus.CONFIRMED,
@@ -467,10 +506,10 @@ async def create_deposit(
     )
     db.add(deposit)
 
-    # Update entity balance
-    entity.balance_amount = (entity.balance_amount or Decimal('0')) + Decimal(str(deposit_data.amount))
-    entity.balance_currency = Currency(deposit_data.currency.value)
-    entity.total_deposited = (entity.total_deposited or Decimal('0')) + Decimal(str(deposit_data.amount))
+    # Update entity balance atomically using the locked row
+    entity.balance_amount = (entity.balance_amount or Decimal('0')) + deposit_amount
+    entity.balance_currency = deposit_currency
+    entity.total_deposited = (entity.total_deposited or Decimal('0')) + deposit_amount
 
     # Find users for this entity and upgrade to FUNDED if APPROVED
     users_result = await db.execute(
