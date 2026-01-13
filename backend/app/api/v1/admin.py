@@ -540,10 +540,11 @@ async def get_users(
     result = await db.execute(query)
     users = result.scalars().all()
 
-    # Get entity names
+    # Get entity names and approval timestamps
     user_list = []
     for user in users:
         entity_name = None
+        kyc_approved_at = None
         if user.entity_id:
             entity_result = await db.execute(
                 select(Entity).where(Entity.id == user.entity_id)
@@ -551,9 +552,11 @@ async def get_users(
             entity = entity_result.scalar_one_or_none()
             if entity:
                 entity_name = entity.name
+                kyc_approved_at = entity.kyc_approved_at.isoformat() if entity.kyc_approved_at else None
 
         user_data = UserResponse.model_validate(user).model_dump()
         user_data['entity_name'] = entity_name
+        user_data['kyc_approved_at'] = kyc_approved_at
         user_list.append(user_data)
 
     return {

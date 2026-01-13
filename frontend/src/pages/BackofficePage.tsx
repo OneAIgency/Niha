@@ -6,7 +6,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye,
   MapPin,
   Activity,
   ArrowRightLeft,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge } from '../components/common';
 import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
+import { KYCReviewPanel } from '../components/backoffice/KYCReviewPanel';
 import { adminApi, backofficeApi } from '../services/api';
 import { cn, formatRelativeTime, formatCurrency, formatQuantity } from '../utils';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
@@ -191,15 +191,15 @@ export function BackofficePage() {
           backofficeApi.getPendingUsers(),
           backofficeApi.getKYCDocuments()
         ]);
-        // Map User[] to KYCUser[] format
-        setKycUsers(users.map(u => ({
+        // Map response to KYCUser[] format (backend returns documents_count and entity_name)
+        setKycUsers(users.map((u: any) => ({
           id: u.id,
           email: u.email,
           first_name: u.first_name,
           last_name: u.last_name,
-          entity_name: undefined,
-          documents_count: 0,
-          created_at: u.last_login || new Date().toISOString(),
+          entity_name: u.entity_name,
+          documents_count: u.documents_count || 0,
+          created_at: u.created_at || new Date().toISOString(),
         })));
         setKycDocuments(docs);
       }
@@ -687,130 +687,87 @@ export function BackofficePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-500" />
                 KYC Documents Review
               </h2>
+              <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
+                Review and approve user KYC documents by category
+              </p>
+            </div>
 
-              {loading ? (
-                <div className="space-y-4">
-                  {[...Array(2)].map((_, i) => (
-                    <div key={i} className="animate-pulse p-6 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                      <div className="h-5 bg-navy-100 dark:bg-navy-600 rounded w-1/4 mb-3" />
-                      <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/3" />
-                    </div>
-                  ))}
-                </div>
-              ) : kycUsers.length > 0 ? (
-                <div className="space-y-6">
-                  {kycUsers.map((user) => {
-                    const userDocs = getUserDocuments(user.id);
-
-                    return (
-                      <div
-                        key={user.id}
-                        className="p-6 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="font-semibold text-navy-900 dark:text-white">
-                              {user.first_name} {user.last_name}
-                            </h3>
-                            <p className="text-sm text-navy-500 dark:text-navy-400">
-                              {user.email} {user.entity_name && `- ${user.entity_name}`}
-                            </p>
-                          </div>
-                          <p className="text-xs text-navy-400">
-                            {user.documents_count} documents uploaded
-                          </p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          {userDocs.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="flex items-center justify-between p-3 bg-white dark:bg-navy-800 rounded-lg border border-navy-100 dark:border-navy-600"
-                            >
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-navy-400" />
-                                <div>
-                                  <p className="font-medium text-navy-900 dark:text-white text-sm">
-                                    {doc.document_type.replace(/_/g, ' ')}
-                                  </p>
-                                  <p className="text-xs text-navy-500 dark:text-navy-400">{doc.file_name}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={doc.status === 'approved' ? 'success' : doc.status === 'rejected' ? 'danger' : 'warning'}>
-                                  {doc.status.toUpperCase()}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenDocumentViewer(doc)}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                {doc.status === 'pending' && (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleReviewDocument(doc.id, 'rejected')}
-                                      loading={actionLoading === doc.id}
-                                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    >
-                                      <XCircle className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleReviewDocument(doc.id, 'approved')}
-                                      loading={actionLoading === doc.id}
-                                      className="text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                                    >
-                                      <CheckCircle className="w-4 h-4" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="mt-4 flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRejectKYC(user.id)}
-                            loading={actionLoading === user.id}
-                            className="text-red-500 border-red-200 hover:bg-red-50"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject User
-                          </Button>
-                          <Button
-                            variant="primary"
-                            onClick={() => handleApproveKYC(user.id)}
-                            loading={actionLoading === user.id}
-                            disabled={userDocs.some((d) => d.status === 'pending')}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Approve Full KYC
-                          </Button>
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(2)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <div className="p-4 border-b border-navy-100 dark:border-navy-700">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-navy-200 dark:bg-navy-700" />
+                        <div className="flex-1">
+                          <div className="h-5 bg-navy-200 dark:bg-navy-700 rounded w-1/4 mb-2" />
+                          <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/3" />
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
+                    </div>
+                    <div className="p-4">
+                      <div className="h-10 bg-navy-100 dark:bg-navy-700 rounded mb-3" />
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, j) => (
+                          <div key={j} className="h-16 bg-navy-100 dark:bg-navy-700 rounded" />
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : kycUsers.length > 0 ? (
+              <div className="space-y-6">
+                {kycUsers.map((user) => {
+                  const userDocs = getUserDocuments(user.id);
+                  return (
+                    <KYCReviewPanel
+                      key={user.id}
+                      userId={user.id}
+                      userEmail={user.email}
+                      userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                      entityName={user.entity_name}
+                      documents={userDocs}
+                      onDocumentApprove={async (docId) => {
+                        setActionLoading(`approve-${docId}`);
+                        await handleReviewDocument(docId, 'approved');
+                        setActionLoading(null);
+                      }}
+                      onDocumentReject={async (docId, notes) => {
+                        setActionLoading(`reject-${docId}`);
+                        await handleReviewDocument(docId, 'rejected', notes);
+                        setActionLoading(null);
+                      }}
+                      onDocumentPreview={handleOpenDocumentViewer}
+                      onUserApprove={async () => {
+                        setActionLoading(`approve-user-${user.id}`);
+                        await handleApproveKYC(user.id);
+                        setActionLoading(null);
+                      }}
+                      onUserReject={async () => {
+                        setActionLoading(`reject-user-${user.id}`);
+                        await handleRejectKYC(user.id);
+                        setActionLoading(null);
+                      }}
+                      actionLoading={actionLoading}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
                 <div className="text-center py-12">
                   <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
                   <p className="text-navy-500 dark:text-navy-400">No KYC reviews pending</p>
+                  <p className="text-xs text-navy-400 mt-1">All users have completed their verification</p>
                 </div>
-              )}
-            </Card>
+              </Card>
+            )}
           </motion.div>
         )}
 

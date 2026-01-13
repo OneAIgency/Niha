@@ -130,24 +130,46 @@ export const useUIStore = create<UIState>((set, get) => {
   };
 });
 
+// KYC Document type for backoffice
+export interface KYCDocumentBackoffice {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  document_type: string;
+  file_name: string;
+  mime_type?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
 // Backoffice Realtime Store
 export type BackofficeConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
 interface BackofficeState {
   contactRequests: ContactRequestResponse[];
+  kycDocuments: KYCDocumentBackoffice[];
   connectionStatus: BackofficeConnectionStatus;
   lastUpdated: Date | null;
+  kycLastUpdated: Date | null;
   setContactRequests: (requests: ContactRequestResponse[]) => void;
   addContactRequest: (request: ContactRequestResponse) => void;
   updateContactRequest: (request: ContactRequestResponse) => void;
   removeContactRequest: (id: string) => void;
+  setKYCDocuments: (documents: KYCDocumentBackoffice[]) => void;
+  addKYCDocument: (document: KYCDocumentBackoffice) => void;
+  updateKYCDocument: (document: Partial<KYCDocumentBackoffice> & { id: string }) => void;
+  removeKYCDocument: (id: string) => void;
   setConnectionStatus: (status: BackofficeConnectionStatus) => void;
 }
 
 export const useBackofficeStore = create<BackofficeState>((set) => ({
   contactRequests: [],
+  kycDocuments: [],
   connectionStatus: 'disconnected',
   lastUpdated: null,
+  kycLastUpdated: null,
   setContactRequests: (requests) =>
     set({ contactRequests: requests, lastUpdated: new Date() }),
   addContactRequest: (request) =>
@@ -166,6 +188,25 @@ export const useBackofficeStore = create<BackofficeState>((set) => ({
     set((state) => ({
       contactRequests: state.contactRequests.filter((r) => r.id !== id),
       lastUpdated: new Date(),
+    })),
+  setKYCDocuments: (documents) =>
+    set({ kycDocuments: documents, kycLastUpdated: new Date() }),
+  addKYCDocument: (document) =>
+    set((state) => ({
+      kycDocuments: [document, ...state.kycDocuments],
+      kycLastUpdated: new Date(),
+    })),
+  updateKYCDocument: (document) =>
+    set((state) => ({
+      kycDocuments: state.kycDocuments.map((d) =>
+        d.id === document.id ? { ...d, ...document } : d
+      ),
+      kycLastUpdated: new Date(),
+    })),
+  removeKYCDocument: (id) =>
+    set((state) => ({
+      kycDocuments: state.kycDocuments.filter((d) => d.id !== id),
+      kycLastUpdated: new Date(),
     })),
   setConnectionStatus: (status) => set({ connectionStatus: status }),
 }));

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useBackofficeStore } from '../stores/useStore';
-import { backofficeRealtimeApi, adminApi, BackofficeWebSocketMessage } from '../services/api';
+import { useBackofficeStore, KYCDocumentBackoffice } from '../stores/useStore';
+import { backofficeRealtimeApi, adminApi, backofficeApi, BackofficeWebSocketMessage } from '../services/api';
 import type { ContactRequestResponse } from '../types';
 
 const RECONNECT_DELAY = 3000; // 3 seconds
@@ -9,11 +9,17 @@ const POLLING_INTERVAL = 30000; // 30 seconds fallback polling
 export function useBackofficeRealtime() {
   const {
     contactRequests,
+    kycDocuments,
     connectionStatus,
     lastUpdated,
+    kycLastUpdated,
     setContactRequests,
     addContactRequest,
     updateContactRequest,
+    setKYCDocuments,
+    addKYCDocument,
+    updateKYCDocument,
+    removeKYCDocument,
     setConnectionStatus,
   } = useBackofficeStore();
 
@@ -33,6 +39,18 @@ export function useBackofficeRealtime() {
       console.error('[Backoffice] Failed to fetch contact requests:', err);
     }
   }, [setContactRequests]);
+
+  // Fetch KYC documents
+  const fetchKYCDocuments = useCallback(async () => {
+    try {
+      const documents = await backofficeApi.getKYCDocuments();
+      if (mountedRef.current) {
+        setKYCDocuments(documents);
+      }
+    } catch (err) {
+      console.error('[Backoffice] Failed to fetch KYC documents:', err);
+    }
+  }, [setKYCDocuments]);
 
   // Handle WebSocket messages
   const handleMessage = useCallback((message: BackofficeWebSocketMessage) => {
@@ -64,8 +82,41 @@ export function useBackofficeRealtime() {
       case 'request_removed':
         // Not implemented in backend yet, but ready for future use
         break;
+
+      // KYC Document Events
+      case 'kyc_document_uploaded':
+        if (message.data) {
+          const newDoc: KYCDocumentBackoffice = {
+            id: message.data.document_id,
+            user_id: message.data.user_id,
+            user_email: message.data.user_email,
+            document_type: message.data.document_type,
+            file_name: message.data.file_name,
+            status: message.data.status,
+            created_at: message.data.created_at,
+          };
+          addKYCDocument(newDoc);
+        }
+        break;
+
+      case 'kyc_document_reviewed':
+        if (message.data) {
+          updateKYCDocument({
+            id: message.data.document_id,
+            status: message.data.status,
+            notes: message.data.notes,
+            reviewed_at: message.data.reviewed_at,
+          });
+        }
+        break;
+
+      case 'kyc_document_deleted':
+        if (message.data) {
+          removeKYCDocument(message.data.document_id);
+        }
+        break;
     }
-  }, [setConnectionStatus, addContactRequest, updateContactRequest]);
+  }, [setConnectionStatus, addContactRequest, updateContactRequest, addKYCDocument, updateKYCDocument, removeKYCDocument]);
 
   // Connect WebSocket with reconnection logic
   const connect = useCallback(() => {
@@ -117,12 +168,16 @@ export function useBackofficeRealtime() {
 
     // Fetch initial data
     fetchContactRequests();
+    fetchKYCDocuments();
 
     // Connect WebSocket
     connect();
 
     // Set up polling as fallback (less frequent than prices)
-    pollingIntervalRef.current = setInterval(fetchContactRequests, POLLING_INTERVAL);
+    pollingIntervalRef.current = setInterval(() => {
+      fetchContactRequests();
+      fetchKYCDocuments();
+    }, POLLING_INTERVAL);
 
     return () => {
       mountedRef.current = false;
@@ -145,17 +200,20 @@ export function useBackofficeRealtime() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [connect, fetchContactRequests]);
+  }, [connect, fetchContactRequests, fetchKYCDocuments]);
 
   // Manual refresh function
   const refresh = useCallback(() => {
     fetchContactRequests();
-  }, [fetchContactRequests]);
+    fetchKYCDocuments();
+  }, [fetchContactRequests, fetchKYCDocuments]);
 
   return {
     contactRequests,
+    kycDocuments,
     connectionStatus,
     lastUpdated,
+    kycLastUpdated,
     refresh,
   };
 }

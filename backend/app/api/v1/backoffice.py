@@ -365,6 +365,16 @@ async def review_kyc_document(
 
     await db.commit()
 
+    # Broadcast KYC document review event
+    await backoffice_ws_manager.broadcast("kyc_document_reviewed", {
+        "document_id": str(document.id),
+        "user_id": str(document.user_id),
+        "document_type": document.document_type.value,
+        "status": document.status.value,
+        "notes": document.notes,
+        "reviewed_at": document.reviewed_at.isoformat() if document.reviewed_at else None
+    })
+
     return MessageResponse(
         message=f"Document has been {review.status.value}"
     )

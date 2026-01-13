@@ -18,6 +18,7 @@ from ...schemas.schemas import (
     KYCDocumentResponse,
     OnboardingStatusResponse
 )
+from .backoffice import backoffice_ws_manager
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
@@ -177,6 +178,17 @@ async def upload_document(
     await db.commit()
     await db.refresh(document)
 
+    # Broadcast KYC document upload event to backoffice
+    await backoffice_ws_manager.broadcast("kyc_document_uploaded", {
+        "document_id": str(document.id),
+        "user_id": str(document.user_id),
+        "user_email": current_user.email,
+        "document_type": document.document_type.value,
+        "file_name": document.file_name,
+        "status": document.status.value,
+        "created_at": document.created_at.isoformat() if document.created_at else None
+    })
+
     return KYCDocumentResponse.model_validate(document)
 
 
@@ -226,12 +238,22 @@ async def delete_document(
             detail="Cannot delete approved documents"
         )
 
+    # Store document info before deletion for broadcasting
+    doc_info = {
+        "document_id": str(document.id),
+        "user_id": str(document.user_id),
+        "document_type": document.document_type.value,
+    }
+
     # Delete file from filesystem
     if os.path.exists(document.file_path):
         os.remove(document.file_path)
 
     await db.delete(document)
     await db.commit()
+
+    # Broadcast KYC document deletion event to backoffice
+    await backoffice_ws_manager.broadcast("kyc_document_deleted", doc_info)
 
     return MessageResponse(message="Document deleted successfully")
 

@@ -415,7 +415,7 @@ export function UsersPage() {
                     Status
                   </th>
                   <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
-                    Last Login
+                    Last Activity
                   </th>
                   <th className="text-right py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
                     Actions
@@ -513,7 +513,11 @@ export function UsersPage() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-navy-400" />
                         <span className="text-sm text-navy-600 dark:text-navy-300">
-                          {user.last_login ? formatRelativeTime(user.last_login) : 'Never'}
+                          {(user.role === 'APPROVED' || user.role === 'FUNDED') && (user as any).kyc_approved_at
+                            ? formatRelativeTime((user as any).kyc_approved_at)
+                            : user.last_login
+                              ? formatRelativeTime(user.last_login)
+                              : 'Never'}
                         </span>
                       </div>
                     </td>
