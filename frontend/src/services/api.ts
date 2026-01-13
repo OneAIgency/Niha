@@ -712,6 +712,14 @@ export const backofficeApi = {
     return data;
   },
 
+  // Get document content as blob for preview
+  getDocumentContent: async (documentId: string): Promise<Blob> => {
+    const response = await api.get(`/backoffice/kyc-documents/${documentId}/content`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // User Details
   getUserSessions: async (userId: string): Promise<UserSession[]> => {
     const { data } = await api.get(`/backoffice/users/${userId}/sessions`);

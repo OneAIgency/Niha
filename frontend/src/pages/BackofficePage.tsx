@@ -73,9 +73,17 @@ interface KYCDocument {
   user_name?: string;
   document_type: string;
   file_name: string;
+  mime_type?: string;
   status: string;
   notes?: string;
   created_at: string;
+}
+
+interface DocumentViewerState {
+  id: string;
+  fileName: string;
+  type: string;
+  mimeType?: string;
 }
 
 interface UserSession {
@@ -148,7 +156,10 @@ export function BackofficePage() {
 
   // User details state
   const [selectedUser, setSelectedUser] = useState<SelectedUserDetails | null>(null);
-  const [showDocumentViewer, setShowDocumentViewer] = useState<{ fileName: string; type: string } | null>(null);
+  const [showDocumentViewer, setShowDocumentViewer] = useState<DocumentViewerState | null>(null);
+  const [documentContentUrl, setDocumentContentUrl] = useState<string | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   // IP Lookup Modal state
   const [ipLookupData, setIpLookupData] = useState<IPLookupResult | null>(null);
@@ -272,6 +283,99 @@ export function BackofficePage() {
   const handleApproveModalSuccess = () => {
     // Refresh the list after successful user creation
     refreshContactRequests();
+  };
+
+  // Document preview functions
+  const loadDocumentContent = async (documentId: string) => {
+    setDocumentLoading(true);
+    setDocumentError(null);
+    setDocumentContentUrl(null);
+
+    try {
+      const blob = await backofficeApi.getDocumentContent(documentId);
+      const url = URL.createObjectURL(blob);
+      setDocumentContentUrl(url);
+    } catch (err) {
+      console.error('Failed to load document:', err);
+      setDocumentError('Failed to load document preview');
+    } finally {
+      setDocumentLoading(false);
+    }
+  };
+
+  const handleOpenDocumentViewer = (doc: KYCDocument) => {
+    setShowDocumentViewer({
+      id: doc.id,
+      fileName: doc.file_name,
+      type: doc.document_type,
+      mimeType: doc.mime_type,
+    });
+    loadDocumentContent(doc.id);
+  };
+
+  const handleCloseDocumentViewer = () => {
+    if (documentContentUrl) {
+      URL.revokeObjectURL(documentContentUrl);
+    }
+    setShowDocumentViewer(null);
+    setDocumentContentUrl(null);
+    setDocumentError(null);
+  };
+
+  const handleDownloadDocument = () => {
+    if (!showDocumentViewer || !documentContentUrl) return;
+
+    const link = document.createElement('a');
+    link.href = documentContentUrl;
+    link.download = showDocumentViewer.fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const renderDocumentPreview = () => {
+    if (!documentContentUrl || !showDocumentViewer) return null;
+
+    const mimeType = showDocumentViewer.mimeType?.toLowerCase() || '';
+    const fileName = showDocumentViewer.fileName.toLowerCase();
+
+    // Image preview
+    if (mimeType.startsWith('image/') ||
+        /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName)) {
+      return (
+        <img
+          src={documentContentUrl}
+          alt={showDocumentViewer.fileName}
+          className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
+          onError={() => setDocumentError('Failed to display image')}
+        />
+      );
+    }
+
+    // PDF preview
+    if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      return (
+        <iframe
+          src={documentContentUrl}
+          title={showDocumentViewer.fileName}
+          className="w-full h-[60vh] rounded-lg border border-navy-200 dark:border-navy-600"
+        />
+      );
+    }
+
+    // Unsupported file type - show download prompt
+    return (
+      <div className="text-center">
+        <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
+        <p className="text-navy-500 dark:text-navy-400 mb-4">
+          Preview not available for this file type
+        </p>
+        <Button variant="primary" onClick={handleDownloadDocument}>
+          <Download className="w-4 h-4 mr-2" />
+          Download File
+        </Button>
+      </div>
+    );
   };
 
   const handleApproveKYC = async (userId: string) => {
@@ -644,7 +748,7 @@ export function BackofficePage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setShowDocumentViewer({ fileName: doc.file_name, type: doc.document_type })}
+                                  onClick={() => handleOpenDocumentViewer(doc)}
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
@@ -856,7 +960,7 @@ export function BackofficePage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[80vh] overflow-hidden"
+              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden"
             >
               <div className="flex items-center justify-between p-4 border-b border-navy-100 dark:border-navy-700">
                 <div>
@@ -866,24 +970,50 @@ export function BackofficePage() {
                   <p className="text-sm text-navy-500 dark:text-navy-400">{showDocumentViewer.fileName}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownloadDocument}
+                    disabled={!documentContentUrl}
+                  >
                     <Download className="w-4 h-4" />
                     Download
                   </Button>
                   <button
-                    onClick={() => setShowDocumentViewer(null)}
+                    onClick={handleCloseDocumentViewer}
                     className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
                   >
                     <X className="w-5 h-5 text-navy-500" />
                   </button>
                 </div>
               </div>
-              <div className="p-8 min-h-[400px] flex items-center justify-center bg-navy-50 dark:bg-navy-900">
-                <div className="text-center">
-                  <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-                  <p className="text-navy-500 dark:text-navy-400">Document preview would appear here</p>
-                  <p className="text-sm text-navy-400">{showDocumentViewer.fileName}</p>
-                </div>
+              <div className="p-4 min-h-[400px] max-h-[70vh] overflow-auto flex items-center justify-center bg-navy-50 dark:bg-navy-900">
+                {documentLoading ? (
+                  <div className="text-center">
+                    <RefreshCw className="w-8 h-8 text-navy-400 animate-spin mx-auto mb-4" />
+                    <p className="text-navy-500 dark:text-navy-400">Loading document...</p>
+                  </div>
+                ) : documentError ? (
+                  <div className="text-center">
+                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-500 dark:text-red-400">{documentError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => loadDocumentContent(showDocumentViewer.id)}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : documentContentUrl ? (
+                  renderDocumentPreview()
+                ) : (
+                  <div className="text-center">
+                    <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
+                    <p className="text-navy-500 dark:text-navy-400">Document preview not available</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

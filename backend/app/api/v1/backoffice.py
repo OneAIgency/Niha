@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 from datetime import datetime
@@ -326,6 +328,7 @@ async def get_all_kyc_documents(
             "entity_id": str(doc.entity_id) if doc.entity_id else None,
             "document_type": doc.document_type.value,
             "file_name": doc.file_name,
+            "mime_type": doc.mime_type,
             "status": doc.status.value,
             "reviewed_at": doc.reviewed_at.isoformat() if doc.reviewed_at else None,
             "notes": doc.notes,
@@ -364,6 +367,38 @@ async def review_kyc_document(
 
     return MessageResponse(
         message=f"Document has been {review.status.value}"
+    )
+
+
+@router.get("/kyc-documents/{document_id}/content")
+async def get_document_content(
+    document_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get KYC document content for preview/download.
+    Returns file with appropriate Content-Type for inline viewing.
+    Admin only.
+    """
+    result = await db.execute(
+        select(KYCDocument).where(KYCDocument.id == UUID(document_id))
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if not document.file_path or not os.path.exists(document.file_path):
+        raise HTTPException(status_code=404, detail="Document file not found on disk")
+
+    return FileResponse(
+        path=document.file_path,
+        filename=document.file_name,
+        media_type=document.mime_type or 'application/octet-stream',
+        headers={
+            "Content-Disposition": f'inline; filename="{document.file_name}"'
+        }
     )
 
 
