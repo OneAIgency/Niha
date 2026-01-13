@@ -3,114 +3,107 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Upload,
-  FileText,
   CheckCircle,
   Building2,
-  Users,
-  Briefcase,
-  Shield,
-  FileCheck,
+  User,
+  Leaf,
   AlertCircle,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 import { colors } from './OnboardingLayout';
+import { onboardingApi } from '../../services/api';
+import type { KYCDocument, KYCDocumentType } from '../../types';
 
-// Document types
-interface DocumentType {
-  id: string;
+// Document definitions matching backend REQUIRED_DOCUMENTS
+const documentDefinitions: {
+  type: KYCDocumentType;
   name: string;
   description: string;
   required: boolean;
-  uploaded: boolean;
-  status: 'pending' | 'uploaded' | 'verified' | 'rejected';
-  category: string;
-}
-
-// Full KYC document list from doc5 (23 documents across 6 categories)
-const kycDocumentCategories = [
+  category: 'company' | 'representative' | 'optional';
+}[] = [
+  // Company Documents (4 required)
   {
-    id: 'corporate',
-    name: 'Corporate Information Documents',
-    icon: Building2,
-    color: '#3b82f6',
-    documents: [
-      { id: 'cert_incorporation', name: 'Certificate of Incorporation/Registration', description: 'Official document from company registry showing company name, registration number, establishment date', required: true },
-      { id: 'articles', name: 'Articles of Association / Constitutional Documents', description: 'Complete corporate bylaws showing ownership structure, decision-making authority', required: true },
-      { id: 'board_resolution', name: 'Board Resolution (Authorizing Carbon Trading)', description: 'Board decision authorizing trading in carbon allowances and entering into agreements with Nihao', required: true },
-      { id: 'good_standing', name: 'Certificate of Good Standing', description: 'From company registry showing company in good legal standing, no pending dissolution', required: true },
-    ],
+    type: 'REGISTRATION',
+    name: 'Business Registration Certificate',
+    description: 'Official document from company registry showing company name and registration number',
+    required: true,
+    category: 'company',
   },
   {
-    id: 'ownership',
-    name: 'Beneficial Ownership Documentation',
-    icon: Users,
-    color: '#8b5cf6',
-    documents: [
-      { id: 'bo_declaration', name: 'Beneficial Ownership Declaration', description: 'Complete declaration of all beneficial owners (25%+ ownership)', required: true },
-      { id: 'shareholder_register', name: 'Shareholder Register', description: 'Official shareholder list showing all shareholders, ownership percentages', required: true },
-      { id: 'org_chart', name: 'Organizational Chart', description: 'Visual representation of corporate structure showing parent company, subsidiaries', required: true },
-      { id: 'bo_id', name: 'Beneficial Owner Identification Documents', description: 'Valid passport or government ID for each beneficial owner (25%+), plus proof of address', required: true },
-    ],
+    type: 'TAX_CERTIFICATE',
+    name: 'Tax Registration Certificate',
+    description: 'Proof of tax registration and compliance with tax authorities',
+    required: true,
+    category: 'company',
   },
   {
-    id: 'financial',
-    name: 'Financial Documentation',
-    icon: Briefcase,
-    color: '#10b981',
-    documents: [
-      { id: 'financial_statements', name: 'Recent Financial Statements (2-3 years)', description: 'Audited balance sheet, income statement, cash flow statement with notes', required: true },
-      { id: 'bank_reference', name: 'Bank Reference Letter', description: 'From company\'s primary bank confirming account holder status, creditworthiness', required: true },
-      { id: 'tax_certificate', name: 'Tax Compliance Certificate', description: 'Proof of good standing with tax authorities, no tax liens or pending investigations', required: true },
-      { id: 'credit_rating', name: 'Credit Rating or Financial Verification', description: 'Credit rating from Dun & Bradstreet or similar, or bank financial verification', required: false },
-    ],
+    type: 'ARTICLES',
+    name: 'Articles of Association',
+    description: 'Corporate bylaws showing ownership structure and decision-making authority',
+    required: true,
+    category: 'company',
   },
   {
-    id: 'compliance',
-    name: 'Compliance & Regulatory Documentation',
-    icon: Shield,
-    color: '#f59e0b',
-    documents: [
-      { id: 'regulatory_licenses', name: 'Regulatory Licenses and Approvals', description: 'Financial services licenses, environmental permits, sector-specific approvals', required: false },
-      { id: 'compliance_policies', name: 'Compliance Policies and Procedures', description: 'AML/CFT policy documentation, KYC procedures, risk assessment framework', required: true },
-      { id: 'directors_list', name: 'List of Directors and Managers', description: 'Names and titles of all board members and senior management with contact details', required: true },
-      { id: 'authorized_signatories', name: 'Authorized Signatories Documentation', description: 'Board resolution identifying authorized individuals for trading decisions, fund transfers', required: true },
-    ],
+    type: 'FINANCIAL_STATEMENTS',
+    name: 'Latest Financial Statements',
+    description: 'Recent audited financial statements (balance sheet, income statement)',
+    required: true,
+    category: 'company',
+  },
+  // Representative Documents (3 required)
+  {
+    type: 'ID',
+    name: 'Government-Issued ID',
+    description: 'Valid passport or national ID card of authorized representative',
+    required: true,
+    category: 'representative',
   },
   {
-    id: 'business',
-    name: 'Business & Use of Funds Documentation',
-    icon: FileCheck,
-    color: '#ec4899',
-    documents: [
-      { id: 'business_description', name: 'Business Description and Purpose Statement', description: 'Detailed description of company business and carbon allowance trading purpose', required: true },
-      { id: 'use_of_funds', name: 'Use of Funds Statement', description: 'Description of intended use of Nihao account funds, estimated volumes, frequency', required: true },
-      { id: 'trading_plan', name: 'Anticipated Trading Activity Plan', description: '12-month projection of expected trading volumes, transaction amounts, risk management', required: true },
-    ],
+    type: 'PROOF_AUTHORITY',
+    name: 'Proof of Authority',
+    description: 'Power of Attorney or board resolution authorizing representative',
+    required: true,
+    category: 'representative',
   },
   {
-    id: 'verification',
-    name: 'Additional Verification Documents',
-    icon: FileText,
-    color: '#06b6d4',
-    documents: [
-      { id: 'website_verification', name: 'Corporate Website and Business Verification', description: 'Corporate website review, business directory listings, industry association memberships', required: false },
-      { id: 'sanctions_declaration', name: 'Sanctions and PEP Screening Declarations', description: 'Declaration that no directors/beneficial owners on sanctions lists or are PEPs', required: true },
-      { id: 'negative_screening', name: 'Negative Screening Results', description: 'Results from OFAC, EU, UN sanctions database searches', required: true },
-      { id: 'adverse_media', name: 'Adverse Media and Reputational Screening', description: 'Results from media screening looking for negative publicity, regulatory actions', required: true },
-    ],
+    type: 'CONTACT_INFO',
+    name: 'Representative Contact Information',
+    description: 'Official contact details and verification of representative',
+    required: true,
+    category: 'representative',
+  },
+  // Optional Document
+  {
+    type: 'GHG_PERMIT',
+    name: 'GHG Emissions Permit',
+    description: 'Required only for EU ETS installation operators',
+    required: false,
+    category: 'optional',
   },
 ];
 
-// Flatten documents for state management
-const flattenDocuments = (): DocumentType[] => {
-  return kycDocumentCategories.flatMap(cat =>
-    cat.documents.map(doc => ({
-      ...doc,
-      uploaded: false,
-      status: 'pending' as const,
-      category: cat.id,
-    }))
-  );
-};
+const categories = [
+  {
+    id: 'company',
+    name: 'Company Documents',
+    icon: Building2,
+    color: '#3b82f6',
+  },
+  {
+    id: 'representative',
+    name: 'Representative Documents',
+    icon: User,
+    color: '#8b5cf6',
+  },
+  {
+    id: 'optional',
+    name: 'Optional Documents',
+    icon: Leaf,
+    color: '#10b981',
+  },
+];
 
 interface KycUploadModalProps {
   isOpen: boolean;
@@ -123,34 +116,91 @@ export default function KycUploadModal({
   onClose,
   onProgressChange,
 }: KycUploadModalProps) {
-  const [documents, setDocuments] = useState<DocumentType[]>(flattenDocuments());
-  const [activeCategory, setActiveCategory] = useState('corporate');
+  const [uploadedDocs, setUploadedDocs] = useState<KYCDocument[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('company');
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const uploadedCount = documents.filter(d => d.uploaded).length;
-  const requiredCount = documents.filter(d => d.required).length;
-  const uploadedRequiredCount = documents.filter(d => d.required && d.uploaded).length;
-  const progress = Math.round((uploadedRequiredCount / requiredCount) * 100);
+  // Load existing documents on mount
+  useEffect(() => {
+    if (isOpen) {
+      loadDocuments();
+    }
+  }, [isOpen]);
+
+  const loadDocuments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const status = await onboardingApi.getStatus();
+      setUploadedDocs(status.documents || []);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+      setError('Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate progress
+  const requiredDocs = documentDefinitions.filter(d => d.required);
+  const uploadedTypes = new Set(uploadedDocs.map(d => d.document_type));
+  const uploadedRequiredCount = requiredDocs.filter(d => uploadedTypes.has(d.type)).length;
+  const progress = Math.round((uploadedRequiredCount / requiredDocs.length) * 100);
 
   useEffect(() => {
     onProgressChange(progress);
   }, [progress, onProgressChange]);
 
-  const handleUpload = (id: string, _file: File) => {
-    setDocuments(prev =>
-      prev.map(doc =>
-        doc.id === id ? { ...doc, uploaded: true, status: 'uploaded' } : doc
-      )
-    );
+  const handleUpload = async (type: KYCDocumentType, file: File) => {
+    setUploading(type);
+    setError(null);
+    try {
+      const doc = await onboardingApi.uploadDocument(type, file);
+      setUploadedDocs(prev => [...prev.filter(d => d.document_type !== type), doc]);
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      setError(err.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploading(null);
+    }
   };
 
-  const handleSubmit = () => {
-    alert('KYC documents submitted for review! You will be notified once verification is complete.');
-    onClose();
+  const handleDelete = async (docId: string, type: KYCDocumentType) => {
+    setUploading(type);
+    setError(null);
+    try {
+      await onboardingApi.deleteDocument(docId);
+      setUploadedDocs(prev => prev.filter(d => d.id !== docId));
+    } catch (err: any) {
+      console.error('Delete failed:', err);
+      setError(err.response?.data?.detail || 'Delete failed');
+    } finally {
+      setUploading(null);
+    }
   };
 
-  const canSubmit = uploadedRequiredCount >= requiredCount;
-  const activeDocuments = documents.filter(d => d.category === activeCategory);
-  const activeCategoryData = kycDocumentCategories.find(c => c.id === activeCategory);
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onboardingApi.submit();
+      onClose();
+    } catch (err: any) {
+      console.error('Submit failed:', err);
+      setError(err.response?.data?.detail || 'Submission failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const canSubmit = uploadedRequiredCount >= requiredDocs.length;
+  const activeDocuments = documentDefinitions.filter(d => d.category === activeCategory);
+  const activeCategoryData = categories.find(c => c.id === activeCategory);
+
+  const getUploadedDoc = (type: KYCDocumentType) => uploadedDocs.find(d => d.document_type === type);
 
   return (
     <AnimatePresence>
@@ -167,7 +217,7 @@ export default function KycUploadModal({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-2xl flex flex-col"
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl flex flex-col"
             style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
             onClick={e => e.stopPropagation()}
           >
@@ -181,17 +231,17 @@ export default function KycUploadModal({
               </button>
 
               <h2 className="text-2xl font-bold mb-2" style={{ color: colors.textPrimary }}>
-                Complete Your KYC Documentation
+                KYC Document Upload
               </h2>
               <p style={{ color: colors.textSecondary }}>
-                Upload the required 23 documents across 6 categories to complete your account verification
+                Upload {requiredDocs.length} required documents to complete verification
               </p>
 
               {/* Progress Bar */}
               <div className="mt-4">
                 <div className="flex justify-between mb-2">
                   <span style={{ color: colors.textSecondary }}>
-                    {uploadedRequiredCount} of {requiredCount} required documents
+                    {uploadedRequiredCount} of {requiredDocs.length} required documents
                   </span>
                   <span style={{ color: colors.primaryLight }}>{progress}%</span>
                 </div>
@@ -207,22 +257,30 @@ export default function KycUploadModal({
                   />
                 </div>
               </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="mt-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: `${colors.danger}20` }}>
+                  <AlertCircle className="w-5 h-5" style={{ color: colors.danger }} />
+                  <span style={{ color: colors.danger }}>{error}</span>
+                </div>
+              )}
             </div>
 
             {/* Content */}
             <div className="flex flex-1 overflow-hidden">
               {/* Category Sidebar */}
               <div
-                className="w-64 flex-shrink-0 p-4 space-y-2 overflow-y-auto"
+                className="w-56 flex-shrink-0 p-4 space-y-2 overflow-y-auto"
                 style={{ borderRight: `1px solid ${colors.border}` }}
               >
-                {kycDocumentCategories.map(cat => {
+                {categories.map(cat => {
                   const Icon = cat.icon;
-                  const catDocs = documents.filter(d => d.category === cat.id);
-                  const catUploaded = catDocs.filter(d => d.uploaded).length;
+                  const catDocs = documentDefinitions.filter(d => d.category === cat.id);
+                  const catUploaded = catDocs.filter(d => uploadedTypes.has(d.type)).length;
                   const catRequired = catDocs.filter(d => d.required).length;
                   const isActive = activeCategory === cat.id;
-                  const isComplete = catUploaded >= catRequired;
+                  const isComplete = catRequired > 0 ? catUploaded >= catRequired : catUploaded > 0;
 
                   return (
                     <button
@@ -243,14 +301,14 @@ export default function KycUploadModal({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
-                            className="font-medium text-sm truncate"
+                            className="font-medium text-sm"
                             style={{ color: isActive ? colors.textPrimary : colors.textSecondary }}
                           >
-                            {cat.name.split(' ')[0]}
+                            {cat.name}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs" style={{ color: colors.textMuted }}>
-                              {catUploaded}/{cat.documents.length}
+                              {catUploaded}/{catDocs.length}
                             </span>
                             {isComplete && (
                               <CheckCircle className="w-3 h-3" style={{ color: colors.success }} />
@@ -265,7 +323,11 @@ export default function KycUploadModal({
 
               {/* Documents Grid */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {activeCategoryData && (
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.primary }} />
+                  </div>
+                ) : activeCategoryData && (
                   <>
                     <div className="flex items-center gap-3 mb-6">
                       <div
@@ -279,7 +341,7 @@ export default function KycUploadModal({
                           {activeCategoryData.name}
                         </h3>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>
-                          {activeDocuments.filter(d => d.uploaded).length} of {activeDocuments.length} documents uploaded
+                          {activeDocuments.filter(d => uploadedTypes.has(d.type)).length} of {activeDocuments.length} uploaded
                         </p>
                       </div>
                     </div>
@@ -287,10 +349,13 @@ export default function KycUploadModal({
                     <div className="grid gap-4">
                       {activeDocuments.map(doc => (
                         <DocumentUploadCard
-                          key={doc.id}
-                          doc={doc}
+                          key={doc.type}
+                          docDef={doc}
+                          uploadedDoc={getUploadedDoc(doc.type)}
                           onUpload={handleUpload}
+                          onDelete={handleDelete}
                           color={activeCategoryData.color}
+                          isUploading={uploading === doc.type}
                         />
                       ))}
                     </div>
@@ -307,22 +372,23 @@ export default function KycUploadModal({
               <div className="flex items-center gap-2" style={{ color: colors.textSecondary }}>
                 <AlertCircle className="w-5 h-5" />
                 <span className="text-sm">
-                  Total: {uploadedCount}/{documents.length} documents uploaded
+                  {uploadedDocs.length}/{documentDefinitions.length} documents uploaded
                 </span>
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={!canSubmit}
-                className="px-8 py-3 rounded-xl font-semibold text-white transition-all"
+                disabled={!canSubmit || submitting}
+                className="px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2"
                 style={{
-                  background: canSubmit
+                  background: canSubmit && !submitting
                     ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
                     : colors.bgCardHover,
-                  opacity: canSubmit ? 1 : 0.5,
-                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  opacity: canSubmit && !submitting ? 1 : 0.5,
+                  cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
                 }}
               >
-                {canSubmit ? 'Submit for Verification' : `Upload ${requiredCount - uploadedRequiredCount} more required document(s)`}
+                {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                {submitting ? 'Submitting...' : canSubmit ? 'Submit for Verification' : `Upload ${requiredDocs.length - uploadedRequiredCount} more`}
               </button>
             </div>
           </motion.div>
@@ -334,35 +400,60 @@ export default function KycUploadModal({
 
 // Document Upload Card Component
 function DocumentUploadCard({
-  doc,
+  docDef,
+  uploadedDoc,
   onUpload,
+  onDelete,
   color,
+  isUploading,
 }: {
-  doc: DocumentType;
-  onUpload: (id: string, file: File) => void;
+  docDef: typeof documentDefinitions[0];
+  uploadedDoc?: KYCDocument;
+  onUpload: (type: KYCDocumentType, file: File) => void;
+  onDelete: (id: string, type: KYCDocumentType) => void;
   color: string;
+  isUploading: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = () => {
-    fileInputRef.current?.click();
+    if (!uploadedDoc && !isUploading) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onUpload(doc.id, file);
+      onUpload(docDef.type, file);
+    }
+    e.target.value = '';
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (uploadedDoc) {
+      onDelete(uploadedDoc.id, docDef.type);
+    }
+  };
+
+  const getStatusColor = () => {
+    if (!uploadedDoc) return color;
+    switch (uploadedDoc.status) {
+      case 'approved': return colors.success;
+      case 'rejected': return colors.danger;
+      default: return colors.accent; // pending status - amber/yellow
     }
   };
 
   return (
     <div
-      className="p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100"
+      className={`p-4 rounded-xl border transition-all ${!uploadedDoc && !isUploading ? 'cursor-pointer hover:border-opacity-100' : ''}`}
       style={{
         backgroundColor: colors.bgCardHover,
-        borderColor: doc.uploaded ? colors.success : color,
+        borderColor: uploadedDoc ? getStatusColor() : color,
         borderWidth: '2px',
-        borderStyle: doc.uploaded ? 'solid' : 'dashed',
+        borderStyle: uploadedDoc ? 'solid' : 'dashed',
       }}
       onClick={handleClick}
     >
@@ -370,38 +461,63 @@ function DocumentUploadCard({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+        accept=".pdf,.jpg,.jpeg,.png"
         onChange={handleFileChange}
       />
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 flex-1">
-          {doc.uploaded ? (
-            <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: colors.success }} />
+          {isUploading ? (
+            <Loader2 className="w-6 h-6 mt-0.5 flex-shrink-0 animate-spin" style={{ color }} />
+          ) : uploadedDoc ? (
+            <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: getStatusColor() }} />
           ) : (
             <Upload className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color }} />
           )}
           <div className="flex-1">
             <div className="font-medium flex items-center gap-2" style={{ color: colors.textPrimary }}>
-              {doc.name}
-              {doc.required && (
+              {docDef.name}
+              {docDef.required ? (
                 <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${colors.danger}20`, color: colors.danger }}>
                   Required
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${colors.success}20`, color: colors.success }}>
+                  Optional
                 </span>
               )}
             </div>
             <div className="text-sm mt-1" style={{ color: colors.textMuted }}>
-              {doc.description}
+              {docDef.description}
             </div>
+            {uploadedDoc && (
+              <div className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+                {uploadedDoc.file_name} - {uploadedDoc.status}
+              </div>
+            )}
           </div>
         </div>
-        <div
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={{
-            backgroundColor: doc.uploaded ? `${colors.success}20` : `${color}20`,
-            color: doc.uploaded ? colors.success : color,
-          }}
-        >
-          {doc.uploaded ? 'Uploaded ✓' : 'Click to Upload'}
+        <div className="flex items-center gap-2">
+          {uploadedDoc && (
+            <button
+              onClick={handleDeleteClick}
+              className="p-2 rounded-lg hover:bg-slate-600 transition-colors"
+              disabled={isUploading}
+            >
+              <Trash2 className="w-4 h-4" style={{ color: colors.danger }} />
+            </button>
+          )}
+          <div
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              backgroundColor: uploadedDoc ? `${getStatusColor()}20` : `${color}20`,
+              color: uploadedDoc ? getStatusColor() : color,
+            }}
+          >
+            {isUploading ? 'Uploading...' : uploadedDoc ? (
+              uploadedDoc.status === 'approved' ? 'Approved' :
+              uploadedDoc.status === 'rejected' ? 'Rejected' : 'Pending'
+            ) : 'Upload'}
+          </div>
         </div>
       </div>
     </div>
