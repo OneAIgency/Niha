@@ -28,7 +28,7 @@ import {
 import { Button, Card, Badge, Input } from '../components/common';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi, backofficeApi } from '../services/api';
-import type { User, UserRole, AdminUserFull, Deposit, Currency, EntityBalance } from '../types';
+import type { User, UserRole, AdminUserFull, Deposit, EntityBalance } from '../types';
 
 interface UserWithEntity extends User {
   entity_name?: string;
@@ -79,18 +79,10 @@ export function UsersPage() {
   const [forceChange, setForceChange] = useState(true);
   const [resettingPassword, setResettingPassword] = useState(false);
 
-  // Deposit state
+  // Deposit state (view only - deposit creation is in backoffice)
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loadingDeposits, setLoadingDeposits] = useState(false);
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositForm, setDepositForm] = useState({
-    amount: '',
-    currency: 'EUR' as Currency,
-    wire_reference: '',
-    notes: '',
-  });
-  const [creatingDeposit, setCreatingDeposit] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -280,35 +272,6 @@ export function UsersPage() {
       setDeposits([]);
     } finally {
       setLoadingDeposits(false);
-    }
-  };
-
-  const handleCreateDeposit = async () => {
-    if (!detailUser?.entity_id || !depositForm.amount) return;
-
-    setCreatingDeposit(true);
-    try {
-      await backofficeApi.createDeposit({
-        entity_id: detailUser.entity_id,
-        amount: parseFloat(depositForm.amount),
-        currency: depositForm.currency,
-        wire_reference: depositForm.wire_reference || undefined,
-        notes: depositForm.notes || undefined,
-      });
-      // Refresh deposits
-      await loadDeposits(detailUser.entity_id);
-      // Refresh user details (role may have changed to FUNDED)
-      const updated = await adminApi.getUserFull(detailUser.id);
-      setDetailUser(updated);
-      // Update users list to reflect role change
-      setUsers(users.map(u => u.id === detailUser.id ? { ...u, role: updated.role as UserRole } : u));
-      // Close modal and reset form
-      setShowDepositModal(false);
-      setDepositForm({ amount: '', currency: 'EUR', wire_reference: '', notes: '' });
-    } catch (error) {
-      console.error('Failed to create deposit:', error);
-    } finally {
-      setCreatingDeposit(false);
     }
   };
 
@@ -1098,25 +1061,14 @@ export function UsersPage() {
                           <>
                             {/* Balance Card */}
                             <div className="p-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white">
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-white/20 rounded-lg">
-                                    <Wallet className="w-6 h-6" />
-                                  </div>
-                                  <div>
-                                    <p className="text-emerald-100 text-sm">Entity Balance</p>
-                                    <p className="font-bold">{entityBalance?.entity_name || 'Unknown'}</p>
-                                  </div>
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-white/20 rounded-lg">
+                                  <Wallet className="w-6 h-6" />
                                 </div>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => setShowDepositModal(true)}
-                                  className="bg-white/20 hover:bg-white/30 border-0 text-white"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                  Confirm Deposit
-                                </Button>
+                                <div>
+                                  <p className="text-emerald-100 text-sm">Entity Balance</p>
+                                  <p className="font-bold">{entityBalance?.entity_name || 'Unknown'}</p>
+                                </div>
                               </div>
                               <div className="grid grid-cols-3 gap-4">
                                 <div>
@@ -1301,126 +1253,6 @@ export function UsersPage() {
           </div>
         )}
 
-        {/* Deposit Creation Modal */}
-        {showDepositModal && detailUser?.entity_id && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
-            >
-              <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                    <DollarSign className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <h2 className="text-xl font-bold text-navy-900 dark:text-white">Confirm Deposit</h2>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowDepositModal(false);
-                    setDepositForm({ amount: '', currency: 'EUR', wire_reference: '', notes: '' });
-                  }}
-                  className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
-                >
-                  <X className="w-5 h-5 text-navy-500" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                  <div className="flex items-start gap-3">
-                    <Building2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-navy-900 dark:text-white">Confirming deposit for:</p>
-                      <p className="text-sm text-navy-600 dark:text-navy-300">{entityBalance?.entity_name || 'Unknown Entity'}</p>
-                      <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                        User: {detailUser.email}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
-                      Amount *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      value={depositForm.amount}
-                      onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
-                      Currency *
-                    </label>
-                    <select
-                      value={depositForm.currency}
-                      onChange={(e) => setDepositForm({ ...depositForm, currency: e.target.value as Currency })}
-                      className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="EUR">EUR (€)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="CNY">CNY (¥)</option>
-                      <option value="HKD">HKD (HK$)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <Input
-                  label="Wire Reference"
-                  placeholder="Bank wire reference number"
-                  value={depositForm.wire_reference}
-                  onChange={(e) => setDepositForm({ ...depositForm, wire_reference: e.target.value })}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    placeholder="Additional notes about this deposit..."
-                    value={depositForm.notes}
-                    onChange={(e) => setDepositForm({ ...depositForm, notes: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                  />
-                </div>
-
-                {detailUser.role === 'APPROVED' && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      <CheckCircle2 className="w-4 h-4 inline mr-2" />
-                      This will upgrade the user role from APPROVED to FUNDED
-                    </p>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
-                <Button variant="ghost" onClick={() => {
-                  setShowDepositModal(false);
-                  setDepositForm({ amount: '', currency: 'EUR', wire_reference: '', notes: '' });
-                }}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleCreateDeposit}
-                  loading={creatingDeposit}
-                  disabled={!depositForm.amount || parseFloat(depositForm.amount) <= 0}
-                >
-                  <Check className="w-4 h-4" />
-                  Confirm Deposit
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </div>
     </div>
   );

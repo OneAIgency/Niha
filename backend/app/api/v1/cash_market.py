@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Query, HTTPException, Depends
 from decimal import Decimal
+from sqlalchemy import select, func, and_, or_
+from sqlalchemy.orm import joinedload
 
 from ...schemas.schemas import (
     OrderCreate,
@@ -24,6 +26,9 @@ from ...schemas.schemas import (
     MessageResponse,
 )
 from ...services.simulation import simulation_engine
+from ...core.database import get_db
+from ...models.models import Order, CashMarketTrade, Seller, Entity
+from ...models.models import OrderSide as OrderSideEnum, OrderStatus, CertificateType as CertTypeEnum
 
 router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
 
@@ -387,3 +392,227 @@ async def cancel_order(order_id: str):
         message=f"Order {order_id} cancelled successfully",
         success=True
     )
+
+
+# ====================
+# REAL CEA ORDER BOOK ENDPOINTS
+# ====================
+
+@router.get("/cea/orderbook", response_model=OrderBookResponse)
+async def get_cea_orderbook(db=Depends(get_db)):
+    """
+    Get the real CEA order book from database.
+    Returns sell orders from registered sellers sorted by price-time priority (FIFO).
+    """
+    # Fetch real CEA sell orders sorted by price ASC (best price first), then by time ASC (FIFO)
+    result = await db.execute(
+        select(Order, Seller)
+        .join(Seller, Order.seller_id == Seller.id)
+        .where(
+            and_(
+                Order.certificate_type == CertTypeEnum.CEA,
+                Order.side == OrderSideEnum.SELL,
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+            )
+        )
+        .order_by(Order.price.asc(), Order.created_at.asc())
+    )
+    orders = result.all()
+
+    # Aggregate orders by price level for display
+    price_levels = {}
+    for order, seller in orders:
+        remaining = float(order.quantity) - float(order.filled_quantity)
+        price_key = float(order.price)
+        if price_key not in price_levels:
+            price_levels[price_key] = {
+                "price": price_key,
+                "quantity": 0,
+                "order_count": 0,
+                "cumulative_quantity": 0,
+                "seller_codes": []
+            }
+        price_levels[price_key]["quantity"] += remaining
+        price_levels[price_key]["order_count"] += 1
+        price_levels[price_key]["seller_codes"].append(seller.client_code)
+
+    # Convert to sorted list and calculate cumulative
+    asks = sorted(price_levels.values(), key=lambda x: x["price"])
+    cumulative = 0
+    for ask in asks:
+        cumulative += ask["quantity"]
+        ask["cumulative_quantity"] = round(cumulative, 2)
+        ask["quantity"] = round(ask["quantity"], 2)
+
+    # Calculate market stats
+    best_ask = asks[0]["price"] if asks else None
+    last_price = best_ask if best_ask else 63.0  # Default CEA price
+    total_volume = sum(a["quantity"] for a in asks)
+
+    return OrderBookResponse(
+        certificate_type="CEA",
+        bids=[],  # No real bids yet - buyers come from entities
+        asks=[OrderBookLevel(
+            price=a["price"],
+            quantity=a["quantity"],
+            order_count=a["order_count"],
+            cumulative_quantity=a["cumulative_quantity"]
+        ) for a in asks],
+        spread=None,
+        best_bid=None,
+        best_ask=best_ask,
+        last_price=last_price,
+        volume_24h=total_volume,
+        change_24h=random.uniform(-2.0, 2.0),  # Mock 24h change
+    )
+
+
+@router.get("/cea/sellers")
+async def get_cea_sellers(db=Depends(get_db)):
+    """
+    Get all CEA sellers with their available inventory.
+    """
+    result = await db.execute(
+        select(Seller)
+        .where(Seller.is_active == True)
+        .order_by(Seller.client_code)
+    )
+    sellers = result.scalars().all()
+
+    return [
+        {
+            "client_code": s.client_code,
+            "name": s.name,
+            "company_name": s.company_name,
+            "cea_balance": float(s.cea_balance) if s.cea_balance else 0,
+            "cea_sold": float(s.cea_sold) if s.cea_sold else 0,
+            "total_transactions": s.total_transactions or 0,
+        }
+        for s in sellers
+    ]
+
+
+@router.post("/cea/buy")
+async def buy_cea_fifo(
+    amount_eur: float,
+    entity_id: str,
+    db=Depends(get_db)
+):
+    """
+    Execute a CEA buy order using FIFO price-time priority matching.
+
+    This creates multiple transactions with multiple sellers to fill a single buy order.
+    The buyer spends their entire cash balance to buy CEA from all available sellers.
+
+    Algorithm:
+    1. Fetch all open CEA sell orders sorted by price ASC (best price), then created_at ASC (FIFO)
+    2. Match against orders until buyer's funds are exhausted or no more orders
+    3. Create CashMarketTrade for each matched order
+    4. Update seller statistics
+    """
+    # CNY to EUR conversion rate
+    CNY_TO_EUR = 0.127
+
+    # Fetch entity to verify balance
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == entity_id)
+    )
+    entity = entity_result.scalar_one_or_none()
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    available_balance = float(entity.balance_amount or 0)
+    if available_balance <= 0:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+
+    # Use the minimum of requested amount and available balance
+    spending_amount = min(amount_eur, available_balance)
+
+    # Fetch all open CEA sell orders sorted by price-time priority (FIFO)
+    result = await db.execute(
+        select(Order, Seller)
+        .join(Seller, Order.seller_id == Seller.id)
+        .where(
+            and_(
+                Order.certificate_type == CertTypeEnum.CEA,
+                Order.side == OrderSideEnum.SELL,
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+            )
+        )
+        .order_by(Order.price.asc(), Order.created_at.asc())
+    )
+    sell_orders = result.all()
+
+    if not sell_orders:
+        raise HTTPException(status_code=400, detail="No CEA sellers available")
+
+    # Execute FIFO matching
+    remaining_eur = spending_amount
+    trades_executed = []
+    total_cea_bought = 0
+
+    for order, seller in sell_orders:
+        if remaining_eur <= 0:
+            break
+
+        order_price_cny = float(order.price)
+        order_price_eur = order_price_cny * CNY_TO_EUR
+        remaining_qty = float(order.quantity) - float(order.filled_quantity)
+
+        if remaining_qty <= 0:
+            continue
+
+        # Calculate how much we can buy from this order
+        max_qty_by_funds = remaining_eur / order_price_eur
+        qty_to_buy = min(max_qty_by_funds, remaining_qty)
+        cost_eur = qty_to_buy * order_price_eur
+
+        # Create the trade record
+        trade = CashMarketTrade(
+            buy_order_id=None,  # Will be set if we create a buy order record
+            sell_order_id=order.id,
+            certificate_type=CertTypeEnum.CEA,
+            price=Decimal(str(order_price_cny)),
+            quantity=Decimal(str(qty_to_buy)),
+            executed_at=datetime.utcnow()
+        )
+        db.add(trade)
+
+        # Update the sell order
+        order.filled_quantity = Decimal(str(float(order.filled_quantity) + qty_to_buy))
+        if order.filled_quantity >= order.quantity:
+            order.status = OrderStatus.FILLED
+        else:
+            order.status = OrderStatus.PARTIALLY_FILLED
+
+        # Update seller statistics
+        seller.cea_sold = Decimal(str(float(seller.cea_sold or 0) + qty_to_buy))
+        seller.total_transactions = (seller.total_transactions or 0) + 1
+
+        # Track the trade
+        trades_executed.append({
+            "seller_code": seller.client_code,
+            "seller_name": seller.name,
+            "quantity": round(qty_to_buy, 2),
+            "price_cny": round(order_price_cny, 4),
+            "price_eur": round(order_price_eur, 4),
+            "cost_eur": round(cost_eur, 2),
+        })
+
+        remaining_eur -= cost_eur
+        total_cea_bought += qty_to_buy
+
+    # Update entity balance
+    spent_amount = spending_amount - remaining_eur
+    entity.balance_amount = Decimal(str(available_balance - spent_amount))
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"Purchased {round(total_cea_bought, 2)} CEA from {len(trades_executed)} sellers",
+        "total_cea_bought": round(total_cea_bought, 2),
+        "total_spent_eur": round(spent_amount, 2),
+        "remaining_balance_eur": round(available_balance - spent_amount, 2),
+        "transactions": trades_executed,
+    }

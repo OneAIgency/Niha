@@ -354,7 +354,8 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
+    seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
@@ -365,6 +366,7 @@ class Order(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     entity = relationship("Entity")
+    seller = relationship("Seller", back_populates="orders")
     buy_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.buy_order_id", back_populates="buy_order")
     sell_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.sell_order_id", back_populates="sell_order")
 
@@ -400,6 +402,27 @@ class AuthenticationAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", back_populates="auth_attempts")
+
+
+class Seller(Base):
+    """CEA sellers with unique client codes for the Cash Market"""
+    __tablename__ = "sellers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_code = Column(String(20), unique=True, nullable=False, index=True)  # e.g., "CEA-001", "CEA-002"
+    name = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=True)
+    jurisdiction = Column(SQLEnum(Jurisdiction), default=Jurisdiction.CN)
+    cea_balance = Column(Numeric(18, 2), default=0)  # Available CEA for sale
+    cea_sold = Column(Numeric(18, 2), default=0)  # Total CEA sold
+    total_transactions = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to orders
+    orders = relationship("Order", back_populates="seller")
 
 
 class Deposit(Base):

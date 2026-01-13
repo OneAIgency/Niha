@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,9 +11,20 @@ import {
   FileText,
   CreditCard,
   Shield,
+  Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 import { usePrices } from '../hooks/usePrices';
+import { usersApi } from '../services/api';
+
+interface EntityBalance {
+  entity_id: string;
+  entity_name: string;
+  balance_amount: number;
+  balance_currency: string | null;
+  total_deposited: number;
+  deposit_count: number;
+}
 
 // Mock user account data - in production this would come from API
 const MOCK_ACCOUNT = {
@@ -86,6 +97,32 @@ export function DashboardPage() {
   const { user } = useAuthStore();
   const { prices } = usePrices();
   const [activeTab, setActiveTab] = useState<'open' | 'history'>('open');
+  const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+
+  // Fetch real balance data for FUNDED users
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
+        try {
+          setLoadingBalance(true);
+          const balance = await usersApi.getMyEntityBalance();
+          setEntityBalance(balance);
+        } catch (error) {
+          console.error('Failed to fetch balance:', error);
+        } finally {
+          setLoadingBalance(false);
+        }
+      } else {
+        setLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+  }, [user?.role]);
+
+  // Determine if user is a FUNDED user (can only access Cash Market)
+  const isFundedUser = user?.role === 'FUNDED';
 
   // Format helpers
   const formatNumber = (num: number, decimals = 0) => {
@@ -124,7 +161,7 @@ export function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg">
                   <span className="text-amber-400">CEA</span>
-                  <span className="text-white font-mono">¥{prices.cea.price.toFixed(2)}</span>
+                  <span className="text-white font-mono">€{(prices.cea.price * 0.127).toFixed(2)}</span>
                   <span className={prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                     {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(1)}%
                   </span>
@@ -142,16 +179,34 @@ export function DashboardPage() {
             className="bg-slate-900 rounded-xl border border-slate-800 p-4"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-400 text-sm">EUR Balance</span>
+              <span className="text-slate-400 text-sm">Cash Balance</span>
               <CreditCard className="w-4 h-4 text-slate-500" />
             </div>
-            <div className="text-2xl font-bold text-white font-mono">
-              {formatCurrency(MOCK_ACCOUNT.eur_balance)}
-            </div>
-            {MOCK_ACCOUNT.eur_locked > 0 && (
-              <div className="text-xs text-amber-400 mt-1">
-                {formatCurrency(MOCK_ACCOUNT.eur_locked)} locked
+            {loadingBalance ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
               </div>
+            ) : entityBalance ? (
+              <>
+                <div className="text-2xl font-bold text-emerald-400 font-mono">
+                  {entityBalance.balance_currency === 'EUR' ? '€' : entityBalance.balance_currency || '€'}
+                  {formatNumber(entityBalance.balance_amount, 2)}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  Available for trading
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-white font-mono">
+                  {formatCurrency(MOCK_ACCOUNT.eur_balance)}
+                </div>
+                {MOCK_ACCOUNT.eur_locked > 0 && (
+                  <div className="text-xs text-amber-400 mt-1">
+                    {formatCurrency(MOCK_ACCOUNT.eur_locked)} locked
+                  </div>
+                )}
+              </>
             )}
           </motion.div>
 
@@ -259,7 +314,7 @@ export function DashboardPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-slate-400">
-                          {holding.avgPrice ? `¥${holding.avgPrice}` : '-'}
+                          {holding.avgPrice ? `€${(holding.avgPrice * 0.127).toFixed(2)}` : '-'}
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-white">
                           {holding.value > 0 ? formatCurrency(holding.value) : '-'}
@@ -322,26 +377,47 @@ export function DashboardPage() {
                   </motion.div>
                 </Link>
 
-                <Link to="/swap">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl hover:bg-violet-500/20 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                          <ArrowRightLeft className="w-5 h-5 text-violet-500" />
+                {/* Swap is only available for ADMIN users, not FUNDED users */}
+                {!isFundedUser && (
+                  <Link to="/swap">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl hover:bg-violet-500/20 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                            <ArrowRightLeft className="w-5 h-5 text-violet-500" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">Swap CEA → EUA</h3>
+                            <p className="text-sm text-slate-400">Swap Market</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-white">Swap CEA → EUA</h3>
-                          <p className="text-sm text-slate-400">Swap Market</p>
-                        </div>
+                        <ArrowRight className="w-5 h-5 text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                      <ArrowRight className="w-5 h-5 text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </motion.div>
+                  </Link>
+                )}
+
+                {/* For FUNDED users, show info about their trading access */}
+                {isFundedUser && entityBalance && entityBalance.balance_amount > 0 && (
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Ready to Trade</h3>
+                        <p className="text-sm text-slate-400">
+                          {entityBalance.balance_currency === 'EUR' ? '€' : entityBalance.balance_currency}
+                          {formatNumber(entityBalance.balance_amount, 2)} available
+                        </p>
+                      </div>
                     </div>
-                  </motion.div>
-                </Link>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

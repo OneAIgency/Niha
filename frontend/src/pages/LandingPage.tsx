@@ -9,7 +9,6 @@ import {
   TrendingUp,
   Lock,
   RefreshCw,
-  ChevronRight,
 } from 'lucide-react';
 import { Button, AnimatedCounter } from '../components/common';
 import { usePrices } from '../hooks/usePrices';
@@ -266,81 +265,6 @@ export function LandingPage() {
               </div>
               <div className="text-navy-400 text-sm">Jurisdictions</div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-24 bg-navy-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-white mb-4">
-              How It Works
-            </h2>
-            <p className="text-navy-400 text-lg max-w-2xl mx-auto">
-              Trade carbon certificates across jurisdictions in four simple steps
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              {
-                step: '01',
-                title: 'Get Verified',
-                description:
-                  'Submit your entity details and complete our streamlined KYC process.',
-                icon: Shield,
-              },
-              {
-                step: '02',
-                title: 'Browse Market',
-                description:
-                  'Explore anonymous CEA listings from verified sellers across Asia.',
-                icon: Globe,
-              },
-              {
-                step: '03',
-                title: 'Execute Trade',
-                description:
-                  'Purchase certificates at OTC rates, avoiding exchange fees.',
-                icon: Zap,
-              },
-              {
-                step: '04',
-                title: 'Swap & Settle',
-                description:
-                  'Exchange CEA for EUA through our secure swap mechanism.',
-                icon: RefreshCw,
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={item.step}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="relative"
-              >
-                <div className="bg-navy-800/50 rounded-2xl p-8 border border-white/10 hover:border-emerald-500/50 transition-colors h-full">
-                  <div className="text-emerald-500 font-mono text-sm mb-4">
-                    {item.step}
-                  </div>
-                  <item.icon className="w-10 h-10 text-emerald-400 mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-navy-400">{item.description}</p>
-                </div>
-                {index < 3 && (
-                  <ChevronRight className="hidden md:block absolute top-1/2 -right-6 w-8 h-8 text-navy-600 transform -translate-y-1/2" />
-                )}
-              </motion.div>
-            ))}
           </div>
         </div>
       </section>

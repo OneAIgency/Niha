@@ -44,14 +44,6 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  to="/how-it-works"
-                  className="text-navy-400 hover:text-white transition-colors"
-                >
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link
                   to="/contact"
                   className="text-navy-400 hover:text-white transition-colors"
                 >

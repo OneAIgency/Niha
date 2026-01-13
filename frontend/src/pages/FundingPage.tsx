@@ -64,10 +64,35 @@ export function FundingPage() {
 
   // Form state
   const [amount, setAmount] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
   const [currency, setCurrency] = useState('EUR');
   const [wireReference, setWireReference] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Format amount with thousand separators for display
+  const formatAmountInput = (value: string) => {
+    // Remove all non-digit and non-decimal characters
+    const cleaned = value.replace(/[^\d.]/g, '');
+
+    // Handle multiple decimal points - keep only the first one
+    const parts = cleaned.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+    // Add thousand separators to integer part
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    return formattedInteger + decimalPart;
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const formatted = formatAmountInput(inputValue);
+    setDisplayAmount(formatted);
+    // Store raw numeric value without commas
+    setAmount(formatted.replace(/,/g, ''));
+  };
 
   useEffect(() => {
     fetchData();
@@ -107,6 +132,7 @@ export function FundingPage() {
       const result = await usersApi.reportDeposit(amountNum, currency, wireReference || undefined);
       setSuccessMessage(result.message);
       setAmount('');
+      setDisplayAmount('');
       setWireReference('');
       // Refresh deposits
       const depositsData = await usersApi.getMyDeposits();
@@ -273,12 +299,11 @@ export function FundingPage() {
                     Amount
                   </label>
                   <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    value={displayAmount}
+                    onChange={handleAmountChange}
+                    placeholder="Enter amount (e.g., 999,000)"
+                    inputMode="decimal"
                     className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     required
                   />

@@ -6,7 +6,6 @@ export { CashMarketPage } from './CashMarketPage';
 export { CeaCashMarketPage } from './CeaCashMarketPage';
 export { SwapPage } from './SwapPage';
 export { CeaSwapMarketPage } from './CeaSwapMarketPage';
-export { HowItWorksPage } from './HowItWorksPage';
 export { DashboardPage } from './DashboardPage';
 export { ProfilePage } from './ProfilePage';
 export { SettingsPage } from './SettingsPage';

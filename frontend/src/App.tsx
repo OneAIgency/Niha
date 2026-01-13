@@ -7,7 +7,6 @@ import {
   CeaCashMarketPage,
   SwapPage,
   CeaSwapMarketPage,
-  HowItWorksPage,
   DashboardPage,
   ProfilePage,
   SettingsPage,
@@ -240,7 +239,6 @@ function App() {
         {/* Public routes with layout */}
         <Route element={<Layout />}>
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
 
           {/* Protected - All authenticated users */}
           <Route

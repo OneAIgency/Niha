@@ -58,7 +58,6 @@ export function Header() {
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
       return [
-        { href: '/how-it-works', label: 'How It Works' },
         { href: '/contact', label: 'Contact' },
       ];
     }
@@ -67,7 +66,6 @@ export function Header() {
     if (isApproved) {
       return [
         { href: '/funding', label: 'Funding' },
-        { href: '/how-it-works', label: 'How It Works' },
       ];
     }
 
@@ -76,7 +74,6 @@ export function Header() {
       return [
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/cash-market', label: 'Cash Market' },
-        { href: '/how-it-works', label: 'How It Works' },
       ];
     }
 
@@ -86,14 +83,11 @@ export function Header() {
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/cash-market', label: 'Cash Market' },
         { href: '/swap', label: 'Swap Center' },
-        { href: '/how-it-works', label: 'How It Works' },
       ];
     }
 
     // Default (PENDING or unknown) - minimal navigation
-    return [
-      { href: '/how-it-works', label: 'How It Works' },
-    ];
+    return [];
   }, [isAuthenticated, isApproved, isFunded, isAdmin]);
 
   return (

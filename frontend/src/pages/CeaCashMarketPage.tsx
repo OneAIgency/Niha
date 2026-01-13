@@ -25,6 +25,9 @@ const MOCK_USER_BALANCE = {
 // Conversion rate CNY to EUR (approximate)
 const CNY_TO_EUR = 0.127;
 
+// Convert CNY price to EUR for display
+const toEur = (cnyPrice: number) => cnyPrice * CNY_TO_EUR;
+
 export function CeaCashMarketPage() {
   const [orderBook, setOrderBook] = useState<OrderBook | null>(null);
   const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
@@ -147,12 +150,12 @@ export function CeaCashMarketPage() {
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats - All prices displayed in EUR */}
             <div className="flex items-center gap-6 text-sm">
               <div>
                 <span className="text-slate-400 mr-2">Last</span>
                 <span className="font-bold font-mono text-white text-lg">
-                  ¥{formatNumber(orderBook?.last_price || 0)}
+                  €{formatNumber(toEur(orderBook?.last_price || 0))}
                 </span>
               </div>
 
@@ -255,7 +258,7 @@ export function CeaCashMarketPage() {
                                 style={{ width: `${depthPercent}%` }}
                               />
                               <span className="relative font-mono text-red-400">
-                                ¥{formatNumber(ask.price)}
+                                €{formatNumber(toEur(ask.price))}
                               </span>
                               <span className="relative text-right text-slate-300 font-mono">
                                 {formatNumber(ask.quantity, 0)}
@@ -271,7 +274,7 @@ export function CeaCashMarketPage() {
                   <div className="mt-4 pt-4 border-t border-slate-800 text-center">
                     <span className="text-slate-500 text-sm">Spread: </span>
                     <span className="text-white font-mono">
-                      ¥{formatNumber(orderBook?.spread || 0)}
+                      €{formatNumber(toEur(orderBook?.spread || 0))}
                     </span>
                   </div>
                 </div>
@@ -303,7 +306,7 @@ export function CeaCashMarketPage() {
 
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Price (best ask)</span>
-                      <span className="text-white font-mono">¥{formatNumber(bestAskPrice)} ({formatCurrency(priceInEur)}/t)</span>
+                      <span className="text-white font-mono">€{formatNumber(priceInEur)}/t</span>
                     </div>
 
                     <div className="flex justify-between text-sm">
@@ -392,7 +395,7 @@ export function CeaCashMarketPage() {
                             {formatNumber(trade.quantity, 0)} CEA
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-slate-300">
-                            ¥{formatNumber(trade.price)}
+                            €{formatNumber(toEur(trade.price))}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className="text-emerald-400 text-xs">✓ Done</span>
@@ -442,7 +445,7 @@ export function CeaCashMarketPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Price per tonne</span>
-                  <span className="text-white font-mono">¥{formatNumber(bestAskPrice)} ({formatCurrency(priceInEur)})</span>
+                  <span className="text-white font-mono">€{formatNumber(priceInEur)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Quantity</span>
