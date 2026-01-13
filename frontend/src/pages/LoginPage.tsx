@@ -323,8 +323,17 @@ export function LoginPage() {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setAuth, isAuthenticated } = useAuthStore();
+  const { setAuth, isAuthenticated, user } = useAuthStore();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Helper to determine where to redirect after login
+  const getPostLoginRedirect = (loggedInUser: { email: string }): string => {
+    // Send specific users to onboarding
+    if (loggedInUser.email === 'eu@eu.ro') {
+      return '/onboarding';
+    }
+    return '/dashboard';
+  };
 
   // Check for magic link token in URL
   useEffect(() => {
@@ -336,17 +345,17 @@ export function LoginPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      navigate(getPostLoginRedirect(user));
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const verifyToken = async (token: string) => {
     setVerifying(true);
     try {
-      const { access_token, user } = await authApi.verifyMagicLink(token);
-      setAuth(user, access_token);
-      navigate('/dashboard');
+      const { access_token, user: loggedInUser } = await authApi.verifyMagicLink(token);
+      setAuth(loggedInUser, access_token);
+      navigate(getPostLoginRedirect(loggedInUser));
     } catch {
       setError('Invalid or expired link. Please request a new one.');
       setMode('enter');
@@ -371,9 +380,9 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      const { access_token, user } = await authApi.loginWithPassword(email, password);
-      setAuth(user, access_token);
-      navigate('/dashboard');
+      const { access_token, user: loggedInUser } = await authApi.loginWithPassword(email, password);
+      setAuth(loggedInUser, access_token);
+      navigate(getPostLoginRedirect(loggedInUser));
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid credentials');
     } finally {

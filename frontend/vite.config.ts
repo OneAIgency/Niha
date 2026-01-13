@@ -14,11 +14,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://niha_backend:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://niha_backend:8000',
+        target: 'ws://localhost:8000',
         ws: true,
       },
     },
