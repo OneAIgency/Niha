@@ -145,7 +145,7 @@ const keyStats = [
   { icon: '🇪🇺', value: '1.6B tonnes', label: 'EU ETS Coverage', color: colors.secondaryLight },
   { icon: '🇨🇳', value: '4.5B tonnes', label: 'China ETS Coverage', color: colors.danger },
   { icon: '🌍', value: '6.1B tonnes', label: 'Combined Market Coverage', color: colors.primaryLight },
-  { icon: '💹', value: '15-25%', label: 'Value Improvement via Nihao', color: colors.success },
+  { icon: '💹', value: '15-25%', label: 'Value Improvement (EU Entities)', color: colors.success },
 ];
 
 // Value propositions

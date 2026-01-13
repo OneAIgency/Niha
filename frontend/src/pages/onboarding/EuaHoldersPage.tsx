@@ -667,10 +667,10 @@ const MarketSizingTable = () => {
             ))}
             <tr style={{ backgroundColor: colors.primary, borderTop: `2px solid ${colors.primaryDark}` }}>
               <td className="px-4 py-3 font-bold text-white">TOTAL</td>
-              <td className="px-4 py-3 text-center font-bold text-white">355-640</td>
+              <td className="px-4 py-3 text-center font-bold text-white">355-660</td>
               <td className="px-4 py-3 text-center font-bold text-white">Avg: ~1.5M</td>
               <td className="px-4 py-3 text-center font-bold text-white">239.75-4,197.5M</td>
-              <td className="px-4 py-3 text-center font-bold text-white">225.75-3,747.5M</td>
+              <td className="px-4 py-3 text-center font-bold text-white">225.75-3,847.5M</td>
             </tr>
           </tbody>
         </table>
@@ -709,8 +709,8 @@ const SwapAdvantages = () => {
   const [selectedAdvantage, setSelectedAdvantage] = useState('price');
 
   const advantages = [
-    { id: 'price', label: 'Price Arbitrage (10-18%)', icon: TrendingUp },
-    { id: 'operational', label: 'Operational (3-8%)', icon: Settings },
+    { id: 'price', label: 'Price Arbitrage (8-18%)', icon: TrendingUp },
+    { id: 'operational', label: 'Operational & Timing (3-8%)', icon: Settings },
     { id: 'currency', label: 'Currency (2-5%)', icon: DollarSign },
     { id: 'strategic', label: 'Strategic (2-5%)', icon: Target },
   ];
@@ -1537,7 +1537,7 @@ const QuantifiedAdvantages = () => {
           </div>
           <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
             <div className="text-3xl font-bold" style={{ color: colors.primary }}>€200-300B</div>
-            <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>Conservative midpoint estimate</div>
+            <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>Conservative realistic estimate</div>
           </div>
           <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
             <div className="text-3xl font-bold" style={{ color: colors.accent }}>10-22%</div>
@@ -1876,7 +1876,7 @@ const EuaHoldersPage: React.FC = () => {
             <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>Total value realization improvement</div>
           </div>
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-            <div className="text-2xl font-bold" style={{ color: colors.primary }}>8-15%</div>
+            <div className="text-2xl font-bold" style={{ color: colors.primary }}>8-18%</div>
             <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>Price arbitrage capture</div>
           </div>
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
