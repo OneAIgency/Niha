@@ -22,6 +22,10 @@ import type {
   MarketDepth,
   CashMarketTrade,
   CashMarketStats,
+  AdminUserFull,
+  AdminUserUpdate,
+  AdminPasswordReset,
+  AuthenticationAttempt,
 } from '../types';
 
 // Use relative URL to leverage Vite's proxy in development
@@ -297,6 +301,33 @@ export const adminApi = {
 
   deleteUser: async (id: string): Promise<MessageResponse> => {
     const { data } = await api.delete(`/admin/users/${id}`);
+    return data;
+  },
+
+  // Full User Details (with auth history, sessions, stats)
+  getUserFull: async (id: string): Promise<AdminUserFull> => {
+    const { data } = await api.get(`/admin/users/${id}/full`);
+    return data;
+  },
+
+  // Update any user field
+  updateUserFull: async (id: string, update: AdminUserUpdate): Promise<User> => {
+    const { data } = await api.put(`/admin/users/${id}`, update);
+    return data;
+  },
+
+  // Reset user password
+  resetUserPassword: async (id: string, reset: AdminPasswordReset): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/users/${id}/reset-password`, reset);
+    return data;
+  },
+
+  // Get user auth history
+  getUserAuthHistory: async (
+    id: string,
+    params?: { page?: number; per_page?: number }
+  ): Promise<PaginatedResponse<AuthenticationAttempt>> => {
+    const { data } = await api.get(`/admin/users/${id}/auth-history`, { params });
     return data;
   },
 

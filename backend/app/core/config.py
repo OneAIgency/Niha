@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     MAGIC_LINK_EXPIRE_MINUTES: int = 15
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://platonos.mooo.com,https://platonos.mooo.com"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://platonos.mooo.com,https://platonos.mooo.com,http://192.168.10.42:5173,http://192.168.10.42:8000"
 
     @property
     def cors_origins_list(self) -> List[str]:

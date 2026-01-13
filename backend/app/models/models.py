@@ -97,6 +97,11 @@ class SwapStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class AuthMethod(str, enum.Enum):
+    PASSWORD = "password"
+    MAGIC_LINK = "magic_link"
+
+
 class OrderSide(str, enum.Enum):
     BUY = "BUY"
     SELL = "SELL"
@@ -157,6 +162,7 @@ class User(Base):
     activity_logs = relationship("ActivityLog", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
     kyc_documents = relationship("KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id")
+    auth_attempts = relationship("AuthenticationAttempt", back_populates="user")
 
 
 class ContactRequest(Base):
@@ -349,3 +355,20 @@ class CashMarketTrade(Base):
 
     buy_order = relationship("Order", foreign_keys=[buy_order_id], back_populates="buy_trades")
     sell_order = relationship("Order", foreign_keys=[sell_order_id], back_populates="sell_trades")
+
+
+class AuthenticationAttempt(Base):
+    """Track all authentication attempts for security and audit"""
+    __tablename__ = "authentication_attempts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    email = Column(String(255), nullable=False, index=True)  # Store email even if user doesn't exist
+    success = Column(Boolean, nullable=False)
+    method = Column(SQLEnum(AuthMethod), nullable=False)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    failure_reason = Column(String(255), nullable=True)  # 'invalid_password', 'user_not_found', 'account_disabled', etc.
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User", back_populates="auth_attempts")

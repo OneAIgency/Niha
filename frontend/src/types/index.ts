@@ -142,6 +142,7 @@ export interface UserSession {
   started_at: string;
   ended_at?: string;
   duration_seconds?: number;
+  is_active?: boolean;
 }
 
 export interface Entity {
@@ -279,4 +280,48 @@ export interface CashMarketStats {
   volume_24h: number;
   total_bids: number;
   total_asks: number;
+}
+
+// Authentication History Types
+export type AuthMethod = 'password' | 'magic_link';
+
+export interface AuthenticationAttempt {
+  id: string;
+  user_id?: string;
+  email: string;
+  success: boolean;
+  method: AuthMethod;
+  ip_address?: string;
+  user_agent?: string;
+  failure_reason?: string;
+  created_at: string;
+}
+
+// Admin User Management Types
+export interface AdminUserFull extends User {
+  entity_name?: string;
+  password_set: boolean;
+  login_count: number;
+  last_login_ip?: string;
+  failed_login_count_24h: number;
+  sessions: UserSession[];
+  auth_history: AuthenticationAttempt[];
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface AdminUserUpdate {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  phone?: string;
+  role?: UserRole;
+  is_active?: boolean;
+  entity_id?: string;
+}
+
+export interface AdminPasswordReset {
+  new_password: string;
+  force_change?: boolean;
 }

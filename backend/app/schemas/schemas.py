@@ -527,3 +527,54 @@ class MarketStatsResponse(BaseModel):
     volume_24h: float
     total_bids: int
     total_asks: int
+
+
+# Authentication History Schemas
+class AuthMethod(str, Enum):
+    PASSWORD = "password"
+    MAGIC_LINK = "magic_link"
+
+
+class AuthenticationAttemptResponse(BaseModel):
+    id: UUID
+    user_id: Optional[UUID]
+    email: str
+    success: bool
+    method: str
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    failure_reason: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Admin User Management Schemas
+class AdminUserFullResponse(UserResponse):
+    """Full user details for admin - includes auth history and stats"""
+    entity_name: Optional[str] = None
+    password_set: bool = False  # Indicates if user has password (NOT the actual password)
+    login_count: int = 0
+    last_login_ip: Optional[str] = None
+    failed_login_count_24h: int = 0
+    sessions: List[UserSessionResponse] = []
+    auth_history: List[AuthenticationAttemptResponse] = []
+
+
+class AdminUserUpdate(BaseModel):
+    """Schema for admin to update any user field"""
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    position: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=50)
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+    entity_id: Optional[UUID] = None
+
+
+class AdminPasswordReset(BaseModel):
+    """Admin can reset user password"""
+    new_password: str = Field(..., min_length=8)
+    force_change: bool = True  # Force user to change on next login

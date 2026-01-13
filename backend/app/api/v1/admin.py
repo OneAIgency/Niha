@@ -11,12 +11,15 @@ from ...core.security import get_admin_user, hash_password
 from ...models.models import (
     ContactRequest, ContactStatus, Entity, User, Trade, UserRole,
     ActivityLog, UserSession, ScrapingSource, CertificateType,
-    Certificate, CertificateStatus, SwapRequest, SwapStatus
+    Certificate, CertificateStatus, SwapRequest, SwapStatus,
+    AuthenticationAttempt
 )
 from ...schemas.schemas import (
     ContactRequestUpdate, MessageResponse, UserResponse, UserCreate,
     UserRoleUpdate, ActivityLogResponse, ActivityStatsResponse,
-    ScrapingSourceResponse, ScrapingSourceUpdate, ScrapingSourceCreate
+    ScrapingSourceResponse, ScrapingSourceUpdate, ScrapingSourceCreate,
+    AdminUserFullResponse, AdminUserUpdate, AdminPasswordReset,
+    AuthenticationAttemptResponse, UserSessionResponse
 )
 from ...services.email_service import email_service
 
@@ -451,6 +454,261 @@ async def deactivate_user(
     await db.commit()
 
     return MessageResponse(message=f"User {user.email} has been deactivated")
+
+
+@router.get("/users/{user_id}/full", response_model=AdminUserFullResponse)
+async def get_user_full_details(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get comprehensive user details including auth history and stats.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get entity name
+    entity_name = None
+    if user.entity_id:
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == user.entity_id)
+        )
+        entity = entity_result.scalar_one_or_none()
+        if entity:
+            entity_name = entity.name
+
+    # Get auth attempts
+    auth_query = (
+        select(AuthenticationAttempt)
+        .where(AuthenticationAttempt.email == user.email)
+        .order_by(AuthenticationAttempt.created_at.desc())
+        .limit(50)
+    )
+    auth_result = await db.execute(auth_query)
+    auth_attempts = auth_result.scalars().all()
+
+    # Count total logins
+    login_count_result = await db.execute(
+        select(func.count())
+        .select_from(AuthenticationAttempt)
+        .where(AuthenticationAttempt.email == user.email)
+        .where(AuthenticationAttempt.success == True)
+    )
+    login_count = login_count_result.scalar() or 0
+
+    # Get last login IP
+    last_login_ip = None
+    if auth_attempts:
+        for attempt in auth_attempts:
+            if attempt.success and attempt.ip_address:
+                last_login_ip = attempt.ip_address
+                break
+
+    # Failed logins in last 24h
+    yesterday = datetime.utcnow() - timedelta(hours=24)
+    failed_24h_result = await db.execute(
+        select(func.count())
+        .select_from(AuthenticationAttempt)
+        .where(AuthenticationAttempt.email == user.email)
+        .where(AuthenticationAttempt.success == False)
+        .where(AuthenticationAttempt.created_at >= yesterday)
+    )
+    failed_login_count_24h = failed_24h_result.scalar() or 0
+
+    # Get sessions
+    sessions_query = (
+        select(UserSession)
+        .where(UserSession.user_id == user.id)
+        .order_by(UserSession.started_at.desc())
+        .limit(20)
+    )
+    sessions_result = await db.execute(sessions_query)
+    sessions = sessions_result.scalars().all()
+
+    return AdminUserFullResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        position=user.position,
+        phone=user.phone,
+        role=user.role.value,
+        entity_id=user.entity_id,
+        is_active=user.is_active,
+        must_change_password=user.must_change_password,
+        last_login=user.last_login,
+        created_at=user.created_at,
+        entity_name=entity_name,
+        password_set=user.password_hash is not None,
+        login_count=login_count,
+        last_login_ip=last_login_ip,
+        failed_login_count_24h=failed_login_count_24h,
+        sessions=[UserSessionResponse.model_validate(s) for s in sessions],
+        auth_history=[AuthenticationAttemptResponse.model_validate(a) for a in auth_attempts]
+    )
+
+
+@router.put("/users/{user_id}", response_model=UserResponse)
+async def update_user_full(
+    user_id: str,
+    update: AdminUserUpdate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update any user field.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check email uniqueness if changing email
+    if update.email and update.email.lower() != user.email:
+        existing = await db.execute(
+            select(User).where(User.email == update.email.lower())
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail="Email already in use by another user"
+            )
+        user.email = update.email.lower()
+
+    if update.first_name is not None:
+        user.first_name = update.first_name
+    if update.last_name is not None:
+        user.last_name = update.last_name
+    if update.position is not None:
+        user.position = update.position
+    if update.phone is not None:
+        user.phone = update.phone
+    if update.role is not None:
+        if user.id == admin_user.id:
+            raise HTTPException(status_code=400, detail="Cannot change your own role")
+        user.role = update.role
+    if update.is_active is not None:
+        if user.id == admin_user.id and not update.is_active:
+            raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+        user.is_active = update.is_active
+    if update.entity_id is not None:
+        # Verify entity exists
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == update.entity_id)
+        )
+        if not entity_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Entity not found")
+        user.entity_id = update.entity_id
+
+    await db.commit()
+    await db.refresh(user)
+
+    return UserResponse.model_validate(user)
+
+
+@router.post("/users/{user_id}/reset-password", response_model=MessageResponse)
+async def admin_reset_password(
+    user_id: str,
+    reset: AdminPasswordReset,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset a user's password.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = hash_password(reset.new_password)
+    user.must_change_password = reset.force_change
+
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Password reset for {user.email}. Force change on login: {reset.force_change}"
+    )
+
+
+@router.get("/users/{user_id}/auth-history")
+async def get_user_auth_history(
+    user_id: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get authentication history for a specific user.
+    Admin only.
+    """
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Count total
+    count_query = (
+        select(func.count())
+        .select_from(AuthenticationAttempt)
+        .where(AuthenticationAttempt.email == user.email)
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    # Get paginated auth attempts
+    offset = (page - 1) * per_page
+    auth_query = (
+        select(AuthenticationAttempt)
+        .where(AuthenticationAttempt.email == user.email)
+        .order_by(AuthenticationAttempt.created_at.desc())
+        .offset(offset)
+        .limit(per_page)
+    )
+    auth_result = await db.execute(auth_query)
+    auth_attempts = auth_result.scalars().all()
+
+    return {
+        "data": [
+            {
+                "id": str(a.id),
+                "user_id": str(a.user_id) if a.user_id else None,
+                "email": a.email,
+                "success": a.success,
+                "method": a.method.value,
+                "ip_address": a.ip_address,
+                "user_agent": a.user_agent,
+                "failure_reason": a.failure_reason,
+                "created_at": a.created_at.isoformat()
+            }
+            for a in auth_attempts
+        ],
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": (total + per_page - 1) // per_page if total else 0
+        }
+    }
 
 
 # ==================== Activity Logs ====================

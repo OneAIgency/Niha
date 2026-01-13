@@ -13,11 +13,19 @@ import {
   Check,
   RefreshCw,
   Trash2,
+  Eye,
+  Key,
+  Shield,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Globe,
+  Monitor,
 } from 'lucide-react';
 import { Button, Card, Badge, Input } from '../components/common';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi } from '../services/api';
-import type { User, UserRole } from '../types';
+import type { User, UserRole, AdminUserFull } from '../types';
 
 interface UserWithEntity extends User {
   entity_name?: string;
@@ -56,6 +64,17 @@ export function UsersPage() {
     role: 'PENDING' as UserRole,
     is_active: true,
   });
+
+  // User Detail Modal state
+  const [detailUser, setDetailUser] = useState<AdminUserFull | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailTab, setDetailTab] = useState<'info' | 'auth' | 'sessions'>('info');
+
+  // Password Reset state
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [forceChange, setForceChange] = useState(true);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -194,6 +213,40 @@ export function UsersPage() {
       role: user.role,
       is_active: user.is_active !== false,
     });
+  };
+
+  const openDetailModal = async (userId: string) => {
+    setLoadingDetail(true);
+    setDetailTab('info');
+    try {
+      const fullUser = await adminApi.getUserFull(userId);
+      setDetailUser(fullUser);
+    } catch (error) {
+      console.error('Failed to load user details:', error);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!detailUser || newPassword.length < 8) return;
+
+    setResettingPassword(true);
+    try {
+      await adminApi.resetUserPassword(detailUser.id, {
+        new_password: newPassword,
+        force_change: forceChange,
+      });
+      setShowPasswordReset(false);
+      setNewPassword('');
+      // Refresh user details
+      const updated = await adminApi.getUserFull(detailUser.id);
+      setDetailUser(updated);
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const getRoleBadgeVariant = (role: UserRole) => {
@@ -401,7 +454,16 @@ export function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => openDetailModal(user.id)}
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => openEditModal(user)}
+                          title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -410,6 +472,7 @@ export function UsersPage() {
                           size="sm"
                           onClick={() => handleDeactivateUser(user.id)}
                           className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Deactivate"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -663,6 +726,355 @@ export function UsersPage() {
                 </Button>
                 <Button variant="primary" onClick={handleUpdateUser} loading={savingUser}>
                   Save Changes
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* User Detail Modal */}
+        {(detailUser || loadingDetail) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto py-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              {loadingDetail ? (
+                <div className="flex items-center justify-center p-12">
+                  <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+                </div>
+              ) : detailUser && (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        'w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl',
+                        detailUser.role === 'ADMIN'
+                          ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                          : detailUser.role === 'FUNDED'
+                          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                          : detailUser.role === 'APPROVED'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                          : 'bg-gradient-to-br from-amber-500 to-amber-600'
+                      )}>
+                        {getInitials(detailUser.first_name, detailUser.last_name, detailUser.email)}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-navy-900 dark:text-white">
+                          {detailUser.first_name} {detailUser.last_name}
+                        </h2>
+                        <p className="text-navy-500 dark:text-navy-400">{detailUser.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDetailUser(null)}
+                      className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+                    >
+                      <X className="w-5 h-5 text-navy-500" />
+                    </button>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex border-b border-navy-100 dark:border-navy-700">
+                    {[
+                      { id: 'info', label: 'User Info', icon: Shield },
+                      { id: 'auth', label: 'Auth History', icon: Key },
+                      { id: 'sessions', label: 'Sessions', icon: Monitor },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setDetailTab(tab.id as 'info' | 'auth' | 'sessions')}
+                        className={cn(
+                          'flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors',
+                          detailTab === tab.id
+                            ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                            : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                        )}
+                      >
+                        <tab.icon className="w-4 h-4" />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 overflow-y-auto p-6">
+                    {detailTab === 'info' && (
+                      <div className="space-y-6">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                            <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Role</p>
+                            <Badge variant={getRoleBadgeVariant(detailUser.role as UserRole)}>
+                              {detailUser.role}
+                            </Badge>
+                          </div>
+                          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                            <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Status</p>
+                            <Badge variant={detailUser.is_active ? 'success' : 'danger'}>
+                              {detailUser.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                            <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Password</p>
+                            <Badge variant={detailUser.password_set ? 'success' : 'warning'}>
+                              {detailUser.password_set ? 'Set' : 'Not Set'}
+                            </Badge>
+                          </div>
+                          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                            <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Total Logins</p>
+                            <p className="text-lg font-bold text-navy-900 dark:text-white">{detailUser.login_count}</p>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <h3 className="font-semibold text-navy-900 dark:text-white">Account Details</h3>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Entity</span>
+                                <span className="text-navy-900 dark:text-white">{detailUser.entity_name || 'None'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Position</span>
+                                <span className="text-navy-900 dark:text-white">{detailUser.position || 'Not set'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Phone</span>
+                                <span className="text-navy-900 dark:text-white">{detailUser.phone || 'Not set'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Created</span>
+                                <span className="text-navy-900 dark:text-white">
+                                  {detailUser.created_at ? formatRelativeTime(detailUser.created_at) : 'Unknown'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <h3 className="font-semibold text-navy-900 dark:text-white">Security</h3>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Last Login</span>
+                                <span className="text-navy-900 dark:text-white">
+                                  {detailUser.last_login ? formatRelativeTime(detailUser.last_login) : 'Never'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-navy-500 dark:text-navy-400">Last IP</span>
+                                <span className="text-navy-900 dark:text-white font-mono text-sm">
+                                  {detailUser.last_login_ip || 'Unknown'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-navy-500 dark:text-navy-400">Failed (24h)</span>
+                                <Badge variant={detailUser.failed_login_count_24h > 5 ? 'danger' : detailUser.failed_login_count_24h > 0 ? 'warning' : 'success'}>
+                                  {detailUser.failed_login_count_24h}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-navy-500 dark:text-navy-400">Force Password Change</span>
+                                <Badge variant={detailUser.must_change_password ? 'warning' : 'success'}>
+                                  {detailUser.must_change_password ? 'Yes' : 'No'}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Password Reset */}
+                        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Key className="w-5 h-5 text-amber-600" />
+                              <div>
+                                <p className="font-medium text-navy-900 dark:text-white">Password Management</p>
+                                <p className="text-sm text-navy-500 dark:text-navy-400">Reset user's password</p>
+                              </div>
+                            </div>
+                            <Button variant="secondary" size="sm" onClick={() => setShowPasswordReset(true)}>
+                              Reset Password
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {detailTab === 'auth' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-navy-900 dark:text-white">Authentication History</h3>
+                          <p className="text-sm text-navy-500">Last 50 attempts</p>
+                        </div>
+                        {detailUser.auth_history.length === 0 ? (
+                          <div className="text-center py-8 text-navy-500 dark:text-navy-400">
+                            No authentication attempts recorded
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {detailUser.auth_history.map((attempt) => (
+                              <div
+                                key={attempt.id}
+                                className={cn(
+                                  'flex items-center justify-between p-3 rounded-lg border',
+                                  attempt.success
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                                )}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {attempt.success ? (
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-500" />
+                                  )}
+                                  <div>
+                                    <p className="text-sm font-medium text-navy-900 dark:text-white">
+                                      {attempt.success ? 'Successful Login' : 'Failed Attempt'}
+                                      {attempt.failure_reason && (
+                                        <span className="text-red-500 ml-2">({attempt.failure_reason})</span>
+                                      )}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                                      <Badge variant="default" className="text-xs">{attempt.method}</Badge>
+                                      {attempt.ip_address && (
+                                        <span className="flex items-center gap-1">
+                                          <Globe className="w-3 h-3" />
+                                          {attempt.ip_address}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="text-xs text-navy-500 dark:text-navy-400">
+                                  {formatRelativeTime(attempt.created_at)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {detailTab === 'sessions' && (
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-navy-900 dark:text-white">Recent Sessions</h3>
+                        {detailUser.sessions.length === 0 ? (
+                          <div className="text-center py-8 text-navy-500 dark:text-navy-400">
+                            No sessions recorded
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {detailUser.sessions.map((session) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between p-3 rounded-lg bg-navy-50 dark:bg-navy-700/50"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Monitor className="w-5 h-5 text-navy-400" />
+                                  <div>
+                                    <p className="text-sm font-medium text-navy-900 dark:text-white font-mono">
+                                      {session.ip_address || 'Unknown IP'}
+                                    </p>
+                                    <p className="text-xs text-navy-500 dark:text-navy-400 truncate max-w-md">
+                                      {session.user_agent || 'Unknown device'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <Badge variant={session.is_active ? 'success' : 'default'}>
+                                    {session.is_active ? 'Active' : 'Ended'}
+                                  </Badge>
+                                  <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                                    {formatRelativeTime(session.started_at)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+
+        {/* Password Reset Modal */}
+        {showPasswordReset && detailUser && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <Key className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <h2 className="text-xl font-bold text-navy-900 dark:text-white">Reset Password</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPasswordReset(false);
+                    setNewPassword('');
+                  }}
+                  className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-navy-500" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-navy-900 dark:text-white">Resetting password for:</p>
+                      <p className="text-sm text-navy-600 dark:text-navy-300">{detailUser.email}</p>
+                    </div>
+                  </div>
+                </div>
+                <Input
+                  label="New Password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <div className="flex items-center gap-3 p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="forceChange"
+                    checked={forceChange}
+                    onChange={(e) => setForceChange(e.target.checked)}
+                    className="w-4 h-4 text-emerald-500"
+                  />
+                  <label htmlFor="forceChange" className="text-sm text-navy-700 dark:text-navy-200">
+                    Force user to change password on next login
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
+                <Button variant="ghost" onClick={() => {
+                  setShowPasswordReset(false);
+                  setNewPassword('');
+                }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handlePasswordReset}
+                  loading={resettingPassword}
+                  disabled={newPassword.length < 8}
+                >
+                  <Key className="w-4 h-4" />
+                  Reset Password
                 </Button>
               </div>
             </motion.div>
