@@ -102,7 +102,7 @@ const PlatformWorkflow = () => {
         number={1}
         title="KYC (Know Your Customer) Process & Account Approval"
         objective="Establish EU entity as approved participant in Nihao's marketplace"
-        timeline="Weeks 1-4"
+        timeline="Weeks 1-3"
         outcome="Active trading account with verified credentials, API access, custody account, wire transfer details"
         isActive={activeStep === 1}
         onClick={() => setActiveStep(activeStep === 1 ? 0 : 1)}
@@ -110,11 +110,11 @@ const PlatformWorkflow = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {[
-              { num: 1, title: 'Initial Application', time: '1-2 days', desc: 'Submit account opening application, designate authorized traders' },
-              { num: 2, title: 'KYC Documentation', time: '3-5 days', desc: 'Submission via secure portal, multi-format document acceptance' },
-              { num: 3, title: 'Due Diligence', time: '7-10 days', desc: 'Third-party verification, AML/sanctions screening' },
-              { num: 4, title: 'Enhanced DD', time: '5-10 days', desc: 'For high-risk jurisdictions, additional document requests' },
-              { num: 5, title: 'Final Approval', time: '1-2 days', desc: 'Account credentials, trading platform access enabled' },
+              { num: 1, title: 'Initial Application', time: 'Instant', desc: 'Submit account opening application via platform' },
+              { num: 2, title: 'KYC Documentation', time: 'Instant', desc: 'Upload via secure portal, multi-format acceptance' },
+              { num: 3, title: 'Due Diligence', time: '5-10 days', desc: 'Third-party verification, AML/sanctions screening' },
+              { num: 4, title: 'Enhanced DD', time: '3-7 days', desc: 'If required for specific jurisdictions' },
+              { num: 5, title: 'Final Approval', time: 'Instant', desc: 'Account credentials, trading platform access enabled' },
             ].map((item) => (
               <div key={item.num} className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.bgCard }}>
                 <div className="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center text-sm font-bold" style={{ backgroundColor: colors.secondary, color: 'white' }}>
@@ -128,9 +128,9 @@ const PlatformWorkflow = () => {
           </div>
           <div className="p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
             <div className="font-medium text-sm mb-2" style={{ color: colors.textPrimary }}>Total KYC Timeline:</div>
-            <div className="flex gap-4">
-              <span className="px-3 py-1 rounded text-xs" style={{ backgroundColor: colors.success, color: 'white' }}>Expedited: 2-4 weeks</span>
-              <span className="px-3 py-1 rounded text-xs" style={{ backgroundColor: colors.secondary, color: 'white' }}>Standard: 4-6 weeks</span>
+            <div className="flex flex-wrap gap-4 items-center">
+              <span className="px-3 py-1 rounded text-xs" style={{ backgroundColor: colors.success, color: 'white' }}>Typical: 1-2 weeks (external verification)</span>
+              <span className="px-3 py-1 rounded text-xs" style={{ backgroundColor: colors.secondary, color: 'white' }}>With Enhanced DD: 2-3 weeks</span>
             </div>
           </div>
         </div>
@@ -141,7 +141,7 @@ const PlatformWorkflow = () => {
         number={2}
         title="Account Funding - Wire Transfer of Capital"
         objective="Establish EU entity's capital available for CEA/EUA acquisitions"
-        timeline="Weeks 4-5"
+        timeline="Week 3 (1-5 days bank processing)"
         outcome="EU entity has immediate access to capital for CEA acquisitions"
         isActive={activeStep === 2}
         onClick={() => setActiveStep(activeStep === 2 ? 0 : 2)}
@@ -210,9 +210,9 @@ const PlatformWorkflow = () => {
       <WorkflowStep
         number={3}
         title="Marketplace Access - Browse CEA Seller Offerings"
-        objective="EU entity accesses marketplace showing available CEA offerings from non-EU sellers"
-        timeline="Weeks 5-8"
-        outcome="EU entity develops shortlist of preferred CEA sellers and offerings"
+        objective="EU entity accesses marketplace showing available CEA offerings from online sellers"
+        timeline="Instant access (all sellers online)"
+        outcome="EU entity selects preferred CEA sellers from live marketplace"
         isActive={activeStep === 3}
         onClick={() => setActiveStep(activeStep === 3 ? 0 : 3)}
       >
@@ -262,13 +262,13 @@ const PlatformWorkflow = () => {
         </div>
       </WorkflowStep>
 
-      {/* Step 4: Seller Selection and Order Placement */}
+      {/* Step 4: Seller Selection, Order Placement & CEA Delivery */}
       <WorkflowStep
         number={4}
-        title="Seller Selection and Order Placement"
-        objective="EU entity places order to purchase CEA from selected non-EU seller(s) through Nihao"
-        timeline="Weeks 5-8"
-        outcome="Binding contract established between EU entity and non-EU seller for CEA purchase"
+        title="Seller Selection, Order Placement & CEA Delivery"
+        objective="EU entity places order to purchase CEA from selected seller and receives CEA in custody"
+        timeline="Order: Instant | Delivery: 10-30 days (China ETS registry)"
+        outcome="CEA delivered and held in Nihao custody account on behalf of EU entity"
         isActive={activeStep === 4}
         onClick={() => setActiveStep(activeStep === 4 ? 0 : 4)}
       >
@@ -325,9 +325,9 @@ const PlatformWorkflow = () => {
       <WorkflowStep
         number={5}
         title="CEA-to-EUA Swap Offer Marketplace Access"
-        objective="EU entity gains access to marketplace where non-EU entities offer to swap EUA for CEA"
-        timeline="Weeks 6-10"
-        outcome="EU entity selects EUA holder willing to swap EUA for CEA"
+        objective="EU entity accesses marketplace where online counterparties offer to swap EUA for CEA"
+        timeline="Instant access (parallel with Step 4)"
+        outcome="EU entity selects EUA holder from live swap marketplace"
         isActive={activeStep === 5}
         onClick={() => setActiveStep(activeStep === 5 ? 0 : 5)}
       >
@@ -374,6 +374,9 @@ const PlatformWorkflow = () => {
                 <li>• Lower execution risk</li>
                 <li>• Timing: 6+ months total</li>
               </ul>
+              <div className="mt-2 px-2 py-1 rounded text-xs" style={{ backgroundColor: colors.danger + '20', color: colors.danger }}>
+                Note: Type C extends beyond 12-14 week standard timeline
+              </div>
             </div>
           </div>
         </div>
@@ -384,7 +387,7 @@ const PlatformWorkflow = () => {
         number={6}
         title="Swap Execution - CEA-to-EUA Exchange"
         objective="Execute bilateral swap between EU entity (providing CEA) and EUA holder (providing EUA)"
-        timeline="Weeks 10-12"
+        timeline="Initiation: Instant | Settlement: 10-14 days (registry transfers)"
         outcome="EU entity now holds EUA certificates in EU ETS registry account"
         isActive={activeStep === 6}
         onClick={() => setActiveStep(activeStep === 6 ? 0 : 6)}
@@ -427,7 +430,7 @@ const PlatformWorkflow = () => {
             </div>
           </div>
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.primary }}>
-            <span className="font-bold text-white">Swap Execution Timeline: 10-20 days (signing to final settlement)</span>
+            <span className="font-bold text-white">Swap Execution Timeline: 10-14 days (signing to final settlement)</span>
           </div>
         </div>
       </WorkflowStep>
@@ -437,7 +440,7 @@ const PlatformWorkflow = () => {
         number={7}
         title="EUA Certification and Delivery Confirmation"
         objective="Confirm EU entity's EUA holdings and prepare for compliance/trading use"
-        timeline="Weeks 12-14"
+        timeline="3-7 days (verification + documentation)"
         outcome="Final Settlement Report with full documentation for regulatory audit trail"
         isActive={activeStep === 7}
         onClick={() => setActiveStep(activeStep === 7 ? 0 : 7)}
@@ -488,7 +491,7 @@ const PlatformWorkflow = () => {
 
           <div className="p-3 rounded-lg border-2" style={{ borderColor: colors.success }}>
             <h5 className="font-bold text-sm text-center mb-2" style={{ color: colors.success }}>
-              Total Workflow Timeline: 12-14 weeks
+              Total Workflow Timeline: 6-8 weeks
             </h5>
           </div>
         </div>
@@ -1269,14 +1272,12 @@ const TimelineAndSummary = () => {
             </thead>
             <tbody>
               {[
-                { week: 'Weeks 1-2', activity: 'KYC Documentation Assembly', stake: 'EU Entity, Nihao Compliance', deliverable: 'Complete document package' },
-                { week: 'Weeks 2-4', activity: 'KYC Review and Due Diligence', stake: 'Nihao Compliance, External Verification', deliverable: 'KYC Approval' },
-                { week: 'Weeks 4-5', activity: 'Account Activation and Funding', stake: 'EU Entity, Nihao Operations, Banks', deliverable: 'Funded Trading Account' },
-                { week: 'Weeks 5-8', activity: 'Marketplace Exploration and CEA Sourcing', stake: 'EU Entity, Nihao, Sellers', deliverable: 'CEA Purchase Order' },
-                { week: 'Weeks 8-9', activity: 'CEA Delivery and Custody', stake: 'Sellers, Nihao, Registries', deliverable: 'CEA in Custody' },
-                { week: 'Weeks 6-10', activity: 'Swap Opportunity Identification', stake: 'EU Entity, Nihao, EUA Holders', deliverable: 'Swap Counterparty Selected' },
-                { week: 'Weeks 10-12', activity: 'Swap Execution and Settlement', stake: 'EU Entity, Nihao, EUA Holders, Registries', deliverable: 'EUA in EU Entity Account' },
-                { week: 'Weeks 12-14', activity: 'Final Verification and Reporting', stake: 'EU Entity, Nihao, Auditors', deliverable: 'Final Settlement Report' },
+                { week: 'Weeks 1-3', activity: 'Step 1: KYC Process (external verification)', stake: 'EU Entity, Nihao Compliance, External Verification', deliverable: 'Active Trading Account' },
+                { week: 'Week 3', activity: 'Step 2: Account Funding (1-5 days bank transfer)', stake: 'EU Entity, Banks', deliverable: 'Funded Trading Account' },
+                { week: 'Week 3', activity: 'Steps 3 & 5: Marketplace Access (instant)', stake: 'EU Entity, Online Sellers & Swap Partners', deliverable: 'Selections Made' },
+                { week: 'Weeks 3-6', activity: 'Step 4: CEA Order & Delivery (10-30 days registry)', stake: 'China ETS Registry', deliverable: 'CEA in Custody' },
+                { week: 'Weeks 5-7', activity: 'Step 6: Swap Settlement (10-14 days registry)', stake: 'China ETS + EU ETS Registries', deliverable: 'EUA in EU Entity Account' },
+                { week: 'Weeks 7-8', activity: 'Step 7: Final Verification (3-7 days)', stake: 'EU Entity, Nihao, Auditors', deliverable: 'Final Settlement Report' },
               ].map((row, idx) => (
                 <tr key={row.week} style={{ backgroundColor: idx % 2 === 0 ? colors.bgCard : colors.bgCardHover, borderTop: `1px solid ${colors.border}` }}>
                   <td className="px-3 py-2 font-medium" style={{ color: colors.primary }}>{row.week}</td>
@@ -1474,7 +1475,7 @@ const EuEntitiesPage: React.FC = () => {
             <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>Structured workflow</div>
           </div>
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-            <div className="text-2xl font-bold" style={{ color: colors.secondary }}>12-14 Weeks</div>
+            <div className="text-2xl font-bold" style={{ color: colors.secondary }}>6-8 Weeks</div>
             <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>Total timeline</div>
           </div>
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
