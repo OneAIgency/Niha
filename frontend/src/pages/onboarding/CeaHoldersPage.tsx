@@ -443,7 +443,7 @@ const operationalAdvantages = {
       },
       {
         type: 'Payment Terms',
-        details: '30-50% upfront with remainder on delivery, staged payments, client account arrangements',
+        details: '100% full payment upfront, funds secured in client account, instant order confirmation',
       },
       {
         type: 'Dispute Resolution',
@@ -591,8 +591,8 @@ const riskMitigation = {
         details: 'Nihao performs full KYC on EU entity, verification of capital adequacy (minimum €5-10M recommended), banking relationship verification, prior transaction history review',
       },
       {
-        level: 'Staged Settlement with Client Account',
-        details: 'First tranche: 30-50% of CEA/payment, Second tranche: 25-35%, Final tranche: 15-20%. Nihao holds funds until final delivery.',
+        level: 'Secure Settlement with Client Account',
+        details: '100% payment secured at order confirmation. Funds held in Nihao client account with HSBC until registry delivery complete. Zero counterparty risk.',
       },
       {
         level: 'Insurance and Guarantees',

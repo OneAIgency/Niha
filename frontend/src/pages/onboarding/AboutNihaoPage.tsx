@@ -89,7 +89,7 @@ const companyOverview = {
       'Private bilateral deal facilitation',
       'Direct negotiation between counterparties',
       'Customized contract terms',
-      'Multi-staged transaction workflows',
+      'Streamlined transaction workflows',
       'Custody and settlement services',
       'KYC/AML compliance management',
     ],

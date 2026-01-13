@@ -302,19 +302,15 @@ const PlatformWorkflow = () => {
           </div>
 
           <div className="p-3 rounded-lg border" style={{ borderColor: colors.accent }}>
-            <h5 className="font-medium text-sm mb-2" style={{ color: colors.accent }}>Typical Order Structure:</h5>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <h5 className="font-medium text-sm mb-2" style={{ color: colors.accent }}>Order & Settlement Structure:</h5>
+            <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="font-bold" style={{ color: colors.primary }}>30-50%</div>
-                <div className="text-xs" style={{ color: colors.textMuted }}>Upfront Payment</div>
+                <div className="font-bold" style={{ color: colors.primary }}>100%</div>
+                <div className="text-xs" style={{ color: colors.textMuted }}>Full Payment Upfront</div>
               </div>
               <div>
                 <div className="font-bold" style={{ color: colors.secondary }}>10-30 days</div>
-                <div className="text-xs" style={{ color: colors.textMuted }}>Delivery Period</div>
-              </div>
-              <div>
-                <div className="font-bold" style={{ color: colors.success }}>50-70%</div>
-                <div className="text-xs" style={{ color: colors.textMuted }}>Final Payment on Delivery</div>
+                <div className="text-xs" style={{ color: colors.textMuted }}>Registry Delivery Period</div>
               </div>
             </div>
           </div>
@@ -367,15 +363,15 @@ const PlatformWorkflow = () => {
               </ul>
             </div>
             <div className="p-3 rounded-lg border" style={{ borderColor: colors.accent }}>
-              <h6 className="font-medium text-sm mb-2" style={{ color: colors.accent }}>Type C: Staged/Tranche Swaps</h6>
+              <h6 className="font-medium text-sm mb-2" style={{ color: colors.accent }}>Type C: Premium/Discount Swaps</h6>
               <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
-                <li>• Multiple tranches over time</li>
-                <li>• Example: "500,000 EUA/month for 6 months"</li>
-                <li>• Lower execution risk</li>
-                <li>• Timing: 6+ months total</li>
+                <li>• Fixed premium or discount to market price</li>
+                <li>• Example: "EUA at 2% discount to settlement date price"</li>
+                <li>• Price certainty with market flexibility</li>
+                <li>• Timing: 15-30 days</li>
               </ul>
-              <div className="mt-2 px-2 py-1 rounded text-xs" style={{ backgroundColor: colors.danger + '20', color: colors.danger }}>
-                Note: Type C extends beyond 12-14 week standard timeline
+              <div className="mt-2 px-2 py-1 rounded text-xs" style={{ backgroundColor: colors.success + '20', color: colors.success }}>
+                Full payment at order confirmation
               </div>
             </div>
           </div>
@@ -732,24 +728,24 @@ const EconomicAdvantages = () => {
             <ul className="text-sm space-y-2" style={{ color: colors.textSecondary }}>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
-                Customizable settlement terms (negotiable)
+                Instant order confirmation (all parties online)
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
-                Can negotiate 50% upfront, 50% on delivery
+                Full payment at order - funds secured in client account
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
-                Can negotiate 30-60 day payment terms
+                No exchange settlement delays
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
-                Reduces working capital requirement by 50%
+                Transparent fee structure (no hidden costs)
               </li>
             </ul>
             <div className="mt-3 p-2 rounded text-center" style={{ backgroundColor: `${colors.success}15` }}>
-              <div className="text-sm" style={{ color: colors.success }}>Interest savings:</div>
-              <div className="font-bold" style={{ color: colors.success }}>€25,000-150,000 per transaction</div>
+              <div className="text-sm" style={{ color: colors.success }}>Total cost savings:</div>
+              <div className="font-bold" style={{ color: colors.success }}>€45,000-340,000 per transaction</div>
             </div>
           </div>
         </div>
@@ -1307,7 +1303,7 @@ const TimelineAndSummary = () => {
               {[
                 { cat: 'Price Advantage', mech: 'Bilateral negotiation, timing optimization', benefit: '8-15% lower EUA price' },
                 { cat: 'Cost Reduction', mech: 'Lower transaction costs vs. exchanges', benefit: '€45,000-340,000 per transaction' },
-                { cat: 'Working Capital', mech: 'Extended payment terms', benefit: '€25,000-150,000 savings' },
+                { cat: 'Settlement Speed', mech: 'Instant confirmation, faster registry processing', benefit: '10-14 days vs 30+ days' },
                 { cat: 'Regulatory', mech: 'Reduced scrutiny, simplified reporting', benefit: '€25,000-250,000 expected savings' },
                 { cat: 'Operational', mech: 'Customized settlement, no market impact', benefit: '1-3% value preservation' },
                 { cat: 'Strategic', mech: 'Access to emerging CEA market', benefit: '1-2% option value' },
@@ -1384,7 +1380,7 @@ const Conclusion = () => {
   const benefits = [
     { num: 1, name: 'Price optimization', desc: 'via bilateral negotiation and timing flexibility' },
     { num: 2, name: 'Cost reduction', desc: 'through consolidated transaction infrastructure' },
-    { num: 3, name: 'Working capital benefits', desc: 'from extended payment terms' },
+    { num: 3, name: 'Settlement speed', desc: 'through instant confirmation and streamlined processing' },
     { num: 4, name: 'Regulatory advantages', desc: 'from private market structure' },
     { num: 5, name: 'Operational efficiency', desc: 'through customized settlement' },
     { num: 6, name: 'Strategic positioning', desc: 'in emerging global carbon markets' },

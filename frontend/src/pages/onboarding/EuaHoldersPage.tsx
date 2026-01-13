@@ -1190,14 +1190,14 @@ const SwapAdvantages = () => {
               </ul>
             </div>
 
-            {/* Private Swap Payment Options */}
+            {/* Private Swap Settlement */}
             <div className="p-4 rounded-lg border" style={{ borderColor: colors.success }}>
-              <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Private Swap Payment Options:</h5>
+              <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Private Swap Settlement:</h5>
               <ul className="text-sm space-y-1" style={{ color: colors.textSecondary }}>
-                <li>• Can negotiate 30-60 day settlement periods</li>
-                <li>• Staged payments over multiple tranches</li>
-                <li>• Allows optimization of cash flow timing</li>
-                <li>• Reduces working capital requirements</li>
+                <li>• Full payment at order confirmation</li>
+                <li>• Funds secured in Nihao client account with HSBC</li>
+                <li>• Instant order matching (all parties online)</li>
+                <li>• Streamlined registry processing (10-14 days)</li>
               </ul>
             </div>
           </div>
@@ -1205,8 +1205,8 @@ const SwapAdvantages = () => {
           <div className="p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
             <h5 className="font-medium mb-2" style={{ color: colors.textPrimary }}>Value Capture:</h5>
             <ul className="text-sm" style={{ color: colors.textSecondary }}>
-              <li>• Reduced working capital needs: 1-2% financing cost savings</li>
-              <li>• Example: 1-month payment delay saves €95,000 × 1%/12 = <strong style={{ color: colors.primary }}>€79,000</strong> in financing costs</li>
+              <li>• Zero settlement risk: funds secured at order confirmation</li>
+              <li>• Faster processing: 10-14 days vs 30+ days on exchanges</li>
             </ul>
           </div>
         </div>
@@ -1586,7 +1586,7 @@ const ImplementationFramework = () => {
         'Negotiation of:',
         '• EUA/CEA exchange ratio (1 EUA : 8-12 CEA typically)',
         '• Settlement timeline (usually 14-30 days)',
-        '• Payment terms (30-50% upfront, remainder on delivery)',
+        '• Payment terms (100% upfront, funds secured in client account)',
         '• Pricing (negotiated bilaterally)',
       ],
       icon: ArrowRightLeft,
@@ -1687,7 +1687,7 @@ const RiskMitigation = () => {
       color: colors.danger,
       mitigations: [
         'Nihao pre-qualification of all CEA providers',
-        'Staged settlement reduces exposure per tranche',
+        'Full upfront payment eliminates settlement risk',
         'Client account arrangements protect both parties',
         'Performance bonds available for large transactions',
         'Insurance coverage options',
