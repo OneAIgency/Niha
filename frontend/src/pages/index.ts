@@ -10,5 +10,17 @@ export { ProfilePage } from './ProfilePage';
 export { SettingsPage } from './SettingsPage';
 export { UsersPage } from './UsersPage';
 export { BackofficePage } from './BackofficePage';
+export { default as Onboarding1Page } from './Onboarding1Page';
 export { default as OnboardingPage } from './OnboardingPage';
 export { LearnMorePage } from './LearnMorePage';
+
+// Onboarding sub-pages
+export {
+  OnboardingIndexPage,
+  MarketOverviewPage,
+  AboutNihaoPage,
+  CeaHoldersPage,
+  EuaHoldersPage,
+  EuEntitiesPage,
+  StrategicAdvantagePage,
+} from './onboarding';

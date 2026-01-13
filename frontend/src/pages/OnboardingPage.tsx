@@ -4,11 +4,25 @@ import {
   Upload,
   FileText,
   CheckCircle,
-  AlertCircle,
   X,
   Building2,
   Users,
   LogOut,
+  ChevronRight,
+  Globe,
+  TrendingUp,
+  Shield,
+  Zap,
+  ArrowRight,
+  Clock,
+  DollarSign,
+  BarChart3,
+  Factory,
+  Landmark,
+  Briefcase,
+  Scale,
+  FileCheck,
+  CircleDollarSign,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useStore';
 
@@ -23,35 +37,7 @@ interface DocumentType {
   category: 'company' | 'representative';
 }
 
-interface ScenarioData {
-  id: number;
-  icon: string;
-  iconClass: string;
-  title: string;
-  titleEn: string;
-  tag: string;
-  description: string;
-  metrics: { value: string; label: string }[];
-  context: string;
-  optionA: {
-    title: string;
-    steps: string[];
-    issues: string[];
-  };
-  optionB: {
-    title: string;
-    steps: string[];
-    benefits: string[];
-  };
-  example: {
-    title: string;
-    situation: string[];
-    solution: string[];
-  };
-  economics: { value: string; label: string; color: string }[];
-}
-
-// Color palette from swap-analysis.html
+// Color palette
 const colors = {
   primary: '#0d9488',
   primaryDark: '#0f766e',
@@ -70,370 +56,13 @@ const colors = {
   border: '#334155',
 };
 
-// All 6 scenarios data from swap-analysis.html - COMPLETE DATA
-const scenariosData: ScenarioData[] = [
-  {
-    id: 1,
-    icon: '🌏',
-    iconClass: 's1',
-    title: 'China Compliance Arbitrage',
-    titleEn: 'China Compliance Arbitrage',
-    tag: 'Dual Operational Necessity',
-    description: 'Multinationals with operations in both jurisdictions',
-    metrics: [
-      { value: '80%+', label: 'Conversion Rate' },
-      { value: '2M', label: 'tCO2/year' },
-    ],
-    context: 'A multinational with operations in both jurisdictions that has EUA surplus from EU operations (efficient facilities or capacity closures) and CEA deficit from China operations (expansion or production higher than benchmarks).',
-    optionA: {
-      title: 'Direct Sale (Status Quo)',
-      steps: [
-        'Sell 100,000 EUA on EU market at EUR88/t = EUR8.8M',
-        'Transfer EUR8.8M to China (subject to capital controls)',
-        'Convert to RMB (7.8 rate) = 68.64M yuan',
-        'Buy CEA on China market at 63 yuan/t',
-        'Obtain ~1,089,523 CEA',
-      ],
-      issues: [
-        'Capital controls delay: 2-4 weeks for SAFE approval (>$50k USD)',
-        'FX spread: 1-2% loss in EUR to RMB conversion (68.64M to 67.87M real)',
-        'Timing risk: CEA price may rise during waiting period for transfer',
-        'Transparency: Large capital transfers attract attention from regulators in both jurisdictions',
-        'Tax complications: Potential double taxation on profit from EUA sale',
-      ],
-    },
-    optionB: {
-      title: 'Direct Swap (via Nihao)',
-      steps: [
-        'Swap 100,000 EUA directly for 1,000,000 CEA (ratio 1:10)',
-        'Settlement in 48h through respective registries',
-        'Zero cross-border cash transfer',
-        'Zero FX exposure',
-      ],
-      benefits: [
-        'Instant compliance: Receive CEA immediately for China deadline',
-        'Zero capital controls: Swap is commodity-for-commodity, not capital flow',
-        'Better effective ratio: 1:10 vs 1:10.9 (avoiding FX and timing losses in Option A)',
-        'Regulatory simplicity: Declared as "barter trade" not investment outflow',
-      ],
-    },
-    example: {
-      title: 'Real-World Example: German Cement Company with China Factory (e.g., HeidelbergCement)',
-      situation: [
-        'Cement plant in Germany: modernization leads to 50,000 EUA surplus',
-        'New cement factory in Guangdong: needs 500,000 CEA for 2025 compliance',
-        'Problem: Transferring EUR4.4M from Germany to China for CEA acquisition is complicated',
-      ],
-      solution: [
-        'Direct swap 50,000 EUA to 500,000 CEA, avoiding all frictions',
-      ],
-    },
-    economics: [
-      { value: 'EUR100,000+', label: 'Cost avoided (FX spread + delay + compliance)', color: colors.success },
-      { value: 'EUR66,000', label: 'Nihao Fee (1.5% x EUR4.4M)', color: colors.accent },
-      { value: 'EUR34,000+', label: 'Net savings + timing risk elimination', color: colors.primaryLight },
-    ],
-  },
-  {
-    id: 2,
-    icon: '📊',
-    iconClass: 's2',
-    title: 'Strategic Repositioning',
-    titleEn: 'Strategic Repositioning',
-    tag: 'China Market Bull Bet',
-    description: 'Investment funds with bullish thesis on China carbon market reform',
-    metrics: [
-      { value: '+212%', label: 'CEA Upside' },
-      { value: '1M', label: 'tCO2/fund' },
-    ],
-    context: 'An investment fund or corporate treasury that holds EUA as commoditized carbon asset (investment, not compliance), has bullish thesis on China carbon market reform, and believes CEA will appreciate dramatically when absolute caps are introduced (2027-2030). Current prices: EUA EUR88/t, projection 2030: EUR130-150/t = +48-70% upside. CEA 63 yuan (~EUR8/t), projection 2030 with reforms: 200 yuan (~EUR25/t) = +212% upside. Asymmetric opportunity: CEA has growth potential 3-4x higher than EUA.',
-    optionA: {
-      title: 'Problem with Sell then Buy',
-      steps: [],
-      issues: [
-        'Market impact: Selling 500,000 EUA on market can move price (5 bps)',
-        'CEA acquisition is DIFFICULT for foreigners:',
-        '- Requires WFOE in China (EUR50k-100k setup, 6-12 months)',
-        '- Limited access to Shanghai Exchange without local entity',
-        '- Lack of international brokers facilitating CEA purchases',
-      ],
-    },
-    optionB: {
-      title: 'Swap Advantage',
-      steps: [],
-      benefits: [
-        'One-stop execution: Nihao manages both legs simultaneously',
-        'No market impact: OTC bilateral transaction, not through public order book',
-        'Instant China exposure: Get CEA without establishing WFOE',
-        'Secure custody: Nihao keeps CEA in custody until investor decides to sell',
-      ],
-    },
-    example: {
-      title: 'Example: Hedge Fund "Green Alpha Partners"',
-      situation: [
-        'Current portfolio: 1,000,000 EUA (value EUR88M) purchased in 2023 at EUR60/t',
-        'Unrealized profit: EUR28M (+47%)',
-        'Thesis: EUA will continue rising, but CEA offers more upside',
-        'Strategy: Rebalancing - sell 20% of EUA holdings (200,000 EUA) and reallocate to CEA',
-      ],
-      solution: [
-        'Transfer 200,000 EUA to Nihao',
-        'Receive 2,000,000 CEA',
-        'Keep in Nihao Hong Kong custody',
-        'If CEA rises to 200 yuan (EUR25) in 2030: profit EUR34M (200% return)',
-        'If CEA fails reform and stays 60 yuan (EUR7.7): loss only EUR600k (-3.4% portfolio)',
-      ],
-    },
-    economics: [
-      { value: '-3.4%', label: 'Downside (portfolio if CEA fails)', color: colors.danger },
-      { value: '+39%', label: 'Upside (portfolio if CEA thesis correct)', color: colors.success },
-      { value: 'Asymmetric', label: 'Risk-Reward justifies swap', color: colors.primaryLight },
-    ],
-  },
-  {
-    id: 3,
-    icon: '🏭',
-    iconClass: 's3',
-    title: 'CBAM Strategy',
-    titleEn: 'CBAM Strategy',
-    tag: 'Supply Chain Optimization',
-    description: 'EU companies with Chinese supply chain, subject to CBAM from 2026',
-    metrics: [
-      { value: 'EUR40', label: '/ton product savings' },
-      { value: '60%', label: 'Conversion Rate' },
-    ],
-    context: 'A European company with Chinese supply chain that imports carbon-intensive products (steel, aluminum, cement), will be subject to CBAM (Carbon Border Adjustment Mechanism) from 2026, and has surplus EUA from own EU operations. CBAM mechanism: From 2026, EU importers must buy CBAM certificates for embedded emissions in imports. CBAM certificate price = quarterly average EUA price. Deduction available: If Chinese producer has already paid carbon price in China. Formula: CBAM cost = (Embedded emissions - Carbon price paid in China) x EUA price.',
-    optionA: {
-      title: 'Benefits for EU Company',
-      steps: [
-        'Increased CBAM discount: Instead of 63 yuan/t (EUR8), supplier demonstrates cost EUR88/t',
-        'Savings per ton of imported product: (EUR88 - EUR8) x emission factor = EUR80 x 0.5 tCO2/ton product = EUR40/ton product',
-        'If importing 10,000 tons of steel/year: EUR400,000 annual savings',
-      ],
-      issues: [],
-    },
-    optionB: {
-      title: 'Benefits for Chinese Supplier',
-      steps: [],
-      benefits: [
-        'Receives EUA "for free": EUR88 value in exchange for CEA EUR8 value = EUR80/t gift',
-        'Reduces customer CBAM burden: Maintains competitiveness',
-        'Avoids CEA market purchase: Where low liquidity creates timing risk',
-      ],
-    },
-    example: {
-      title: 'Example: ThyssenKrupp with Supplier HBIS Group',
-      situation: [
-        'ThyssenKrupp (German steel): Imports 50,000 tons steel billets/year from HBIS Group (Hebei Iron & Steel, Chinese SOE)',
-        'CBAM 2026: needs to demonstrate carbon cost for 25,000 tCO2 embedded',
-        'HBIS has 500,000 CEA deficit in compliance cycle',
-      ],
-      solution: [
-        'ThyssenKrupp swap 50,000 EUA surplus to HBIS',
-        'HBIS swap 500,000 CEA to ThyssenKrupp (unused)',
-        'HBIS surrender partial EUA to demonstrate CBAM (documentation purposes)',
-        'ThyssenKrupp reduces CBAM bill by EUR2M annually',
-        'Both parties win vs. direct market sale',
-      ],
-    },
-    economics: [
-      { value: 'EUR2M/year', label: 'CBAM savings for EU Company', color: colors.success },
-      { value: 'EUR80/t', label: '"Gift" to supplier (maintaining relationship)', color: colors.accent },
-      { value: 'Win-Win', label: 'Supply chain strengthening', color: colors.primaryLight },
-    ],
-  },
-  {
-    id: 4,
-    icon: '🚪',
-    iconClass: 's4',
-    title: 'Jurisdictional Exit',
-    titleEn: 'Jurisdictional Exit',
-    tag: 'Strategic Divestment',
-    description: 'Chinese companies exiting EU market, wanting to repatriate value to China',
-    metrics: [
-      { value: '48h', label: 'Settlement Time' },
-      { value: '90%', label: 'Conversion Rate' },
-    ],
-    context: 'A Chinese company exiting the European market that has EU installations with EUA surplus, wants to repatriate all value to China without leaving cash abroad, and prefers tangible assets in China (CEA) over cash subject to controls. Example reversed scenario: In 2024, Shell exited China power market after operating carbon trading desk. Imagine the inverse.',
-    optionA: {
-      title: 'Option A: Sell EUA on EU Market',
-      steps: [
-        '1. Sell 200,000 EUA at EUR88/t = EUR17.6M',
-        '2. Cash remains in EU account (German/Spanish bank)',
-        '3. Apply SAFE China for EUR17.6M transfer to China',
-        '4. Wait 4-8 weeks for approval (large sum)',
-        '5. Wire transfer with audit trail and justifications',
-        '6. Convert to RMB with 1.5% spread = loss EUR264k',
-        '7. Final: 135.4M RMB in China mainland',
-      ],
-      issues: [
-        'Capital controls scrutiny: EUR17.6M triggers enhanced review',
-        'Repatriation justification: must document as "profit from closed operations"',
-        'Potential freezing: If EU sanctions or China policy changes, cash blocked',
-        'FX risk: 2 months between sale and conversion, EUR/RMB may fluctuate',
-      ],
-    },
-    optionB: {
-      title: 'Option B: Direct Swap for CEA',
-      steps: [
-        '1. Swap 200,000 EUA for 2,000,000 CEA via Nihao',
-        '2. CEA transferred to Shanghai subsidiary custody in 48h',
-        '3. Zero cross-border cash, zero FX exposure',
-        '4. Can resell CEA gradually on China market or use for compliance',
-        '5. Total value: 2M x 63 yuan = 126M yuan (~EUR16.15M)',
-      ],
-      benefits: [
-        'Instant repatriation: Assets in China in 2 days vs. 2 months',
-        'Zero regulatory friction: Commodity swap, not capital transfer',
-        'Flexibility: CEA can be held for speculation or sold gradually',
-        'No political risk: No EUR17.6M cash "stuck" in EU banking system',
-      ],
-    },
-    example: {
-      title: 'Hypothetical: Chinese SOE "China Power International" exits EU operations',
-      situation: [
-        'Closes 3 gas plants in Spain and Italy',
-        'Has 200,000 EUA surplus from unconsumed free allocations',
-        'Objective: complete liquidation of EU assets and repatriation to China',
-      ],
-      solution: [
-        'Swap to CEA provides instant repatriation',
-        'Trade-off: Loss 8% (EUR16.15M CEA value vs EUR17.6M EUA sale) = -EUR1.45M',
-        'But eliminates: FX spread (EUR264k) + capital controls risk + timing risk',
-        'Net real cost: ~EUR1.2M for certainty and speed',
-        'Decision: If SOE values speed and capital repatriation certainty more than EUR1.2M, swap makes sense',
-      ],
-    },
-    economics: [
-      { value: '-EUR1.45M', label: 'Value difference (8%)', color: colors.danger },
-      { value: '+EUR264k', label: 'FX spread avoided', color: colors.success },
-      { value: '~EUR1.2M', label: 'Net cost for certainty & speed', color: colors.accent },
-    ],
-  },
-  {
-    id: 5,
-    icon: '🏢',
-    iconClass: 's5',
-    title: 'Offshore Treasury',
-    titleEn: 'Offshore Treasury Management',
-    tag: 'SPV Optimization',
-    description: 'Multinationals with complex holding structures using HK SPV for treasury management',
-    metrics: [
-      { value: '0%', label: 'Withholding Tax' },
-      { value: 'EUR40M', label: 'Transfer Value' },
-    ],
-    context: 'Multinationals with complex holding structures that hold EUA in EU subsidiary (e.g., Luxembourg, Netherlands), have China operations generating profit but cannot easily repatriate (restrictions), and use Hong Kong SPV for regional treasury management. Objective: Balance regional assets without moving cash cross-border directly. Structure example: Parent (Swiss HQ) with EU Subsidiary (Netherlands) holding 500,000 EUA, China WFOE (Shanghai) holding 150M RMB cash, and HK Treasury SPV as regional cash pool.',
-    optionA: {
-      title: 'Problems with Standard Approach',
-      steps: [
-        'EU sub wants to distribute dividends to HQ: subject to 15% withholding tax',
-        'China WFOE wants to distribute profit: capital controls + SAFE audit',
-      ],
-      issues: [
-        'Subject to withholding tax 15%',
-        'Capital controls and SAFE audit requirements',
-        'Solution: Use carbon assets as "internal currency" between subsidiaries',
-      ],
-    },
-    optionB: {
-      title: 'Swap Execution Flow',
-      steps: [
-        '1. EU sub transfers 500,000 EUA to HK Treasury SPV (intra-group transfer)',
-        '2. HK Treasury SPV swap EUA for 5,000,000 CEA with Nihao',
-        '3. HK Treasury SPV transfers CEA to China WFOE',
-        '4. China WFOE sells CEA gradually on market (315M yuan = EUR40.4M)',
-        '5. China WFOE uses proceeds for working capital or reinvestment in China',
-      ],
-      benefits: [
-        'No withholding tax: Asset transfer intra-group, not cash dividend',
-        'No capital controls: CEA considered "inventory commodity" in China accounting',
-        'Better FX rate: Avoid EU cash to RMB conversion with bank spread',
-        'Flexibility: CEA can be held until price is favorable for sale',
-      ],
-    },
-    example: {
-      title: 'Use Case: Danone or Similar FMCG with Large China Operations',
-      situation: [
-        'EU dairy plants have reduced emissions: EUA surplus',
-        'China yogurt factories need working capital but profit blocked by restrictions',
-      ],
-      solution: [
-        'Swap EUA to CEA permits internal value transfer without cross-border cash',
-        'Carbon assets become "internal currency" for regional treasury optimization',
-      ],
-    },
-    economics: [
-      { value: '0%', label: 'Withholding Tax (vs 15%)', color: colors.success },
-      { value: 'Zero', label: 'Capital Controls Friction', color: colors.success },
-      { value: 'Better', label: 'Effective FX Rate', color: colors.success },
-    ],
-  },
-  {
-    id: 6,
-    icon: '📈',
-    iconClass: 's6',
-    title: 'Portfolio Diversification',
-    titleEn: 'Hedging and Portfolio Diversification',
-    tag: 'Institutional Investors',
-    description: 'Pension funds, sovereign wealth seeking China exposure but cannot access directly',
-    metrics: [
-      { value: '30%', label: 'CEA Allocation Target' },
-      { value: 'Low', label: 'Correlation with EUA' },
-    ],
-    context: 'Institutional investors (pension funds, sovereign wealth) that hold EUA as climate-aligned investment (ESG mandates), seek geographic diversification in carbon exposure, and see China market potential but cannot access directly. Current portfolio: 100% EUA exposure (EUR88M). Risk concentration: Geographic (100% EU policy risk), Regulatory (vulnerable to EU ETS reforms, MSR changes), Correlation (EUA correlated with EU gas prices at 89% at peak). Desired portfolio: 70% EUA / 30% CEA for diversification benefits.',
-    optionA: {
-      title: 'Problem: No Mechanism to Buy CEA Directly',
-      steps: [],
-      issues: [
-        'Hong Kong Core Climate platform: only voluntary credits (CCER), not compliance CEA',
-        'Shanghai Exchange: closed to foreigners without WFOE',
-        'OTC brokers: non-existent for CEA international purchases',
-        'Result: There is no free mechanism for foreign institutional investor to buy CEA',
-      ],
-    },
-    optionB: {
-      title: 'Swap Solution via Nihao',
-      steps: [],
-      benefits: [
-        'Nihao offers access: Institutional investor swap EUA to CEA',
-        'Custody in HK: CEA kept in secure custody (beneficiary ownership)',
-        'Liquidity at exit: When investor wants to sell, Nihao facilitates',
-        'Fee justified: Investor pays 2% intermediation fee (EUR528k) for access to otherwise inaccessible market',
-      ],
-    },
-    example: {
-      title: 'Diversification Thesis',
-      situation: [
-        'Current: 100% EUA exposure = 100% EU policy risk',
-        'Desired: 70% EUA / 30% CEA',
-        'Benefits: Geographic split (70% EU / 30% China), Low correlation (CEA driven by China policy, not EU gas)',
-        'Upside optionality: CEA potential +200% vs EUA +50%',
-      ],
-      solution: [
-        'Sell 30% EUA (300,000 tons) = EUR26.4M cash',
-        'Use Nihao swap service to convert to CEA',
-        'Hold CEA in Nihao Hong Kong custody',
-        'Achieve desired 70/30 portfolio allocation',
-      ],
-    },
-    economics: [
-      { value: 'Access', label: 'To otherwise inaccessible China market', color: colors.success },
-      { value: 'Secure', label: 'Hong Kong custody arrangement', color: colors.success },
-      { value: '2%', label: 'Intermediation fee (justified for access)', color: colors.accent },
-    ],
-  },
-];
-
-// Comparison table data - EXACT from swap-analysis.html
-const comparisonData = [
-  { criteria: 'Execution Speed', sale: '2-5 days (spot market)', swap: '2-5 days (OTC swap)', winner: 'tie' },
-  { criteria: 'Transaction Costs', sale: '0.1-0.3% (exchange fees)', swap: '1-2% (intermediation)', winner: 'sale' },
-  { criteria: 'Capital Repatriation', sale: '4-8 weeks (China controls)', swap: '48h (commodity transfer)', winner: 'swap' },
-  { criteria: 'FX Risk', sale: 'EUR/RMB exposure 1-2 months', swap: 'Zero (no cash conversion)', winner: 'swap' },
-  { criteria: 'Regulatory Complexity', sale: 'Medium (cash transfer scrutiny)', swap: 'Low (barter trade)', winner: 'swap' },
-  { criteria: 'Access to CEA', sale: 'Very difficult (requires WFOE)', swap: 'Immediate (via intermediary)', winner: 'swap' },
-  { criteria: 'Tax Efficiency', sale: 'Profit taxable immediately', swap: 'Deferral (no cash realized)', winner: 'swap' },
-  { criteria: 'Downstream Flexibility', sale: 'Cash = maximum flexibility', swap: 'CEA = limited to China use', winner: 'sale' },
+// Navigation sections
+const navSections = [
+  { id: 'market', label: 'Market Overview' },
+  { id: 'nihao', label: 'About Nihao' },
+  { id: 'cea-holders', label: 'For CEA Holders' },
+  { id: 'eua-holders', label: 'For EUA Holders' },
+  { id: 'eu-entities', label: 'For EU Entities' },
 ];
 
 // Document types for upload
@@ -443,6 +72,275 @@ const documentTypes: DocumentType[] = [
   { id: 'bank_statement', name: 'Bank Statement', description: 'Recent statement showing company name (< 3 months)', required: true, uploaded: false, status: 'pending', category: 'company' },
   { id: 'gov_id', name: 'Government-issued ID', description: 'Passport or national ID of representative', required: true, uploaded: false, status: 'pending', category: 'representative' },
   { id: 'proof_address', name: 'Proof of Address', description: 'Utility bill or bank statement (< 3 months)', required: true, uploaded: false, status: 'pending', category: 'representative' },
+];
+
+// CEA Holder Categories Data
+const ceaHolderCategories = [
+  {
+    id: 1,
+    icon: Factory,
+    title: 'Chinese Domestic Industrial Facilities',
+    tag: 'Covered Entities',
+    description: 'Industrial manufacturing facilities mandated in China\'s national ETS',
+    subCategories: [
+      { name: 'Power Generation Facilities', details: 'Thermal power, natural gas, CHP plants (2,500+ entities)' },
+      { name: 'Steel and Iron Production', details: 'Blast furnace, EAF facilities (400-500 entities, 800-1,000 MtCO2e/year)' },
+      { name: 'Cement Manufacturing', details: 'Portland cement, lime production (600-700 entities, 1,200-1,400 MtCO2e/year)' },
+      { name: 'Aluminum Smelting', details: 'Primary aluminum, anode production (200-250 entities, 400-500 MtCO2e/year)' },
+    ],
+    advantage: '10-15%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 2,
+    icon: BarChart3,
+    title: 'Financial Trading Companies',
+    tag: 'Non-Regulated Brokers',
+    description: 'Financial intermediaries trading CEA for profit opportunities',
+    subCategories: [
+      { name: 'Carbon Trading Brokers', details: '100-200+ entities, holdings 1,000-10,000,000 tonnes' },
+      { name: 'Energy Trading Companies', details: '50-100 entities, holdings 100,000-5,000,000 tonnes' },
+      { name: 'Financial Investment Firms', details: '30-50 entities, 1-3 year holding periods' },
+      { name: 'Tech-Enabled Trading Platforms', details: '10-20 platforms, 100,000-2,000,000 tonnes aggregate' },
+    ],
+    advantage: '15-25%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 3,
+    icon: Building2,
+    title: 'Conglomerate Trading Arms',
+    tag: 'Subsidiaries of Manufacturing Groups',
+    description: 'Trading subsidiaries optimizing carbon portfolios across group companies',
+    subCategories: [
+      { name: 'Conglomerate Trading Arms', details: '20-50 entities, 5-50 million tonnes aggregate' },
+      { name: 'Internal Risk Management Entities', details: '15-30 entities, managing 5-50+ facilities per group' },
+      { name: 'Strategic Reserves', details: '10-20 entities, 10-100+ million tonnes holdings' },
+    ],
+    advantage: '12-20%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 4,
+    icon: Globe,
+    title: 'Export-Focused Manufacturers',
+    tag: 'Carbon Efficiency Leaders',
+    description: 'Companies generating CEA surplus due to advanced production efficiency',
+    subCategories: [
+      { name: 'Export-Focused Industrial Manufacturers', details: '200-400 entities, 500-1,000 MtCO2e surplus/year' },
+      { name: 'Joint Venture Manufacturers', details: '100-200 entities, best-available technologies' },
+      { name: 'Technology Leaders in Heavy Industry', details: '50-100 entities, proprietary low-carbon processes' },
+    ],
+    advantage: '12-18%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 5,
+    icon: Landmark,
+    title: 'Government-Linked Entities',
+    tag: 'SOE Holdings',
+    description: 'Government-controlled organizations holding CEA for policy purposes',
+    subCategories: [
+      { name: 'Environmental Ministry Reserves', details: '100,000-5,000,000 tonnes for system stability' },
+      { name: 'State Asset Management Companies', details: '15-30 entities, 5-50 million tonnes aggregate' },
+      { name: 'Special Purpose Government Entities', details: 'Provincial reserves, 1-20 million tonnes' },
+    ],
+    advantage: '8-15%',
+    advantageLabel: 'Total Value Improvement',
+  },
+];
+
+// EUA Holder Categories Data
+const euaHolderCategories = [
+  {
+    id: 1,
+    icon: Globe,
+    title: 'Multinational Corporations',
+    tag: 'EU & China Operations',
+    description: 'Large enterprises with manufacturing presence in both Europe and China',
+    subCategories: [
+      { name: 'Automotive & Transportation', details: '50-100 entities, 50,000-1,000,000 tonnes annually' },
+      { name: 'Chemical & Materials Manufacturing', details: '30-60 entities, 100,000-500,000 tonnes annually' },
+      { name: 'Metal Manufacturing & Aluminum', details: '20-40 entities, 200,000-2,000,000 tonnes' },
+      { name: 'Paper, Pulp & Packaging', details: '15-30 entities, 50,000-500,000 tonnes' },
+    ],
+    advantage: '13-22%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 2,
+    icon: Briefcase,
+    title: 'Non-EU Financial Institutions',
+    tag: 'European Market Access',
+    description: 'Investment banks, asset managers, and brokers with EUA trading operations',
+    subCategories: [
+      { name: 'International Investment Banks', details: 'US, Asian, Middle Eastern banks (20-40 entities)' },
+      { name: 'Asset Management Firms', details: 'ESG-focused funds (30-80 entities, 500K-20M tonnes)' },
+      { name: 'Brokers and Traders', details: '20-50 entities, 100,000-10,000,000 tonnes' },
+    ],
+    advantage: '20-34%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 3,
+    icon: TrendingUp,
+    title: 'International Trading Companies',
+    tag: 'Commodity Diversification',
+    description: 'Global energy and commodity traders with carbon portfolio exposure',
+    subCategories: [
+      { name: 'Global Energy Trading Companies', details: '15-35 entities, 100,000-5,000,000 tonnes' },
+      { name: 'Commodity Trading Houses', details: '20-40 entities, 50,000-2,000,000 tonnes' },
+      { name: 'Environmental/ESG Trading Specialists', details: '30-50 entities, 500,000-20,000,000 tonnes' },
+    ],
+    advantage: '17-28%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 4,
+    icon: Landmark,
+    title: 'State-Owned & Government-Linked',
+    tag: 'Strategic Holdings',
+    description: 'Sovereign wealth funds and state investment vehicles with EUA positions',
+    subCategories: [
+      { name: 'Sovereign Wealth Funds', details: 'Middle Eastern, Asian (10-25 entities)' },
+      { name: 'State-Owned Energy Companies', details: 'Russian, Chinese, Middle Eastern (5-15 entities)' },
+    ],
+    advantage: '10.5-20.5%',
+    advantageLabel: 'Total Value Improvement',
+  },
+  {
+    id: 5,
+    icon: Factory,
+    title: 'Infrastructure & Services',
+    tag: 'EU Operations',
+    description: 'Utilities, transportation, and consumer companies with European presence',
+    subCategories: [
+      { name: 'Utilities and Infrastructure', details: '20-40 entities, 100,000-1,000,000 tonnes' },
+      { name: 'Transportation and Logistics', details: '10-25 entities, 50,000-500,000 tonnes' },
+      { name: 'Consumer and Retail Companies', details: '15-30 entities, 10,000-100,000 tonnes' },
+    ],
+    advantage: '12-21%',
+    advantageLabel: 'Total Value Improvement',
+  },
+];
+
+// EU Entity Workflow Steps
+const workflowSteps = [
+  {
+    step: 1,
+    title: 'KYC Process & Account Approval',
+    duration: 'Weeks 1-4',
+    icon: FileCheck,
+    description: 'Establish EU entity as approved participant in Nihao\'s marketplace',
+    details: [
+      'Initial application submission (1-2 days)',
+      'KYC documentation collection (3-5 days)',
+      'Due diligence and verification (7-10 days)',
+      'Enhanced due diligence if applicable (5-10 days)',
+      'Final approval and account activation (1-2 days)',
+    ],
+    outcome: 'Active trading account with verified credentials, API access, custody account setup',
+  },
+  {
+    step: 2,
+    title: 'Account Funding - Wire Transfer',
+    duration: 'Weeks 4-5',
+    icon: CircleDollarSign,
+    description: 'Establish capital available for CEA/EUA acquisitions',
+    details: [
+      'Wire transfer to Nihao\'s Hong Kong client account',
+      'Amount range: EUR 100,000 - EUR 50,000,000+',
+      'SWIFT-enabled international wire settlement',
+      'Funds receipt confirmation (2-5 business days)',
+      'Real-time balance viewing via portal',
+    ],
+    outcome: 'Immediate access to capital for CEA acquisitions',
+  },
+  {
+    step: 3,
+    title: 'Marketplace Access - Browse CEA Offerings',
+    duration: 'Weeks 5-8',
+    icon: Globe,
+    description: 'Access marketplace showing available CEA from non-EU sellers',
+    details: [
+      'Real-time listing of CEA from various sellers',
+      'Industrial Manufacturers: 50,000-500,000 tonnes',
+      'Financial Trading Companies: 100,000-5,000,000 tonnes',
+      'Filtering by quantity, price, delivery date',
+      'Price comparison and watchlist functionality',
+    ],
+    outcome: 'Shortlist of preferred CEA sellers and offerings',
+  },
+  {
+    step: 4,
+    title: 'Seller Selection and Order Placement',
+    duration: 'Weeks 5-8',
+    icon: Briefcase,
+    description: 'Place order to purchase CEA from selected non-EU seller(s)',
+    details: [
+      'Price competitiveness analysis (CNY 75-95/tonne)',
+      'Order initiation and specification',
+      'Seller confirmation process (24h window)',
+      'Payment trigger: 30-50% upfront',
+      'Binding contract establishment',
+    ],
+    outcome: 'Binding contract for CEA purchase',
+  },
+  {
+    step: 5,
+    title: 'Swap Offer Marketplace Access',
+    duration: 'Weeks 6-10',
+    icon: TrendingUp,
+    description: 'Access marketplace where non-EU entities offer EUA for CEA',
+    details: [
+      'Parallel marketplace with swap offers',
+      'Fixed-Ratio CEA-for-EUA Swaps',
+      'Market-Adjusted Swaps (ratio adjusts)',
+      'Staged/Tranche Swaps (multiple tranches)',
+      'Swap ratio: typically 1 EUA : 8-12 CEA',
+    ],
+    outcome: 'EUA holder identified willing to swap',
+  },
+  {
+    step: 6,
+    title: 'Swap Execution - CEA-to-EUA Exchange',
+    duration: 'Weeks 10-12',
+    icon: ArrowRight,
+    description: 'Execute bilateral swap between EU entity and EUA holder',
+    details: [
+      'Swap agreement confirmation',
+      'Legal documentation prepared by Nihao',
+      'Pre-settlement verification',
+      'CEA transfer to EUA holder (T+2 to T+5)',
+      'EUA transfer to EU entity (T+3 to T+7)',
+    ],
+    outcome: 'EU entity holds EUA certificates in EU ETS registry',
+  },
+  {
+    step: 7,
+    title: 'EUA Certification and Delivery',
+    duration: 'Weeks 12-14',
+    icon: CheckCircle,
+    description: 'Confirm EUA holdings and prepare for compliance/trading use',
+    details: [
+      'EUA account verification in EU ETS registry',
+      'Regulatory compliance documentation package',
+      'EUA integration into compliance portfolio',
+      'Final accounting of all costs',
+      'Transaction reporting for tax purposes',
+    ],
+    outcome: 'Complete workflow with 15-25% total value improvement',
+  },
+];
+
+// KYC Documents List
+const kycDocuments = [
+  { category: 'Corporate Information', items: ['Certificate of Incorporation', 'Articles of Association', 'Board Resolution', 'Certificate of Good Standing'] },
+  { category: 'Beneficial Ownership', items: ['Beneficial Ownership Declaration', 'Shareholder Register', 'Organizational Chart', 'Beneficial Owner IDs'] },
+  { category: 'Financial Documentation', items: ['Recent Financial Statements (2-3 years)', 'Bank Reference Letter', 'Tax Compliance Certificate', 'Credit Rating'] },
+  { category: 'Compliance & Regulatory', items: ['Regulatory Licenses', 'Compliance Policies', 'List of Directors', 'Authorized Signatories'] },
+  { category: 'Business & Use of Funds', items: ['Business Description', 'Use of Funds Statement', 'Trading Activity Plan'] },
+  { category: 'Verification', items: ['Sanctions & PEP Declarations', 'Negative Screening Results', 'Adverse Media Screening'] },
 ];
 
 // Floating Upload Button Component
@@ -705,8 +603,85 @@ const DocumentCard = ({
   );
 };
 
-// Scenario Detail Panel Component - COMPREHENSIVE with ALL content
-const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
+// Entity Category Card Component
+const EntityCategoryCard = ({
+  category,
+  isActive,
+  onClick,
+  colorScheme,
+}: {
+  category: typeof ceaHolderCategories[0];
+  isActive: boolean;
+  onClick: () => void;
+  colorScheme: 'cea' | 'eua';
+}) => {
+  const Icon = category.icon;
+  const gradients = {
+    cea: ['#dc2626', '#f97316'],
+    eua: ['#3b82f6', '#8b5cf6'],
+  };
+
+  return (
+    <motion.div
+      className="p-6 rounded-2xl cursor-pointer transition-all"
+      style={{
+        backgroundColor: isActive ? 'transparent' : colors.bgCard,
+        border: `2px solid ${isActive ? colors.primary : colors.border}`,
+        background: isActive
+          ? `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)`
+          : colors.bgCard,
+        opacity: isActive ? 1 : 0.6,
+      }}
+      onClick={onClick}
+      whileHover={{ y: -4, borderColor: colors.primary, opacity: 1 }}
+    >
+      <div
+        className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+        style={{
+          background: `linear-gradient(135deg, ${gradients[colorScheme][0]} 0%, ${gradients[colorScheme][1]} 100%)`
+        }}
+      >
+        <Icon className="w-7 h-7 text-white" />
+      </div>
+      <h4 className="font-bold text-lg mb-2" style={{ color: colors.textPrimary }}>{category.title}</h4>
+      <span
+        className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3"
+        style={{ backgroundColor: `${colors.primary}30`, color: colors.primaryLight }}
+      >
+        {category.tag}
+      </span>
+      <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+        {category.description}
+      </p>
+      <div
+        className="text-center p-3 rounded-lg"
+        style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+      >
+        <div className="text-2xl font-bold" style={{ color: colors.success }}>
+          {category.advantage}
+        </div>
+        <div className="text-xs" style={{ color: colors.textMuted }}>
+          {category.advantageLabel}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Entity Category Detail Panel
+const EntityCategoryDetail = ({
+  category,
+  colorScheme,
+}: {
+  category: typeof ceaHolderCategories[0];
+  colorScheme: 'cea' | 'eua';
+}) => {
+  const Icon = category.icon;
+  const gradients = {
+    cea: ['#dc2626', '#f97316'],
+    eua: ['#3b82f6', '#8b5cf6'],
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -715,208 +690,198 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
       className="rounded-2xl p-8 mt-8"
       style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
     >
-      {/* Header */}
       <div className="flex items-center gap-4 pb-6 mb-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
         <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl"
+          className="w-16 h-16 rounded-xl flex items-center justify-center"
           style={{
-            background: scenario.iconClass === 's1' ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` :
-                        scenario.iconClass === 's2' ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` :
-                        scenario.iconClass === 's3' ? `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` :
-                        scenario.iconClass === 's4' ? `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` :
-                        scenario.iconClass === 's5' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
-                        `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`
+            background: `linear-gradient(135deg, ${gradients[colorScheme][0]} 0%, ${gradients[colorScheme][1]} 100%)`
           }}
         >
-          {scenario.icon}
+          <Icon className="w-8 h-8 text-white" />
         </div>
         <div>
           <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
-            Scenario {scenario.id}: {scenario.titleEn}
+            {category.title}
           </h3>
           <span
             className="inline-block px-4 py-1 rounded-full text-sm font-semibold mt-2"
             style={{ backgroundColor: colors.primary, color: 'white' }}
           >
-            {scenario.tag}
+            {category.tag}
           </span>
         </div>
+        <div className="ml-auto text-right">
+          <div className="text-4xl font-extrabold" style={{ color: colors.success }}>
+            {category.advantage}
+          </div>
+          <div className="text-sm" style={{ color: colors.textSecondary }}>
+            {category.advantageLabel}
+          </div>
+        </div>
       </div>
 
-      {/* Context Box */}
+      <div className="mb-8">
+        <h4 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
+          Sub-Categories
+        </h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          {category.subCategories.map((sub, i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl"
+              style={{ backgroundColor: colors.bgCardHover }}
+            >
+              <div className="flex items-start gap-3">
+                <ChevronRight className="w-5 h-5 mt-0.5" style={{ color: colors.primaryLight }} />
+                <div>
+                  <div className="font-semibold" style={{ color: colors.textPrimary }}>
+                    {sub.name}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                    {sub.details}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div
-        className="p-6 rounded-xl mb-8"
+        className="p-6 rounded-xl"
         style={{
-          background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-          border: `1px solid ${colors.accent}`,
+          background: `linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)`,
+          border: `1px solid ${colors.success}`,
         }}
       >
-        <strong style={{ color: colors.accent }}>Context:</strong>{' '}
-        <span style={{ color: colors.textSecondary }}>{scenario.context}</span>
-      </div>
-
-      {/* Options Comparison */}
-      <h4 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>
-        Comparison: Why Swap Instead of Direct Sale?
-      </h4>
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        {/* Option A - Sale/Problem */}
-        <div
-          className="p-6 rounded-xl"
-          style={{ border: `2px solid ${colors.border}` }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: colors.textMuted, color: 'white' }}
-            >
-              A
-            </span>
-            <span className="font-semibold text-lg" style={{ color: colors.textPrimary }}>
-              {scenario.optionA.title}
-            </span>
+        <h5 className="font-semibold mb-3" style={{ color: colors.success }}>
+          Key Advantages via Nihao Platform
+        </h5>
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: colors.primaryLight }}>8-15%</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Price Premium</div>
           </div>
-
-          {scenario.optionA.steps.length > 0 && (
-            <div
-              className="p-4 rounded-lg mb-4 font-mono text-sm"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            >
-              {scenario.optionA.steps.map((step, i) => (
-                <div key={i} className="flex gap-2 py-1">
-                  <span style={{ color: colors.textMuted }}>{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
-                  <span style={{ color: colors.textSecondary }}>{step}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {scenario.optionA.issues.length > 0 && (
-            <div>
-              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: colors.danger }}>
-                <AlertCircle className="w-4 h-4" />
-                Problems & Frictions
-              </h5>
-              <ul className="space-y-2">
-                {scenario.optionA.issues.map((issue, i) => (
-                  <li
-                    key={i}
-                    className="py-1 pl-6 relative text-sm"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    <span className="absolute left-0 font-bold" style={{ color: colors.danger }}>✗</span>
-                    {issue}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: colors.accent }}>High</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Confidentiality</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: colors.success }}>Medium</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: colors.secondaryLight }}>High</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Structuring</div>
+          </div>
         </div>
+      </div>
+    </motion.div>
+  );
+};
 
-        {/* Option B - Swap (Recommended) */}
+// Workflow Step Card
+const WorkflowStepCard = ({
+  step,
+  isActive,
+  onClick,
+}: {
+  step: typeof workflowSteps[0];
+  isActive: boolean;
+  onClick: () => void;
+}) => {
+  const Icon = step.icon;
+
+  return (
+    <motion.div
+      className="p-4 rounded-xl cursor-pointer transition-all"
+      style={{
+        backgroundColor: isActive ? colors.primary : colors.bgCard,
+        border: `2px solid ${isActive ? colors.primaryLight : colors.border}`,
+      }}
+      onClick={onClick}
+      whileHover={{ scale: 1.02 }}
+    >
+      <div className="flex items-center gap-3">
         <div
-          className="p-6 rounded-xl relative"
+          className="w-10 h-10 rounded-lg flex items-center justify-center font-bold"
           style={{
-            border: `2px solid ${colors.success}`,
-            background: `linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, transparent 100%)`,
+            backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : colors.bgCardHover,
+            color: isActive ? 'white' : colors.primaryLight,
           }}
         >
-          <div
-            className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold uppercase"
-            style={{ backgroundColor: colors.success, color: 'white' }}
-          >
-            RECOMMENDED
+          {step.step}
+        </div>
+        <div className="flex-1">
+          <div className="font-semibold text-sm" style={{ color: isActive ? 'white' : colors.textPrimary }}>
+            {step.title}
           </div>
+          <div className="text-xs" style={{ color: isActive ? 'rgba(255,255,255,0.7)' : colors.textMuted }}>
+            {step.duration}
+          </div>
+        </div>
+        <Icon className="w-5 h-5" style={{ color: isActive ? 'white' : colors.textSecondary }} />
+      </div>
+    </motion.div>
+  );
+};
 
-          <div className="flex items-center gap-2 mb-4 mt-2">
+// Workflow Step Detail
+const WorkflowStepDetail = ({ step }: { step: typeof workflowSteps[0] }) => {
+  const Icon = step.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="rounded-2xl p-8"
+      style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+    >
+      <div className="flex items-center gap-4 mb-6">
+        <div
+          className="w-16 h-16 rounded-xl flex items-center justify-center"
+          style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+        >
+          <Icon className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <div className="flex items-center gap-3 mb-1">
             <span
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: colors.success, color: 'white' }}
+              className="px-3 py-1 rounded-full text-sm font-bold"
+              style={{ backgroundColor: colors.primary, color: 'white' }}
             >
-              B
+              Step {step.step}
             </span>
-            <span className="font-semibold text-lg" style={{ color: colors.textPrimary }}>
-              {scenario.optionB.title}
+            <span className="flex items-center gap-1 text-sm" style={{ color: colors.accent }}>
+              <Clock className="w-4 h-4" />
+              {step.duration}
             </span>
           </div>
-
-          {scenario.optionB.steps.length > 0 && (
-            <div
-              className="p-4 rounded-lg mb-4 font-mono text-sm"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            >
-              {scenario.optionB.steps.map((step, i) => (
-                <div key={i} className="flex gap-2 py-1">
-                  <span style={{ color: colors.textMuted }}>{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
-                  <span style={{ color: colors.textSecondary }}>{step}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {scenario.optionB.benefits.length > 0 && (
-            <div>
-              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: colors.success }}>
-                <CheckCircle className="w-4 h-4" />
-                Benefits
-              </h5>
-              <ul className="space-y-2">
-                {scenario.optionB.benefits.map((benefit, i) => (
-                  <li
-                    key={i}
-                    className="py-1 pl-6 relative text-sm"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    <span className="absolute left-0 font-bold" style={{ color: colors.success }}>✓</span>
-                    {benefit}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+            {step.title}
+          </h3>
         </div>
       </div>
 
-      {/* Example Box */}
-      <div
-        className="p-6 rounded-xl mb-8"
-        style={{
-          backgroundColor: colors.bgCardHover,
-          borderLeft: `4px solid ${colors.accent}`,
-        }}
-      >
-        <h5 className="font-semibold mb-4 text-lg" style={{ color: colors.textPrimary }}>
-          💡 {scenario.example.title}
-        </h5>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div>
-            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide" style={{ color: colors.textSecondary }}>
-              📍 Situation
-            </h6>
-            <ul className="space-y-2">
-              {scenario.example.situation.map((item, i) => (
-                <li key={i} className="text-sm" style={{ color: colors.textPrimary }}>
-                  • {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide" style={{ color: colors.textSecondary }}>
-              💡 Solution
-            </h6>
-            <ul className="space-y-2">
-              {scenario.example.solution.map((item, i) => (
-                <li key={i} className="text-sm" style={{ color: colors.textPrimary }}>
-                  • {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+      <p className="text-lg mb-6" style={{ color: colors.textSecondary }}>
+        {step.description}
+      </p>
+
+      <div className="mb-6">
+        <h4 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>
+          Process Details
+        </h4>
+        <div className="space-y-3">
+          {step.details.map((detail, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: colors.success }} />
+              <span style={{ color: colors.textSecondary }}>{detail}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Economic Analysis Box */}
       <div
         className="p-6 rounded-xl"
         style={{
@@ -924,25 +889,11 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
           border: `1px solid ${colors.primary}`,
         }}
       >
-        <h5 className="font-semibold mb-6 text-lg" style={{ color: colors.primaryLight }}>
-          📊 Economic Analysis
-        </h5>
-        <div className="grid md:grid-cols-3 gap-4">
-          {scenario.economics.map((item, i) => (
-            <div
-              key={i}
-              className="text-center p-6 rounded-xl"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            >
-              <div className="text-3xl font-extrabold mb-2" style={{ color: item.color }}>
-                {item.value}
-              </div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>
-                {item.label}
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center gap-2 mb-2">
+          <Zap className="w-5 h-5" style={{ color: colors.primaryLight }} />
+          <span className="font-semibold" style={{ color: colors.primaryLight }}>Outcome</span>
         </div>
+        <p style={{ color: colors.textPrimary }}>{step.outcome}</p>
       </div>
     </motion.div>
   );
@@ -953,8 +904,10 @@ export default function OnboardingPage() {
   const { logout } = useAuthStore();
   const [documents, setDocuments] = useState<DocumentType[]>(documentTypes);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeScenario, setActiveScenario] = useState<number>(1);
-  const [activeNav, setActiveNav] = useState('overview');
+  const [activeNav, setActiveNav] = useState('market');
+  const [activeCeaCategory, setActiveCeaCategory] = useState(1);
+  const [activeEuaCategory, setActiveEuaCategory] = useState(1);
+  const [activeWorkflowStep, setActiveWorkflowStep] = useState(1);
 
   const uploadedCount = documents.filter(d => d.uploaded).length;
   const requiredCount = documents.filter(d => d.required).length;
@@ -1017,23 +970,23 @@ export default function OnboardingPage() {
                 Nihao Group
               </h1>
               <span className="text-xs uppercase tracking-widest" style={{ color: colors.textSecondary }}>
-                Strategic Analysis Report
+                Onboarding
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <nav className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-              {['overview', 'scenarios', 'comparison'].map(nav => (
+            <nav className="hidden lg:flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
+              {navSections.map(nav => (
                 <button
-                  key={nav}
-                  onClick={() => scrollToSection(nav)}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  key={nav.id}
+                  onClick={() => scrollToSection(nav.id)}
+                  className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
                   style={{
-                    backgroundColor: activeNav === nav ? colors.primary : 'transparent',
-                    color: activeNav === nav ? 'white' : colors.textSecondary,
+                    backgroundColor: activeNav === nav.id ? colors.primary : 'transparent',
+                    color: activeNav === nav.id ? 'white' : colors.textSecondary,
                   }}
                 >
-                  {nav.charAt(0).toUpperCase() + nav.slice(1)}
+                  {nav.label}
                 </button>
               ))}
             </nav>
@@ -1051,7 +1004,7 @@ export default function OnboardingPage() {
 
       <main className="max-w-7xl mx-auto px-8 py-8">
         {/* Hero Section */}
-        <section id="overview" className="text-center py-16 relative">
+        <section className="text-center py-16 relative">
           <div
             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none"
             style={{
@@ -1059,7 +1012,7 @@ export default function OnboardingPage() {
             }}
           />
           <h2 className="text-5xl font-extrabold mb-4 relative">
-            Economic Scenarios for
+            Welcome to
             <br />
             <span
               style={{
@@ -1068,21 +1021,37 @@ export default function OnboardingPage() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              EUA→CEA Swap
+              Nihao Group
             </span>
           </h2>
           <p className="text-xl max-w-3xl mx-auto mb-8" style={{ color: colors.textSecondary }}>
-            Detailed analysis of why EUA-holding entities would prefer swapping for CEA instead of direct market sale. Based on extensive research and current market data from EU ETS and China ETS markets.
+            Your gateway to the world's two largest carbon markets. We bridge the EU ETS and China ETS through innovative bilateral trading solutions.
           </p>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => scrollToSection('market')}
+              className="px-6 py-3 rounded-xl font-semibold text-white transition-all"
+              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+            >
+              Learn More
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-3 rounded-xl font-semibold transition-all"
+              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+            >
+              Complete KYC
+            </button>
+          </div>
         </section>
 
         {/* Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
           {[
-            { icon: '📈', value: 'EUR88/t', label: 'Current EUA Price (January 2026)', color: colors.secondaryLight },
-            { icon: '🇨🇳', value: '63 CNY/t', label: 'Current CEA Price (~EUR8/t)', color: colors.accent },
-            { icon: '🔄', value: '1:10', label: 'EUA to CEA Swap Ratio', color: colors.primaryLight },
-            { icon: '💰', value: '+212%', label: 'CEA Potential Upside 2030', color: colors.success },
+            { icon: '🇪🇺', value: 'EUR 88/t', label: 'Current EUA Price', color: colors.secondaryLight },
+            { icon: '🇨🇳', value: 'CNY 63/t', label: 'Current CEA Price (~EUR 8)', color: colors.danger },
+            { icon: '🌍', value: '6.1B tonnes', label: 'Combined Market Coverage', color: colors.primaryLight },
+            { icon: '💹', value: '15-25%', label: 'Value Improvement via Nihao', color: colors.success },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -1106,8 +1075,8 @@ export default function OnboardingPage() {
           ))}
         </section>
 
-        {/* Section 1: Price Comparison */}
-        <section className="mb-16">
+        {/* SECTION 1: Market Overview */}
+        <section id="market" className="mb-20">
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
@@ -1115,18 +1084,25 @@ export default function OnboardingPage() {
             >
               1
             </div>
-            <h3 className="text-2xl font-bold">Price Comparison & Projections</h3>
+            <div>
+              <h3 className="text-3xl font-bold">Market Overview</h3>
+              <p style={{ color: colors.textSecondary }}>Understanding the world's two largest carbon markets</p>
+            </div>
           </div>
 
+          {/* Market Comparison Cards */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* EUA Card */}
+            {/* EU ETS Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
               style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
             >
               <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.secondaryLight }} />
               <div className="flex justify-between items-start mb-6">
-                <div className="text-lg font-semibold">European Union Allowances (EUA)</div>
+                <div>
+                  <div className="text-lg font-semibold">EU Emissions Trading System</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>European Union Allowances (EUA)</div>
+                </div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
                   style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.secondaryLight }}
@@ -1135,37 +1111,44 @@ export default function OnboardingPage() {
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-5xl font-extrabold">EUR88</span>
+                <span className="text-5xl font-extrabold">EUR 88</span>
                 <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                 <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                  <span style={{ color: colors.textSecondary }}>Emissions Coverage:</span>
+                  <span className="font-semibold">1.6 billion tonnes CO2</span>
+                </div>
+                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                  <span style={{ color: colors.textSecondary }}>Covered Entities:</span>
+                  <span className="font-semibold">~10,000-11,000 installations</span>
+                </div>
+                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                  <span style={{ color: colors.textSecondary }}>Market Maturity:</span>
+                  <span className="font-semibold">Phase 4 (since 2021)</span>
+                </div>
+                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
                   <span style={{ color: colors.textSecondary }}>2030 Projection:</span>
-                  <span className="font-semibold">EUR130-150/t</span>
-                </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Potential Upside:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>+48-70%</span>
-                </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>EU Gas Correlation:</span>
-                  <span className="font-semibold">89% at peak</span>
+                  <span className="font-semibold" style={{ color: colors.success }}>EUR 130-150/t (+48-70%)</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>2024 Volume Traded:</span>
-                  <span className="font-semibold">13.7 Gt CO2</span>
+                  <span style={{ color: colors.textSecondary }}>Annual Trading Volume:</span>
+                  <span className="font-semibold">8-9 billion tonnes</span>
                 </div>
               </div>
             </div>
 
-            {/* CEA Card */}
+            {/* China ETS Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
               style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
             >
               <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.danger }} />
               <div className="flex justify-between items-start mb-6">
-                <div className="text-lg font-semibold">Chinese Emission Allowances (CEA)</div>
+                <div>
+                  <div className="text-lg font-semibold">China Emissions Trading Scheme</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>Chinese Emission Allowances (CEA)</div>
+                </div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
                   style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: colors.danger }}
@@ -1174,186 +1157,67 @@ export default function OnboardingPage() {
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-5xl font-extrabold">63 CNY</span>
-                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2 (~EUR8)</span>
+                <span className="text-5xl font-extrabold">CNY 63</span>
+                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2 (~EUR 8)</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                 <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>2030 Projection (with reforms):</span>
-                  <span className="font-semibold">200 CNY/t (~EUR25)</span>
+                  <span style={{ color: colors.textSecondary }}>Emissions Coverage:</span>
+                  <span className="font-semibold">4.5 billion tonnes CO2</span>
                 </div>
                 <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Potential Upside:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>+212%</span>
+                  <span style={{ color: colors.textSecondary }}>Covered Entities:</span>
+                  <span className="font-semibold">2,162+ companies</span>
                 </div>
                 <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Upside vs EUA:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>3-4x higher</span>
+                  <span style={{ color: colors.textSecondary }}>Market Status:</span>
+                  <span className="font-semibold">Expanding (2024+)</span>
+                </div>
+                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                  <span style={{ color: colors.textSecondary }}>2030 Projection:</span>
+                  <span className="font-semibold" style={{ color: colors.success }}>CNY 200/t (+212%)</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>Emissions Covered:</span>
-                  <span className="font-semibold">~5.1 Gt CO2/year</span>
+                  <span style={{ color: colors.textSecondary }}>Annual Trading Volume:</span>
+                  <span className="font-semibold">200-250 million tonnes</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Key Insight Box */}
-          <div
-            className="p-6 rounded-xl text-center"
-            style={{
-              background: `linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)`,
-              border: `1px solid ${colors.success}`,
-            }}
-          >
-            <strong style={{ color: colors.success }}>Key Investment Thesis:</strong>{' '}
-            <span style={{ color: colors.textSecondary }}>
-              CEA has growth potential <strong style={{ color: colors.textPrimary }}>3-4x higher</strong> than EUA.
-              EUA: +48-70% upside to 2030 → CEA: +212% upside to 2030.
-              The asymmetric opportunity justifies the swap for investors seeking China carbon exposure.
-            </span>
-          </div>
-        </section>
-
-        {/* Section 2: Scenarios */}
-        <section id="scenarios" className="mb-16">
-          <div className="flex items-center gap-4 mb-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-            >
-              2
-            </div>
-            <h3 className="text-2xl font-bold">The 6 Economic Scenarios</h3>
-          </div>
-          <p className="mb-4 text-lg" style={{ color: colors.textSecondary }}>
-            Click on each scenario to see complete details, including step-by-step comparison of options,
-            real-world examples, and economic analysis.
-          </p>
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: `${colors.accent}20`, color: colors.accent }}
-          >
-            <span className="animate-pulse">👆</span>
-            Select a scenario card below to view full analysis
-          </div>
-
-          {/* Scenario Cards Grid */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {scenariosData.map(scenario => (
-              <motion.div
-                key={scenario.id}
-                className="p-6 rounded-2xl cursor-pointer transition-all"
-                style={{
-                  backgroundColor: activeScenario === scenario.id ? 'transparent' : colors.bgCard,
-                  border: `2px solid ${activeScenario === scenario.id ? colors.primary : colors.border}`,
-                  background: activeScenario === scenario.id
-                    ? `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)`
-                    : colors.bgCard,
-                  opacity: activeScenario === scenario.id ? 1 : 0.5,
-                }}
-                onClick={() => setActiveScenario(scenario.id)}
-                whileHover={{ y: -4, borderColor: colors.primary, opacity: 1 }}
-              >
-                <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4"
-                  style={{
-                    background: scenario.iconClass === 's1' ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` :
-                                scenario.iconClass === 's2' ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` :
-                                scenario.iconClass === 's3' ? `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` :
-                                scenario.iconClass === 's4' ? `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` :
-                                scenario.iconClass === 's5' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
-                                `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`
-                  }}
-                >
-                  {scenario.icon}
-                </div>
-                <h4 className="font-bold text-lg mb-2">{scenario.title}</h4>
-                <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
-                  {scenario.description}
-                </p>
-                <div className="flex gap-4">
-                  {scenario.metrics.map((metric, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 text-center p-3 rounded-lg"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-                    >
-                      <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>
-                        {metric.value}
-                      </div>
-                      <div className="text-xs" style={{ color: colors.textMuted }}>
-                        {metric.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Active Scenario Detail */}
-          <AnimatePresence mode="wait">
-            {activeScenario && (
-              <ScenarioDetailPanel
-                key={activeScenario}
-                scenario={scenariosData.find(s => s.id === activeScenario)!}
-              />
-            )}
-          </AnimatePresence>
-        </section>
-
-        {/* Section 3: Comparison Table */}
-        <section id="comparison" className="mb-16">
-          <div className="flex items-center gap-4 mb-8">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-            >
-              3
-            </div>
-            <h3 className="text-2xl font-bold">Detailed Comparison: Swap vs. Direct Sale</h3>
-          </div>
-
+          {/* Market Comparison Table */}
           <div
             className="rounded-2xl p-6 overflow-x-auto"
             style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
           >
+            <h4 className="text-xl font-semibold mb-6">Key Regulatory Differences</h4>
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                  <th className="text-left p-4 font-semibold rounded-tl-lg">Criteria</th>
-                  <th className="text-left p-4 font-semibold">Direct EUA Sale</th>
-                  <th className="text-left p-4 font-semibold">EUA to CEA Swap</th>
-                  <th className="text-center p-4 font-semibold rounded-tr-lg">Winner</th>
+                  <th className="text-left p-4 font-semibold rounded-tl-lg">Dimension</th>
+                  <th className="text-left p-4 font-semibold">EU ETS</th>
+                  <th className="text-left p-4 font-semibold rounded-tr-lg">China ETS</th>
                 </tr>
               </thead>
               <tbody>
-                {comparisonData.map((row, i) => (
+                {[
+                  { dimension: 'Supply Model', eu: 'Absolute cap with linear reduction', china: 'Carbon intensity benchmarking' },
+                  { dimension: 'Allocation', eu: 'Mix of auction and free allocation', china: 'Primarily free allocation' },
+                  { dimension: 'Market Access', eu: 'Open (MiFID II compliant)', china: 'Closed (domestic entities only)' },
+                  { dimension: 'Financial Participation', eu: 'Yes (regulated banks, funds)', china: 'No' },
+                  { dimension: 'Trading Venues', eu: 'Multiple (EEX, ICE)', china: 'Single (SEEE)' },
+                  { dimension: 'Futures Market', eu: 'Yes (active)', china: 'No (spot only)' },
+                  { dimension: 'Compliance Penalty', eu: 'EUR 100/tonne fixed', china: 'Up to 500% of shortage value' },
+                ].map((row, i) => (
                   <tr key={i} className="hover:bg-white/5 transition-colors">
                     <td className="p-4 font-semibold" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                      {row.criteria}
+                      {row.dimension}
                     </td>
                     <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
-                      {row.sale}
+                      {row.eu}
                     </td>
                     <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
-                      {row.swap}
-                    </td>
-                    <td className="p-4 text-center" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                      <span
-                        className="px-4 py-1 rounded-full text-xs font-bold uppercase"
-                        style={{
-                          backgroundColor: row.winner === 'swap' ? 'rgba(22, 163, 74, 0.2)' :
-                                          row.winner === 'sale' ? 'rgba(59, 130, 246, 0.2)' :
-                                          'rgba(100, 116, 139, 0.2)',
-                          color: row.winner === 'swap' ? colors.success :
-                                row.winner === 'sale' ? colors.secondaryLight :
-                                colors.textSecondary,
-                        }}
-                      >
-                        {row.winner === 'swap' ? 'SWAP' : row.winner === 'sale' ? 'SALE' : 'TIE'}
-                      </span>
+                      {row.china}
                     </td>
                   </tr>
                 ))}
@@ -1361,6 +1225,7 @@ export default function OnboardingPage() {
             </table>
           </div>
 
+          {/* Key Insight Box */}
           <div
             className="p-6 rounded-xl text-center mt-8"
             style={{
@@ -1368,15 +1233,425 @@ export default function OnboardingPage() {
               border: `1px solid ${colors.accent}`,
             }}
           >
-            <strong style={{ color: colors.accent }}>Conclusion:</strong>{' '}
+            <strong style={{ color: colors.accent }}>Key Opportunity:</strong>{' '}
             <span style={{ color: colors.textSecondary }}>
-              Swap wins when <strong style={{ color: colors.textPrimary }}>non-cash benefits are valuable</strong> (speed, regulatory simplicity, access)
-              and when there is a <strong style={{ color: colors.textPrimary }}>specific use case for CEA</strong> in China.
-              Score: Swap wins 5 criteria, Sale wins 2, Tie on 1.
+              The 7-10x price differential between EU EUA (EUR 88/t) and China CEA (EUR 8/t) creates significant arbitrage opportunities.
+              Foreign participation in China ETS is explicitly prohibited - Nihao provides the bridge.
             </span>
           </div>
         </section>
 
+        {/* SECTION 2: About Nihao */}
+        <section id="nihao" className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
+              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+            >
+              2
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold">About Nihao Group</h3>
+              <p style={{ color: colors.textSecondary }}>Strategic intermediary bridging EU and China carbon markets</p>
+            </div>
+          </div>
+
+          {/* Company Overview */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div
+              className="rounded-2xl p-6"
+              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              >
+                <Globe className="w-7 h-7 text-white" />
+              </div>
+              <h4 className="font-bold text-lg mb-2">Hong Kong Headquarters</h4>
+              <p className="text-sm" style={{ color: colors.textSecondary }}>
+                Strategic positioning at the intersection of European and Chinese carbon markets, leveraging Hong Kong's unique role as a gateway.
+              </p>
+            </div>
+            <div
+              className="rounded-2xl p-6"
+              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` }}
+              >
+                <Scale className="w-7 h-7 text-white" />
+              </div>
+              <h4 className="font-bold text-lg mb-2">Regulatory Compliance</h4>
+              <p className="text-sm" style={{ color: colors.textSecondary }}>
+                Full compliance with Hong Kong SFC oversight, AML/KYC standards comparable to EU, and FATCA/CRS requirements.
+              </p>
+            </div>
+            <div
+              className="rounded-2xl p-6"
+              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` }}
+              >
+                <Shield className="w-7 h-7 text-white" />
+              </div>
+              <h4 className="font-bold text-lg mb-2">Secure Infrastructure</h4>
+              <p className="text-sm" style={{ color: colors.textSecondary }}>
+                Custody and settlement services, multi-currency transaction capabilities, and direct Yuan/RMB convertibility access.
+              </p>
+            </div>
+          </div>
+
+          {/* Service Offerings */}
+          <div
+            className="rounded-2xl p-8 mb-8"
+            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+          >
+            <h4 className="text-xl font-semibold mb-6">Our Services</h4>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { title: 'Market Intelligence', items: ['CEA/EUA price analysis', 'Market participant identification', 'Counterparty risk assessment'] },
+                { title: 'Transaction Facilitation', items: ['Deal negotiation support', 'Contract structuring', 'Settlement arrangement'] },
+                { title: 'Post-Trade Services', items: ['Custody and settlement', 'Trade confirmation', 'Invoice processing'] },
+                { title: 'Risk Management', items: ['Counterparty risk evaluation', 'Transaction optimization', 'Hedging advice'] },
+                { title: 'Regulatory Compliance', items: ['KYC/AML documentation', 'Ongoing monitoring', 'Transaction reporting'] },
+                { title: 'Technology Platform', items: ['Secure marketplace portal', 'Real-time deal tracking', 'Audit trail maintenance'] },
+              ].map((service, i) => (
+                <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
+                  <h5 className="font-semibold mb-3" style={{ color: colors.primaryLight }}>{service.title}</h5>
+                  <ul className="space-y-2">
+                    {service.items.map((item, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm" style={{ color: colors.textSecondary }}>
+                        <CheckCircle className="w-4 h-4" style={{ color: colors.success }} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hong Kong Advantages */}
+          <div
+            className="rounded-2xl p-8"
+            style={{
+              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`,
+              border: `1px solid ${colors.primary}`,
+            }}
+          >
+            <h4 className="text-xl font-semibold mb-6" style={{ color: colors.primaryLight }}>
+              Why Hong Kong?
+            </h4>
+            <div className="grid md:grid-cols-4 gap-6">
+              {[
+                { label: 'China Market Access', desc: 'Direct Greater Bay Area connectivity' },
+                { label: 'EU Market Access', desc: 'EEX/ICE trading infrastructure' },
+                { label: 'Multi-Currency', desc: 'HKD, USD, EUR, RMB settlement' },
+                { label: '24-Hour Trading', desc: 'Asian/European/American coverage' },
+              ].map((item, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-lg font-bold mb-1" style={{ color: colors.textPrimary }}>{item.label}</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 3: For CEA Holders */}
+        <section id="cea-holders" className="mb-20">
+          <div className="flex items-center gap-4 mb-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
+              style={{ background: `linear-gradient(135deg, ${colors.danger} 0%, #f97316 100%)` }}
+            >
+              3
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold">For CEA Holders</h3>
+              <p style={{ color: colors.textSecondary }}>Private bilateral deals offer 8-25% value improvement over SEEE exchange trading</p>
+            </div>
+          </div>
+
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
+            style={{ backgroundColor: `${colors.danger}20`, color: colors.danger }}
+          >
+            <span className="animate-pulse">👆</span>
+            Select an entity category to view full details
+          </div>
+
+          {/* CEA Category Cards */}
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            {ceaHolderCategories.map(category => (
+              <EntityCategoryCard
+                key={category.id}
+                category={category}
+                isActive={activeCeaCategory === category.id}
+                onClick={() => setActiveCeaCategory(category.id)}
+                colorScheme="cea"
+              />
+            ))}
+          </div>
+
+          {/* Active CEA Category Detail */}
+          <AnimatePresence mode="wait">
+            {activeCeaCategory && (
+              <EntityCategoryDetail
+                key={activeCeaCategory}
+                category={ceaHolderCategories.find(c => c.id === activeCeaCategory)!}
+                colorScheme="cea"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* CEA Advantages Summary */}
+          <div
+            className="p-6 rounded-xl mt-8"
+            style={{
+              background: `linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%)`,
+              border: `1px solid ${colors.danger}`,
+            }}
+          >
+            <h5 className="font-semibold mb-4" style={{ color: colors.danger }}>
+              Key Advantages for CEA Holders via Nihao
+            </h5>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <DollarSign className="w-8 h-8 mx-auto mb-2" style={{ color: colors.success }} />
+                <div className="text-xl font-bold" style={{ color: colors.success }}>8-15%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Premium</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <Shield className="w-8 h-8 mx-auto mb-2" style={{ color: colors.primaryLight }} />
+                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>High</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Confidentiality</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <Scale className="w-8 h-8 mx-auto mb-2" style={{ color: colors.accent }} />
+                <div className="text-xl font-bold" style={{ color: colors.accent }}>Lower</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory Scrutiny</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <Zap className="w-8 h-8 mx-auto mb-2" style={{ color: colors.secondaryLight }} />
+                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>Custom</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Transaction Structuring</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 4: For EUA Holders */}
+        <section id="eua-holders" className="mb-20">
+          <div className="flex items-center gap-4 mb-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
+              style={{ background: `linear-gradient(135deg, ${colors.secondaryLight} 0%, #8b5cf6 100%)` }}
+            >
+              4
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold">For EUA Holders</h3>
+              <p style={{ color: colors.textSecondary }}>EUA-to-CEA swaps generate 10-22% total value improvement</p>
+            </div>
+          </div>
+
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
+            style={{ backgroundColor: `${colors.secondaryLight}20`, color: colors.secondaryLight }}
+          >
+            <span className="animate-pulse">👆</span>
+            Select an entity category to view full details
+          </div>
+
+          {/* EUA Category Cards */}
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            {euaHolderCategories.map(category => (
+              <EntityCategoryCard
+                key={category.id}
+                category={category}
+                isActive={activeEuaCategory === category.id}
+                onClick={() => setActiveEuaCategory(category.id)}
+                colorScheme="eua"
+              />
+            ))}
+          </div>
+
+          {/* Active EUA Category Detail */}
+          <AnimatePresence mode="wait">
+            {activeEuaCategory && (
+              <EntityCategoryDetail
+                key={activeEuaCategory}
+                category={euaHolderCategories.find(c => c.id === activeEuaCategory)!}
+                colorScheme="eua"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* EUA Swap Advantage Box */}
+          <div
+            className="p-6 rounded-xl mt-8"
+            style={{
+              background: `linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)`,
+              border: `1px solid ${colors.secondaryLight}`,
+            }}
+          >
+            <h5 className="font-semibold mb-4" style={{ color: colors.secondaryLight }}>
+              EUA-to-CEA Swap Value Breakdown
+            </h5>
+            <div className="grid md:grid-cols-5 gap-4">
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.success }}>8-18%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Arbitrage</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>1-8%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Timing Optimization</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.accent }}>1-3%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Operational Efficiency</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>1-2%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Currency Management</div>
+              </div>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: '#8b5cf6' }}>1-4%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Strategic Positioning</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 5: For EU Entities */}
+        <section id="eu-entities" className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
+              style={{ background: `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)` }}
+            >
+              5
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold">For EU Entities</h3>
+              <p style={{ color: colors.textSecondary }}>Complete 7-step workflow delivering 15-25% total value improvement</p>
+            </div>
+          </div>
+
+          {/* Workflow Steps */}
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="space-y-3">
+              {workflowSteps.map(step => (
+                <WorkflowStepCard
+                  key={step.step}
+                  step={step}
+                  isActive={activeWorkflowStep === step.step}
+                  onClick={() => setActiveWorkflowStep(step.step)}
+                />
+              ))}
+            </div>
+            <div className="lg:col-span-2">
+              <AnimatePresence mode="wait">
+                {activeWorkflowStep && (
+                  <WorkflowStepDetail
+                    key={activeWorkflowStep}
+                    step={workflowSteps.find(s => s.step === activeWorkflowStep)!}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* KYC Documents Section */}
+          <div
+            className="rounded-2xl p-8 mt-8"
+            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+          >
+            <h4 className="text-xl font-semibold mb-6">KYC Documentation Requirements (23 Documents)</h4>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {kycDocuments.map((category, i) => (
+                <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
+                  <h5 className="font-semibold mb-3" style={{ color: colors.primaryLight }}>{category.category}</h5>
+                  <ul className="space-y-2">
+                    {category.items.map((item, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm" style={{ color: colors.textSecondary }}>
+                        <FileText className="w-4 h-4" style={{ color: colors.textMuted }} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* EU Entity Value Summary */}
+          <div
+            className="p-6 rounded-xl mt-8"
+            style={{
+              background: `linear-gradient(135deg, rgba(22, 163, 74, 0.15) 0%, rgba(13, 148, 136, 0.15) 100%)`,
+              border: `1px solid ${colors.success}`,
+            }}
+          >
+            <h5 className="font-semibold mb-4" style={{ color: colors.success }}>
+              Total Value Advantages for EU Entities
+            </h5>
+            <div className="grid md:grid-cols-6 gap-4">
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.success }}>8-15%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Advantage</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>EUR 45-340K</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Cost Reduction</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.accent }}>EUR 25-150K</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Working Capital</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>EUR 25-250K</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory Savings</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: '#8b5cf6' }}>1-3%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Operational</div>
+              </div>
+              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                <div className="text-xl font-bold" style={{ color: colors.success }}>15-25%</div>
+                <div className="text-xs" style={{ color: colors.textSecondary }}>Total Benefit</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="text-center py-16">
+          <div
+            className="rounded-3xl p-12"
+            style={{
+              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%)`,
+              border: `1px solid ${colors.primary}`,
+            }}
+          >
+            <h3 className="text-3xl font-bold mb-4">Ready to Get Started?</h3>
+            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: colors.textSecondary }}>
+              Complete your KYC documentation to access the Nihao marketplace and start benefiting from bilateral carbon trading opportunities.
+            </p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all"
+              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+            >
+              Complete Your KYC Documentation
+            </button>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
@@ -1385,10 +1660,10 @@ export default function OnboardingPage() {
         style={{ borderTop: `1px solid ${colors.border}` }}
       >
         <p className="font-semibold" style={{ color: colors.textSecondary }}>
-          Nihao Group | Strategic Analysis Report | January 2026
+          Nihao Group Hong Kong | Carbon Market Intermediation | January 2026
         </p>
         <p className="text-sm mt-2" style={{ color: colors.textMuted }}>
-          Analysis based on extensive research and current market data from EU ETS and China ETS markets
+          Bridging the EU ETS and China ETS through innovative bilateral trading solutions
         </p>
       </footer>
 

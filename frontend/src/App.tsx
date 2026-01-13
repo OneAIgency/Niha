@@ -11,8 +11,15 @@ import {
   SettingsPage,
   UsersPage,
   BackofficePage,
-  OnboardingPage,
+  Onboarding1Page,
   LearnMorePage,
+  OnboardingIndexPage,
+  MarketOverviewPage,
+  AboutNihaoPage,
+  CeaHoldersPage,
+  EuaHoldersPage,
+  EuEntitiesPage,
+  StrategicAdvantagePage,
 } from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -96,12 +103,70 @@ function App() {
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Onboarding - standalone page without layout */}
+        {/* Onboarding - new multi-page onboarding hub */}
         <Route
           path="/onboarding"
           element={
             <OnboardingRoute>
-              <OnboardingPage />
+              <OnboardingIndexPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/market-overview"
+          element={
+            <OnboardingRoute>
+              <MarketOverviewPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/about-nihao"
+          element={
+            <OnboardingRoute>
+              <AboutNihaoPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/cea-holders"
+          element={
+            <OnboardingRoute>
+              <CeaHoldersPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/eua-holders"
+          element={
+            <OnboardingRoute>
+              <EuaHoldersPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/eu-entities"
+          element={
+            <OnboardingRoute>
+              <EuEntitiesPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/strategic-advantage"
+          element={
+            <OnboardingRoute>
+              <StrategicAdvantagePage />
+            </OnboardingRoute>
+          }
+        />
+
+        {/* Onboarding1 - EUA-CEA swap analysis page (legacy) */}
+        <Route
+          path="/onboarding1"
+          element={
+            <OnboardingRoute>
+              <Onboarding1Page />
             </OnboardingRoute>
           }
         />

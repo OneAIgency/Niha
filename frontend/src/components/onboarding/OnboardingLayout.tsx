@@ -1,0 +1,279 @@
+import { ReactNode, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  Upload,
+  CheckCircle,
+  LogOut,
+  Globe,
+  Building2,
+  Factory,
+  TrendingUp,
+  FileText,
+  Home,
+  ChevronRight,
+  Target,
+} from 'lucide-react';
+import { useAuthStore } from '@/stores/useStore';
+import KycUploadModal from './KycUploadModal';
+
+// Color palette
+export const colors = {
+  primary: '#0d9488',
+  primaryDark: '#0f766e',
+  primaryLight: '#5eead4',
+  secondary: '#1e40af',
+  secondaryLight: '#3b82f6',
+  accent: '#f59e0b',
+  danger: '#dc2626',
+  success: '#16a34a',
+  bgDark: '#0f172a',
+  bgCard: '#1e293b',
+  bgCardHover: '#334155',
+  textPrimary: '#f8fafc',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+  border: '#334155',
+};
+
+// Navigation items
+const navItems = [
+  { path: '/onboarding', label: 'Overview', icon: Home },
+  { path: '/onboarding/market-overview', label: 'Market', icon: TrendingUp },
+  { path: '/onboarding/about-nihao', label: 'About', icon: Building2 },
+  { path: '/onboarding/cea-holders', label: 'CEA', icon: Factory },
+  { path: '/onboarding/eua-holders', label: 'EUA', icon: Globe },
+  { path: '/onboarding/eu-entities', label: 'EU Entities', icon: FileText },
+  { path: '/onboarding/strategic-advantage', label: 'Strategy', icon: Target },
+];
+
+interface OnboardingLayoutProps {
+  children: ReactNode;
+  title?: string;
+  subtitle?: string;
+  showBreadcrumb?: boolean;
+}
+
+export default function OnboardingLayout({
+  children,
+  title,
+  subtitle,
+  showBreadcrumb = true,
+}: OnboardingLayoutProps) {
+  const { logout } = useAuthStore();
+  const location = useLocation();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [kycProgress, setKycProgress] = useState(0);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/login';
+  };
+
+  const currentNavItem = navItems.find(item => item.path === location.pathname);
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-40"
+        style={{
+          background: 'linear-gradient(180deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)',
+          borderBottom: `1px solid ${colors.border}`,
+          backdropFilter: 'blur(20px)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/onboarding" className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
+                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              >
+                N
+              </div>
+              <div>
+                <h1
+                  className="text-xl font-bold"
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  Nihao Group
+                </h1>
+                <span className="text-xs uppercase tracking-widest" style={{ color: colors.textSecondary }}>
+                  Onboarding
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Navigation */}
+            <nav className="hidden xl:flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
+              {navItems.map(nav => {
+                const Icon = nav.icon;
+                const isActive = location.pathname === nav.path;
+                return (
+                  <Link
+                    key={nav.path}
+                    to={nav.path}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all"
+                    style={{
+                      backgroundColor: isActive ? colors.primary : 'transparent',
+                      color: isActive ? 'white' : colors.textSecondary,
+                    }}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {nav.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20"
+              style={{ color: colors.danger }}
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="xl:hidden overflow-x-auto px-4 pb-4">
+          <nav className="flex gap-2 min-w-max">
+            {navItems.map(nav => {
+              const Icon = nav.icon;
+              const isActive = location.pathname === nav.path;
+              return (
+                <Link
+                  key={nav.path}
+                  to={nav.path}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: isActive ? colors.primary : colors.bgCard,
+                    color: isActive ? 'white' : colors.textSecondary,
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                  {nav.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {/* Breadcrumb */}
+      {showBreadcrumb && currentNavItem && location.pathname !== '/onboarding' && (
+        <div className="max-w-7xl mx-auto px-8 py-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Link
+              to="/onboarding"
+              className="hover:underline"
+              style={{ color: colors.textSecondary }}
+            >
+              Onboarding
+            </Link>
+            <ChevronRight className="w-4 h-4" style={{ color: colors.textMuted }} />
+            <span style={{ color: colors.primaryLight }}>{currentNavItem.label}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Page Title */}
+      {title && (
+        <div className="max-w-7xl mx-auto px-8 pt-8 pb-4">
+          <h2 className="text-4xl font-extrabold mb-2">{title}</h2>
+          {subtitle && (
+            <p className="text-lg" style={{ color: colors.textSecondary }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-8 py-8">
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer
+        className="text-center py-12"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
+        <p className="font-semibold" style={{ color: colors.textSecondary }}>
+          Nihao Group Hong Kong | Carbon Market Intermediation | January 2026
+        </p>
+        <p className="text-sm mt-2" style={{ color: colors.textMuted }}>
+          Bridging the EU ETS and China ETS through innovative bilateral trading solutions
+        </p>
+      </footer>
+
+      {/* Floating KYC Button */}
+      <motion.button
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
+        style={{
+          background: kycProgress >= 100
+            ? `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)`
+            : `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)`,
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        animate={kycProgress < 100 ? {
+          boxShadow: [
+            '0 0 20px rgba(245, 158, 11, 0.4)',
+            '0 0 40px rgba(245, 158, 11, 0.6)',
+            '0 0 20px rgba(245, 158, 11, 0.4)',
+          ],
+        } : {}}
+        transition={kycProgress < 100 ? {
+          duration: 1.5,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        } : {}}
+      >
+        {kycProgress >= 100 ? (
+          <CheckCircle className="w-6 h-6 text-white" />
+        ) : (
+          <Upload className="w-6 h-6 text-white" />
+        )}
+        <div className="text-white">
+          <div className="text-sm font-semibold">
+            {kycProgress >= 100 ? 'Documents Complete' : 'Complete KYC'}
+          </div>
+          <div className="text-xs opacity-90">
+            {kycProgress}% uploaded
+          </div>
+        </div>
+        {kycProgress < 100 && (
+          <motion.div
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white"
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [1, 0.7, 1],
+            }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+            }}
+          />
+        )}
+      </motion.button>
+
+      {/* KYC Modal */}
+      <KycUploadModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onProgressChange={setKycProgress}
+      />
+    </div>
+  );
+}
