@@ -19,6 +19,8 @@ export default defineConfig({
         changeOrigin: true,
         // Enable WebSocket proxying for /api paths (e.g., /api/v1/prices/ws)
         ws: true,
+        // Rewrite WebSocket Origin header for proper handshake
+        rewriteWsOrigin: true,
       },
     },
   },

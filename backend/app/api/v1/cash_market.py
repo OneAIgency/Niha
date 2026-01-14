@@ -27,7 +27,8 @@ from ...schemas.schemas import (
 )
 from ...services.simulation import simulation_engine
 from ...core.database import get_db
-from ...models.models import Order, CashMarketTrade, Seller, Entity
+from ...core.security import get_current_user
+from ...models.models import Order, CashMarketTrade, Seller, Entity, User
 from ...models.models import OrderSide as OrderSideEnum, OrderStatus, CertificateType as CertTypeEnum
 
 router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
@@ -298,22 +299,46 @@ async def get_market_stats(certificate_type: CertificateType):
     )
 
 
-@router.post("/orders", response_model=MessageResponse)
-async def place_order(order: OrderCreate):
+@router.post("/orders", response_model=OrderResponse)
+async def place_order(
+    order: OrderCreate,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """
     Place a new order in the cash market.
-    In demo mode, this simulates order placement.
+    Creates a real order in the database linked to the user's entity.
     """
-    # In demo mode, just acknowledge the order
-    # In production, this would:
-    # 1. Validate the user has sufficient balance/holdings
-    # 2. Insert the order into the database
-    # 3. Run the matching engine
-    # 4. Return any executed trades
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User must have an entity to place orders")
 
-    return MessageResponse(
-        message=f"Order placed: {order.side.value} {order.quantity} {order.certificate_type.value} @ ${order.price}",
-        success=True
+    # Create the order in database
+    new_order = Order(
+        entity_id=current_user.entity_id,
+        certificate_type=CertTypeEnum(order.certificate_type.value),
+        side=OrderSideEnum(order.side.value),
+        price=Decimal(str(order.price)),
+        quantity=Decimal(str(order.quantity)),
+        filled_quantity=Decimal('0'),
+        status=OrderStatus.OPEN
+    )
+
+    db.add(new_order)
+    await db.commit()
+    await db.refresh(new_order)
+
+    return OrderResponse(
+        id=new_order.id,
+        entity_id=new_order.entity_id,
+        certificate_type=new_order.certificate_type.value,
+        side=new_order.side.value,
+        price=float(new_order.price),
+        quantity=float(new_order.quantity),
+        filled_quantity=float(new_order.filled_quantity),
+        remaining_quantity=float(new_order.quantity - new_order.filled_quantity),
+        status=new_order.status.value,
+        created_at=new_order.created_at,
+        updated_at=new_order.updated_at,
     )
 
 
@@ -321,73 +346,94 @@ async def place_order(order: OrderCreate):
 async def get_my_orders(
     status: Optional[str] = Query(None, description="Filter by status: OPEN, FILLED, CANCELLED"),
     certificate_type: Optional[CertificateType] = None,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
 ):
     """
-    Get the current user's orders.
-    In demo mode, returns simulated orders.
+    Get the current user's orders from the database.
+    Returns orders linked to the user's entity.
     """
-    # In demo mode, return sample orders
-    base_time = datetime.utcnow()
+    if not current_user.entity_id:
+        return []  # User has no entity, no orders
 
-    sample_orders = [
-        {
-            "id": str(uuid.uuid4()),
-            "entity_id": str(uuid.uuid4()),
-            "certificate_type": "EUA",
-            "side": "BUY",
-            "price": 80.50,
-            "quantity": 500,
-            "filled_quantity": 0,
-            "remaining_quantity": 500,
-            "status": "OPEN",
-            "created_at": (base_time - timedelta(hours=2)).isoformat(),
-            "updated_at": None,
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "entity_id": str(uuid.uuid4()),
-            "certificate_type": "CEA",
-            "side": "SELL",
-            "price": 14.20,
-            "quantity": 1000,
-            "filled_quantity": 350,
-            "remaining_quantity": 650,
-            "status": "PARTIALLY_FILLED",
-            "created_at": (base_time - timedelta(hours=5)).isoformat(),
-            "updated_at": (base_time - timedelta(hours=1)).isoformat(),
-        },
-    ]
+    # Build query
+    query = select(Order).where(Order.entity_id == current_user.entity_id)
 
     # Apply filters
     if status:
-        sample_orders = [o for o in sample_orders if o["status"] == status]
+        try:
+            status_enum = OrderStatus(status)
+            query = query.where(Order.status == status_enum)
+        except ValueError:
+            pass  # Invalid status, ignore filter
+
     if certificate_type:
-        sample_orders = [o for o in sample_orders if o["certificate_type"] == certificate_type.value]
+        query = query.where(Order.certificate_type == CertTypeEnum(certificate_type.value))
+
+    # Order by most recent first
+    query = query.order_by(Order.created_at.desc()).limit(100)
+
+    result = await db.execute(query)
+    orders = result.scalars().all()
 
     return [
         OrderResponse(
-            id=uuid.UUID(o["id"]),
-            entity_id=uuid.UUID(o["entity_id"]),
-            certificate_type=o["certificate_type"],
-            side=o["side"],
-            price=o["price"],
-            quantity=o["quantity"],
-            filled_quantity=o["filled_quantity"],
-            remaining_quantity=o["remaining_quantity"],
-            status=o["status"],
-            created_at=datetime.fromisoformat(o["created_at"]),
-            updated_at=datetime.fromisoformat(o["updated_at"]) if o["updated_at"] else None,
+            id=o.id,
+            entity_id=o.entity_id,
+            certificate_type=o.certificate_type.value,
+            side=o.side.value,
+            price=float(o.price),
+            quantity=float(o.quantity),
+            filled_quantity=float(o.filled_quantity),
+            remaining_quantity=float(o.quantity - o.filled_quantity),
+            status=o.status.value,
+            created_at=o.created_at,
+            updated_at=o.updated_at,
         )
-        for o in sample_orders
+        for o in orders
     ]
 
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
-async def cancel_order(order_id: str):
+async def cancel_order(
+    order_id: str,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
     """
     Cancel an open order.
-    In demo mode, this simulates cancellation.
+    Only the owner (same entity) can cancel their orders.
     """
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User must have an entity")
+
+    # Find the order
+    try:
+        order_uuid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid order ID")
+
+    result = await db.execute(
+        select(Order).where(Order.id == order_uuid)
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Verify ownership
+    if order.entity_id != current_user.entity_id:
+        raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+
+    # Check if order can be cancelled
+    if order.status not in [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]:
+        raise HTTPException(status_code=400, detail=f"Cannot cancel order with status {order.status.value}")
+
+    # Cancel the order
+    order.status = OrderStatus.CANCELLED
+    order.updated_at = datetime.utcnow()
+    await db.commit()
+
     return MessageResponse(
         message=f"Order {order_id} cancelled successfully",
         success=True

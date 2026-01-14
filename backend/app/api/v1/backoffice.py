@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
@@ -1146,3 +1147,277 @@ async def get_entity_transactions(
         }
         for t in transactions
     ]
+
+
+# =============================================================================
+# Asset Balance Update (Admin Edit Assets)
+# =============================================================================
+
+class UpdateAssetRequest(BaseModel):
+    """Request to update an entity's asset balance"""
+    new_balance: float = Field(..., ge=0, description="New balance value (must be >= 0)")
+    notes: Optional[str] = Field(None, max_length=500, description="Admin notes for audit")
+    reference: Optional[str] = Field(None, max_length=100, description="Reference for tracking")
+
+
+@router.put("/entities/{entity_id}/assets/{asset_type}")
+async def update_asset_balance(
+    entity_id: str,
+    asset_type: AssetTypeEnum,
+    request: UpdateAssetRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update an entity's asset balance to a specific value.
+    Creates an audit trail transaction.
+    Admin only.
+    """
+    # Validate entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Map schema enum to model enum
+    asset_type_map = {
+        AssetTypeEnum.EUR: AssetType.EUR,
+        AssetTypeEnum.CEA: AssetType.CEA,
+        AssetTypeEnum.EUA: AssetType.EUA,
+    }
+    model_asset_type = asset_type_map[asset_type]
+
+    # Get or create holding
+    holding_result = await db.execute(
+        select(EntityHolding).where(
+            EntityHolding.entity_id == UUID(entity_id),
+            EntityHolding.asset_type == model_asset_type
+        )
+    )
+    holding = holding_result.scalar_one_or_none()
+
+    balance_before = Decimal('0')
+    if holding:
+        balance_before = holding.quantity
+    else:
+        # Create new holding
+        holding = EntityHolding(
+            entity_id=UUID(entity_id),
+            asset_type=model_asset_type,
+            quantity=Decimal('0')
+        )
+        db.add(holding)
+
+    new_balance = Decimal(str(request.new_balance))
+    delta = new_balance - balance_before
+
+    # Update the holding
+    holding.quantity = new_balance
+    holding.updated_at = datetime.utcnow()
+
+    # Create audit transaction
+    transaction = AssetTransaction(
+        entity_id=UUID(entity_id),
+        asset_type=model_asset_type,
+        transaction_type=TransactionType.ADJUSTMENT,
+        amount=abs(delta),
+        balance_before=balance_before,
+        balance_after=new_balance,
+        reference=request.reference,
+        notes=request.notes or f"Admin adjustment by {admin_user.email}",
+        created_by=admin_user.id
+    )
+    db.add(transaction)
+
+    # If EUR, also update Entity.balance_amount for backward compatibility
+    if model_asset_type == AssetType.EUR:
+        entity.balance_amount = new_balance
+
+    await db.commit()
+
+    asset_labels = {'EUR': 'EUR', 'CEA': 'CEA', 'EUA': 'EUA'}
+    asset_label = asset_labels.get(asset_type.value, asset_type.value)
+    direction = "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"
+
+    return MessageResponse(
+        message=f"Successfully updated {entity.name}'s {asset_label} balance from {float(balance_before):,.2f} to {float(new_balance):,.2f} ({direction} by {abs(float(delta)):,.2f})"
+    )
+
+
+# =============================================================================
+# Entity Orders Management (Admin)
+# =============================================================================
+
+@router.get("/entities/{entity_id}/orders")
+async def get_entity_orders(
+    entity_id: str,
+    status: Optional[str] = Query(None, description="Filter by status: OPEN, PARTIALLY_FILLED, FILLED, CANCELLED"),
+    certificate_type: Optional[str] = Query(None, description="Filter by certificate type: EUA, CEA"),
+    limit: int = Query(50, le=200),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all orders for an entity.
+    Admin only.
+    """
+    from ...models.models import Order, OrderStatus as ModelOrderStatus, CertificateType as ModelCertificateType
+
+    # Validate entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Build query
+    query = select(Order).where(Order.entity_id == UUID(entity_id))
+
+    if status:
+        try:
+            status_enum = ModelOrderStatus(status)
+            query = query.where(Order.status == status_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+    if certificate_type:
+        try:
+            cert_type_enum = ModelCertificateType(certificate_type)
+            query = query.where(Order.certificate_type == cert_type_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+
+    query = query.order_by(Order.created_at.desc()).limit(limit)
+
+    result = await db.execute(query)
+    orders = result.scalars().all()
+
+    return [
+        {
+            "id": str(o.id),
+            "entity_id": str(o.entity_id) if o.entity_id else None,
+            "certificate_type": o.certificate_type.value,
+            "side": o.side.value,
+            "price": float(o.price),
+            "quantity": float(o.quantity),
+            "filled_quantity": float(o.filled_quantity),
+            "remaining_quantity": float(o.quantity - o.filled_quantity),
+            "status": o.status.value,
+            "created_at": o.created_at.isoformat(),
+            "updated_at": o.updated_at.isoformat() if o.updated_at else None,
+        }
+        for o in orders
+    ]
+
+
+@router.delete("/orders/{order_id}")
+async def admin_cancel_order(
+    order_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Cancel any order (admin only).
+    Only OPEN or PARTIALLY_FILLED orders can be cancelled.
+    """
+    from ...models.models import Order, OrderStatus as ModelOrderStatus
+
+    # Get the order
+    result = await db.execute(
+        select(Order).where(Order.id == UUID(order_id))
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Check if order can be cancelled
+    if order.status not in [ModelOrderStatus.OPEN, ModelOrderStatus.PARTIALLY_FILLED]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel order with status {order.status.value}"
+        )
+
+    # Cancel the order
+    order.status = ModelOrderStatus.CANCELLED
+    order.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Order {order_id} cancelled successfully"
+    )
+
+
+@router.put("/orders/{order_id}")
+async def admin_update_order(
+    order_id: str,
+    update: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update an order's price or quantity (admin only).
+    Only OPEN orders can be updated.
+    Quantity can only be reduced, not increased.
+    """
+    from ...models.models import Order, OrderStatus as ModelOrderStatus
+
+    # Get the order
+    result = await db.execute(
+        select(Order).where(Order.id == UUID(order_id))
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Check if order can be updated
+    if order.status != ModelOrderStatus.OPEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only update OPEN orders. Current status: {order.status.value}"
+        )
+
+    # Update price if provided
+    if 'price' in update and update['price'] is not None:
+        new_price = float(update['price'])
+        if new_price <= 0:
+            raise HTTPException(status_code=400, detail="Price must be greater than 0")
+        order.price = Decimal(str(new_price))
+
+    # Update quantity if provided
+    if 'quantity' in update and update['quantity'] is not None:
+        new_quantity = float(update['quantity'])
+        if new_quantity <= 0:
+            raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+        if new_quantity < float(order.filled_quantity):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot reduce quantity below filled amount ({float(order.filled_quantity)})"
+            )
+        order.quantity = Decimal(str(new_quantity))
+
+    order.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    return {
+        "id": str(order.id),
+        "entity_id": str(order.entity_id) if order.entity_id else None,
+        "certificate_type": order.certificate_type.value,
+        "side": order.side.value,
+        "price": float(order.price),
+        "quantity": float(order.quantity),
+        "filled_quantity": float(order.filled_quantity),
+        "remaining_quantity": float(order.quantity - order.filled_quantity),
+        "status": order.status.value,
+        "created_at": order.created_at.isoformat(),
+        "updated_at": order.updated_at.isoformat() if order.updated_at else None,
+        "message": "Order updated successfully"
+    }

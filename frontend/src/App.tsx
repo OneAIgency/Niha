@@ -154,7 +154,7 @@ function DashboardRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />

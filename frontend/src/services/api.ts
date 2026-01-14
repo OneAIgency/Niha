@@ -451,6 +451,17 @@ export const usersApi = {
     return data;
   },
 
+  getMyEntityAssets: async (): Promise<{
+    entity_id: string;
+    entity_name: string;
+    eur_balance: number;
+    cea_balance: number;
+    eua_balance: number;
+  }> => {
+    const { data } = await api.get('/users/me/entity/assets');
+    return data;
+  },
+
   getFundingInstructions: async (): Promise<any> => {
     const { data } = await api.get('/users/me/funding-instructions');
     return data;
@@ -865,6 +876,41 @@ export const backofficeApi = {
     const { data } = await api.get(`/backoffice/entities/${entityId}/transactions`, {
       params: assetType ? { asset_type: assetType } : undefined,
     });
+    return data;
+  },
+
+  // Update asset balance (admin edit)
+  updateAssetBalance: async (entityId: string, assetType: 'EUR' | 'CEA' | 'EUA', request: {
+    new_balance: number;
+    notes?: string;
+    reference?: string;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put(`/backoffice/entities/${entityId}/assets/${assetType}`, request);
+    return data;
+  },
+
+  // Get entity orders (admin)
+  getEntityOrders: async (entityId: string, params?: {
+    status?: string;
+    certificate_type?: string;
+    limit?: number;
+  }): Promise<Order[]> => {
+    const { data } = await api.get(`/backoffice/entities/${entityId}/orders`, { params });
+    return data;
+  },
+
+  // Admin cancel order
+  adminCancelOrder: async (orderId: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/backoffice/orders/${orderId}`);
+    return data;
+  },
+
+  // Admin update order
+  adminUpdateOrder: async (orderId: string, update: {
+    price?: number;
+    quantity?: number;
+  }): Promise<Order & { message: string }> => {
+    const { data } = await api.put(`/backoffice/orders/${orderId}`, update);
     return data;
   },
 };

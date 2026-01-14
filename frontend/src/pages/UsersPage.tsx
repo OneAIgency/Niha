@@ -24,12 +24,25 @@ import {
   DollarSign,
   Wallet,
   BanknoteIcon,
+  Leaf,
+  Wind,
+  BarChart3,
+  Pencil,
 } from 'lucide-react';
 import { Button, Card, Badge, Input, ConfirmationModal } from '../components/common';
-import { AddAssetModal } from '../components/backoffice/AddAssetModal';
+import { AddAssetModal, EditAssetModal, UserOrdersSection } from '../components/backoffice';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi, backofficeApi } from '../services/api';
 import type { User, UserRole, AdminUserFull, Deposit, EntityBalance } from '../types';
+
+// Simple interface for entity assets display (subset of full EntityAssets)
+interface EntityAssetsDisplay {
+  entity_id: string;
+  entity_name: string;
+  eur_balance: number;
+  cea_balance: number;
+  eua_balance: number;
+}
 
 interface UserWithEntity extends User {
   entity_name?: string;
@@ -72,7 +85,15 @@ export function UsersPage() {
   // User Detail Modal state
   const [detailUser, setDetailUser] = useState<AdminUserFull | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [detailTab, setDetailTab] = useState<'info' | 'auth' | 'sessions' | 'deposits'>('info');
+  const [detailTab, setDetailTab] = useState<'info' | 'auth' | 'sessions' | 'deposits' | 'orders'>('info');
+
+  // Edit Asset modal state
+  const [editingAsset, setEditingAsset] = useState<{
+    entityId: string;
+    entityName: string;
+    assetType: 'EUR' | 'CEA' | 'EUA';
+    currentBalance: number;
+  } | null>(null);
 
   // Password Reset state
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -89,6 +110,7 @@ export function UsersPage() {
 
   // Deposit state (view only - deposit creation is in backoffice)
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
+  const [entityAssets, setEntityAssets] = useState<EntityAssetsDisplay | null>(null);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loadingDeposits, setLoadingDeposits] = useState(false);
 
@@ -276,15 +298,25 @@ export function UsersPage() {
   const loadDeposits = async (entityId: string) => {
     setLoadingDeposits(true);
     try {
-      const [balance, depositList] = await Promise.all([
+      const [balance, assetsResponse, depositList] = await Promise.all([
         backofficeApi.getEntityBalance(entityId),
+        backofficeApi.getEntityAssets(entityId),
         backofficeApi.getDeposits({ entity_id: entityId }),
       ]);
       setEntityBalance(balance);
+      // Extract only the fields we need from the assets response
+      setEntityAssets({
+        entity_id: assetsResponse.entity_id,
+        entity_name: assetsResponse.entity_name,
+        eur_balance: assetsResponse.eur_balance,
+        cea_balance: assetsResponse.cea_balance,
+        eua_balance: assetsResponse.eua_balance,
+      });
       setDeposits(depositList);
     } catch (error) {
       console.error('Failed to load deposits:', error);
       setEntityBalance(null);
+      setEntityAssets(null);
       setDeposits([]);
     } finally {
       setLoadingDeposits(false);
@@ -846,15 +878,16 @@ export function UsersPage() {
                   <div className="flex border-b border-navy-100 dark:border-navy-700">
                     {[
                       { id: 'info', label: 'User Info', icon: Shield },
-                      { id: 'deposits', label: 'Deposits', icon: Wallet },
+                      { id: 'deposits', label: 'Assets', icon: Wallet },
+                      { id: 'orders', label: 'Orders', icon: BarChart3 },
                       { id: 'auth', label: 'Auth History', icon: Key },
                       { id: 'sessions', label: 'Sessions', icon: Monitor },
                     ].map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => {
-                          setDetailTab(tab.id as 'info' | 'auth' | 'sessions' | 'deposits');
-                          // Load deposits when switching to deposits tab
+                          setDetailTab(tab.id as 'info' | 'auth' | 'sessions' | 'deposits' | 'orders');
+                          // Load deposits/assets when switching to deposits tab
                           if (tab.id === 'deposits' && detailUser?.entity_id) {
                             loadDeposits(detailUser.entity_id);
                           }
@@ -1090,34 +1123,101 @@ export function UsersPage() {
                           </div>
                         ) : (
                           <>
-                            {/* Balance Card */}
-                            <div className="p-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white">
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-white/20 rounded-lg">
-                                  <Wallet className="w-6 h-6" />
-                                </div>
-                                <div>
-                                  <p className="text-emerald-100 text-sm">Entity Balance</p>
-                                  <p className="font-bold">{entityBalance?.entity_name || 'Unknown'}</p>
-                                </div>
+                            {/* Entity Header */}
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                                <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                               </div>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                  <p className="text-emerald-100 text-xs mb-1">Current Balance</p>
-                                  <p className="text-2xl font-bold">
-                                    {entityBalance ? formatCurrency(entityBalance.balance_amount, entityBalance.balance_currency || 'EUR') : '€ 0.00'}
-                                  </p>
+                              <div>
+                                <p className="text-sm text-navy-500 dark:text-navy-400">Entity Holdings</p>
+                                <p className="font-bold text-navy-900 dark:text-white">{entityAssets?.entity_name || entityBalance?.entity_name || 'Unknown'}</p>
+                              </div>
+                            </div>
+
+                            {/* Asset Balances Grid */}
+                            <div className="grid grid-cols-3 gap-4">
+                              {/* EUR Balance */}
+                              <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white relative group">
+                                <button
+                                  onClick={() => setEditingAsset({
+                                    entityId: detailUser.entity_id!,
+                                    entityName: entityAssets?.entity_name || detailUser.entity_name || 'Unknown',
+                                    assetType: 'EUR',
+                                    currentBalance: entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0,
+                                  })}
+                                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
+                                  title="Edit EUR Balance"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <DollarSign className="w-5 h-5" />
+                                  <span className="text-sm font-medium text-emerald-100">EUR Cash</span>
                                 </div>
-                                <div>
-                                  <p className="text-emerald-100 text-xs mb-1">Total Deposited</p>
-                                  <p className="text-lg font-semibold">
-                                    {entityBalance ? formatCurrency(entityBalance.total_deposited, entityBalance.balance_currency || 'EUR') : '€ 0.00'}
-                                  </p>
+                                <p className="text-2xl font-bold font-mono">
+                                  €{(entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                              </div>
+
+                              {/* CEA Balance */}
+                              <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl text-white relative group">
+                                <button
+                                  onClick={() => setEditingAsset({
+                                    entityId: detailUser.entity_id!,
+                                    entityName: entityAssets?.entity_name || detailUser.entity_name || 'Unknown',
+                                    assetType: 'CEA',
+                                    currentBalance: entityAssets?.cea_balance ?? 0,
+                                  })}
+                                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
+                                  title="Edit CEA Balance"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Leaf className="w-5 h-5" />
+                                  <span className="text-sm font-medium text-amber-100">CEA</span>
                                 </div>
-                                <div>
-                                  <p className="text-emerald-100 text-xs mb-1">Deposits</p>
-                                  <p className="text-lg font-semibold">{entityBalance?.deposit_count || 0}</p>
+                                <p className="text-2xl font-bold font-mono">
+                                  {(entityAssets?.cea_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                  <span className="text-sm font-normal ml-1">tCO₂</span>
+                                </p>
+                              </div>
+
+                              {/* EUA Balance */}
+                              <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white relative group">
+                                <button
+                                  onClick={() => setEditingAsset({
+                                    entityId: detailUser.entity_id!,
+                                    entityName: entityAssets?.entity_name || detailUser.entity_name || 'Unknown',
+                                    assetType: 'EUA',
+                                    currentBalance: entityAssets?.eua_balance ?? 0,
+                                  })}
+                                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
+                                  title="Edit EUA Balance"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Wind className="w-5 h-5" />
+                                  <span className="text-sm font-medium text-blue-100">EUA</span>
                                 </div>
+                                <p className="text-2xl font-bold font-mono">
+                                  {(entityAssets?.eua_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                  <span className="text-sm font-normal ml-1">tCO₂</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Deposit Summary */}
+                            <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-100 dark:border-navy-600">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <BanknoteIcon className="w-5 h-5 text-navy-400" />
+                                  <span className="text-sm text-navy-600 dark:text-navy-300">Total Deposited</span>
+                                </div>
+                                <span className="font-mono font-semibold text-navy-900 dark:text-white">
+                                  {entityBalance ? formatCurrency(entityBalance.total_deposited, entityBalance.balance_currency || 'EUR') : '€ 0.00'}
+                                </span>
                               </div>
                             </div>
 
@@ -1198,6 +1298,27 @@ export function UsersPage() {
                               )}
                             </div>
                           </>
+                        )}
+                      </div>
+                    )}
+
+                    {detailTab === 'orders' && (
+                      <div className="space-y-4">
+                        {!detailUser.entity_id ? (
+                          <div className="text-center py-8">
+                            <BarChart3 className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
+                            <p className="text-navy-500 dark:text-navy-400">
+                              User is not associated with any entity
+                            </p>
+                            <p className="text-sm text-navy-400 dark:text-navy-500 mt-2">
+                              Orders can only be viewed for users with an entity
+                            </p>
+                          </div>
+                        ) : (
+                          <UserOrdersSection
+                            entityId={detailUser.entity_id}
+                            entityName={detailUser.entity_name || 'Unknown Entity'}
+                          />
                         )}
                       </div>
                     )}
@@ -1318,6 +1439,24 @@ export function UsersPage() {
             }}
             entityId={addAssetUser.entityId}
             entityName={addAssetUser.entityName}
+          />
+        )}
+
+        {/* Edit Asset Modal */}
+        {editingAsset && (
+          <EditAssetModal
+            isOpen={!!editingAsset}
+            onClose={() => setEditingAsset(null)}
+            onSuccess={() => {
+              // Refresh the asset balances
+              if (detailUser?.entity_id) {
+                loadDeposits(detailUser.entity_id);
+              }
+            }}
+            entityId={editingAsset.entityId}
+            entityName={editingAsset.entityName}
+            assetType={editingAsset.assetType}
+            currentBalance={editingAsset.currentBalance}
           />
         )}
 

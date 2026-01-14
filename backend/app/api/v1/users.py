@@ -335,6 +335,59 @@ async def get_my_entity_balance(
     }
 
 
+@router.get("/me/entity/assets")
+async def get_my_entity_assets(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current user's entity asset holdings (EUR, CEA, EUA).
+    """
+    from ...models.models import EntityHolding, AssetType
+
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User not associated with an entity")
+
+    result = await db.execute(
+        select(Entity).where(Entity.id == current_user.entity_id)
+    )
+    entity = result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Get holdings from EntityHolding table
+    holdings_result = await db.execute(
+        select(EntityHolding).where(EntityHolding.entity_id == entity.id)
+    )
+    holdings = holdings_result.scalars().all()
+
+    # Build response with all asset types
+    eur_balance = 0.0
+    cea_balance = 0.0
+    eua_balance = 0.0
+
+    for holding in holdings:
+        if holding.asset_type == AssetType.EUR:
+            eur_balance = float(holding.quantity)
+        elif holding.asset_type == AssetType.CEA:
+            cea_balance = float(holding.quantity)
+        elif holding.asset_type == AssetType.EUA:
+            eua_balance = float(holding.quantity)
+
+    # Also check Entity.balance_amount for backward compatibility
+    if eur_balance == 0 and entity.balance_amount:
+        eur_balance = float(entity.balance_amount)
+
+    return {
+        "entity_id": str(entity.id),
+        "entity_name": entity.name,
+        "eur_balance": eur_balance,
+        "cea_balance": cea_balance,
+        "eua_balance": eua_balance,
+    }
+
+
 @router.get("/me/funding-instructions")
 async def get_funding_instructions(
     current_user: User = Depends(get_current_user)

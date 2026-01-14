@@ -45,6 +45,14 @@ interface EntityBalance {
   deposit_count: number;
 }
 
+interface EntityAssets {
+  entity_id: string;
+  entity_name: string;
+  eur_balance: number;
+  cea_balance: number;
+  eua_balance: number;
+}
+
 interface Portfolio {
   cash_available: number;
   cash_locked: number;
@@ -68,7 +76,7 @@ interface Transaction {
   description: string;
   details: string;
   amount: number | null;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'cancelled';
   ref: string;
 }
 
@@ -132,14 +140,17 @@ const transactionColumns: Column<Transaction>[] = [
     align: 'right',
     render: (value) => (
       <span className={`flex items-center justify-end gap-1 text-xs ${
-        value === 'completed' ? 'text-emerald-400' : 'text-amber-400'
+        value === 'completed' ? 'text-emerald-400' :
+        value === 'cancelled' ? 'text-slate-400' : 'text-amber-400'
       }`}>
         {value === 'completed' ? (
           <CheckCircle2 className="w-3 h-3" />
+        ) : value === 'cancelled' ? (
+          <AlertCircle className="w-3 h-3" />
         ) : (
           <Clock className="w-3 h-3" />
         )}
-        {value === 'completed' ? 'Complete' : 'Pending'}
+        {value === 'completed' ? 'Complete' : value === 'cancelled' ? 'Cancelled' : 'Pending'}
       </span>
     ),
   },
@@ -163,6 +174,7 @@ export function DashboardPage() {
   const { prices } = usePrices();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
+  const [entityAssets, setEntityAssets] = useState<EntityAssets | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -170,17 +182,18 @@ export function DashboardPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Derive portfolio from real data
+  // Derive portfolio from real data (prefer entityAssets over entityBalance for cash)
+  const eurBalance = entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0;
   const portfolio: Portfolio = {
-    cash_available: entityBalance?.balance_amount || 0,
+    cash_available: eurBalance,
     cash_locked: 0, // Would come from orders
-    cash_total: entityBalance?.balance_amount || 0,
-    cea_available: 0, // Would come from holdings API
+    cash_total: eurBalance,
+    cea_available: entityAssets?.cea_balance ?? 0,
     cea_locked: 0,
-    cea_total: 0,
-    eua_available: 0,
+    cea_total: entityAssets?.cea_balance ?? 0,
+    eua_available: entityAssets?.eua_balance ?? 0,
     eua_pending: 0,
-    eua_total: 0,
+    eua_total: entityAssets?.eua_balance ?? 0,
   };
 
   // Calculate portfolio value
@@ -205,15 +218,20 @@ export function DashboardPage() {
 
   const portfolioValue = calculatePortfolioValue();
 
-  // Fetch balance data
+  // Fetch balance and assets data
   const fetchBalance = useCallback(async () => {
     if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
       try {
-        const balance = await usersApi.getMyEntityBalance();
+        // Fetch both balance and assets in parallel
+        const [balance, assets] = await Promise.all([
+          usersApi.getMyEntityBalance(),
+          usersApi.getMyEntityAssets(),
+        ]);
         setEntityBalance(balance);
+        setEntityAssets(assets);
         setError(null);
       } catch (err) {
-        console.error('Failed to fetch balance:', err);
+        console.error('Failed to fetch balance/assets:', err);
         setError('Failed to load balance');
       }
     }
@@ -271,7 +289,7 @@ export function DashboardPage() {
     description: `${order.side} ${order.certificate_type}`,
     details: `${formatNumber(order.quantity)} ${order.certificate_type} @ €${order.price.toFixed(2)}`,
     amount: order.side === 'BUY' ? -(order.quantity * order.price) : (order.quantity * order.price),
-    status: order.status === 'FILLED' ? 'completed' : 'pending',
+    status: order.status === 'FILLED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
     ref: order.id.substring(0, 16),
   }));
 
