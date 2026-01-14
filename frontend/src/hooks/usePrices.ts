@@ -5,39 +5,70 @@ import { pricesApi } from '../services/api';
 export function usePrices() {
   const { prices, loading, error, setPrices, setLoading, setError } = usePricesStore();
   const wsRef = useRef<WebSocket | null>(null);
+  const wsAttempted = useRef(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Fetch initial prices
     const fetchPrices = async () => {
       try {
         setLoading(true);
         const data = await pricesApi.getCurrent();
-        setPrices(data);
+        if (isMounted) {
+          setPrices(data);
+        }
+        return true; // Success
       } catch (err) {
-        setError('Failed to fetch prices');
+        if (isMounted) {
+          setError('Failed to fetch prices');
+        }
         console.error('Price fetch error:', err);
+        return false; // Failed
       }
     };
 
-    fetchPrices();
+    // Initial fetch, then try WebSocket
+    const init = async () => {
+      const success = await fetchPrices();
 
-    // Set up WebSocket connection
-    try {
-      wsRef.current = pricesApi.connectWebSocket((newPrices) => {
-        setPrices(newPrices);
-      });
+      // Only attempt WebSocket once and only if initial fetch succeeded
+      if (success && !wsAttempted.current && isMounted) {
+        wsAttempted.current = true;
 
-      wsRef.current.onerror = () => {
-        console.warn('WebSocket error, falling back to polling');
-      };
-    } catch {
-      // WebSocket not available
-    }
+        // Delay WebSocket connection to let the backend be ready
+        setTimeout(() => {
+          if (!isMounted) return;
 
-    // Set up polling as fallback
+          try {
+            wsRef.current = pricesApi.connectWebSocket((newPrices) => {
+              if (isMounted) {
+                setPrices(newPrices);
+              }
+            });
+
+            // Silent error handling - polling is the fallback
+            wsRef.current.onerror = () => {
+              // WebSocket failed, polling will handle updates
+            };
+
+            wsRef.current.onclose = () => {
+              // Connection closed, polling continues
+            };
+          } catch {
+            // WebSocket not available, polling continues
+          }
+        }, 1000); // 1 second delay
+      }
+    };
+
+    init();
+
+    // Set up polling as primary/fallback mechanism
     const interval = setInterval(fetchPrices, 30000);
 
     return () => {
+      isMounted = false;
       clearInterval(interval);
       if (wsRef.current) {
         wsRef.current.close();
