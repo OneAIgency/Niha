@@ -24,11 +24,25 @@ from ...schemas.schemas import (
     CertificateType,
     OrderSide,
     MessageResponse,
+    OrderPreviewRequest,
+    OrderPreviewResponse,
+    OrderFill,
+    MarketOrderRequest,
+    LimitOrderRequest,
+    OrderExecutionResponse,
+    OrderType,
 )
 from ...services.simulation import simulation_engine
+from ...services.order_matching import (
+    preview_buy_order,
+    execute_market_buy_order,
+    get_real_orderbook,
+    get_entity_balance,
+    PLATFORM_FEE_RATE,
+)
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...models.models import Order, CashMarketTrade, Seller, Entity, User
+from ...models.models import Order, CashMarketTrade, Seller, Entity, User, EntityHolding, AssetType
 from ...models.models import OrderSide as OrderSideEnum, OrderStatus, CertificateType as CertTypeEnum
 
 router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
@@ -662,3 +676,195 @@ async def buy_cea_fifo(
         "remaining_balance_eur": round(available_balance - spent_amount, 2),
         "transactions": trades_executed,
     }
+
+
+# ====================
+# NEW REAL TRADING ENDPOINTS
+# ====================
+
+@router.get("/real/orderbook/{certificate_type}", response_model=OrderBookResponse)
+async def get_real_orderbook_endpoint(
+    certificate_type: CertificateType,
+    db=Depends(get_db)
+):
+    """
+    Get the real order book from database.
+    Returns both bids (buy orders) and asks (sell orders).
+    """
+    orderbook = await get_real_orderbook(db, certificate_type.value)
+
+    return OrderBookResponse(
+        certificate_type=orderbook["certificate_type"],
+        bids=[OrderBookLevel(**b) for b in orderbook["bids"]],
+        asks=[OrderBookLevel(**a) for a in orderbook["asks"]],
+        spread=orderbook["spread"],
+        best_bid=orderbook["best_bid"],
+        best_ask=orderbook["best_ask"],
+        last_price=orderbook["last_price"],
+        volume_24h=orderbook["volume_24h"],
+        change_24h=orderbook["change_24h"],
+    )
+
+
+@router.get("/user/balances")
+async def get_user_balances(
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    Get the current user's asset balances (EUR, CEA, EUA).
+    """
+    if not current_user.entity_id:
+        return {
+            "entity_id": None,
+            "eur_balance": 0,
+            "cea_balance": 0,
+            "eua_balance": 0,
+        }
+
+    eur_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+    cea_balance = await get_entity_balance(db, current_user.entity_id, AssetType.CEA)
+    eua_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUA)
+
+    return {
+        "entity_id": str(current_user.entity_id),
+        "eur_balance": float(eur_balance),
+        "cea_balance": float(cea_balance),
+        "eua_balance": float(eua_balance),
+    }
+
+
+@router.post("/order/preview", response_model=OrderPreviewResponse)
+async def preview_order(
+    request: OrderPreviewRequest,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    Preview an order before execution.
+
+    Shows the expected fills, fees, and final cost without placing the order.
+    Useful for showing the user what they'll get before they commit.
+    """
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User must have an entity to trade")
+
+    # Get available balance
+    available_eur = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+
+    # Only support BUY for now (CEA market)
+    if request.side != OrderSide.BUY:
+        raise HTTPException(status_code=400, detail="Only BUY orders are currently supported")
+
+    if request.certificate_type != CertificateType.CEA:
+        raise HTTPException(status_code=400, detail="Only CEA trading is currently supported")
+
+    # Convert to Decimal
+    amount_eur = Decimal(str(request.amount_eur)) if request.amount_eur else None
+    quantity = Decimal(str(request.quantity)) if request.quantity else None
+    limit_price = Decimal(str(request.limit_price)) if request.limit_price else None
+
+    # Get preview
+    preview = await preview_buy_order(
+        db=db,
+        entity_id=current_user.entity_id,
+        amount_eur=amount_eur,
+        quantity=quantity,
+        limit_price=limit_price,
+        all_or_none=request.all_or_none
+    )
+
+    return OrderPreviewResponse(
+        certificate_type=request.certificate_type.value,
+        side=request.side.value,
+        order_type=request.order_type.value,
+        amount_eur=float(amount_eur) if amount_eur else None,
+        quantity_requested=float(quantity) if quantity else None,
+        limit_price=float(limit_price) if limit_price else None,
+        all_or_none=request.all_or_none,
+        fills=[
+            OrderFill(
+                seller_code=f.seller_code,
+                price=float(f.price_eur),
+                quantity=float(f.quantity),
+                cost=float(f.cost_eur)
+            )
+            for f in preview.fills
+        ],
+        total_quantity=float(preview.total_quantity),
+        total_cost_gross=float(preview.total_cost_gross),
+        weighted_avg_price=float(preview.weighted_avg_price),
+        best_price=float(preview.best_price) if preview.best_price else None,
+        worst_price=float(preview.worst_price) if preview.worst_price else None,
+        platform_fee_rate=float(PLATFORM_FEE_RATE),
+        platform_fee_amount=float(preview.platform_fee_amount),
+        total_cost_net=float(preview.total_cost_net),
+        net_price_per_unit=float(preview.net_price_per_unit),
+        available_balance=float(available_eur),
+        remaining_balance=float(available_eur - preview.total_cost_net),
+        can_execute=preview.can_execute,
+        execution_message=preview.execution_message,
+        partial_fill=preview.partial_fill
+    )
+
+
+@router.post("/order/market", response_model=OrderExecutionResponse)
+async def execute_market_order(
+    request: MarketOrderRequest,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """
+    Execute a market order immediately at best available prices.
+
+    Market orders are filled immediately using FIFO price-time priority.
+    A 0.5% platform fee is charged on the transaction value.
+    """
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User must have an entity to trade")
+
+    # Only support BUY for now
+    if request.side != OrderSide.BUY:
+        raise HTTPException(status_code=400, detail="Only BUY orders are currently supported")
+
+    if request.certificate_type != CertificateType.CEA:
+        raise HTTPException(status_code=400, detail="Only CEA trading is currently supported")
+
+    # Convert to Decimal
+    amount_eur = Decimal(str(request.amount_eur)) if request.amount_eur else None
+    quantity = Decimal(str(request.quantity)) if request.quantity else None
+
+    # Execute the order
+    result = await execute_market_buy_order(
+        db=db,
+        entity_id=current_user.entity_id,
+        user_id=current_user.id,
+        amount_eur=amount_eur,
+        quantity=quantity,
+        all_or_none=request.all_or_none
+    )
+
+    return OrderExecutionResponse(
+        success=result.success,
+        order_id=result.order_id,
+        message=result.message,
+        certificate_type=request.certificate_type.value,
+        side=request.side.value,
+        order_type="MARKET",
+        total_quantity=float(result.total_quantity),
+        total_cost_gross=float(result.total_cost_gross),
+        platform_fee=float(result.platform_fee),
+        total_cost_net=float(result.total_cost_net),
+        weighted_avg_price=float(result.weighted_avg_price),
+        trades=[
+            OrderFill(
+                seller_code=f.seller_code,
+                price=float(f.price_eur),
+                quantity=float(f.quantity),
+                cost=float(f.cost_eur)
+            )
+            for f in result.fills
+        ],
+        eur_balance=float(result.eur_balance),
+        certificate_balance=float(result.certificate_balance)
+    )

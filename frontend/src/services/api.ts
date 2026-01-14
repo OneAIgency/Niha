@@ -1006,6 +1006,95 @@ export const cashMarketApi = {
     const { data } = await api.delete(`/cash-market/orders/${orderId}`);
     return data;
   },
+
+  // NEW REAL TRADING ENDPOINTS
+
+  getUserBalances: async (): Promise<{
+    entity_id: string | null;
+    eur_balance: number;
+    cea_balance: number;
+    eua_balance: number;
+  }> => {
+    const { data } = await api.get('/cash-market/user/balances');
+    return data;
+  },
+
+  getRealOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
+    const { data } = await api.get(`/cash-market/real/orderbook/${certificateType}`);
+    return data;
+  },
+
+  previewOrder: async (request: {
+    certificate_type: CertificateType;
+    side: OrderSide;
+    amount_eur?: number;
+    quantity?: number;
+    order_type?: 'MARKET' | 'LIMIT';
+    limit_price?: number;
+    all_or_none?: boolean;
+  }): Promise<{
+    certificate_type: string;
+    side: string;
+    order_type: string;
+    amount_eur: number | null;
+    quantity_requested: number | null;
+    limit_price: number | null;
+    all_or_none: boolean;
+    fills: Array<{
+      seller_code: string;
+      price: number;
+      quantity: number;
+      cost: number;
+    }>;
+    total_quantity: number;
+    total_cost_gross: number;
+    weighted_avg_price: number;
+    best_price: number | null;
+    worst_price: number | null;
+    platform_fee_rate: number;
+    platform_fee_amount: number;
+    total_cost_net: number;
+    net_price_per_unit: number;
+    available_balance: number;
+    remaining_balance: number;
+    can_execute: boolean;
+    execution_message: string;
+    partial_fill: boolean;
+  }> => {
+    const { data } = await api.post('/cash-market/order/preview', request);
+    return data;
+  },
+
+  executeMarketOrder: async (request: {
+    certificate_type: CertificateType;
+    side: OrderSide;
+    amount_eur?: number;
+    quantity?: number;
+    all_or_none?: boolean;
+  }): Promise<{
+    success: boolean;
+    order_id: string | null;
+    message: string;
+    certificate_type: string;
+    side: string;
+    order_type: string;
+    total_quantity: number;
+    total_cost_gross: number;
+    platform_fee: number;
+    total_cost_net: number;
+    weighted_avg_price: number;
+    trades: Array<{
+      seller_code: string;
+      price: number;
+      quantity: number;
+      cost: number;
+    }>;
+    eur_balance: number;
+    certificate_balance: number;
+  }> => {
+    const { data } = await api.post('/cash-market/order/market', request);
+    return data;
+  },
 };
 
 export default api;

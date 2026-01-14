@@ -9,18 +9,10 @@ import {
   CheckCircle2,
   X,
   ArrowRight,
-  Clock,
   Shield
 } from 'lucide-react';
 import { cashMarketApi } from '../services/api';
 import type { OrderBook, CashMarketTrade } from '../types';
-
-// Mock user balance - in production this would come from API
-const MOCK_USER_BALANCE = {
-  eur: 5000000,
-  cea: 0,
-  eua: 0,
-};
 
 // Conversion rate CNY to EUR (approximate)
 const CNY_TO_EUR = 0.127;
@@ -28,11 +20,53 @@ const CNY_TO_EUR = 0.127;
 // Convert CNY price to EUR for display
 const toEur = (cnyPrice: number) => cnyPrice * CNY_TO_EUR;
 
+// Types for order preview
+interface OrderPreview {
+  fills: Array<{
+    seller_code: string;
+    price: number;
+    quantity: number;
+    cost: number;
+  }>;
+  total_quantity: number;
+  total_cost_gross: number;
+  weighted_avg_price: number;
+  best_price: number | null;
+  worst_price: number | null;
+  platform_fee_rate: number;
+  platform_fee_amount: number;
+  total_cost_net: number;
+  net_price_per_unit: number;
+  available_balance: number;
+  remaining_balance: number;
+  can_execute: boolean;
+  execution_message: string;
+  partial_fill: boolean;
+}
+
+interface UserBalances {
+  entity_id: string | null;
+  eur_balance: number;
+  cea_balance: number;
+  eua_balance: number;
+}
+
 export function CeaCashMarketPage() {
   const [orderBook, setOrderBook] = useState<OrderBook | null>(null);
   const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userBalance] = useState(MOCK_USER_BALANCE);
+
+  // Real user balances from API
+  const [userBalance, setUserBalance] = useState<UserBalances>({
+    entity_id: null,
+    eur_balance: 0,
+    cea_balance: 0,
+    eua_balance: 0,
+  });
+
+  // Order preview from API
+  const [orderPreview, setOrderPreview] = useState<OrderPreview | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Confirmation dialog states
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
@@ -41,22 +75,53 @@ export function CeaCashMarketPage() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [orderReference, setOrderReference] = useState('');
+  const [executionResult, setExecutionResult] = useState<{
+    total_quantity: number;
+    total_cost_net: number;
+    trades: Array<{ seller_code: string; quantity: number; price: number }>;
+  } | null>(null);
 
-  // Fetch market data
+  // Fetch market data and user balances
   const fetchData = useCallback(async () => {
     try {
-      const [orderBookData, tradesData] = await Promise.all([
-        cashMarketApi.getOrderBook('CEA'),
+      const [orderBookData, tradesData, balances] = await Promise.all([
+        cashMarketApi.getRealOrderBook('CEA'),
         cashMarketApi.getRecentTrades('CEA', 20),
+        cashMarketApi.getUserBalances(),
       ]);
       setOrderBook(orderBookData);
       setRecentTrades(tradesData);
+      setUserBalance(balances);
     } catch (error) {
       console.error('Error fetching market data:', error);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  // Fetch order preview when balance changes
+  const fetchPreview = useCallback(async () => {
+    if (userBalance.eur_balance <= 0) {
+      setOrderPreview(null);
+      return;
+    }
+    setIsLoadingPreview(true);
+    try {
+      const preview = await cashMarketApi.previewOrder({
+        certificate_type: 'CEA',
+        side: 'BUY',
+        amount_eur: userBalance.eur_balance,
+        order_type: 'MARKET',
+        all_or_none: false,
+      });
+      setOrderPreview(preview);
+    } catch (error) {
+      console.error('Error fetching preview:', error);
+      setOrderPreview(null);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, [userBalance.eur_balance]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -65,14 +130,12 @@ export function CeaCashMarketPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Calculate order details
-  const bestAskPrice = orderBook?.best_ask || 0;
-  const priceInEur = bestAskPrice * CNY_TO_EUR;
-  const estimatedCeaQuantity = userBalance.eur > 0 && priceInEur > 0
-    ? Math.floor(userBalance.eur / priceInEur)
-    : 0;
-  const platformFee = userBalance.eur * 0.005; // 0.5% fee
-  const netCeaQuantity = Math.floor((userBalance.eur - platformFee) / priceInEur);
+  // Fetch preview when balance changes
+  useEffect(() => {
+    if (userBalance.eur_balance > 0) {
+      fetchPreview();
+    }
+  }, [userBalance.eur_balance, fetchPreview]);
 
   // Format helpers
   const formatNumber = (num: number, decimals = 2) => {
@@ -93,8 +156,11 @@ export function CeaCashMarketPage() {
   };
 
   // Handle buy flow
-  const handleBuyClick = () => {
-    if (userBalance.eur <= 0) return;
+  const handleBuyClick = async () => {
+    if (userBalance.eur_balance <= 0 || !orderPreview?.can_execute) return;
+
+    // Refresh preview before showing dialog
+    await fetchPreview();
     setShowPreviewDialog(true);
   };
 
@@ -107,21 +173,46 @@ export function CeaCashMarketPage() {
   const handleConfirmOrder = async () => {
     setIsPlacingOrder(true);
     try {
-      await cashMarketApi.placeOrder({
+      const result = await cashMarketApi.executeMarketOrder({
         certificate_type: 'CEA',
         side: 'BUY',
-        price: bestAskPrice,
-        quantity: netCeaQuantity,
+        amount_eur: userBalance.eur_balance,
+        all_or_none: false,
       });
 
-      // Generate order reference
-      const ref = `CEA-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-      setOrderReference(ref);
+      if (result.success) {
+        // Store execution result for success dialog
+        setExecutionResult({
+          total_quantity: result.total_quantity,
+          total_cost_net: result.total_cost_net,
+          trades: result.trades,
+        });
 
-      setShowFinalDialog(false);
-      setShowSuccessDialog(true);
+        // Generate order reference
+        const ref = result.order_id
+          ? `CEA-${result.order_id.slice(0, 8).toUpperCase()}`
+          : `CEA-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+        setOrderReference(ref);
+
+        // Update local balances
+        setUserBalance({
+          ...userBalance,
+          eur_balance: result.eur_balance,
+          cea_balance: result.certificate_balance,
+        });
+
+        setShowFinalDialog(false);
+        setShowSuccessDialog(true);
+
+        // Refresh data to update order book
+        fetchData();
+      } else {
+        console.error('Order failed:', result.message);
+        alert(result.message);
+      }
     } catch (error) {
       console.error('Error placing order:', error);
+      alert('Failed to execute order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -289,49 +380,89 @@ export function CeaCashMarketPage() {
                 </div>
 
                 <div className="p-6 space-y-6">
-                  {/* Available Balance */}
+                  {/* Available Balances */}
                   <div className="bg-slate-800/50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-slate-400">Available Balance</span>
                       <span className="text-xs text-slate-500">EUR</span>
                     </div>
                     <div className="text-3xl font-bold text-white font-mono">
-                      {formatCurrency(userBalance.eur)}
+                      {formatCurrency(userBalance.eur_balance)}
                     </div>
+                    {userBalance.cea_balance > 0 && (
+                      <div className="mt-2 pt-2 border-t border-slate-700 flex justify-between text-sm">
+                        <span className="text-slate-400">CEA Holdings</span>
+                        <span className="text-amber-400 font-mono">{formatNumber(userBalance.cea_balance, 0)} tonnes</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order Preview */}
                   <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
-                    <h3 className="font-medium text-white mb-3">Order Preview</h3>
-
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Price (best ask)</span>
-                      <span className="text-white font-mono">€{formatNumber(priceInEur)}/t</span>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-white">Order Preview</h3>
+                      {isLoadingPreview && (
+                        <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                      )}
                     </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Amount</span>
-                      <span className="text-white font-mono">{formatCurrency(userBalance.eur)}</span>
-                    </div>
+                    {orderPreview ? (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Avg Price</span>
+                          <span className="text-white font-mono">€{formatNumber(orderPreview.weighted_avg_price, 4)}/t</span>
+                        </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Est. Quantity</span>
-                      <span className="text-white font-mono">~{formatNumber(estimatedCeaQuantity, 0)} CEA</span>
-                    </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Amount</span>
+                          <span className="text-white font-mono">{formatCurrency(userBalance.eur_balance)}</span>
+                        </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Platform Fee (0.5%)</span>
-                      <span className="text-amber-400 font-mono">{formatCurrency(platformFee)}</span>
-                    </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">CEA Quantity</span>
+                          <span className="text-white font-mono">{formatNumber(orderPreview.total_quantity, 2)} CEA</span>
+                        </div>
 
-                    <div className="border-t border-slate-700 pt-3 mt-3">
-                      <div className="flex justify-between">
-                        <span className="text-slate-300 font-medium">Net CEA</span>
-                        <span className="text-xl font-bold text-amber-400 font-mono">
-                          ~{formatNumber(netCeaQuantity, 0)} tonnes
-                        </span>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Platform Fee (0.5%)</span>
+                          <span className="text-amber-400 font-mono">{formatCurrency(orderPreview.platform_fee_amount)}</span>
+                        </div>
+
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-400">Total Cost</span>
+                          <span className="text-white font-mono">{formatCurrency(orderPreview.total_cost_net)}</span>
+                        </div>
+
+                        {orderPreview.fills.length > 1 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-400">Sellers</span>
+                            <span className="text-slate-300">{orderPreview.fills.length} sellers</span>
+                          </div>
+                        )}
+
+                        <div className="border-t border-slate-700 pt-3 mt-3">
+                          <div className="flex justify-between">
+                            <span className="text-slate-300 font-medium">Net Price/CEA</span>
+                            <span className="text-xl font-bold text-amber-400 font-mono">
+                              €{formatNumber(orderPreview.net_price_per_unit, 4)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!orderPreview.can_execute && (
+                          <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+                            <p className="text-red-400 text-xs flex items-center gap-2">
+                              <AlertTriangle className="w-3 h-3" />
+                              {orderPreview.execution_message}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4 text-slate-500 text-sm">
+                        {userBalance.eur_balance > 0 ? 'Loading preview...' : 'No balance available'}
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Buy Button */}
@@ -339,9 +470,9 @@ export function CeaCashMarketPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleBuyClick}
-                    disabled={userBalance.eur <= 0}
+                    disabled={userBalance.eur_balance <= 0 || !orderPreview?.can_execute}
                     className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                      userBalance.eur > 0
+                      userBalance.eur_balance > 0 && orderPreview?.can_execute
                         ? 'bg-amber-500 hover:bg-amber-400 text-slate-900'
                         : 'bg-slate-700 text-slate-500 cursor-not-allowed'
                     }`}
@@ -350,9 +481,11 @@ export function CeaCashMarketPage() {
                       <Leaf className="w-5 h-5" />
                       <span>BUY CEA - FULL BALANCE</span>
                     </div>
-                    <div className="text-sm font-normal mt-1 opacity-80">
-                      {formatCurrency(userBalance.eur)} → ~{formatNumber(netCeaQuantity, 0)} CEA
-                    </div>
+                    {orderPreview && orderPreview.can_execute && (
+                      <div className="text-sm font-normal mt-1 opacity-80">
+                        {formatCurrency(userBalance.eur_balance)} → {formatNumber(orderPreview.total_quantity, 2)} CEA
+                      </div>
+                    )}
                   </motion.button>
 
                   {/* Info Note */}
@@ -438,30 +571,54 @@ export function CeaCashMarketPage() {
 
               <p className="text-slate-400 mb-4">You are about to purchase CEA certificates:</p>
 
-              <div className="bg-slate-800 rounded-lg p-4 space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Amount</span>
-                  <span className="text-white font-mono font-bold">{formatCurrency(userBalance.eur)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Price per tonne</span>
-                  <span className="text-white font-mono">€{formatNumber(priceInEur)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Quantity</span>
-                  <span className="text-white font-mono">~{formatNumber(estimatedCeaQuantity, 0)} CEA</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Platform fee (0.5%)</span>
-                  <span className="text-amber-400 font-mono">{formatCurrency(platformFee)}</span>
-                </div>
-                <div className="border-t border-slate-700 pt-3">
+              {orderPreview && (
+                <div className="bg-slate-800 rounded-lg p-4 space-y-3 mb-6">
                   <div className="flex justify-between">
-                    <span className="text-white font-medium">Net CEA</span>
-                    <span className="text-amber-400 font-bold font-mono">~{formatNumber(netCeaQuantity, 0)} tonnes</span>
+                    <span className="text-slate-400">Amount</span>
+                    <span className="text-white font-mono font-bold">{formatCurrency(userBalance.eur_balance)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Avg Price per tonne</span>
+                    <span className="text-white font-mono">€{formatNumber(orderPreview.weighted_avg_price, 4)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">CEA Quantity</span>
+                    <span className="text-white font-mono">{formatNumber(orderPreview.total_quantity, 2)} CEA</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Platform fee (0.5%)</span>
+                    <span className="text-amber-400 font-mono">{formatCurrency(orderPreview.platform_fee_amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Total Cost</span>
+                    <span className="text-white font-mono">{formatCurrency(orderPreview.total_cost_net)}</span>
+                  </div>
+
+                  {/* Seller breakdown */}
+                  {orderPreview.fills.length > 0 && (
+                    <div className="border-t border-slate-700 pt-3 mt-3">
+                      <div className="text-xs text-slate-500 mb-2">Seller Breakdown ({orderPreview.fills.length} sellers)</div>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {orderPreview.fills.map((fill, idx) => (
+                          <div key={idx} className="flex justify-between text-xs">
+                            <span className="text-slate-400">{fill.seller_code}</span>
+                            <span className="text-slate-300 font-mono">
+                              {formatNumber(fill.quantity, 2)} @ €{formatNumber(fill.price, 4)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t border-slate-700 pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-white font-medium">Net Price/CEA</span>
+                      <span className="text-amber-400 font-bold font-mono">€{formatNumber(orderPreview.net_price_per_unit, 4)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
@@ -525,12 +682,12 @@ export function CeaCashMarketPage() {
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center">
                     <div className="text-3xl mb-1">💶</div>
-                    <div className="text-white font-bold font-mono">{formatCurrency(userBalance.eur)}</div>
+                    <div className="text-white font-bold font-mono">{formatCurrency(orderPreview?.total_cost_net || 0)}</div>
                   </div>
                   <ArrowRight className="w-8 h-8 text-amber-500" />
                   <div className="text-center">
                     <div className="text-3xl mb-1">🌱</div>
-                    <div className="text-amber-400 font-bold font-mono">{formatNumber(netCeaQuantity, 0)} CEA</div>
+                    <div className="text-amber-400 font-bold font-mono">{formatNumber(orderPreview?.total_quantity || 0, 2)} CEA</div>
                   </div>
                 </div>
               </div>
@@ -600,8 +757,8 @@ export function CeaCashMarketPage() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
               </div>
 
-              <h3 className="text-2xl font-bold text-white mb-2">Order Confirmed!</h3>
-              <p className="text-slate-400 mb-6">Your CEA purchase order has been placed.</p>
+              <h3 className="text-2xl font-bold text-white mb-2">Order Executed!</h3>
+              <p className="text-slate-400 mb-6">Your CEA purchase has been completed.</p>
 
               <div className="bg-slate-800 rounded-lg p-4 space-y-2 mb-6 text-left">
                 <div className="flex justify-between text-sm">
@@ -609,22 +766,26 @@ export function CeaCashMarketPage() {
                   <span className="text-white font-mono">#{orderReference}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Amount</span>
-                  <span className="text-white font-mono">{formatCurrency(userBalance.eur)}</span>
+                  <span className="text-slate-400">Total Paid</span>
+                  <span className="text-white font-mono">{formatCurrency(executionResult?.total_cost_net || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">CEA Quantity</span>
-                  <span className="text-amber-400 font-mono">{formatNumber(netCeaQuantity, 0)} tonnes</span>
+                  <span className="text-slate-400">CEA Purchased</span>
+                  <span className="text-amber-400 font-mono">{formatNumber(executionResult?.total_quantity || 0, 2)} tonnes</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Sellers</span>
+                  <span className="text-white">{executionResult?.trades.length || 0} sellers matched</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Status</span>
-                  <span className="text-amber-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Processing
+                  <span className="text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Completed
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Expected Delivery</span>
-                  <span className="text-white">10-30 business days</span>
+                  <span className="text-slate-400">New CEA Balance</span>
+                  <span className="text-amber-400 font-mono">{formatNumber(userBalance.cea_balance, 2)} tonnes</span>
                 </div>
               </div>
 

@@ -43,6 +43,12 @@ class OrderSide(str, Enum):
     SELL = "SELL"
 
 
+class OrderType(str, Enum):
+    """Order execution type"""
+    MARKET = "MARKET"  # Execute immediately at best available price
+    LIMIT = "LIMIT"    # Place in order book at specified price
+
+
 class OrderStatus(str, Enum):
     OPEN = "OPEN"
     PARTIALLY_FILLED = "PARTIALLY_FILLED"
@@ -486,6 +492,111 @@ class OrderBookLevel(BaseModel):
     quantity: float
     order_count: int
     cumulative_quantity: float
+
+
+# =============================================================================
+# Order Preview and Execution Schemas
+# =============================================================================
+
+class OrderFill(BaseModel):
+    """Single fill from the order book"""
+    seller_code: str
+    price: float
+    quantity: float
+    cost: float
+
+
+class OrderPreviewRequest(BaseModel):
+    """Request to preview an order before execution"""
+    certificate_type: CertificateType
+    side: OrderSide
+    amount_eur: Optional[float] = Field(None, gt=0, description="Amount in EUR to spend (for BUY)")
+    quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
+    order_type: OrderType = OrderType.MARKET
+    limit_price: Optional[float] = Field(None, gt=0, description="Limit price (required for LIMIT orders)")
+    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+
+
+class OrderPreviewResponse(BaseModel):
+    """Response with preview of order execution"""
+    certificate_type: str
+    side: str
+    order_type: str
+
+    # Input parameters
+    amount_eur: Optional[float] = None
+    quantity_requested: Optional[float] = None
+    limit_price: Optional[float] = None
+    all_or_none: bool = False
+
+    # Calculated fills
+    fills: List[OrderFill] = []
+    total_quantity: float
+    total_cost_gross: float  # Before fees
+
+    # Price analysis
+    weighted_avg_price: float  # Average price per certificate
+    best_price: Optional[float] = None  # Best price in order book
+    worst_price: Optional[float] = None  # Worst price we'd pay
+
+    # Fee breakdown (platform fee: 0.5%)
+    platform_fee_rate: float = 0.005
+    platform_fee_amount: float
+    total_cost_net: float  # After fees (what user actually pays)
+    net_price_per_unit: float  # Net price per certificate including fees
+
+    # Balance info
+    available_balance: float
+    remaining_balance: float
+
+    # Execution status
+    can_execute: bool
+    execution_message: str
+    partial_fill: bool = False  # True if order would only partially fill
+
+
+class MarketOrderRequest(BaseModel):
+    """Request to execute a market order"""
+    certificate_type: CertificateType
+    side: OrderSide
+    amount_eur: Optional[float] = Field(None, gt=0, description="Amount in EUR to spend (for BUY)")
+    quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
+    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+
+
+class LimitOrderRequest(BaseModel):
+    """Request to place a limit order"""
+    certificate_type: CertificateType
+    side: OrderSide
+    price: float = Field(..., gt=0, description="Limit price")
+    quantity: float = Field(..., gt=0, description="Quantity to buy/sell")
+    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+
+
+class OrderExecutionResponse(BaseModel):
+    """Response after order execution"""
+    success: bool
+    order_id: Optional[UUID] = None
+    message: str
+
+    # Execution details
+    certificate_type: str
+    side: str
+    order_type: str
+
+    # What was filled
+    total_quantity: float
+    total_cost_gross: float
+    platform_fee: float
+    total_cost_net: float
+    weighted_avg_price: float
+
+    # Trade breakdown
+    trades: List[OrderFill] = []
+
+    # Updated balances
+    eur_balance: float
+    certificate_balance: float
 
 
 class OrderBookResponse(BaseModel):
