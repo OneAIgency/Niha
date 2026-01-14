@@ -813,6 +813,60 @@ export const backofficeApi = {
     });
     return data;
   },
+
+  // Asset Management
+  addAsset: async (entityId: string, request: {
+    asset_type: 'EUR' | 'CEA' | 'EUA';
+    amount: number;
+    reference?: string;
+    notes?: string;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.post(`/backoffice/entities/${entityId}/add-asset`, request);
+    return data;
+  },
+
+  getEntityAssets: async (entityId: string): Promise<{
+    entity_id: string;
+    entity_name: string;
+    eur_balance: number;
+    cea_balance: number;
+    eua_balance: number;
+    recent_transactions: Array<{
+      id: string;
+      entity_id: string;
+      asset_type: string;
+      transaction_type: string;
+      amount: number;
+      balance_before: number;
+      balance_after: number;
+      reference?: string;
+      notes?: string;
+      created_by: string;
+      created_at: string;
+    }>;
+  }> => {
+    const { data } = await api.get(`/backoffice/entities/${entityId}/assets`);
+    return data;
+  },
+
+  getEntityTransactions: async (entityId: string, assetType?: 'EUR' | 'CEA' | 'EUA'): Promise<Array<{
+    id: string;
+    entity_id: string;
+    asset_type: string;
+    transaction_type: string;
+    amount: number;
+    balance_before: number;
+    balance_after: number;
+    reference?: string;
+    notes?: string;
+    created_by: string;
+    created_at: string;
+  }>> => {
+    const { data } = await api.get(`/backoffice/entities/${entityId}/transactions`, {
+      params: assetType ? { asset_type: assetType } : undefined,
+    });
+    return data;
+  },
 };
 
 // Onboarding API (KYC document upload for pending users)

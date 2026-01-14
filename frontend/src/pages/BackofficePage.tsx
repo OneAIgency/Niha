@@ -21,7 +21,7 @@ import {
   Banknote,
   DollarSign,
 } from 'lucide-react';
-import { Button, Card, Badge } from '../components/common';
+import { Button, Card, Badge, ConfirmationModal } from '../components/common';
 import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
 import { KYCReviewPanel } from '../components/backoffice/KYCReviewPanel';
 import { adminApi, backofficeApi } from '../services/api';
@@ -188,6 +188,9 @@ export function BackofficePage() {
   // Approve/Invite Modal state
   const [approveModalRequest, setApproveModalRequest] = useState<ContactRequest | null>(null);
 
+  // Delete confirmation modal state
+  const [deleteConfirmRequest, setDeleteConfirmRequest] = useState<ContactRequest | null>(null);
+
   // Deposits state
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
   const [confirmDepositModal, setConfirmDepositModal] = useState<PendingDeposit | null>(null);
@@ -292,18 +295,23 @@ export function BackofficePage() {
     }
   };
 
-  const handleDeleteRequest = async (requestId: string) => {
-    if (!confirm('Are you sure you want to delete this contact request?')) return;
+  const handleDeleteRequest = (request: ContactRequest) => {
+    setDeleteConfirmRequest(request);
+  };
 
-    setActionLoading(`delete-${requestId}`);
+  const confirmDeleteRequest = async () => {
+    if (!deleteConfirmRequest) return;
+
+    setActionLoading(`delete-${deleteConfirmRequest.id}`);
     try {
-      await adminApi.deleteContactRequest(requestId);
+      await adminApi.deleteContactRequest(deleteConfirmRequest.id);
       // WebSocket will broadcast deletion and update the store automatically
     } catch (err) {
       console.error('Failed to delete request:', err);
       setError('Failed to delete contact request');
     } finally {
       setActionLoading(null);
+      setDeleteConfirmRequest(null);
     }
   };
 
@@ -716,7 +724,7 @@ export function BackofficePage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteRequest(request.id)}
+                            onClick={() => handleDeleteRequest(request)}
                             loading={actionLoading === `delete-${request.id}`}
                             className="text-navy-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                           >
@@ -1250,6 +1258,26 @@ export function BackofficePage() {
             onSuccess={handleApproveModalSuccess}
           />
         )}
+
+        {/* Delete Contact Request Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!deleteConfirmRequest}
+          onClose={() => setDeleteConfirmRequest(null)}
+          onConfirm={confirmDeleteRequest}
+          title="Delete Contact Request"
+          message="This action cannot be undone. The contact request will be permanently deleted from the database."
+          confirmText="Delete Request"
+          cancelText="Cancel"
+          variant="danger"
+          requireConfirmation={deleteConfirmRequest?.entity_name}
+          details={deleteConfirmRequest ? [
+            { label: 'Company', value: deleteConfirmRequest.entity_name },
+            { label: 'Contact', value: deleteConfirmRequest.contact_email },
+            { label: 'Status', value: deleteConfirmRequest.status },
+            { label: 'Submitted', value: formatRelativeTime(deleteConfirmRequest.created_at) },
+          ] : []}
+          loading={actionLoading === `delete-${deleteConfirmRequest?.id}`}
+        />
 
         {/* Deposit Confirmation Modal */}
         {confirmDepositModal && (

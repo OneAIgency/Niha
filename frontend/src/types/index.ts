@@ -406,3 +406,48 @@ export interface EntityBalance {
   total_deposited: number;
   deposit_count: number;
 }
+
+// =============================================================================
+// Asset Management Types
+// =============================================================================
+
+export type AssetType = 'EUR' | 'CEA' | 'EUA';
+
+export type TransactionType = 'deposit' | 'withdrawal' | 'trade_buy' | 'trade_sell' | 'adjustment';
+
+export interface EntityHolding {
+  entity_id: string;
+  asset_type: AssetType;
+  quantity: number;
+  updated_at: string;
+}
+
+export interface AssetTransaction {
+  id: string;
+  entity_id: string;
+  asset_type: AssetType;
+  transaction_type: TransactionType;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  reference?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface EntityAssets {
+  entity_id: string;
+  entity_name: string;
+  eur_balance: number;
+  cea_balance: number;
+  eua_balance: number;
+  recent_transactions: AssetTransaction[];
+}
+
+export interface AddAssetRequest {
+  asset_type: AssetType;
+  amount: number;
+  reference?: string;
+  notes?: string;
+}

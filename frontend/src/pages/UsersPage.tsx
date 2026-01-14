@@ -25,7 +25,8 @@ import {
   Wallet,
   BanknoteIcon,
 } from 'lucide-react';
-import { Button, Card, Badge, Input } from '../components/common';
+import { Button, Card, Badge, Input, ConfirmationModal } from '../components/common';
+import { AddAssetModal } from '../components/backoffice/AddAssetModal';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi, backofficeApi } from '../services/api';
 import type { User, UserRole, AdminUserFull, Deposit, EntityBalance } from '../types';
@@ -78,6 +79,13 @@ export function UsersPage() {
   const [newPassword, setNewPassword] = useState('');
   const [forceChange, setForceChange] = useState(true);
   const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Deactivation confirmation modal state
+  const [deactivateUser, setDeactivateUser] = useState<UserWithEntity | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+
+  // Add Asset modal state
+  const [addAssetUser, setAddAssetUser] = useState<{ id: string; entityId: string; entityName: string } | null>(null);
 
   // Deposit state (view only - deposit creation is in backoffice)
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
@@ -199,16 +207,24 @@ export function UsersPage() {
     }
   };
 
-  const handleDeactivateUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to deactivate this user?')) return;
+  const handleDeactivateUser = (user: UserWithEntity) => {
+    setDeactivateUser(user);
+  };
 
+  const confirmDeactivateUser = async () => {
+    if (!deactivateUser) return;
+
+    setDeactivating(true);
     try {
-      await adminApi.deleteUser(userId);
+      await adminApi.deleteUser(deactivateUser.id);
       setUsers(users.map(u =>
-        u.id === userId ? { ...u, is_active: false } : u
+        u.id === deactivateUser.id ? { ...u, is_active: false } : u
       ));
     } catch (error) {
       console.error('Failed to deactivate user:', error);
+    } finally {
+      setDeactivating(false);
+      setDeactivateUser(null);
     }
   };
 
@@ -502,10 +518,25 @@ export function UsersPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
+                        {user.entity_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAddAssetUser({
+                              id: user.id,
+                              entityId: user.entity_id!,
+                              entityName: user.entity_name || 'Unknown Entity'
+                            })}
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            title="Add Asset"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeactivateUser(user.id)}
+                          onClick={() => handleDeactivateUser(user)}
                           className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                           title="Deactivate"
                         >
@@ -1251,6 +1282,43 @@ export function UsersPage() {
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Deactivate User Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!deactivateUser}
+          onClose={() => setDeactivateUser(null)}
+          onConfirm={confirmDeactivateUser}
+          title="Deactivate User"
+          message="This will deactivate the user account. The user will no longer be able to log in. This action can be reversed by reactivating the account."
+          confirmText="Deactivate User"
+          cancelText="Cancel"
+          variant="warning"
+          requireConfirmation={deactivateUser?.email?.split('@')[0]}
+          details={deactivateUser ? [
+            { label: 'Email', value: deactivateUser.email },
+            { label: 'Name', value: `${deactivateUser.first_name || ''} ${deactivateUser.last_name || ''}`.trim() || 'N/A' },
+            { label: 'Role', value: deactivateUser.role },
+            { label: 'Company', value: deactivateUser.entity_name || 'N/A' },
+          ] : []}
+          loading={deactivating}
+        />
+
+        {/* Add Asset Modal */}
+        {addAssetUser && (
+          <AddAssetModal
+            isOpen={!!addAssetUser}
+            onClose={() => setAddAssetUser(null)}
+            onSuccess={() => {
+              // Refresh the user detail if viewing same user
+              if (detailUser?.entity_id === addAssetUser.entityId) {
+                loadDeposits(addAssetUser.entityId);
+              }
+              loadUsers();
+            }}
+            entityId={addAssetUser.entityId}
+            entityName={addAssetUser.entityName}
+          />
         )}
 
       </div>

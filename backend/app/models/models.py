@@ -154,6 +154,7 @@ class Entity(Base):
     swap_requests = relationship("SwapRequest", back_populates="entity")
     kyc_documents = relationship("KYCDocument", back_populates="entity")
     deposits = relationship("Deposit", back_populates="entity")
+    holdings = relationship("EntityHolding", back_populates="entity")
 
 
 class User(Base):
@@ -452,3 +453,58 @@ class Deposit(Base):
 
     entity = relationship("Entity", back_populates="deposits")
     confirmed_by_user = relationship("User", foreign_keys=[confirmed_by])
+
+
+class AssetType(str, enum.Enum):
+    """Types of assets that can be held by entities"""
+    EUR = "EUR"       # Cash in EUR
+    CEA = "CEA"       # China Emission Allowances
+    EUA = "EUA"       # EU Allowances
+
+
+class TransactionType(str, enum.Enum):
+    """Types of asset transactions for audit trail"""
+    DEPOSIT = "deposit"          # Admin adds asset
+    WITHDRAWAL = "withdrawal"    # Admin removes asset
+    TRADE_BUY = "trade_buy"      # Market purchase
+    TRADE_SELL = "trade_sell"    # Market sale
+    ADJUSTMENT = "adjustment"    # Manual correction
+
+
+class EntityHolding(Base):
+    """Track entity holdings of various asset types (EUR, CEA, EUA)"""
+    __tablename__ = "entity_holdings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    asset_type = Column(SQLEnum(AssetType), nullable=False)
+    quantity = Column(Numeric(18, 2), nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    entity = relationship("Entity", back_populates="holdings")
+
+    __table_args__ = (
+        # One record per entity per asset type
+        {'sqlite_autoincrement': True},
+    )
+
+
+class AssetTransaction(Base):
+    """Audit trail for all asset movements"""
+    __tablename__ = "asset_transactions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    asset_type = Column(SQLEnum(AssetType), nullable=False)
+    transaction_type = Column(SQLEnum(TransactionType), nullable=False)
+    amount = Column(Numeric(18, 2), nullable=False)
+    balance_before = Column(Numeric(18, 2), nullable=False)
+    balance_after = Column(Numeric(18, 2), nullable=False)
+    reference = Column(String(100), nullable=True)  # External reference
+    notes = Column(Text, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    entity = relationship("Entity")
+    admin = relationship("User", foreign_keys=[created_by])

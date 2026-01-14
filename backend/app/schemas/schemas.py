@@ -656,3 +656,70 @@ class DepositWithEntityResponse(DepositResponse):
     """Deposit with entity details for backoffice list"""
     entity_name: Optional[str] = None
     user_email: Optional[str] = None
+
+
+# =============================================================================
+# Asset Management Schemas (EUR, CEA, EUA)
+# =============================================================================
+
+class AssetTypeEnum(str, Enum):
+    """Types of assets that can be held by entities"""
+    EUR = "EUR"
+    CEA = "CEA"
+    EUA = "EUA"
+
+
+class TransactionTypeEnum(str, Enum):
+    """Types of asset transactions"""
+    DEPOSIT = "deposit"
+    WITHDRAWAL = "withdrawal"
+    TRADE_BUY = "trade_buy"
+    TRADE_SELL = "trade_sell"
+    ADJUSTMENT = "adjustment"
+
+
+class AddAssetRequest(BaseModel):
+    """Request to add assets to an entity"""
+    asset_type: AssetTypeEnum
+    amount: float = Field(..., gt=0, description="Amount to add (must be positive)")
+    reference: Optional[str] = Field(None, max_length=100, description="External reference")
+    notes: Optional[str] = Field(None, description="Admin notes")
+
+
+class EntityHoldingResponse(BaseModel):
+    """Single asset holding for an entity"""
+    entity_id: UUID
+    asset_type: str
+    quantity: float
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AssetTransactionResponse(BaseModel):
+    """Asset transaction record for audit trail"""
+    id: UUID
+    entity_id: UUID
+    asset_type: str
+    transaction_type: str
+    amount: float
+    balance_before: float
+    balance_after: float
+    reference: Optional[str]
+    notes: Optional[str]
+    created_by: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntityAssetsResponse(BaseModel):
+    """Complete asset overview for an entity"""
+    entity_id: UUID
+    entity_name: str
+    eur_balance: float = 0
+    cea_balance: float = 0
+    eua_balance: float = 0
+    recent_transactions: List[AssetTransactionResponse] = []

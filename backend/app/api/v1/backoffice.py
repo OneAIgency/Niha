@@ -17,7 +17,8 @@ from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
     User, Entity, KYCDocument, UserSession, Trade, UserRole,
-    DocumentStatus, KYCStatus, Deposit, DepositStatus, Currency
+    DocumentStatus, KYCStatus, Deposit, DepositStatus, Currency,
+    EntityHolding, AssetTransaction, AssetType, TransactionType
 )
 from ...schemas.schemas import (
     MessageResponse,
@@ -30,7 +31,11 @@ from ...schemas.schemas import (
     DepositResponse,
     DepositWithEntityResponse,
     EntityBalanceResponse,
-    Currency as SchemaCurrency
+    Currency as SchemaCurrency,
+    AddAssetRequest,
+    EntityAssetsResponse,
+    AssetTransactionResponse,
+    AssetTypeEnum
 )
 from ...services.email_service import email_service
 
@@ -909,4 +914,235 @@ async def get_user_deposits(
             "created_at": d.created_at.isoformat()
         }
         for d in deposits
+    ]
+
+
+# ============== Asset Management Endpoints ==============
+
+@router.post("/entities/{entity_id}/add-asset", response_model=MessageResponse)
+async def add_asset_to_entity(
+    entity_id: str,
+    asset_request: AddAssetRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Add EUR, CEA, or EUA to an entity's account.
+    Creates audit trail and updates holdings.
+    Admin only.
+    """
+    # Validate entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Map schema enum to model enum
+    asset_type_map = {
+        AssetTypeEnum.EUR: AssetType.EUR,
+        AssetTypeEnum.CEA: AssetType.CEA,
+        AssetTypeEnum.EUA: AssetType.EUA,
+    }
+    model_asset_type = asset_type_map[asset_request.asset_type]
+
+    # Get or create EntityHolding record
+    holding_result = await db.execute(
+        select(EntityHolding).where(
+            EntityHolding.entity_id == UUID(entity_id),
+            EntityHolding.asset_type == model_asset_type
+        )
+    )
+    holding = holding_result.scalar_one_or_none()
+
+    if not holding:
+        holding = EntityHolding(
+            entity_id=UUID(entity_id),
+            asset_type=model_asset_type,
+            quantity=Decimal('0')
+        )
+        db.add(holding)
+        await db.flush()  # Get the holding ID
+
+    # Calculate new balance
+    balance_before = Decimal(str(holding.quantity))
+    amount_to_add = Decimal(str(asset_request.amount))
+    balance_after = balance_before + amount_to_add
+
+    # Update holding
+    holding.quantity = balance_after
+    holding.updated_at = datetime.utcnow()
+
+    # Create audit transaction
+    transaction = AssetTransaction(
+        entity_id=UUID(entity_id),
+        asset_type=model_asset_type,
+        transaction_type=TransactionType.DEPOSIT,
+        amount=amount_to_add,
+        balance_before=balance_before,
+        balance_after=balance_after,
+        reference=asset_request.reference,
+        notes=asset_request.notes,
+        created_by=admin_user.id
+    )
+    db.add(transaction)
+
+    # If adding EUR, also update Entity.balance_amount for compatibility
+    if model_asset_type == AssetType.EUR:
+        entity.balance_amount = balance_after
+        entity.balance_currency = Currency.EUR
+        entity.total_deposited = (entity.total_deposited or Decimal('0')) + amount_to_add
+
+    # Upgrade user(s) to FUNDED if they have any balance now
+    if balance_after > 0:
+        users_result = await db.execute(
+            select(User).where(
+                User.entity_id == UUID(entity_id),
+                User.role.in_([UserRole.APPROVED, UserRole.PENDING])
+            )
+        )
+        users = users_result.scalars().all()
+        for user in users:
+            if user.role in [UserRole.APPROVED, UserRole.PENDING]:
+                user.role = UserRole.FUNDED
+
+    await db.commit()
+
+    asset_label = {
+        AssetType.EUR: "EUR",
+        AssetType.CEA: "CEA certificates",
+        AssetType.EUA: "EUA certificates"
+    }[model_asset_type]
+
+    return MessageResponse(
+        message=f"Successfully added {asset_request.amount:,.2f} {asset_label} to {entity.name}"
+    )
+
+
+@router.get("/entities/{entity_id}/assets", response_model=EntityAssetsResponse)
+async def get_entity_assets(
+    entity_id: str,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all asset balances for an entity (EUR, CEA, EUA).
+    Admin only.
+    """
+    # Validate entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Get all holdings
+    holdings_result = await db.execute(
+        select(EntityHolding).where(EntityHolding.entity_id == UUID(entity_id))
+    )
+    holdings = holdings_result.scalars().all()
+
+    # Build balance map
+    balances = {
+        AssetType.EUR: Decimal('0'),
+        AssetType.CEA: Decimal('0'),
+        AssetType.EUA: Decimal('0'),
+    }
+    for h in holdings:
+        balances[h.asset_type] = h.quantity
+
+    # If EUR holding doesn't exist but entity has balance_amount, use that
+    if balances[AssetType.EUR] == 0 and entity.balance_amount:
+        balances[AssetType.EUR] = entity.balance_amount
+
+    # Get recent transactions
+    transactions_result = await db.execute(
+        select(AssetTransaction)
+        .where(AssetTransaction.entity_id == UUID(entity_id))
+        .order_by(AssetTransaction.created_at.desc())
+        .limit(20)
+    )
+    transactions = transactions_result.scalars().all()
+
+    return EntityAssetsResponse(
+        entity_id=UUID(entity_id),
+        entity_name=entity.name,
+        eur_balance=float(balances[AssetType.EUR]),
+        cea_balance=float(balances[AssetType.CEA]),
+        eua_balance=float(balances[AssetType.EUA]),
+        recent_transactions=[
+            AssetTransactionResponse(
+                id=t.id,
+                entity_id=t.entity_id,
+                asset_type=t.asset_type.value,
+                transaction_type=t.transaction_type.value,
+                amount=float(t.amount),
+                balance_before=float(t.balance_before),
+                balance_after=float(t.balance_after),
+                reference=t.reference,
+                notes=t.notes,
+                created_by=t.created_by,
+                created_at=t.created_at
+            )
+            for t in transactions
+        ]
+    )
+
+
+@router.get("/entities/{entity_id}/transactions")
+async def get_entity_transactions(
+    entity_id: str,
+    asset_type: Optional[AssetTypeEnum] = None,
+    limit: int = Query(50, le=100),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get transaction history for an entity.
+    Admin only.
+    """
+    # Validate entity exists
+    entity_result = await db.execute(
+        select(Entity).where(Entity.id == UUID(entity_id))
+    )
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Build query
+    query = select(AssetTransaction).where(AssetTransaction.entity_id == UUID(entity_id))
+
+    if asset_type:
+        asset_type_map = {
+            AssetTypeEnum.EUR: AssetType.EUR,
+            AssetTypeEnum.CEA: AssetType.CEA,
+            AssetTypeEnum.EUA: AssetType.EUA,
+        }
+        query = query.where(AssetTransaction.asset_type == asset_type_map[asset_type])
+
+    query = query.order_by(AssetTransaction.created_at.desc()).limit(limit)
+
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+
+    return [
+        {
+            "id": str(t.id),
+            "entity_id": str(t.entity_id),
+            "asset_type": t.asset_type.value,
+            "transaction_type": t.transaction_type.value,
+            "amount": float(t.amount),
+            "balance_before": float(t.balance_before),
+            "balance_after": float(t.balance_after),
+            "reference": t.reference,
+            "notes": t.notes,
+            "created_by": str(t.created_by),
+            "created_at": t.created_at.isoformat()
+        }
+        for t in transactions
     ]
