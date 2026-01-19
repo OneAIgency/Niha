@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Numeric, Integer, Text, Enum as SQLEnum, JSON, LargeBinary
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 import enum
 from ..core.database import Base
@@ -498,6 +498,11 @@ class TransactionType(str, enum.Enum):
     ADJUSTMENT = "ADJUSTMENT"        # Admin balance adjustment
 
 
+class TicketStatus(str, enum.Enum):
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+
 class EntityHolding(Base):
     """Track entity holdings of various asset types (EUR, CEA, EUA)"""
     __tablename__ = "entity_holdings"
@@ -546,3 +551,32 @@ class AssetTransaction(Base):
     entity = relationship("Entity", foreign_keys=[entity_id])
     market_maker = relationship("MarketMakerClient", back_populates="transactions")
     creator = relationship("User", foreign_keys=[created_by])
+
+
+class TicketLog(Base):
+    """Comprehensive audit trail for all system actions"""
+    __tablename__ = "ticket_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ticket_id = Column(String(30), unique=True, nullable=False, index=True)  # TKT-2026-001234
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    action_type = Column(String(100), nullable=False, index=True)  # ORDER_PLACED, MM_CREATED, etc.
+    entity_type = Column(String(50), nullable=False, index=True)  # Order, MarketMaker, User, etc.
+    entity_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    status = Column(SQLEnum(TicketStatus), nullable=False, index=True)
+    request_payload = Column(JSONB, nullable=True)
+    response_data = Column(JSONB, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("user_sessions.id"), nullable=True)
+    before_state = Column(JSONB, nullable=True)
+    after_state = Column(JSONB, nullable=True)
+    related_ticket_ids = Column(ARRAY(String(30)), nullable=True)
+    tags = Column(ARRAY(String(50)), nullable=True, index=True)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    market_maker = relationship("MarketMakerClient", foreign_keys=[market_maker_id])
+    session = relationship("UserSession", foreign_keys=[session_id])
