@@ -493,6 +493,8 @@ class TransactionType(str, enum.Enum):
     WITHDRAWAL = "WITHDRAWAL"
     TRADE_DEBIT = "TRADE_DEBIT"      # Locks assets when order placed
     TRADE_CREDIT = "TRADE_CREDIT"    # Releases assets when order cancelled/filled
+    TRADE_BUY = "TRADE_BUY"          # Asset purchase transaction
+    TRADE_SELL = "TRADE_SELL"        # Asset sale transaction
     ADJUSTMENT = "ADJUSTMENT"        # Admin balance adjustment
 
 
