@@ -489,11 +489,10 @@ class AssetType(str, enum.Enum):
 
 class TransactionType(str, enum.Enum):
     """Types of asset transactions for audit trail"""
-    DEPOSIT = "deposit"          # Admin adds asset
-    WITHDRAWAL = "withdrawal"    # Admin removes asset
-    TRADE_BUY = "trade_buy"      # Market purchase
-    TRADE_SELL = "trade_sell"    # Market sale
-    ADJUSTMENT = "adjustment"    # Manual correction
+    DEPOSIT = "DEPOSIT"
+    WITHDRAWAL = "WITHDRAWAL"
+    TRADE_DEBIT = "TRADE_DEBIT"      # Locks assets when order placed
+    TRADE_CREDIT = "TRADE_CREDIT"    # Releases assets when order cancelled/filled
 
 
 class EntityHolding(Base):
@@ -520,18 +519,16 @@ class AssetTransaction(Base):
     __tablename__ = "asset_transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    ticket_id = Column(String(30), nullable=False, index=True)  # Links to TicketLog
     market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
-    asset_type = Column(SQLEnum(AssetType), nullable=False)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
-    amount = Column(Numeric(18, 2), nullable=False)
-    balance_before = Column(Numeric(18, 2), nullable=False)
-    balance_after = Column(Numeric(18, 2), nullable=False)
-    reference = Column(String(100), nullable=True)  # External reference
+    amount = Column(Numeric(18, 2), nullable=False)  # Positive for deposits/credits, negative for debits/withdrawals
+    balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
     notes = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
-    entity = relationship("Entity")
-    admin = relationship("User", foreign_keys=[created_by])
+    # Relationships
     market_maker = relationship("MarketMakerClient", back_populates="transactions")
+    creator = relationship("User", foreign_keys=[created_by])
