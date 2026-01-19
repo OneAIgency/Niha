@@ -493,6 +493,7 @@ class TransactionType(str, enum.Enum):
     WITHDRAWAL = "WITHDRAWAL"
     TRADE_DEBIT = "TRADE_DEBIT"      # Locks assets when order placed
     TRADE_CREDIT = "TRADE_CREDIT"    # Releases assets when order cancelled/filled
+    ADJUSTMENT = "ADJUSTMENT"        # Admin balance adjustment
 
 
 class EntityHolding(Base):
@@ -519,9 +520,19 @@ class AssetTransaction(Base):
     __tablename__ = "asset_transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    ticket_id = Column(String(30), nullable=False, index=True)  # Links to TicketLog
+
+    # Existing fields (for backward compatibility with Entity-based transactions)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
+    asset_type = Column(String(10), nullable=True)  # EUR, CEA, EUA (for Entity transactions)
+    balance_before = Column(Numeric(18, 2), nullable=True)
+    reference = Column(String(255), nullable=True)
+
+    # New fields (for Market Makers system)
+    ticket_id = Column(String(30), nullable=True, index=True)  # Links to TicketLog
     market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
-    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=True)
+
+    # Common fields (used by both Entity and Market Maker transactions)
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
     amount = Column(Numeric(18, 2), nullable=False)  # Positive for deposits/credits, negative for debits/withdrawals
     balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
@@ -530,5 +541,6 @@ class AssetTransaction(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Relationships
+    entity = relationship("Entity", foreign_keys=[entity_id])
     market_maker = relationship("MarketMakerClient", back_populates="transactions")
     creator = relationship("User", foreign_keys=[created_by])
