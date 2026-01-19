@@ -191,7 +191,7 @@ class MarketMakerService:
                     and_(
                         Order.market_maker_id == market_maker_id,
                         Order.certificate_type == cert_type,
-                        Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]),
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
                     )
                 )
             )
