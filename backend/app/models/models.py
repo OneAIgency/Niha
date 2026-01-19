@@ -405,6 +405,8 @@ class CashMarketTrade(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     buy_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
     sell_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    ticket_id = Column(String(30), nullable=True, index=True)
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
@@ -412,6 +414,7 @@ class CashMarketTrade(Base):
 
     buy_order = relationship("Order", foreign_keys=[buy_order_id], back_populates="buy_trades")
     sell_order = relationship("Order", foreign_keys=[sell_order_id], back_populates="sell_trades")
+    market_maker = relationship("MarketMakerClient")
 
 
 class AuthenticationAttempt(Base):
