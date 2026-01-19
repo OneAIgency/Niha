@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
 from enum import Enum
+from decimal import Decimal
 
 
 # Enums
@@ -835,3 +836,109 @@ class EntityAssetsResponse(BaseModel):
     cea_balance: float = 0
     eua_balance: float = 0
     recent_transactions: List[AssetTransactionResponse] = []
+
+
+# =============================================================================
+# Market Maker Schemas
+# =============================================================================
+
+class MarketMakerCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    description: Optional[str] = None
+    initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
+
+
+class MarketMakerUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class MarketMakerBalance(BaseModel):
+    available: Decimal
+    locked: Decimal
+    total: Decimal
+
+
+class MarketMakerResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    name: str
+    description: Optional[str]
+    is_active: bool
+    current_balances: Dict[str, MarketMakerBalance]  # {CEA: {...}, EUA: {...}}
+    total_orders: int = 0
+    total_trades: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Asset Transaction Schemas
+class AssetTransactionCreate(BaseModel):
+    certificate_type: str  # CEA, EUA
+    transaction_type: str  # DEPOSIT, WITHDRAWAL
+    amount: Decimal = Field(..., gt=0)
+    notes: Optional[str] = None
+
+
+class AssetTransactionResponse(BaseModel):
+    id: UUID
+    ticket_id: str
+    market_maker_id: UUID
+    certificate_type: str
+    transaction_type: str
+    amount: Decimal
+    balance_after: Decimal
+    notes: Optional[str]
+    created_by: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Market Order (Admin) Schemas
+class MarketOrderCreate(BaseModel):
+    market_maker_id: UUID
+    certificate_type: str  # CEA, EUA
+    side: str = Field(..., pattern="^SELL$")  # Only SELL allowed
+    order_type: str = "LIMIT"
+    price: Decimal = Field(..., gt=0)
+    quantity: Decimal = Field(..., gt=0)
+
+
+# Ticket Log Schemas
+class TicketLogResponse(BaseModel):
+    id: UUID
+    ticket_id: str
+    timestamp: datetime
+    user_id: Optional[UUID]
+    market_maker_id: Optional[UUID]
+    action_type: str
+    entity_type: str
+    entity_id: Optional[UUID]
+    status: str
+    request_payload: Optional[Dict[str, Any]]
+    response_data: Optional[Dict[str, Any]]
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    before_state: Optional[Dict[str, Any]]
+    after_state: Optional[Dict[str, Any]]
+    related_ticket_ids: List[str]
+    tags: List[str]
+
+    class Config:
+        from_attributes = True
+
+
+class TicketLogStats(BaseModel):
+    total_actions: int
+    success_count: int
+    failed_count: int
+    by_action_type: Dict[str, int]
+    by_user: List[Dict[str, Any]]
+    actions_over_time: List[Dict[str, Any]]
