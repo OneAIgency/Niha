@@ -1079,8 +1079,8 @@ async def get_entity_assets(
             AssetTransactionResponse(
                 id=t.id,
                 entity_id=t.entity_id,
-                asset_type=t.asset_type.value,
-                transaction_type=t.transaction_type.value,
+                asset_type=t.asset_type,
+                transaction_type=t.transaction_type,
                 amount=float(t.amount),
                 balance_before=float(t.balance_before),
                 balance_after=float(t.balance_after),
