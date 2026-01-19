@@ -6,7 +6,7 @@ import logging
 from .core.config import settings
 from .core.database import init_db
 from .core.security import RedisManager
-from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market
+from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market, market_maker, admin_market_orders, admin_logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -76,6 +76,9 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(backoffice.router, prefix="/api/v1")
 app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(cash_market.router, prefix="/api/v1")
+app.include_router(market_maker.router, prefix="/api/v1/admin")
+app.include_router(admin_market_orders.router, prefix="/api/v1/admin")
+app.include_router(admin_logging.router, prefix="/api/v1/admin")
 
 
 @app.get("/")

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Numeric, Integer, Text, Enum as SQLEnum, JSON, LargeBinary
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 import enum
 from ..core.database import Base
@@ -25,6 +25,7 @@ class UserRole(str, enum.Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     FUNDED = "FUNDED"
+    MARKET_MAKER = "MARKET_MAKER"
 
 
 class DocumentType(str, enum.Enum):
@@ -185,6 +186,28 @@ class User(Base):
     sessions = relationship("UserSession", back_populates="user")
     kyc_documents = relationship("KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id")
     auth_attempts = relationship("AuthenticationAttempt", back_populates="user")
+    market_maker_client = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.user_id", back_populates="user", uselist=False)
+    created_market_maker_clients = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.created_by", back_populates="creator")
+
+
+class MarketMakerClient(Base):
+    """Market Maker client managed by admin"""
+    __tablename__ = "market_maker_clients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # Display name like "MM-Alpha"
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
+    creator = relationship("User", foreign_keys=[created_by], back_populates="created_market_maker_clients")
+    transactions = relationship("AssetTransaction", back_populates="market_maker")
+    orders = relationship("Order", back_populates="market_maker")
 
 
 class ContactRequest(Base):
@@ -357,6 +380,8 @@ class Order(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
+    ticket_id = Column(String(30), nullable=True, index=True)  # Link to audit log
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
@@ -368,6 +393,7 @@ class Order(Base):
 
     entity = relationship("Entity")
     seller = relationship("Seller", back_populates="orders")
+    market_maker = relationship("MarketMakerClient", back_populates="orders")
     buy_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.buy_order_id", back_populates="buy_order")
     sell_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.sell_order_id", back_populates="sell_order")
 
@@ -379,6 +405,8 @@ class CashMarketTrade(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     buy_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
     sell_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    ticket_id = Column(String(30), nullable=True, index=True)
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
@@ -386,6 +414,7 @@ class CashMarketTrade(Base):
 
     buy_order = relationship("Order", foreign_keys=[buy_order_id], back_populates="buy_trades")
     sell_order = relationship("Order", foreign_keys=[sell_order_id], back_populates="sell_trades")
+    market_maker = relationship("MarketMakerClient")
 
 
 class AuthenticationAttempt(Base):
@@ -464,11 +493,18 @@ class AssetType(str, enum.Enum):
 
 class TransactionType(str, enum.Enum):
     """Types of asset transactions for audit trail"""
-    DEPOSIT = "deposit"          # Admin adds asset
-    WITHDRAWAL = "withdrawal"    # Admin removes asset
-    TRADE_BUY = "trade_buy"      # Market purchase
-    TRADE_SELL = "trade_sell"    # Market sale
-    ADJUSTMENT = "adjustment"    # Manual correction
+    DEPOSIT = "DEPOSIT"
+    WITHDRAWAL = "WITHDRAWAL"
+    TRADE_DEBIT = "TRADE_DEBIT"      # Locks assets when order placed
+    TRADE_CREDIT = "TRADE_CREDIT"    # Releases assets when order cancelled/filled
+    TRADE_BUY = "TRADE_BUY"          # Asset purchase transaction
+    TRADE_SELL = "TRADE_SELL"        # Asset sale transaction
+    ADJUSTMENT = "ADJUSTMENT"        # Admin balance adjustment
+
+
+class TicketStatus(str, enum.Enum):
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
 
 
 class EntityHolding(Base):
@@ -495,16 +531,56 @@ class AssetTransaction(Base):
     __tablename__ = "asset_transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
-    asset_type = Column(SQLEnum(AssetType), nullable=False)
+
+    # Existing fields (for backward compatibility with Entity-based transactions)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
+    asset_type = Column(String(10), nullable=True)  # EUR, CEA, EUA (for Entity transactions)
+    balance_before = Column(Numeric(18, 2), nullable=True)
+    reference = Column(String(255), nullable=True)
+
+    # New fields (for Market Makers system)
+    ticket_id = Column(String(30), nullable=True, index=True)  # Links to TicketLog
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=True)
+
+    # Common fields (used by both Entity and Market Maker transactions)
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
-    amount = Column(Numeric(18, 2), nullable=False)
-    balance_before = Column(Numeric(18, 2), nullable=False)
-    balance_after = Column(Numeric(18, 2), nullable=False)
-    reference = Column(String(100), nullable=True)  # External reference
+    amount = Column(Numeric(18, 2), nullable=False)  # Positive for deposits/credits, negative for debits/withdrawals
+    balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
     notes = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
-    entity = relationship("Entity")
-    admin = relationship("User", foreign_keys=[created_by])
+    # Relationships
+    entity = relationship("Entity", foreign_keys=[entity_id])
+    market_maker = relationship("MarketMakerClient", back_populates="transactions")
+    creator = relationship("User", foreign_keys=[created_by])
+
+
+class TicketLog(Base):
+    """Comprehensive audit trail for all system actions"""
+    __tablename__ = "ticket_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ticket_id = Column(String(30), unique=True, nullable=False, index=True)  # TKT-2026-001234
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    action_type = Column(String(100), nullable=False, index=True)  # ORDER_PLACED, MM_CREATED, etc.
+    entity_type = Column(String(50), nullable=False, index=True)  # Order, MarketMaker, User, etc.
+    entity_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    status = Column(SQLEnum(TicketStatus), nullable=False, index=True)
+    request_payload = Column(JSONB, nullable=True)
+    response_data = Column(JSONB, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("user_sessions.id"), nullable=True)
+    before_state = Column(JSONB, nullable=True)
+    after_state = Column(JSONB, nullable=True)
+    related_ticket_ids = Column(ARRAY(String(30)), nullable=True)
+    tags = Column(ARRAY(String(50)), nullable=True, index=True)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    market_maker = relationship("MarketMakerClient", foreign_keys=[market_maker_id])
+    session = relationship("UserSession", foreign_keys=[session_id])

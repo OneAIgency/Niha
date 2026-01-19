@@ -1097,4 +1097,112 @@ export const cashMarketApi = {
   },
 };
 
+// Market Makers API
+export const getMarketMakers = async (params?: any): Promise<any[]> => {
+  const { data } = await api.get('/admin/market-makers', { params });
+  return data;
+};
+
+export const createMarketMaker = async (data: {
+  name: string;
+  email: string;
+  description?: string;
+  cea_balance?: number;
+  eua_balance?: number;
+}): Promise<any> => {
+  const { data: response } = await api.post('/admin/market-makers', data);
+  return response;
+};
+
+export const updateMarketMaker = async (id: string, data: {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}): Promise<any> => {
+  const { data: response } = await api.put(`/admin/market-makers/${id}`, data);
+  return response;
+};
+
+export const deleteMarketMaker = async (id: string): Promise<MessageResponse> => {
+  const { data } = await api.delete(`/admin/market-makers/${id}`);
+  return data;
+};
+
+export const getMarketMakerTransactions = async (id: string, params?: any): Promise<any[]> => {
+  const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
+  return data;
+};
+
+export const createTransaction = async (id: string, data: {
+  certificate_type: 'CEA' | 'EUA';
+  transaction_type: 'deposit' | 'withdrawal';
+  amount: number;
+  notes?: string;
+}): Promise<any> => {
+  const { data: response } = await api.post(`/admin/market-makers/${id}/transactions`, data);
+  return response;
+};
+
+export const getMarketMakerBalances = async (id: string): Promise<{
+  cea_balance: number;
+  eua_balance: number;
+}> => {
+  const { data } = await api.get(`/admin/market-makers/${id}/balances`);
+  return data;
+};
+
+// Market Orders API (Admin)
+export const getAdminOrderBook = (certificateType: string) =>
+  api.get(`/admin/market-orders/orderbook/${certificateType}`);
+
+export const placeMarketMakerOrder = (data: {
+  market_maker_id: string;
+  certificate_type: 'CEA' | 'EUA';
+  price: number;
+  quantity: number;
+}) => api.post('/admin/market-orders', data);
+
+export const getMarketMakerOrders = (params?: {
+  market_maker_id?: string;
+  status?: string;
+  certificate_type?: string;
+}) => api.get('/admin/market-orders', { params });
+
+export const cancelMarketMakerOrder = (orderId: string) =>
+  api.delete(`/admin/market-orders/${orderId}`);
+
+// Logging/Audit API
+export const getTickets = (params?: {
+  date_from?: string;
+  date_to?: string;
+  action_type?: string[];
+  user_id?: string;
+  market_maker_id?: string;
+  status?: string;
+  entity_type?: string;
+  entity_id?: string;
+  search?: string;
+  tags?: string[];
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/tickets', { params });
+
+export const getTicket = (ticketId: string) =>
+  api.get(`/admin/logging/tickets/${ticketId}`);
+
+export const getLoggingStats = (params?: {
+  date_from?: string;
+  date_to?: string;
+}) => api.get('/admin/logging/stats', { params });
+
+export const getMarketMakerActions = (params?: {
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/market-maker-actions', { params });
+
+export const getFailedActions = (params?: {
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/failed-actions', { params });
+
 export default api;

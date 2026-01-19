@@ -1,0 +1,518 @@
+"""Market Maker Admin API endpoints"""
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, func
+from typing import List, Optional
+from uuid import UUID
+from decimal import Decimal
+
+from ...core.database import get_db
+from ...core.security import get_admin_user
+from ...models.models import (
+    User, MarketMakerClient, AssetTransaction, CertificateType,
+    TransactionType, Order, OrderStatus, TicketStatus
+)
+from ...schemas.schemas import (
+    MarketMakerCreate, MarketMakerUpdate, MarketMakerResponse,
+    MarketMakerBalance, AssetTransactionCreate, AssetTransactionResponse,
+    MessageResponse, TicketLogResponse
+)
+from ...services.market_maker_service import MarketMakerService
+from ...services.ticket_service import TicketService
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/market-makers", tags=["Market Makers"])
+
+
+@router.get("", response_model=List[MarketMakerResponse])
+async def list_market_makers(
+    is_active: Optional[bool] = None,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all Market Maker clients with current balances and stats.
+    Admin-only endpoint.
+    """
+    # Build query
+    query = select(MarketMakerClient).order_by(MarketMakerClient.created_at.desc())
+
+    if is_active is not None:
+        query = query.where(MarketMakerClient.is_active == is_active)
+
+    # Pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    result = await db.execute(query)
+    market_makers = result.scalars().all()
+
+    # Enrich with balances and stats
+    response = []
+    for mm in market_makers:
+        # Get balances
+        balances = await MarketMakerService.get_balances(db, mm.id)
+
+        # Format balances for response
+        formatted_balances = {
+            cert_type: MarketMakerBalance(**balance_data)
+            for cert_type, balance_data in balances.items()
+        }
+
+        # Get order count
+        order_count_result = await db.execute(
+            select(func.count(Order.id)).where(Order.market_maker_id == mm.id)
+        )
+        total_orders = order_count_result.scalar() or 0
+
+        # Get filled orders count (as proxy for trades)
+        trade_count_result = await db.execute(
+            select(func.count(Order.id)).where(
+                and_(
+                    Order.market_maker_id == mm.id,
+                    Order.status == OrderStatus.FILLED
+                )
+            )
+        )
+        total_trades = trade_count_result.scalar() or 0
+
+        response.append(
+            MarketMakerResponse(
+                id=mm.id,
+                user_id=mm.user_id,
+                name=mm.name,
+                description=mm.description,
+                is_active=mm.is_active,
+                current_balances=formatted_balances,
+                total_orders=total_orders,
+                total_trades=total_trades,
+                created_at=mm.created_at,
+                updated_at=mm.updated_at,
+            )
+        )
+
+    return response
+
+
+@router.post("", response_model=dict)
+async def create_market_maker(
+    request: Request,
+    data: MarketMakerCreate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create new Market Maker client.
+    Admin-only endpoint.
+
+    Returns: {id, ticket_id, message}
+    """
+    # Check if email already exists
+    result = await db.execute(
+        select(User).where(User.email == data.email)
+    )
+    existing_user = result.scalar_one_or_none()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    # Create Market Maker
+    mm_client, ticket_id = await MarketMakerService.create_market_maker(
+        db=db,
+        name=data.name,
+        email=data.email,
+        description=data.description,
+        created_by_id=admin_user.id,
+        initial_balances=data.initial_balances,
+    )
+
+    logger.info(f"Admin {admin_user.email} created Market Maker {mm_client.name} (ID: {mm_client.id})")
+
+    return {
+        "id": str(mm_client.id),
+        "ticket_id": ticket_id,
+        "message": f"Market Maker '{mm_client.name}' created successfully"
+    }
+
+
+@router.get("/{market_maker_id}", response_model=MarketMakerResponse)
+async def get_market_maker(
+    market_maker_id: UUID,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get Market Maker details by ID.
+    Admin-only endpoint.
+    """
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    # Get balances
+    balances = await MarketMakerService.get_balances(db, mm.id)
+
+    # Format balances
+    formatted_balances = {
+        cert_type: MarketMakerBalance(**balance_data)
+        for cert_type, balance_data in balances.items()
+    }
+
+    # Get order count
+    order_count_result = await db.execute(
+        select(func.count(Order.id)).where(Order.market_maker_id == mm.id)
+    )
+    total_orders = order_count_result.scalar() or 0
+
+    # Get filled orders count
+    trade_count_result = await db.execute(
+        select(func.count(Order.id)).where(
+            and_(
+                Order.market_maker_id == mm.id,
+                Order.status == OrderStatus.FILLED
+            )
+        )
+    )
+    total_trades = trade_count_result.scalar() or 0
+
+    return MarketMakerResponse(
+        id=mm.id,
+        user_id=mm.user_id,
+        name=mm.name,
+        description=mm.description,
+        is_active=mm.is_active,
+        current_balances=formatted_balances,
+        total_orders=total_orders,
+        total_trades=total_trades,
+        created_at=mm.created_at,
+        updated_at=mm.updated_at,
+    )
+
+
+@router.put("/{market_maker_id}", response_model=dict)
+async def update_market_maker(
+    market_maker_id: UUID,
+    data: MarketMakerUpdate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update Market Maker details.
+    Admin-only endpoint.
+
+    Returns: {ticket_id, message}
+    """
+    # Get existing MM
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    # Capture before state
+    before_state = await TicketService.get_entity_state(db, "MarketMaker", mm.id)
+
+    # Update fields
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(mm, field, value)
+
+    await db.commit()
+    await db.refresh(mm)
+
+    # Capture after state
+    after_state = await TicketService.get_entity_state(db, "MarketMaker", mm.id)
+
+    # Create audit ticket
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="MM_UPDATED",
+        entity_type="MarketMaker",
+        entity_id=mm.id,
+        status=TicketStatus.SUCCESS,
+        user_id=admin_user.id,
+        market_maker_id=mm.id,
+        request_payload=update_data,
+        before_state=before_state,
+        after_state=after_state,
+        tags=["market_maker", "update"],
+    )
+
+    logger.info(f"Admin {admin_user.email} updated Market Maker {mm.name} (ID: {mm.id})")
+
+    return {
+        "ticket_id": ticket.ticket_id,
+        "message": f"Market Maker '{mm.name}' updated successfully"
+    }
+
+
+@router.delete("/{market_maker_id}", response_model=dict)
+async def delete_market_maker(
+    market_maker_id: UUID,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Soft delete Market Maker (set is_active = False).
+    Admin-only endpoint.
+
+    Returns: {ticket_id, message}
+    """
+    # Get existing MM
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    if not mm.is_active:
+        raise HTTPException(status_code=400, detail="Market Maker already inactive")
+
+    # Check for open orders
+    open_orders_result = await db.execute(
+        select(func.count(Order.id)).where(
+            and_(
+                Order.market_maker_id == mm.id,
+                Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED])
+            )
+        )
+    )
+    open_orders_count = open_orders_result.scalar() or 0
+
+    if open_orders_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot deactivate Market Maker with {open_orders_count} open orders. Cancel orders first."
+        )
+
+    # Capture before state
+    before_state = await TicketService.get_entity_state(db, "MarketMaker", mm.id)
+
+    # Soft delete
+    mm.is_active = False
+
+    # Also deactivate associated user
+    result = await db.execute(
+        select(User).where(User.id == mm.user_id)
+    )
+    user = result.scalar_one_or_none()
+    if user:
+        user.is_active = False
+
+    await db.commit()
+    await db.refresh(mm)
+
+    # Capture after state
+    after_state = await TicketService.get_entity_state(db, "MarketMaker", mm.id)
+
+    # Create audit ticket
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="MM_DELETED",
+        entity_type="MarketMaker",
+        entity_id=mm.id,
+        status=TicketStatus.SUCCESS,
+        user_id=admin_user.id,
+        market_maker_id=mm.id,
+        before_state=before_state,
+        after_state=after_state,
+        tags=["market_maker", "deletion"],
+    )
+
+    logger.info(f"Admin {admin_user.email} deactivated Market Maker {mm.name} (ID: {mm.id})")
+
+    return {
+        "ticket_id": ticket.ticket_id,
+        "message": f"Market Maker '{mm.name}' deactivated successfully"
+    }
+
+
+@router.get("/{market_maker_id}/balances", response_model=dict)
+async def get_market_maker_balances(
+    market_maker_id: UUID,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current balances for Market Maker.
+    Admin-only endpoint.
+
+    Returns: {CEA: {available, locked, total}, EUA: {...}}
+    """
+    # Verify MM exists
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    # Get balances
+    balances = await MarketMakerService.get_balances(db, market_maker_id)
+
+    # Format for response
+    formatted_balances = {
+        cert_type: MarketMakerBalance(**balance_data).model_dump()
+        for cert_type, balance_data in balances.items()
+    }
+
+    return formatted_balances
+
+
+@router.get("/{market_maker_id}/transactions", response_model=List[AssetTransactionResponse])
+async def list_market_maker_transactions(
+    market_maker_id: UUID,
+    certificate_type: Optional[str] = None,
+    transaction_type: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all transactions for a Market Maker.
+    Admin-only endpoint.
+    """
+    # Verify MM exists
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    # Build query
+    query = select(AssetTransaction).where(
+        AssetTransaction.market_maker_id == market_maker_id
+    ).order_by(AssetTransaction.created_at.desc())
+
+    if certificate_type:
+        try:
+            cert_type_enum = CertificateType(certificate_type)
+            query = query.where(AssetTransaction.certificate_type == cert_type_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+
+    if transaction_type:
+        try:
+            trans_type_enum = TransactionType(transaction_type)
+            query = query.where(AssetTransaction.transaction_type == trans_type_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid transaction_type: {transaction_type}")
+
+    # Pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+
+    return [
+        AssetTransactionResponse(
+            id=t.id,
+            ticket_id=t.ticket_id,
+            market_maker_id=t.market_maker_id,
+            certificate_type=t.certificate_type.value,
+            transaction_type=t.transaction_type.value,
+            amount=t.amount,
+            balance_after=t.balance_after,
+            notes=t.notes,
+            created_by=t.created_by,
+            created_at=t.created_at,
+        )
+        for t in transactions
+    ]
+
+
+@router.post("/{market_maker_id}/transactions", response_model=dict)
+async def create_market_maker_transaction(
+    market_maker_id: UUID,
+    data: AssetTransactionCreate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create asset transaction (deposit/withdrawal) for Market Maker.
+    Admin-only endpoint.
+
+    For withdrawals, validates sufficient available balance.
+
+    Returns: {transaction_id, ticket_id, balance_after, message}
+    """
+    # Verify MM exists and is active
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    if not mm.is_active:
+        raise HTTPException(status_code=400, detail="Market Maker is inactive")
+
+    # Validate certificate type
+    try:
+        cert_type = CertificateType(data.certificate_type)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}")
+
+    # Validate transaction type
+    try:
+        trans_type = TransactionType(data.transaction_type)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid transaction_type: {data.transaction_type}")
+
+    # Calculate amount (negative for withdrawals)
+    amount = data.amount if trans_type == TransactionType.DEPOSIT else -data.amount
+
+    # For withdrawals, validate sufficient balance
+    if trans_type == TransactionType.WITHDRAWAL:
+        has_sufficient = await MarketMakerService.validate_sufficient_balance(
+            db=db,
+            market_maker_id=market_maker_id,
+            certificate_type=cert_type,
+            required_amount=data.amount,
+        )
+
+        if not has_sufficient:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient available balance for {cert_type.value} withdrawal"
+            )
+
+    # Create transaction
+    transaction, ticket_id = await MarketMakerService.create_transaction(
+        db=db,
+        market_maker_id=market_maker_id,
+        certificate_type=cert_type,
+        transaction_type=trans_type,
+        amount=amount,
+        notes=data.notes,
+        created_by_id=admin_user.id,
+    )
+
+    logger.info(
+        f"Admin {admin_user.email} created {trans_type.value} transaction "
+        f"for Market Maker {mm.name}: {data.amount} {cert_type.value}"
+    )
+
+    return {
+        "transaction_id": str(transaction.id),
+        "ticket_id": ticket_id,
+        "balance_after": float(transaction.balance_after),
+        "message": f"{trans_type.value.title()} of {data.amount} {cert_type.value} completed successfully"
+    }
