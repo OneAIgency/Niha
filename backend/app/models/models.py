@@ -186,7 +186,8 @@ class User(Base):
     sessions = relationship("UserSession", back_populates="user")
     kyc_documents = relationship("KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id")
     auth_attempts = relationship("AuthenticationAttempt", back_populates="user")
-    market_maker_client = relationship("MarketMakerClient", foreign_keys="[MarketMakerClient.user_id]", back_populates="user", uselist=False)
+    market_maker_client = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.user_id", back_populates="user", uselist=False)
+    created_market_maker_clients = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.created_by", back_populates="creator")
 
 
 class MarketMakerClient(Base):
@@ -200,12 +201,12 @@ class MarketMakerClient(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
-    creator = relationship("User", foreign_keys=[created_by])
-    transactions = relationship("AssetTransaction", back_populates="market_maker", cascade="all, delete-orphan")
+    creator = relationship("User", foreign_keys=[created_by], back_populates="created_market_maker_clients")
+    transactions = relationship("AssetTransaction", back_populates="market_maker")
     orders = relationship("Order", back_populates="market_maker")
 
 
