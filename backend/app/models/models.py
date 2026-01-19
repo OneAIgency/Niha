@@ -25,6 +25,7 @@ class UserRole(str, enum.Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     FUNDED = "FUNDED"
+    MARKET_MAKER = "MARKET_MAKER"
 
 
 class DocumentType(str, enum.Enum):
