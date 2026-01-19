@@ -25,6 +25,7 @@ import {
   StrategicAdvantagePage,
   ComponentShowcasePage,
   MarketMakersPage,
+  MarketOrdersPage,
 } from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -336,6 +337,14 @@ function App() {
             element={
               <AdminRoute>
                 <MarketMakersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/backoffice/market-orders"
+            element={
+              <AdminRoute>
+                <MarketOrdersPage />
               </AdminRoute>
             }
           />

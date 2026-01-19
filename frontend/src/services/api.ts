@@ -1151,4 +1151,24 @@ export const getMarketMakerBalances = async (id: string): Promise<{
   return data;
 };
 
+// Market Orders API (Admin)
+export const getAdminOrderBook = (certificateType: string) =>
+  api.get(`/admin/market-orders/orderbook/${certificateType}`);
+
+export const placeMarketMakerOrder = (data: {
+  market_maker_id: string;
+  certificate_type: 'CEA' | 'EUA';
+  price: number;
+  quantity: number;
+}) => api.post('/admin/market-orders', data);
+
+export const getMarketMakerOrders = (params?: {
+  market_maker_id?: string;
+  status?: string;
+  certificate_type?: string;
+}) => api.get('/admin/market-orders', { params });
+
+export const cancelMarketMakerOrder = (orderId: string) =>
+  api.delete(`/admin/market-orders/${orderId}`);
+
 export default api;

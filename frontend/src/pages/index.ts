@@ -18,6 +18,7 @@ export { default as OnboardingPage } from './OnboardingPage';
 export { LearnMorePage } from './LearnMorePage';
 export { ComponentShowcasePage } from './ComponentShowcasePage';
 export { MarketMakersPage } from './MarketMakersPage';
+export { MarketOrdersPage } from './MarketOrdersPage';
 
 // Onboarding sub-pages
 export {
