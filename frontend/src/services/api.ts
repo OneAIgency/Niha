@@ -1097,4 +1097,58 @@ export const cashMarketApi = {
   },
 };
 
+// Market Makers API
+export const getMarketMakers = async (params?: any): Promise<any[]> => {
+  const { data } = await api.get('/admin/market-makers', { params });
+  return data;
+};
+
+export const createMarketMaker = async (data: {
+  name: string;
+  email: string;
+  description?: string;
+  cea_balance?: number;
+  eua_balance?: number;
+}): Promise<any> => {
+  const { data: response } = await api.post('/admin/market-makers', data);
+  return response;
+};
+
+export const updateMarketMaker = async (id: string, data: {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}): Promise<any> => {
+  const { data: response } = await api.put(`/admin/market-makers/${id}`, data);
+  return response;
+};
+
+export const deleteMarketMaker = async (id: string): Promise<MessageResponse> => {
+  const { data } = await api.delete(`/admin/market-makers/${id}`);
+  return data;
+};
+
+export const getMarketMakerTransactions = async (id: string, params?: any): Promise<any[]> => {
+  const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
+  return data;
+};
+
+export const createTransaction = async (id: string, data: {
+  certificate_type: 'CEA' | 'EUA';
+  transaction_type: 'deposit' | 'withdrawal';
+  amount: number;
+  notes?: string;
+}): Promise<any> => {
+  const { data: response } = await api.post(`/admin/market-makers/${id}/transactions`, data);
+  return response;
+};
+
+export const getMarketMakerBalances = async (id: string): Promise<{
+  cea_balance: number;
+  eua_balance: number;
+}> => {
+  const { data } = await api.get(`/admin/market-makers/${id}/balances`);
+  return data;
+};
+
 export default api;
