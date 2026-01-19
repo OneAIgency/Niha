@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -20,6 +21,8 @@ import {
   UserPlus,
   Banknote,
   DollarSign,
+  Bot,
+  ShoppingCart,
 } from 'lucide-react';
 import { Button, Card, Badge, ConfirmationModal } from '../components/common';
 import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
@@ -557,6 +560,66 @@ export function BackofficePage() {
           <p className="text-navy-600 dark:text-navy-300">
             Review access requests, KYC documents, and user activity
           </p>
+        </div>
+
+        {/* Quick Navigation to New Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Link
+            to="/backoffice/market-makers"
+            className="group bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-colors">
+                <Bot className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
+                  Market Makers
+                </h3>
+                <p className="text-sm text-navy-600 dark:text-navy-400">
+                  Manage MM clients and assets
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/backoffice/market-orders"
+            className="group bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/40 transition-colors">
+                <ShoppingCart className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
+                  Market Orders
+                </h3>
+                <p className="text-sm text-navy-600 dark:text-navy-400">
+                  Place orders for MM clients
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/backoffice/logging"
+            className="group bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/40 transition-colors">
+                <Activity className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
+                  Audit Logging
+                </h3>
+                <p className="text-sm text-navy-600 dark:text-navy-400">
+                  View comprehensive audit trail
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* Error Display */}
