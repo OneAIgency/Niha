@@ -381,6 +381,7 @@ class Order(Base):
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
     market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
+    ticket_id = Column(String(30), nullable=True, index=True)  # Link to audit log
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
