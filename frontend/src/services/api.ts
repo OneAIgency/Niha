@@ -1171,4 +1171,38 @@ export const getMarketMakerOrders = (params?: {
 export const cancelMarketMakerOrder = (orderId: string) =>
   api.delete(`/admin/market-orders/${orderId}`);
 
+// Logging/Audit API
+export const getTickets = (params?: {
+  date_from?: string;
+  date_to?: string;
+  action_type?: string[];
+  user_id?: string;
+  market_maker_id?: string;
+  status?: string;
+  entity_type?: string;
+  entity_id?: string;
+  search?: string;
+  tags?: string[];
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/tickets', { params });
+
+export const getTicket = (ticketId: string) =>
+  api.get(`/admin/logging/tickets/${ticketId}`);
+
+export const getLoggingStats = (params?: {
+  date_from?: string;
+  date_to?: string;
+}) => api.get('/admin/logging/stats', { params });
+
+export const getMarketMakerActions = (params?: {
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/market-maker-actions', { params });
+
+export const getFailedActions = (params?: {
+  limit?: number;
+  offset?: number;
+}) => api.get('/admin/logging/failed-actions', { params });
+
 export default api;
