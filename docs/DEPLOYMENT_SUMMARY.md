@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-19
 **Status:** ✅ Ready for Staging Deployment
-**Version:** 1.0
+**Version:** 1.0.1 (Security Patches Applied)
 
 ---
 
@@ -79,6 +79,46 @@ The Market Makers system has been successfully implemented, tested, and merged t
 
 ---
 
+## Security Status: ✅ All Vulnerabilities Patched
+
+### Dependabot Alerts Resolved
+
+**Alert #3: python-jose DoS vulnerability (Medium Severity)**
+- **CVE:** CVE-2024-53861
+- **Issue:** Denial of service via compressed JWE content ("JWT bomb")
+- **Vulnerable Version:** python-jose < 3.4.0
+- **Fix Applied:** Upgraded python-jose 3.3.0 → 3.4.0 in `backend/requirements.txt`
+- **Verification:** Confirmed version 3.4.0 running in backend container
+- **Commit:** 38b9472
+
+**Alert #5: esbuild dev server CORS vulnerability (Medium Severity)**
+- **CVE:** GHSA-67mh-4wv8-2f99
+- **Issue:** Development server allows any website to read source code
+- **Vulnerable Version:** esbuild <= 0.24.2
+- **Fix Applied:** Added esbuild ^0.25.0 with npm overrides in `frontend/package.json`
+- **Verification:** npm audit shows 0 vulnerabilities
+- **Commit:** e015fea
+
+### Security Audit Results
+
+**npm audit (Frontend):**
+```
+found 0 vulnerabilities
+```
+
+**Python Dependencies (Backend):**
+- python-jose: 3.4.0 ✅ (patched)
+- All other dependencies: No known vulnerabilities
+
+**Docker Containers:**
+- Backend rebuilt with patched dependencies
+- Frontend rebuilt with patched dependencies
+- All services healthy and running
+
+**GitHub Dependabot:** Will auto-close alerts after next scan (both medium severity issues resolved)
+
+---
+
 ## Deployment Checklist
 
 ### Pre-Deployment
@@ -87,8 +127,8 @@ The Market Makers system has been successfully implemented, tested, and merged t
 - [x] All commits pushed to GitHub
 - [x] Automated tests passing (100%)
 - [x] Documentation complete
+- [x] Security vulnerabilities reviewed and fixed
 - [ ] Manual UI tests complete
-- [ ] Security vulnerabilities reviewed
 - [ ] Performance testing complete
 - [ ] Load testing complete
 
@@ -346,10 +386,12 @@ psql -h <host> -U <user> -d <database> < backup_YYYYMMDD_HHMMSS.sql
 
 ### Security Considerations
 
-**Dependabot Alerts:**
-- 2 moderate vulnerabilities detected by GitHub
-- Not found in `npm audit` (may be false positives or in devDependencies)
-- **Action Required:** Review GitHub Dependabot alerts before production
+**Dependabot Alerts:** ✅ Resolved
+- 2 moderate vulnerabilities were detected and fixed
+- python-jose upgraded to 3.4.0 (fixes DoS vulnerability)
+- esbuild upgraded to 0.25.0 (fixes dev server CORS vulnerability)
+- npm audit now shows 0 vulnerabilities
+- **Status:** All security issues patched and verified
 
 **Authentication:**
 - All MM endpoints require admin JWT
@@ -480,7 +522,7 @@ WHERE o.status = 'OPEN';
 **Implementation Team:**
 - Developer: Claude Sonnet 4.5
 - Repository: OneAIgency/Niha
-- Branch: main (commit 06d324d)
+- Branch: main (commit e015fea - includes security patches)
 
 **For Issues:**
 1. Check this deployment summary
@@ -491,6 +533,15 @@ WHERE o.status = 'OPEN';
 ---
 
 ## Change Log
+
+**2026-01-19 - v1.0.1 - Security Patches**
+- Fixed python-jose DoS vulnerability (CVE-2024-53861)
+- Fixed esbuild dev server CORS vulnerability (GHSA-67mh-4wv8-2f99)
+- Upgraded python-jose 3.3.0 → 3.4.0
+- Added esbuild 0.25.0 with npm overrides
+- Docker containers rebuilt with patched dependencies
+- npm audit: 0 vulnerabilities
+- Commits: 38b9472, e015fea
 
 **2026-01-19 - v1.0 - Initial Release**
 - Complete Market Makers system
