@@ -186,6 +186,27 @@ class User(Base):
     sessions = relationship("UserSession", back_populates="user")
     kyc_documents = relationship("KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id")
     auth_attempts = relationship("AuthenticationAttempt", back_populates="user")
+    market_maker_client = relationship("MarketMakerClient", foreign_keys="[MarketMakerClient.user_id]", back_populates="user", uselist=False)
+
+
+class MarketMakerClient(Base):
+    """Market Maker client managed by admin"""
+    __tablename__ = "market_maker_clients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # Display name like "MM-Alpha"
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
+    creator = relationship("User", foreign_keys=[created_by])
+    transactions = relationship("AssetTransaction", back_populates="market_maker", cascade="all, delete-orphan")
+    orders = relationship("Order", back_populates="market_maker")
 
 
 class ContactRequest(Base):
@@ -358,6 +379,7 @@ class Order(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
@@ -369,6 +391,7 @@ class Order(Base):
 
     entity = relationship("Entity")
     seller = relationship("Seller", back_populates="orders")
+    market_maker = relationship("MarketMakerClient", back_populates="orders")
     buy_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.buy_order_id", back_populates="buy_order")
     sell_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.sell_order_id", back_populates="sell_order")
 
@@ -497,6 +520,7 @@ class AssetTransaction(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
     asset_type = Column(SQLEnum(AssetType), nullable=False)
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
     amount = Column(Numeric(18, 2), nullable=False)
@@ -509,3 +533,4 @@ class AssetTransaction(Base):
 
     entity = relationship("Entity")
     admin = relationship("User", foreign_keys=[created_by])
+    market_maker = relationship("MarketMakerClient", back_populates="transactions")
