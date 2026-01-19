@@ -18,6 +18,7 @@ class UserRole(str, Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     FUNDED = "FUNDED"
+    MARKET_MAKER = "MARKET_MAKER"
 
 
 class CertificateType(str, Enum):
