@@ -31,7 +31,7 @@ class AdminOrderCreate(BaseModel):
     """Request to create order on behalf of Market Maker"""
     market_maker_id: UUID
     certificate_type: str = Field(..., pattern="^(EUA|CEA)$")
-    side: str = Field(..., pattern="^SELL$")  # Only SELL orders allowed for MMs
+    side: str = Field(..., pattern="^(BID|ASK)$")  # BID (buy) or ASK (sell) orders
     price: float = Field(..., gt=0)
     quantity: float = Field(..., gt=0)
 
@@ -183,17 +183,17 @@ async def create_market_order(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Admin places SELL order on behalf of Market Maker.
+    Admin places BID (buy) or ASK (sell) order on behalf of Market Maker.
 
     Process:
     1. Validate MM exists and is active
-    2. Check sufficient balance for certificate type
-    3. Lock assets via TRADE_DEBIT transaction
-    4. Create order in database
-    5. Create audit ticket
+    2. Map side: BID→BUY, ASK→SELL
+    3. For ASK: Check certificate balance, lock via TRADE_DEBIT
+    4. For BID: Calculate notional EUR cost (no balance check for now)
+    5. Create order in database
+    6. Create audit ticket
 
-    Only SELL orders are allowed. The order appears in public order book
-    and can be matched by any buyer using FIFO matching.
+    The order appears in the order book and can be matched using FIFO.
     """
     # Validate MM exists and is active
     result = await db.execute(
@@ -213,53 +213,73 @@ async def create_market_order(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}")
 
-    # Validate side (only SELL allowed)
-    if data.side != "SELL":
-        raise HTTPException(status_code=400, detail="Only SELL orders are allowed for Market Makers")
+    # Map frontend side (BID/ASK) to backend OrderSide (BUY/SELL)
+    if data.side == "BID":
+        order_side = OrderSide.BUY
+        side_display = "BUY"
+    elif data.side == "ASK":
+        order_side = OrderSide.SELL
+        side_display = "SELL"
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid side: {data.side}")
 
     # Convert to Decimal
     price = Decimal(str(data.price))
     quantity = Decimal(str(data.quantity))
 
-    # Check sufficient balance
-    has_sufficient = await MarketMakerService.validate_sufficient_balance(
-        db=db,
-        market_maker_id=data.market_maker_id,
-        certificate_type=cert_type,
-        required_amount=quantity,
-    )
+    # Balance validation and asset locking (only for ASK/SELL orders)
+    trans_ticket_id = None
+    locked_amount = 0.0
+    balance_after = 0.0
 
-    if not has_sufficient:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Insufficient {cert_type.value} balance for this order"
+    if order_side == OrderSide.SELL:
+        # ASK order: Check certificate balance and lock assets
+        has_sufficient = await MarketMakerService.validate_sufficient_balance(
+            db=db,
+            market_maker_id=data.market_maker_id,
+            certificate_type=cert_type,
+            required_amount=quantity,
         )
 
-    # Get current balance before locking
-    balances = await MarketMakerService.get_balances(db, data.market_maker_id)
-    balance_before = balances[cert_type.value]["available"]
+        if not has_sufficient:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient {cert_type.value} balance for this ASK order"
+            )
 
-    # Lock assets via TRADE_DEBIT transaction
-    transaction, trans_ticket_id = await MarketMakerService.create_transaction(
-        db=db,
-        market_maker_id=data.market_maker_id,
-        certificate_type=cert_type,
-        transaction_type=TransactionType.TRADE_DEBIT,
-        amount=-quantity,  # Negative for debit
-        notes=f"Lock {quantity} {cert_type.value} for SELL order at {price}",
-        created_by_id=admin_user.id,
-    )
+        # Get current balance before locking
+        balances = await MarketMakerService.get_balances(db, data.market_maker_id)
+        balance_before = balances[cert_type.value]["available"]
+
+        # Lock assets via TRADE_DEBIT transaction
+        transaction, trans_ticket_id = await MarketMakerService.create_transaction(
+            db=db,
+            market_maker_id=data.market_maker_id,
+            certificate_type=cert_type,
+            transaction_type=TransactionType.TRADE_DEBIT,
+            amount=-quantity,  # Negative for debit
+            notes=f"Lock {quantity} {cert_type.value} for ASK order at {price}",
+            created_by_id=admin_user.id,
+        )
+        locked_amount = float(quantity)
+        balance_after = float(transaction.balance_after)
+    else:
+        # BID order: No asset locking (EUR balance tracking not implemented for MMs yet)
+        # The order will sit in the order book but won't be automatically matched
+        # until matching engine is updated to include MM orders
+        locked_amount = 0.0
+        balance_after = 0.0
 
     # Create the order
     order = Order(
         market_maker_id=data.market_maker_id,
         certificate_type=cert_type,
-        side=OrderSide.SELL,
+        side=order_side,
         price=price,
         quantity=quantity,
         filled_quantity=Decimal('0'),
         status=OrderStatus.OPEN,
-        ticket_id=trans_ticket_id,  # Link to transaction ticket
+        ticket_id=trans_ticket_id,  # Link to transaction ticket (None for BID orders)
     )
     db.add(order)
     await db.flush()
@@ -283,9 +303,10 @@ async def create_market_order(
         after_state={
             "order_id": str(order.id),
             "status": order.status.value,
+            "order_side": order_side.value,
             "transaction_ticket_id": trans_ticket_id,
         },
-        tags=["market_maker", "order", "sell"],
+        tags=["market_maker", "order", side_display.lower()],
     )
 
     # Update order with ticket_id
@@ -293,19 +314,18 @@ async def create_market_order(
 
     await db.commit()
     await db.refresh(order)
-    await db.refresh(transaction)
 
     logger.info(
-        f"Admin {admin_user.email} placed SELL order for MM {mm.name}: "
+        f"Admin {admin_user.email} placed {side_display} order for MM {mm.name}: "
         f"{quantity} {cert_type.value} at {price}"
     )
 
     return AdminOrderResponse(
         order_id=order.id,
         ticket_id=ticket.ticket_id,
-        message=f"SELL order placed: {quantity} {cert_type.value} at {price}",
-        locked_amount=float(quantity),
-        balance_after=float(transaction.balance_after),
+        message=f"{side_display} order placed: {quantity} {cert_type.value} at {price}",
+        locked_amount=locked_amount,
+        balance_after=balance_after,
     )
 
 
@@ -390,14 +410,15 @@ async def cancel_market_order(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Admin cancels Market Maker order and releases locked assets.
+    Admin cancels Market Maker order and releases locked assets (for ASK orders).
 
     Process:
     1. Validate order exists and belongs to MM
     2. Check order can be cancelled (OPEN or PARTIALLY_FILLED)
-    3. Release locked assets via TRADE_CREDIT transaction
-    4. Update order status to CANCELLED
-    5. Create audit ticket
+    3. For ASK orders: Release locked assets via TRADE_CREDIT transaction
+    4. For BID orders: No assets to release
+    5. Update order status to CANCELLED
+    6. Create audit ticket
     """
     # Find the order
     result = await db.execute(
@@ -426,23 +447,23 @@ async def cancel_market_order(
     # Calculate remaining quantity to release
     remaining_quantity = order.quantity - order.filled_quantity
 
-    # Release locked assets via TRADE_CREDIT transaction
-    if remaining_quantity > 0:
+    # Release locked assets via TRADE_CREDIT transaction (only for SELL/ASK orders)
+    trans_ticket_id = None
+    if order.side == OrderSide.SELL and remaining_quantity > 0:
         transaction, trans_ticket_id = await MarketMakerService.create_transaction(
             db=db,
             market_maker_id=order.market_maker_id,
             certificate_type=order.certificate_type,
             transaction_type=TransactionType.TRADE_CREDIT,
             amount=remaining_quantity,  # Positive for credit
-            notes=f"Release {remaining_quantity} {order.certificate_type.value} from cancelled order {order.id}",
+            notes=f"Release {remaining_quantity} {order.certificate_type.value} from cancelled ASK order {order.id}",
             created_by_id=admin_user.id,
         )
-    else:
-        trans_ticket_id = None
 
     # Capture before state
     before_state = {
         "order_id": str(order.id),
+        "side": order.side.value,
         "status": order.status.value,
         "remaining_quantity": float(remaining_quantity),
     }
@@ -475,14 +496,15 @@ async def cancel_market_order(
 
     await db.commit()
 
-    logger.info(
-        f"Admin {admin_user.email} cancelled order {order.id} for MM {mm.name}: "
-        f"released {remaining_quantity} {order.certificate_type.value}"
-    )
+    side_display = "BID" if order.side == OrderSide.BUY else "ASK"
+    log_message = f"Admin {admin_user.email} cancelled {side_display} order {order.id} for MM {mm.name}"
+    if order.side == OrderSide.SELL:
+        log_message += f": released {remaining_quantity} {order.certificate_type.value}"
+    logger.info(log_message)
 
     return {
         "ticket_id": ticket.ticket_id,
         "message": f"Order {order.id} cancelled successfully",
-        "released_amount": float(remaining_quantity),
+        "released_amount": float(remaining_quantity) if order.side == OrderSide.SELL else 0.0,
         "release_ticket_id": trans_ticket_id,
     }

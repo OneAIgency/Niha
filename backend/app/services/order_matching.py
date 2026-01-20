@@ -126,25 +126,31 @@ async def update_entity_balance(
     return balance_after
 
 
-async def get_cea_sell_orders(db: AsyncSession, limit_price: Optional[Decimal] = None) -> List[Tuple[Order, Seller]]:
+async def get_cea_sell_orders(db: AsyncSession, limit_price: Optional[Decimal] = None) -> List[Order]:
     """
     Get available CEA sell orders sorted by price-time priority (FIFO).
+
+    Includes orders from both legacy Sellers and Market Makers.
 
     Args:
         db: Database session
         limit_price: Optional maximum price (in CNY) to include
 
     Returns:
-        List of (Order, Seller) tuples sorted by price ASC, then created_at ASC
+        List of Order objects sorted by price ASC, then created_at ASC
     """
     query = (
-        select(Order, Seller)
-        .join(Seller, Order.seller_id == Seller.id)
+        select(Order)
         .where(
             and_(
                 Order.certificate_type == CertificateType.CEA,
                 Order.side == OrderSide.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                # Include orders from Sellers OR Market Makers
+                or_(
+                    Order.seller_id.isnot(None),
+                    Order.market_maker_id.isnot(None)
+                )
             )
         )
     )
@@ -155,7 +161,7 @@ async def get_cea_sell_orders(db: AsyncSession, limit_price: Optional[Decimal] =
     query = query.order_by(Order.price.asc(), Order.created_at.asc())
 
     result = await db.execute(query)
-    return result.all()
+    return result.scalars().all()
 
 
 async def preview_buy_order(
@@ -240,7 +246,7 @@ async def preview_buy_order(
     total_cost_gross = Decimal("0")
     total_quantity = Decimal("0")
 
-    for order, seller in sell_orders:
+    for order in sell_orders:
         if amount_eur is not None and remaining_budget <= Decimal("0"):
             break
         if quantity is not None and remaining_qty <= Decimal("0"):
@@ -275,9 +281,13 @@ async def preview_buy_order(
 
         cost_eur = qty_to_buy * order_price_eur
 
+        # Get seller/MM code for display (fetch lazily only when needed)
+        # For now, use order ID as code - callers can fetch seller/MM info separately if needed
+        seller_code = str(order.seller_id) if order.seller_id else str(order.market_maker_id)
+
         fills.append(OrderFillResult(
             order_id=order.id,
-            seller_code=seller.client_code,
+            seller_code=seller_code,
             price=order_price_cny,
             price_eur=order_price_eur,
             quantity=qty_to_buy,
@@ -430,13 +440,11 @@ async def execute_market_buy_order(
 
     # Execute trades
     for fill in preview.fills:
-        # Get the sell order and seller
+        # Get the sell order
         result = await db.execute(
-            select(Order, Seller)
-            .join(Seller, Order.seller_id == Seller.id)
-            .where(Order.id == fill.order_id)
+            select(Order).where(Order.id == fill.order_id)
         )
-        sell_order, seller = result.one()
+        sell_order = result.scalar_one()
 
         # Create trade record
         trade = CashMarketTrade(
@@ -457,9 +465,15 @@ async def execute_market_buy_order(
             sell_order.status = OrderStatus.PARTIALLY_FILLED
         sell_order.updated_at = datetime.utcnow()
 
-        # Update seller stats
-        seller.cea_sold = Decimal(str(seller.cea_sold or 0)) + fill.quantity
-        seller.total_transactions = (seller.total_transactions or 0) + 1
+        # Update seller stats (only for legacy sellers, not Market Makers)
+        if sell_order.seller_id:
+            seller_result = await db.execute(
+                select(Seller).where(Seller.id == sell_order.seller_id)
+            )
+            seller = seller_result.scalar_one_or_none()
+            if seller:
+                seller.cea_sold = Decimal(str(seller.cea_sold or 0)) + fill.quantity
+                seller.total_transactions = (seller.total_transactions or 0) + 1
 
     # Update buyer balances
     # Deduct EUR (total cost + fees)

@@ -905,7 +905,7 @@ class MarketMakerTransactionResponse(BaseModel):
 class MarketOrderCreate(BaseModel):
     market_maker_id: UUID
     certificate_type: str  # CEA, EUA
-    side: str = Field(..., pattern="^SELL$")  # Only SELL allowed
+    side: str = Field(..., pattern="^(BID|ASK)$")  # BID (buy) or ASK (sell)
     order_type: str = "LIMIT"
     price: Decimal = Field(..., gt=0)
     quantity: Decimal = Field(..., gt=0)
