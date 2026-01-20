@@ -1,7 +1,7 @@
 """Liquidity management service"""
 import uuid
 from decimal import Decimal
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
@@ -10,6 +10,7 @@ from app.models.models import (
     CertificateType, AssetTransaction, TransactionType, LiquidityOperation
 )
 from app.services.ticket_service import TicketService
+from app.services.market_maker_service import MarketMakerService
 from app.models.models import TicketStatus
 import logging
 
@@ -51,9 +52,12 @@ class LiquidityService:
     async def get_asset_holders(
         db: AsyncSession,
         certificate_type: CertificateType
-    ) -> List[Dict[str, any]]:
+    ) -> List[Dict[str, Any]]:
         """Get all active asset-holding MMs with certificate balances"""
-        from app.services.market_maker_service import MarketMakerService
+        # NOTE: This method has a known N+1 query issue. It fetches all asset holder MMs
+        # in one query, then separately queries balances for each MM. This results in
+        # 1 + (N × 5) queries where N is the number of asset holders.
+        # Future optimization: Refactor balance calculation to use joins for bulk retrieval.
 
         result = await db.execute(
             select(MarketMakerClient)
@@ -70,11 +74,18 @@ class LiquidityService:
         mm_data = []
         for mm in mms:
             balances = await MarketMakerService.get_balances(db, mm.id)
-            available = balances[certificate_type.value]["available"]
+            balance_data = balances.get(certificate_type.value)
+            if not balance_data:
+                logger.warning(f"No balance data for {certificate_type.value} on MM {mm.id}")
+                continue
+
+            available = balance_data.get("available", Decimal("0"))
             if available > 0:
                 mm_data.append({
                     "mm": mm,
                     "available": available
                 })
 
+        # Sort by available balance descending
+        mm_data.sort(key=lambda x: x["available"], reverse=True)
         return mm_data
