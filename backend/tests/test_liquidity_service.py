@@ -296,3 +296,22 @@ async def test_preview_liquidity_creation_sufficient_assets(
     assert len(preview["bid_plan"]["mms"]) >= 1
     assert len(preview["ask_plan"]["mms"]) >= 1
     assert preview["missing_assets"] is None
+
+@pytest.mark.asyncio
+async def test_preview_liquidity_creation_invalid_amounts(db_session, test_admin_user):
+    """Test preview with invalid input amounts"""
+    with pytest.raises(ValueError, match="bid_amount_eur must be positive"):
+        await LiquidityService.preview_liquidity_creation(
+            db=db_session,
+            certificate_type=CertificateType.CEA,
+            bid_amount_eur=Decimal("-100"),
+            ask_amount_eur=Decimal("50000")
+        )
+
+    with pytest.raises(ValueError, match="ask_amount_eur must be positive"):
+        await LiquidityService.preview_liquidity_creation(
+            db=db_session,
+            certificate_type=CertificateType.CEA,
+            bid_amount_eur=Decimal("100000"),
+            ask_amount_eur=Decimal("0")
+        )

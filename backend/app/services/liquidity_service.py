@@ -38,6 +38,10 @@ class LiquidityService:
         CertificateType.EUA: Decimal("81.0")
     }
 
+    # Liquidity operation constants
+    ESTIMATED_SPREAD_PERCENT = 0.5  # 0.5% spread
+    ORDERS_PER_MM = 3  # Price levels per market maker
+
     @staticmethod
     async def get_liquidity_providers(db: AsyncSession) -> List[MarketMakerClient]:
         """Get all active EUR-holding market makers with balances"""
@@ -174,12 +178,43 @@ class LiquidityService:
     ) -> Dict:
         """
         Preview liquidity creation without executing.
-        Returns plan showing what will be executed.
+
+        Args:
+            db: Database session
+            certificate_type: Type of certificate (CEA or EUA)
+            bid_amount_eur: Total EUR to allocate for BID orders (must be positive)
+            ask_amount_eur: Total EUR value for ASK orders (must be positive)
+
+        Returns:
+            Dictionary containing:
+                - can_execute (bool): Whether operation can proceed
+                - certificate_type (str): Certificate type value
+                - bid_plan (dict): BID order allocation plan with mms and price_levels
+                - ask_plan (dict): ASK order allocation plan with mms and price_levels
+                - missing_assets (list|None): List of missing asset details if insufficient
+                - suggested_actions (list): Recommended actions if can't execute
+                - total_orders_count (int): Total orders to be created
+                - estimated_spread (float): Expected spread percentage
+
+        Raises:
+            ValueError: If amounts are non-positive or reference price is invalid
+
+        Note:
+            Does not modify database state. Used for validation before execution.
         """
+        # Input validation
+        if bid_amount_eur <= 0:
+            raise ValueError(f"bid_amount_eur must be positive, got {bid_amount_eur}")
+        if ask_amount_eur <= 0:
+            raise ValueError(f"ask_amount_eur must be positive, got {ask_amount_eur}")
+
         # Calculate reference price
         reference_price = await LiquidityService.calculate_reference_price(
             db, certificate_type
         )
+
+        if reference_price <= 0:
+            raise ValueError(f"Invalid reference price: {reference_price}")
 
         # Get liquidity providers
         lp_mms = await LiquidityService.get_liquidity_providers(db)
@@ -187,15 +222,15 @@ class LiquidityService:
 
         # Check BID liquidity
         bid_sufficient = total_eur_available >= bid_amount_eur
-        missing_assets = None
+        missing_assets_list = []
 
         if not bid_sufficient:
-            missing_assets = {
+            missing_assets_list.append({
                 "asset_type": "EUR",
                 "required": float(bid_amount_eur),
                 "available": float(total_eur_available),
                 "shortfall": float(bid_amount_eur - total_eur_available)
-            }
+            })
 
         # Get asset holders
         ah_data = await LiquidityService.get_asset_holders(db, certificate_type)
@@ -205,13 +240,13 @@ class LiquidityService:
         # Check ASK liquidity
         ask_sufficient = total_certs_available >= ask_quantity_needed
 
-        if not ask_sufficient and not missing_assets:
-            missing_assets = {
+        if not ask_sufficient:
+            missing_assets_list.append({
                 "asset_type": certificate_type.value,
                 "required": float(ask_quantity_needed),
                 "available": float(total_certs_available),
                 "shortfall": float(ask_quantity_needed - total_certs_available)
-            }
+            })
 
         # Build BID plan
         bid_plan = {
@@ -228,7 +263,7 @@ class LiquidityService:
                     "mm_name": mm.name,
                     "mm_type": "LIQUIDITY_PROVIDER",
                     "allocation": float(eur_per_mm),
-                    "orders_count": 3
+                    "orders_count": LiquidityService.ORDERS_PER_MM
                 })
 
             # Price levels
@@ -254,7 +289,7 @@ class LiquidityService:
                     "mm_name": ah["mm"].name,
                     "mm_type": "ASSET_HOLDER",
                     "allocation": float(quantity_per_mm),
-                    "orders_count": 3
+                    "orders_count": LiquidityService.ORDERS_PER_MM
                 })
 
             # Price levels
@@ -267,21 +302,22 @@ class LiquidityService:
 
         # Suggested actions if insufficient
         suggested_actions = []
-        if missing_assets:
-            if missing_assets["asset_type"] == "EUR":
-                suggested_actions.append("create_liquidity_providers")
-                suggested_actions.append("fund_existing_lps")
-            else:
-                suggested_actions.append("create_asset_holders")
-                suggested_actions.append("fund_existing_ahs")
+        if missing_assets_list:
+            for missing in missing_assets_list:
+                if missing["asset_type"] == "EUR":
+                    suggested_actions.append("create_liquidity_providers")
+                    suggested_actions.append("fund_existing_lps")
+                else:
+                    suggested_actions.append("create_asset_holders")
+                    suggested_actions.append("fund_existing_ahs")
 
         return {
             "can_execute": bid_sufficient and ask_sufficient,
             "certificate_type": certificate_type.value,
             "bid_plan": bid_plan,
             "ask_plan": ask_plan,
-            "missing_assets": missing_assets,
+            "missing_assets": missing_assets_list if missing_assets_list else None,
             "suggested_actions": suggested_actions,
-            "total_orders_count": len(bid_plan["mms"]) * 3 + len(ask_plan["mms"]) * 3,
-            "estimated_spread": 0.5  # 0.5% spread
+            "total_orders_count": len(bid_plan["mms"]) * LiquidityService.ORDERS_PER_MM + len(ask_plan["mms"]) * LiquidityService.ORDERS_PER_MM,
+            "estimated_spread": LiquidityService.ESTIMATED_SPREAD_PERCENT
         }
