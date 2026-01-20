@@ -74,13 +74,6 @@ export function CreateLiquidityPage() {
     }
   };
 
-  const formatNumber = (num: number) => {
-    return num.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

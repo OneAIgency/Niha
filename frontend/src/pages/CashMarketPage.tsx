@@ -252,7 +252,21 @@ export function CashMarketPage() {
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* User Order Entry Modal - Fixed/Sticky at Top */}
+      {userBalances && (
+        <div className="sticky top-0 z-10 bg-navy-50 dark:bg-navy-900 border-b border-navy-200 dark:border-navy-700 shadow-lg">
+          <div className="max-w-7xl mx-auto p-6">
+            <UserOrderEntryModal
+              certificateType={certificateType}
+              availableBalance={userBalances.eur_balance}
+              bestAskPrice={orderBook?.best_ask || null}
+              onOrderSubmit={handleMarketOrderSubmit}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Grid - Scrollable Content Below */}
       <div className="max-w-7xl mx-auto p-6">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
@@ -260,18 +274,6 @@ export function CashMarketPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* User Order Entry Modal - Full Width */}
-            {userBalances && (
-              <div className="w-full">
-                <UserOrderEntryModal
-                  certificateType={certificateType}
-                  availableBalance={userBalances.eur_balance}
-                  bestAskPrice={orderBook?.best_ask || null}
-                  onOrderSubmit={handleMarketOrderSubmit}
-                />
-              </div>
-            )}
-
             {/* Professional Order Book - Full Width */}
             <div className="w-full">
               {orderBook && (
