@@ -60,12 +60,12 @@ export function UserOrderEntryModal({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-set amount to full balance for market orders on mount
+  // Auto-set amount to full balance when market order type is selected
   useEffect(() => {
-    if (orderType === 'MARKET' && !amountEur && availableBalance > 0) {
+    if (orderType === 'MARKET' && availableBalance > 0) {
       setAmountEur(availableBalance.toFixed(2));
     }
-  }, [orderType, availableBalance]); // Don't include amountEur to avoid loop
+  }, [orderType, availableBalance]);
 
   // Fetch preview when amount or price changes (debounced)
   const fetchPreview = useCallback(
