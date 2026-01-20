@@ -29,8 +29,8 @@ export const FALLBACK_PRICES: ScrapedPrices = {
   },
   cea: {
     market: 'China ETS',
-    price: 63,
-    currency: 'CNY',
+    price: 8,
+    currency: 'EUR',
     change: 0,
     changePercent: 0,
     lastUpdated: new Date(),
@@ -118,7 +118,7 @@ export async function fetchCarbonPrices(): Promise<ScrapedPrices> {
         cea: data.cea ? {
           market: 'China ETS',
           price: data.cea.price || FALLBACK_PRICES.cea!.price,
-          currency: 'CNY',
+          currency: 'EUR',
           change: data.cea.change_24h || 0,
           changePercent: data.cea.change_percent || 0,
           lastUpdated: new Date(data.cea.updated_at || Date.now()),
@@ -148,16 +148,7 @@ export async function fetchCarbonPrices(): Promise<ScrapedPrices> {
   }
 }
 
-// Exchange rate approximation (CNY to EUR)
-export const CNY_TO_EUR_RATE = 0.127; // ~1 CNY = 0.127 EUR
-
-// Helper to convert CEA price to EUR
-export function ceaToEur(ceaPrice: number): number {
-  return ceaPrice * CNY_TO_EUR_RATE;
-}
-
 // Helper to calculate price ratio
 export function calculatePriceRatio(euaPrice: number, ceaPrice: number): number {
-  const ceaInEur = ceaToEur(ceaPrice);
-  return ceaInEur > 0 ? euaPrice / ceaInEur : 0;
+  return ceaPrice > 0 ? euaPrice / ceaPrice : 0;
 }

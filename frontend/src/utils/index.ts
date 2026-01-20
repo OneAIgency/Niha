@@ -6,10 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Format currency
+// Format currency (Platform default: EUR)
 export function formatCurrency(
   value: number,
-  currency: string = 'USD',
+  currency: string = 'EUR',
   locale: string = 'en-US'
 ): string {
   return new Intl.NumberFormat(locale, {

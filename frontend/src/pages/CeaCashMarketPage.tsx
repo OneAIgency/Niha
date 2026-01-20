@@ -14,12 +14,6 @@ import {
 import { cashMarketApi } from '../services/api';
 import type { OrderBook, CashMarketTrade } from '../types';
 
-// Conversion rate CNY to EUR (approximate)
-const CNY_TO_EUR = 0.127;
-
-// Convert CNY price to EUR for display
-const toEur = (cnyPrice: number) => cnyPrice * CNY_TO_EUR;
-
 // Types for order preview
 interface OrderPreview {
   fills: Array<{
@@ -246,7 +240,7 @@ export function CeaCashMarketPage() {
               <div>
                 <span className="text-slate-400 mr-2">Last</span>
                 <span className="font-bold font-mono text-white text-lg">
-                  €{formatNumber(toEur(orderBook?.last_price || 0))}
+                  €{formatNumber(orderBook?.last_price || 0)}
                 </span>
               </div>
 
@@ -349,7 +343,7 @@ export function CeaCashMarketPage() {
                                 style={{ width: `${depthPercent}%` }}
                               />
                               <span className="relative font-mono text-red-400">
-                                €{formatNumber(toEur(ask.price))}
+                                €{formatNumber(ask.price)}
                               </span>
                               <span className="relative text-right text-slate-300 font-mono">
                                 {formatNumber(ask.quantity, 0)}
@@ -365,7 +359,7 @@ export function CeaCashMarketPage() {
                   <div className="mt-4 pt-4 border-t border-slate-800 text-center">
                     <span className="text-slate-500 text-sm">Spread: </span>
                     <span className="text-white font-mono">
-                      €{formatNumber(toEur(orderBook?.spread || 0))}
+                      €{formatNumber(orderBook?.spread || 0)}
                     </span>
                   </div>
                 </div>
@@ -528,7 +522,7 @@ export function CeaCashMarketPage() {
                             {formatNumber(trade.quantity, 0)} CEA
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-slate-300">
-                            €{formatNumber(toEur(trade.price))}
+                            €{formatNumber(trade.price)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className="text-emerald-400 text-xs">✓ Done</span>

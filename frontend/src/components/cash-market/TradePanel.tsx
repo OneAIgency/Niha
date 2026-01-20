@@ -93,7 +93,7 @@ export function TradePanel({
         <div>
           <div className="flex justify-between items-center mb-1">
             <label className="text-sm text-navy-600 dark:text-navy-400">
-              Price (USD)
+              Price (EUR)
             </label>
             <button
               type="button"
@@ -135,7 +135,7 @@ export function TradePanel({
           <div className="flex justify-between items-center">
             <span className="text-sm text-navy-600 dark:text-navy-400">Total</span>
             <span className="text-lg font-bold font-mono text-navy-900 dark:text-white">
-              ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              €{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -160,19 +160,19 @@ export function TradePanel({
           {lastPrice && (
             <div className="flex justify-between">
               <span>Last Price</span>
-              <span className="font-mono">${lastPrice.toFixed(2)}</span>
+              <span className="font-mono">€{lastPrice.toFixed(2)}</span>
             </div>
           )}
           {bestBid && (
             <div className="flex justify-between">
               <span>Best Bid</span>
-              <span className="font-mono text-emerald-600 dark:text-emerald-400">${bestBid.toFixed(2)}</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400">€{bestBid.toFixed(2)}</span>
             </div>
           )}
           {bestAsk && (
             <div className="flex justify-between">
               <span>Best Ask</span>
-              <span className="font-mono text-red-600 dark:text-red-400">${bestAsk.toFixed(2)}</span>
+              <span className="font-mono text-red-600 dark:text-red-400">€{bestAsk.toFixed(2)}</span>
             </div>
           )}
         </div>

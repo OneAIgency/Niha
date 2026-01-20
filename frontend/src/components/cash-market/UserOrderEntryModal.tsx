@@ -261,7 +261,7 @@ export function UserOrderEntryModal({
           {orderType === 'LIMIT' && (
             <div>
               <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
-                Limit Price (USD)
+                Limit Price (EUR)
               </label>
               <input
                 type="number"
@@ -274,7 +274,7 @@ export function UserOrderEntryModal({
               />
               {bestAskPrice && (
                 <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                  Best Ask: ${bestAskPrice.toFixed(2)}
+                  Best Ask: €{bestAskPrice.toFixed(2)}
                 </p>
               )}
             </div>

@@ -4,7 +4,6 @@ import {
   ScrapedPrices,
   FALLBACK_PRICES,
   getCachedPrices,
-  CNY_TO_EUR_RATE,
 } from '../services/carbonPriceScraper';
 
 export interface OnboardingPrices {
@@ -76,7 +75,7 @@ export function useOnboardingPrices(): OnboardingPrices {
   const ceaChange = scrapedPrices?.cea?.change ?? 0;
   const ceaChangePercent = scrapedPrices?.cea?.changePercent ?? 0;
 
-  const ceaPriceInEur = ceaPrice * CNY_TO_EUR_RATE;
+  const ceaPriceInEur = ceaPrice; // CEA prices are now in EUR
   const priceRatio = ceaPriceInEur > 0 ? euaPrice / ceaPriceInEur : 0;
 
   return {
@@ -85,7 +84,7 @@ export function useOnboardingPrices(): OnboardingPrices {
     euaChange,
     euaChangePercent,
     ceaPrice,
-    ceaCurrency: 'CNY',
+    ceaCurrency: 'EUR',
     ceaChange,
     ceaChangePercent,
     ceaPriceInEur,

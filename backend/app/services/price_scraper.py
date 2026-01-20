@@ -11,6 +11,7 @@ from decimal import Decimal
 from ..core.config import settings
 from ..core.security import RedisManager
 from ..models.models import ScrapingSource, ScrapeLibrary, ScrapeStatus, CertificateType, PriceHistory
+from .currency_service import currency_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +24,11 @@ class PriceScraper:
 
     # Base prices from market research (fallback)
     BASE_EUA_EUR = 75.0  # EU Allowances in EUR
-    BASE_CEA_CNY = 100.0  # China Allowances in CNY
-    EUR_TO_USD = 1.08
-    CNY_TO_USD = 0.14
-    CNY_TO_EUR = 0.13
+    BASE_CEA_EUR = 13.0  # China Allowances in EUR (converted from ~100 CNY)
 
     def __init__(self):
         self.last_eua_price = self.BASE_EUA_EUR
-        self.last_cea_price = self.BASE_CEA_CNY
+        self.last_cea_price = self.BASE_CEA_EUR
         self.last_update = datetime.utcnow()
 
     def _apply_variance(self, base_price: float, max_variance: float = 0.02) -> float:
@@ -398,51 +396,46 @@ class PriceScraper:
         return None
 
     async def get_current_prices(self) -> Dict:
-        """Get current carbon prices with realistic variance"""
+        """Get current carbon prices with realistic variance - ALL IN EUR"""
 
         # Try to fetch real prices first
         web_prices = await self.fetch_prices_from_web()
 
         if web_prices and web_prices.get('eua'):
             eua_eur = web_prices['eua']
-            cea_cny = web_prices.get('cea', self.BASE_CEA_CNY)
+            cea_cny = web_prices.get('cea', 100.0)  # CEA fetched in CNY
         else:
             # Check cache
             cached = await RedisManager.get_cached_prices()
             if cached and 'eua_eur' in cached:
-                cea_cny = float(cached.get('cea_cny', self.BASE_CEA_CNY))
                 return {
                     "eua": {
                         "price": float(cached.get('eua_eur', self.BASE_EUA_EUR)),
                         "currency": "EUR",
-                        "price_usd": float(cached.get('eua_usd', self.BASE_EUA_EUR * self.EUR_TO_USD)),
                         "change_24h": float(cached.get('eua_change', 0)),
                     },
                     "cea": {
-                        "price": cea_cny,
-                        "currency": "CNY",
-                        "price_eur": float(cached.get('cea_eur', cea_cny * self.CNY_TO_EUR)),
-                        "price_usd": float(cached.get('cea_usd', self.BASE_CEA_CNY * self.CNY_TO_USD)),
+                        "price": float(cached.get('cea_eur', self.BASE_CEA_EUR)),
+                        "currency": "EUR",
                         "change_24h": float(cached.get('cea_change', 0)),
                     },
-                    "swap_rate": float(cached.get('swap_rate', self.BASE_EUA_EUR * self.EUR_TO_USD / (self.BASE_CEA_CNY * self.CNY_TO_USD))),
                     "updated_at": cached.get('updated_at', datetime.utcnow().isoformat())
                 }
 
             # Fallback to simulated prices
             eua_eur = self._apply_variance(self.BASE_EUA_EUR)
-            cea_cny = self._apply_variance(self.BASE_CEA_CNY)
+            cea_cny = 100.0  # Fallback CEA in CNY
 
-        eua_usd = round(eua_eur * self.EUR_TO_USD, 2)
-        cea_usd = round(cea_cny * self.CNY_TO_USD, 2)
-        cea_eur = round(cea_cny * self.CNY_TO_EUR, 2)
+        # Convert CEA from CNY to EUR using currency service
+        cea_eur = float(await currency_service.convert(
+            amount=Decimal(str(cea_cny)),
+            from_currency="CNY",
+            to_currency="EUR"
+        ))
 
         # Calculate 24h change (simulated if not available)
         eua_change = round(random.uniform(-3, 3), 2)
         cea_change = round(random.uniform(-2, 2), 2)
-
-        # Swap rate: how many CEA for 1 EUA
-        swap_rate = round(eua_usd / cea_usd, 2) if cea_usd > 0 else 5.0
 
         now = datetime.utcnow()
 
@@ -450,35 +443,27 @@ class PriceScraper:
             "eua": {
                 "price": eua_eur,
                 "currency": "EUR",
-                "price_usd": eua_usd,
                 "change_24h": eua_change,
             },
             "cea": {
-                "price": cea_cny,
-                "currency": "CNY",
-                "price_eur": cea_eur,
-                "price_usd": cea_usd,
+                "price": cea_eur,
+                "currency": "EUR",
                 "change_24h": cea_change,
             },
-            "swap_rate": swap_rate,
             "updated_at": now.isoformat()
         }
 
-        # Cache the prices
+        # Cache the prices (EUR only)
         await RedisManager.cache_prices({
             "eua_eur": str(eua_eur),
-            "eua_usd": str(eua_usd),
             "eua_change": str(eua_change),
-            "cea_cny": str(cea_cny),
             "cea_eur": str(cea_eur),
-            "cea_usd": str(cea_usd),
             "cea_change": str(cea_change),
-            "swap_rate": str(swap_rate),
             "updated_at": now.isoformat()
         })
 
         self.last_eua_price = eua_eur
-        self.last_cea_price = cea_cny
+        self.last_cea_price = cea_eur  # Now storing EUR
         self.last_update = now
 
         return prices
@@ -544,7 +529,7 @@ class PriceScraper:
         logger.info("No database records, using fallback prices")
         cached = await RedisManager.get_cached_prices()
         base_eua_eur = float(cached.get('eua_eur', self.BASE_EUA_EUR)) if cached else self.BASE_EUA_EUR
-        base_cea_eur = float(cached.get('cea_eur', self.BASE_CEA_CNY * self.CNY_TO_EUR)) if cached else self.BASE_CEA_CNY * self.CNY_TO_EUR
+        base_cea_eur = float(cached.get('cea_eur', self.BASE_CEA_EUR)) if cached else self.BASE_CEA_EUR
 
         now = datetime.utcnow()
         for i in range(days, -1, -1):

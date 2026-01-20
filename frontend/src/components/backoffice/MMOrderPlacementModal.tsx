@@ -264,7 +264,7 @@ export function MMOrderPlacementModal({
               {/* Price Input */}
               <div>
                 <label className="block text-sm font-semibold text-navy-700 dark:text-navy-300 mb-2">
-                  Price (USD) *
+                  Price (EUR) *
                 </label>
                 <input
                   type="number"
@@ -314,7 +314,7 @@ export function MMOrderPlacementModal({
                     </span>
                   </div>
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                    {formatQuantity(parseFloat(quantity))} {certificateType} × ${parseFloat(price).toFixed(2)}
+                    {formatQuantity(parseFloat(quantity))} {certificateType} × €{parseFloat(price).toFixed(2)}
                   </p>
                 </div>
               )}

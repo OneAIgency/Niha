@@ -65,9 +65,6 @@ interface Portfolio {
   eua_total: number;
 }
 
-// CNY to EUR conversion
-const CNY_TO_EUR = 0.127;
-
 // Transaction type for display
 interface Transaction {
   id: string;
@@ -199,7 +196,7 @@ export function DashboardPage() {
   // Calculate portfolio value
   const calculatePortfolioValue = useCallback(() => {
     const cashValue = portfolio.cash_total;
-    const ceaPrice = prices?.cea.price_eur || (prices?.cea.price || 0) * CNY_TO_EUR;
+    const ceaPrice = prices?.cea.price || 0;
     const euaPrice = prices?.eua.price || 0;
 
     const ceaValueEur = portfolio.cea_total * ceaPrice;
@@ -332,8 +329,8 @@ export function DashboardPage() {
       locked: portfolio.cea_locked,
       pending: 0,
       total: portfolio.cea_total,
-      value: portfolio.cea_total * (prices?.cea.price_eur || (prices?.cea.price || 0) * CNY_TO_EUR),
-      price: prices?.cea.price_eur || (prices?.cea.price || 0) * CNY_TO_EUR,
+      value: portfolio.cea_total * (prices?.cea.price || 0),
+      price: prices?.cea.price || 0,
       change: prices?.cea.change_24h || 0,
     },
     {
@@ -408,7 +405,7 @@ export function DashboardPage() {
                       <div className="text-xs text-slate-400">CEA Price</div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold font-mono text-white">
-                          €{(prices.cea.price_eur || prices.cea.price * CNY_TO_EUR).toFixed(2)}
+                          €{prices.cea.price.toFixed(2)}
                         </span>
                         <span className={`flex items-center gap-0.5 text-xs ${
                           prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'

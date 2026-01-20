@@ -47,7 +47,7 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-amber-600 dark:text-amber-400">CEA</span>
           <span className={cn('font-mono font-bold text-navy-900 dark:text-white', animate && 'animate-pulse')}>
-            {formatCurrency(prices.cea.price_eur || prices.cea.price * 0.127, 'EUR')}
+            {formatCurrency(prices.cea.price, 'EUR')}
           </span>
         </div>
       </div>
@@ -102,7 +102,7 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
                 animate && 'animate-pulse'
               )}
             >
-              {formatCurrency(prices.cea.price_eur || prices.cea.price * 0.127, 'EUR')}
+              {formatCurrency(prices.cea.price, 'EUR')}
             </span>
           </div>
         </div>

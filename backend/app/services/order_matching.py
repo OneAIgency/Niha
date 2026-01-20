@@ -18,13 +18,15 @@ from ..models.models import (
     Order, Seller, Entity, EntityHolding, AssetTransaction, CashMarketTrade,
     OrderSide, OrderStatus, CertificateType, AssetType, TransactionType
 )
+from ..services.currency_service import currency_service
 
 
 # Platform fee rate: 0.5%
 PLATFORM_FEE_RATE = Decimal("0.005")
 
-# CNY to EUR conversion rate
-CNY_TO_EUR = Decimal("0.127")
+# EUR migration date - orders created before this are in CNY, after are in EUR
+# Set to deployment date of this feature
+EUR_MIGRATION_DATE = datetime(2026, 1, 21)
 
 
 @dataclass
@@ -53,6 +55,32 @@ class OrderPreviewResult:
     can_execute: bool
     execution_message: str
     partial_fill: bool
+
+
+async def normalize_order_price_to_eur(order: Order) -> Decimal:
+    """
+    Convert order price to EUR regardless of storage format.
+
+    Strategy:
+    - Orders created after EUR_MIGRATION_DATE: Already in EUR
+    - Legacy orders (before migration): Stored in CNY, convert to EUR
+
+    Args:
+        order: Order object
+
+    Returns:
+        Decimal: Price in EUR
+    """
+    order_price = Decimal(str(order.price))
+
+    # Check if this is a legacy order (before EUR migration)
+    if order.created_at < EUR_MIGRATION_DATE:
+        # Legacy order - stored in CNY, convert to EUR
+        rate = await currency_service.get_rate("CNY", "EUR")
+        return order_price * rate
+
+    # New order - already in EUR
+    return order_price
 
 
 async def get_entity_balance(db: AsyncSession, entity_id: UUID, asset_type: AssetType) -> Decimal:
@@ -252,8 +280,9 @@ async def preview_buy_order(
         if quantity is not None and remaining_qty <= Decimal("0"):
             break
 
-        order_price_cny = Decimal(str(order.price))
-        order_price_eur = order_price_cny * CNY_TO_EUR
+        # Normalize order price to EUR (handles both legacy CNY and new EUR orders)
+        order_price_eur = await normalize_order_price_to_eur(order)
+        order_price_cny = Decimal(str(order.price))  # Keep for display/audit
         remaining_order_qty = Decimal(str(order.quantity)) - Decimal(str(order.filled_quantity))
 
         if remaining_order_qty <= Decimal("0"):
@@ -425,12 +454,12 @@ async def execute_market_buy_order(
             certificate_balance=await get_entity_balance(db, entity_id, AssetType.CEA)
         )
 
-    # Create buy order record
+    # Create buy order record (NEW ORDERS STORED IN EUR)
     buy_order = Order(
         entity_id=entity_id,
         certificate_type=CertificateType.CEA,
         side=OrderSide.BUY,
-        price=Decimal(str(preview.weighted_avg_price / CNY_TO_EUR)),  # Store in CNY
+        price=Decimal(str(preview.weighted_avg_price)),  # Store in EUR
         quantity=preview.total_quantity,
         filled_quantity=preview.total_quantity,
         status=OrderStatus.FILLED

@@ -41,7 +41,7 @@ export function OrderBook({
 
       {/* Header */}
       <div className="grid grid-cols-3 text-xs text-navy-500 dark:text-navy-400 px-4 py-2 border-b border-navy-100 dark:border-navy-700/50">
-        <span>Price (USD)</span>
+        <span>Price (EUR)</span>
         <span className="text-right">Quantity</span>
         <span className="text-right">Total</span>
       </div>
@@ -80,7 +80,7 @@ export function OrderBook({
           <div className="flex justify-between items-center text-sm">
             <span className="text-navy-500 dark:text-navy-400">Spread</span>
             <span className="font-mono font-semibold text-navy-700 dark:text-navy-300">
-              {spread !== null ? `$${formatNumber(spread, 4)}` : '-'}
+              {spread !== null ? `€${formatNumber(spread, 4)}` : '-'}
             </span>
             {spread !== null && bestBid !== null && (
               <span className="text-navy-400 dark:text-navy-500 text-xs">

@@ -129,7 +129,7 @@ export function MarketplacePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-navy-900 dark:text-white font-mono">
-                  {prices ? formatCurrency(prices.cea.price_eur || prices.cea.price * 0.127, 'EUR') : '---'}
+                  {prices ? formatCurrency(prices.cea.price, 'EUR') : '---'}
                 </p>
                 <p className="text-sm text-navy-500 dark:text-navy-400">Market Price</p>
               </div>
@@ -323,13 +323,13 @@ export function MarketplacePage() {
                         <div>
                           <p className="text-sm text-navy-500 dark:text-navy-400">Unit Price</p>
                           <p className="font-semibold font-mono text-navy-900 dark:text-white">
-                            {formatCurrency(listing.unit_price * 0.93, 'EUR')}
+                            {formatCurrency(listing.unit_price, 'EUR')}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-navy-500 dark:text-navy-400">Total Value</p>
                           <p className="font-semibold font-mono text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(listing.total_value * 0.93, 'EUR')}
+                            {formatCurrency(listing.total_value, 'EUR')}
                           </p>
                         </div>
                         <div>
