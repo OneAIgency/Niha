@@ -254,3 +254,45 @@ def test_generate_price_levels_invalid_price():
 
     with pytest.raises(ValueError, match="reference_price must be positive"):
         LiquidityService.generate_price_levels(Decimal("0.0"), OrderSide.BUY)
+
+@pytest.mark.asyncio
+async def test_preview_liquidity_creation_sufficient_assets(
+    db_session, test_admin_user
+):
+    """Test preview with sufficient assets"""
+    from app.services.market_maker_service import MarketMakerService
+
+    # Create liquidity provider with EUR
+    lp_mm = MarketMakerClient(
+        user_id=test_admin_user.id,
+        name="LP-Preview",
+        mm_type=MarketMakerType.LIQUIDITY_PROVIDER,
+        eur_balance=Decimal("200000"),
+        is_active=True,
+        created_by=test_admin_user.id
+    )
+    db_session.add(lp_mm)
+
+    # Create asset holder with CEA
+    ah_mm, _ = await MarketMakerService.create_market_maker(
+        db=db_session,
+        name="AH-Preview",
+        email="ah-preview@test.com",
+        description="Test",
+        created_by_id=test_admin_user.id,
+        initial_balances={"CEA": Decimal("10000")}
+    )
+    await db_session.commit()
+
+    # Test preview
+    preview = await LiquidityService.preview_liquidity_creation(
+        db=db_session,
+        certificate_type=CertificateType.CEA,
+        bid_amount_eur=Decimal("100000"),
+        ask_amount_eur=Decimal("50000")
+    )
+
+    assert preview["can_execute"] is True
+    assert len(preview["bid_plan"]["mms"]) >= 1
+    assert len(preview["ask_plan"]["mms"]) >= 1
+    assert preview["missing_assets"] is None

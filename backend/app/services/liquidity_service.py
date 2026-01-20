@@ -164,3 +164,124 @@ class LiquidityService:
             ]
 
         return levels
+
+    @staticmethod
+    async def preview_liquidity_creation(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        bid_amount_eur: Decimal,
+        ask_amount_eur: Decimal
+    ) -> Dict:
+        """
+        Preview liquidity creation without executing.
+        Returns plan showing what will be executed.
+        """
+        # Calculate reference price
+        reference_price = await LiquidityService.calculate_reference_price(
+            db, certificate_type
+        )
+
+        # Get liquidity providers
+        lp_mms = await LiquidityService.get_liquidity_providers(db)
+        total_eur_available = sum(mm.eur_balance for mm in lp_mms)
+
+        # Check BID liquidity
+        bid_sufficient = total_eur_available >= bid_amount_eur
+        missing_assets = None
+
+        if not bid_sufficient:
+            missing_assets = {
+                "asset_type": "EUR",
+                "required": float(bid_amount_eur),
+                "available": float(total_eur_available),
+                "shortfall": float(bid_amount_eur - total_eur_available)
+            }
+
+        # Get asset holders
+        ah_data = await LiquidityService.get_asset_holders(db, certificate_type)
+        total_certs_available = sum(Decimal(str(ah["available"])) for ah in ah_data)
+        ask_quantity_needed = ask_amount_eur / reference_price
+
+        # Check ASK liquidity
+        ask_sufficient = total_certs_available >= ask_quantity_needed
+
+        if not ask_sufficient and not missing_assets:
+            missing_assets = {
+                "asset_type": certificate_type.value,
+                "required": float(ask_quantity_needed),
+                "available": float(total_certs_available),
+                "shortfall": float(ask_quantity_needed - total_certs_available)
+            }
+
+        # Build BID plan
+        bid_plan = {
+            "mms": [],
+            "total_amount": float(bid_amount_eur),
+            "price_levels": []
+        }
+
+        if lp_mms:
+            eur_per_mm = bid_amount_eur / len(lp_mms)
+            for mm in lp_mms:
+                bid_plan["mms"].append({
+                    "mm_id": str(mm.id),
+                    "mm_name": mm.name,
+                    "mm_type": "LIQUIDITY_PROVIDER",
+                    "allocation": float(eur_per_mm),
+                    "orders_count": 3
+                })
+
+            # Price levels
+            levels = LiquidityService.generate_price_levels(reference_price, OrderSide.BUY)
+            for price, pct in levels:
+                bid_plan["price_levels"].append({
+                    "price": float(price),
+                    "percentage": float(pct * 100)
+                })
+
+        # Build ASK plan
+        ask_plan = {
+            "mms": [],
+            "total_amount": float(ask_amount_eur),
+            "price_levels": []
+        }
+
+        if ah_data:
+            quantity_per_mm = ask_quantity_needed / len(ah_data)
+            for ah in ah_data:
+                ask_plan["mms"].append({
+                    "mm_id": str(ah["mm"].id),
+                    "mm_name": ah["mm"].name,
+                    "mm_type": "ASSET_HOLDER",
+                    "allocation": float(quantity_per_mm),
+                    "orders_count": 3
+                })
+
+            # Price levels
+            levels = LiquidityService.generate_price_levels(reference_price, OrderSide.SELL)
+            for price, pct in levels:
+                ask_plan["price_levels"].append({
+                    "price": float(price),
+                    "percentage": float(pct * 100)
+                })
+
+        # Suggested actions if insufficient
+        suggested_actions = []
+        if missing_assets:
+            if missing_assets["asset_type"] == "EUR":
+                suggested_actions.append("create_liquidity_providers")
+                suggested_actions.append("fund_existing_lps")
+            else:
+                suggested_actions.append("create_asset_holders")
+                suggested_actions.append("fund_existing_ahs")
+
+        return {
+            "can_execute": bid_sufficient and ask_sufficient,
+            "certificate_type": certificate_type.value,
+            "bid_plan": bid_plan,
+            "ask_plan": ask_plan,
+            "missing_assets": missing_assets,
+            "suggested_actions": suggested_actions,
+            "total_orders_count": len(bid_plan["mms"]) * 3 + len(ask_plan["mms"]) * 3,
+            "estimated_spread": 0.5  # 0.5% spread
+        }
