@@ -45,12 +45,14 @@ def upgrade() -> None:
     # Create indexes
     op.create_index(op.f('ix_liquidity_operations_certificate_type'), 'liquidity_operations', ['certificate_type'], unique=False)
     op.create_index(op.f('ix_liquidity_operations_created_at'), 'liquidity_operations', ['created_at'], unique=False)
+    op.create_index(op.f('ix_liquidity_operations_created_by'), 'liquidity_operations', ['created_by'], unique=False)
     op.create_index(op.f('ix_liquidity_operations_ticket_id'), 'liquidity_operations', ['ticket_id'], unique=True)
 
 
 def downgrade() -> None:
     # Drop indexes
     op.drop_index(op.f('ix_liquidity_operations_ticket_id'), table_name='liquidity_operations')
+    op.drop_index(op.f('ix_liquidity_operations_created_by'), table_name='liquidity_operations')
     op.drop_index(op.f('ix_liquidity_operations_created_at'), table_name='liquidity_operations')
     op.drop_index(op.f('ix_liquidity_operations_certificate_type'), table_name='liquidity_operations')
 

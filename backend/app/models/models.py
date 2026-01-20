@@ -595,7 +595,18 @@ class TicketLog(Base):
 
 
 class LiquidityOperation(Base):
-    """Audit trail for liquidity creation operations"""
+    """Audit trail for liquidity creation operations
+
+    market_makers_used JSONB schema:
+    [
+        {
+            "mm_id": "uuid-string",
+            "mm_type": "ASSET_HOLDER" | "LIQUIDITY_PROVIDER",
+            "amount": "decimal-as-string"
+        },
+        ...
+    ]
+    """
     __tablename__ = "liquidity_operations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
