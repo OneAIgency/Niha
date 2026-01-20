@@ -3,21 +3,18 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
   ProfessionalOrderBook,
-  RecentTrades,
   MyOrders,
   UserOrderEntryModal,
 } from '../components/cash-market';
 import { cashMarketApi } from '../services/api';
 import type {
   OrderBook as OrderBookType,
-  CashMarketTrade,
   Order,
 } from '../types';
 
 export function CashMarketPage() {
   const certificateType = 'CEA'; // Hardcoded to CEA only
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
-  const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
@@ -30,15 +27,13 @@ export function CashMarketPage() {
   // Fetch all market data
   const fetchData = useCallback(async () => {
     try {
-      const [orderBookData, tradesData, ordersData, balancesData] = await Promise.all([
+      const [orderBookData, ordersData, balancesData] = await Promise.all([
         cashMarketApi.getRealOrderBook(certificateType),
-        cashMarketApi.getRecentTrades(certificateType, 50),
         cashMarketApi.getMyOrders({ certificate_type: certificateType }),
         cashMarketApi.getUserBalances(),
       ]);
 
       setOrderBook(orderBookData);
-      setRecentTrades(tradesData);
       setMyOrders(ordersData);
       setUserBalances(balancesData);
     } catch (error) {
@@ -250,34 +245,26 @@ export function CashMarketPage() {
             {/* Professional Order Book - Full Width, Prominent */}
             <div className="w-full">
               {orderBook && (
-                <div className="h-[600px]">
-                  <ProfessionalOrderBook
-                    orderBook={{
-                      bids: orderBook.bids,
-                      asks: orderBook.asks,
-                      spread: orderBook.spread,
-                      best_bid: orderBook.best_bid,
-                      best_ask: orderBook.best_ask,
-                    }}
-                    onPriceClick={handlePriceClick}
-                  />
-                </div>
+                <ProfessionalOrderBook
+                  orderBook={{
+                    bids: orderBook.bids,
+                    asks: orderBook.asks,
+                    spread: orderBook.spread,
+                    best_bid: orderBook.best_bid,
+                    best_ask: orderBook.best_ask,
+                  }}
+                  onPriceClick={handlePriceClick}
+                />
               )}
             </div>
 
-            {/* My Orders and Recent Trades */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* My Orders - Left (Priority) */}
-              <div className="h-[350px]">
+            {/* My Orders - Full Width */}
+            <div className="w-full">
+              <div className="h-[450px]">
                 <MyOrders
                   orders={myOrders}
                   onCancelOrder={handleCancelOrder}
                 />
-              </div>
-
-              {/* Recent Trades - Right */}
-              <div className="h-[350px]">
-                <RecentTrades trades={recentTrades} />
               </div>
             </div>
           </div>
