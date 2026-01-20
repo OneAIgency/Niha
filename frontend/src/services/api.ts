@@ -1100,7 +1100,21 @@ export const cashMarketApi = {
 // Market Makers API
 export const getMarketMakers = async (params?: any): Promise<any[]> => {
   const { data } = await api.get('/admin/market-makers', { params });
-  return data;
+
+  // Transform backend response to match frontend expectations
+  return data.map((mm: any) => ({
+    id: mm.id,
+    name: mm.name,
+    email: mm.email || '',  // Provide default if missing
+    description: mm.description,
+    is_active: mm.is_active,
+    cea_balance: mm.current_balances?.CEA?.total ?? 0,
+    eua_balance: mm.current_balances?.EUA?.total ?? 0,
+    total_orders: mm.total_orders || 0,
+    total_trades: mm.total_trades || 0,
+    created_at: mm.created_at,
+    ticket_id: mm.ticket_id,
+  }));
 };
 
 export const createMarketMaker = async (data: {
