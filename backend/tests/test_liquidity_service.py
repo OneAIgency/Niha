@@ -178,12 +178,79 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
 
 @pytest.mark.asyncio
 async def test_calculate_reference_price(db_session):
-    """Test reference price calculation"""
-    # Mock orderbook data - in real test, create orders
+    """Test reference price calculation returns valid default
+
+    NOTE: Full testing of mid-price calculation, best bid/ask fallbacks,
+    and last price fallback requires orderbook setup and should be covered
+    in integration tests.
+
+    This unit test verifies the method returns a valid default price
+    when no orderbook data exists.
+    """
     result = await LiquidityService.calculate_reference_price(
         db_session,
         CertificateType.CEA
     )
 
-    assert result > 0
+    # Should return default price (14.0) when no orderbook exists
+    assert result == Decimal("14.0")
     assert isinstance(result, Decimal)
+
+def test_generate_price_levels_buy():
+    """Test BID price level generation"""
+    from app.models.models import OrderSide
+
+    ref_price = Decimal("100.0")
+    levels = LiquidityService.generate_price_levels(ref_price, OrderSide.BUY)
+
+    # Should have 3 levels
+    assert len(levels) == 3
+
+    # Verify prices are below reference (BID)
+    assert all(price < ref_price for price, _ in levels)
+
+    # Verify spreads (0.2%, 0.4%, 0.5% below)
+    assert levels[0][0] == ref_price * Decimal("0.998")  # 0.2% below
+    assert levels[1][0] == ref_price * Decimal("0.996")  # 0.4% below
+    assert levels[2][0] == ref_price * Decimal("0.995")  # 0.5% below
+
+    # Verify volume distribution (50%, 30%, 20%)
+    assert levels[0][1] == Decimal("0.5")
+    assert levels[1][1] == Decimal("0.3")
+    assert levels[2][1] == Decimal("0.2")
+
+    # Verify total equals 100%
+    assert sum(pct for _, pct in levels) == Decimal("1.0")
+
+def test_generate_price_levels_sell():
+    """Test ASK price level generation"""
+    from app.models.models import OrderSide
+
+    ref_price = Decimal("100.0")
+    levels = LiquidityService.generate_price_levels(ref_price, OrderSide.SELL)
+
+    # Should have 3 levels
+    assert len(levels) == 3
+
+    # Verify prices are above reference (ASK)
+    assert all(price > ref_price for price, _ in levels)
+
+    # Verify spreads (0.2%, 0.4%, 0.5% above)
+    assert levels[0][0] == ref_price * Decimal("1.002")
+    assert levels[1][0] == ref_price * Decimal("1.004")
+    assert levels[2][0] == ref_price * Decimal("1.005")
+
+    # Verify volume distribution
+    assert levels[0][1] == Decimal("0.5")
+    assert levels[1][1] == Decimal("0.3")
+    assert levels[2][1] == Decimal("0.2")
+
+def test_generate_price_levels_invalid_price():
+    """Test validation of negative price"""
+    from app.models.models import OrderSide
+
+    with pytest.raises(ValueError, match="reference_price must be positive"):
+        LiquidityService.generate_price_levels(Decimal("-1.0"), OrderSide.BUY)
+
+    with pytest.raises(ValueError, match="reference_price must be positive"):
+        LiquidityService.generate_price_levels(Decimal("0.0"), OrderSide.BUY)

@@ -124,6 +124,7 @@ class LiquidityService:
 
         except Exception as e:
             logger.warning(f"Could not get orderbook price: {e}")
+            logger.debug(f"Exception type: {type(e).__name__}", exc_info=True)
 
         # Fallback to default
         return LiquidityService.DEFAULT_PRICES[certificate_type]
@@ -136,7 +137,17 @@ class LiquidityService:
         """
         Generate 3 price levels with volume distribution.
         Returns: [(price, percentage), ...]
+
+        Args:
+            reference_price: Must be positive
+            side: BUY or SELL
+
+        Raises:
+            ValueError: If reference_price <= 0
         """
+        if reference_price <= 0:
+            raise ValueError(f"reference_price must be positive, got {reference_price}")
+
         if side == OrderSide.BUY:
             # BID levels: 0.2%, 0.4%, 0.5% below mid
             levels = [
