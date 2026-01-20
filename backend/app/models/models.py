@@ -128,6 +128,12 @@ class Currency(str, enum.Enum):
     HKD = "HKD"
 
 
+class MarketMakerType(str, enum.Enum):
+    """Types of market maker clients"""
+    ASSET_HOLDER = "ASSET_HOLDER"          # Holds CEA/EUA, places SELL orders
+    LIQUIDITY_PROVIDER = "LIQUIDITY_PROVIDER"  # Holds EUR, places BUY orders
+
+
 class Entity(Base):
     __tablename__ = "entities"
 
@@ -202,6 +208,8 @@ class MarketMakerClient(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    mm_type = Column(SQLEnum(MarketMakerType), default=MarketMakerType.ASSET_HOLDER, nullable=False)
+    eur_balance = Column(Numeric(18, 2), default=0, nullable=False)  # For Liquidity Providers
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
