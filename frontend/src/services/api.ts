@@ -30,6 +30,11 @@ import type {
   DepositCreate,
   EntityBalance,
 } from '../types';
+import type {
+  LiquidityPreviewResponse,
+  LiquidityCreationRequest,
+  LiquidityCreationResponse,
+} from '../types/liquidity';
 
 // Dynamic API URL detection for LAN/remote access
 const getApiBaseUrl = (): string => {
@@ -1260,5 +1265,26 @@ export const getFailedActions = (params?: {
   limit?: number;
   offset?: number;
 }) => api.get('/admin/logging/failed-actions', { params });
+
+// Liquidity API
+export const liquidityApi = {
+  previewLiquidity: async (
+    certificateType: CertificateType,
+    bidEur: number,
+    askEur: number
+  ): Promise<LiquidityPreviewResponse> => {
+    const { data } = await api.post('/admin/liquidity/preview', {
+      certificate_type: certificateType,
+      bid_eur: bidEur,
+      ask_eur: askEur,
+    });
+    return data;
+  },
+
+  createLiquidity: async (request: LiquidityCreationRequest): Promise<LiquidityCreationResponse> => {
+    const { data } = await api.post('/admin/liquidity/create', request);
+    return data;
+  },
+};
 
 export default api;
