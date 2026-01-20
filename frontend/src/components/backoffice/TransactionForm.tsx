@@ -79,11 +79,10 @@ export function TransactionForm({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -273,6 +272,7 @@ export function TransactionForm({
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }
