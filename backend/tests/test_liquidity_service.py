@@ -315,3 +315,42 @@ async def test_preview_liquidity_creation_invalid_amounts(db_session, test_admin
             bid_amount_eur=Decimal("100000"),
             ask_amount_eur=Decimal("0")
         )
+
+@pytest.mark.asyncio
+async def test_create_liquidity_execution(db_session, test_admin_user):
+    """Test actual liquidity creation with order placement"""
+    from app.services.market_maker_service import MarketMakerService
+
+    # Setup MMs
+    lp_mm = MarketMakerClient(
+        user_id=test_admin_user.id,
+        name="LP-Execute",
+        mm_type=MarketMakerType.LIQUIDITY_PROVIDER,
+        eur_balance=Decimal("200000"),
+        is_active=True,
+        created_by=test_admin_user.id
+    )
+    db_session.add(lp_mm)
+
+    ah_mm, _ = await MarketMakerService.create_market_maker(
+        db=db_session,
+        name="AH-Execute",
+        email="ah-execute@test.com",
+        description="Test",
+        created_by_id=test_admin_user.id,
+        initial_balances={"CEA": Decimal("10000")}
+    )
+    await db_session.commit()
+
+    # Execute liquidity creation
+    result = await LiquidityService.create_liquidity(
+        db=db_session,
+        certificate_type=CertificateType.CEA,
+        bid_amount_eur=Decimal("50000"),
+        ask_amount_eur=Decimal("25000"),
+        created_by_id=test_admin_user.id
+    )
+
+    assert result.id is not None
+    assert len(result.orders_created) == 6  # 3 bid + 3 ask
+    assert result.actual_bid_liquidity_eur == Decimal("50000")

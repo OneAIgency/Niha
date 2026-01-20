@@ -321,3 +321,176 @@ class LiquidityService:
             "total_orders_count": len(bid_plan["mms"]) * LiquidityService.ORDERS_PER_MM + len(ask_plan["mms"]) * LiquidityService.ORDERS_PER_MM,
             "estimated_spread": LiquidityService.ESTIMATED_SPREAD_PERCENT
         }
+
+    @staticmethod
+    async def create_liquidity(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        bid_amount_eur: Decimal,
+        ask_amount_eur: Decimal,
+        created_by_id: uuid.UUID,
+        notes: Optional[str] = None
+    ) -> LiquidityOperation:
+        """
+        Create liquidity by placing BID and ASK orders across market makers.
+
+        Args:
+            db: Database session
+            certificate_type: Type of certificate (CEA or EUA)
+            bid_amount_eur: Total EUR to allocate for BID orders
+            ask_amount_eur: Total EUR value for ASK orders
+            created_by_id: User ID executing the operation
+            notes: Optional notes for audit trail
+
+        Returns:
+            LiquidityOperation record with execution details
+
+        Raises:
+            InsufficientAssetsError: If insufficient assets to execute
+            ValueError: If amounts are non-positive
+        """
+        # Step 1: Validate using preview
+        preview = await LiquidityService.preview_liquidity_creation(
+            db=db,
+            certificate_type=certificate_type,
+            bid_amount_eur=bid_amount_eur,
+            ask_amount_eur=ask_amount_eur
+        )
+
+        if not preview["can_execute"]:
+            # Raise error with details from preview
+            missing = preview["missing_assets"][0]
+            raise InsufficientAssetsError(
+                asset_type=missing["asset_type"],
+                required=Decimal(str(missing["required"])),
+                available=Decimal(str(missing["available"]))
+            )
+
+        # Step 2: Calculate reference price
+        reference_price = await LiquidityService.calculate_reference_price(
+            db, certificate_type
+        )
+
+        # Step 3: Get liquidity providers and asset holders
+        lp_mms = await LiquidityService.get_liquidity_providers(db)
+        ah_data = await LiquidityService.get_asset_holders(db, certificate_type)
+
+        # Step 4: Create BID orders across liquidity providers
+        bid_orders = []
+        eur_per_lp = bid_amount_eur / len(lp_mms)
+        bid_price_levels = LiquidityService.generate_price_levels(reference_price, OrderSide.BUY)
+
+        for lp_mm in lp_mms:
+            for price, pct in bid_price_levels:
+                order_eur = eur_per_lp * pct
+                quantity = order_eur / price
+
+                order = Order(
+                    id=uuid.uuid4(),
+                    market_maker_id=lp_mm.id,
+                    certificate_type=certificate_type,
+                    side=OrderSide.BUY,
+                    quantity=quantity,
+                    price=price,
+                    status=OrderStatus.OPEN
+                )
+                db.add(order)
+                bid_orders.append(order)
+
+            # Step 5: Lock EUR by reducing eur_balance
+            lp_mm.eur_balance -= eur_per_lp
+
+        # Step 6: Create ASK orders across asset holders
+        ask_orders = []
+        ask_quantity_needed = ask_amount_eur / reference_price
+        quantity_per_ah = ask_quantity_needed / len(ah_data)
+        ask_price_levels = LiquidityService.generate_price_levels(reference_price, OrderSide.SELL)
+
+        for ah in ah_data:
+            ah_mm = ah["mm"]
+            for price, pct in ask_price_levels:
+                quantity = quantity_per_ah * pct
+
+                order = Order(
+                    id=uuid.uuid4(),
+                    market_maker_id=ah_mm.id,
+                    certificate_type=certificate_type,
+                    side=OrderSide.SELL,
+                    quantity=quantity,
+                    price=price,
+                    status=OrderStatus.OPEN
+                )
+                db.add(order)
+                ask_orders.append(order)
+
+            # Lock certificates by creating asset transaction
+            # Note: AssetTransaction uses 'amount' field, not 'quantity'
+            # TRADE_DEBIT is used to lock assets when order is placed
+            transaction = AssetTransaction(
+                id=uuid.uuid4(),
+                market_maker_id=ah_mm.id,
+                certificate_type=certificate_type,
+                transaction_type=TransactionType.TRADE_DEBIT,
+                amount=-quantity_per_ah,  # Negative for debit (lock)
+                balance_after=ah["available"] - quantity_per_ah,  # Required field
+                created_by=created_by_id
+            )
+            db.add(transaction)
+
+        # Step 7: Create ticket for audit trail
+        ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="LIQUIDITY_CREATION",
+            entity_type="LIQUIDITY_OPERATION",
+            entity_id=None,  # Will be filled after operation is created
+            status=TicketStatus.SUCCESS,
+            user_id=created_by_id,
+            request_payload={
+                "certificate_type": certificate_type.value,
+                "bid_amount_eur": str(bid_amount_eur),
+                "ask_amount_eur": str(ask_amount_eur)
+            },
+            response_data={
+                "bid_orders_count": len(lp_mms) * LiquidityService.ORDERS_PER_MM,
+                "ask_orders_count": len(ah_data) * LiquidityService.ORDERS_PER_MM,
+                "reference_price": str(reference_price)
+            }
+        )
+
+        # Step 8: Create LiquidityOperation record
+        market_makers_used = []
+        for lp_mm in lp_mms:
+            market_makers_used.append({
+                "mm_id": str(lp_mm.id),
+                "mm_type": "LIQUIDITY_PROVIDER",
+                "amount": str(eur_per_lp)
+            })
+        for ah in ah_data:
+            market_makers_used.append({
+                "mm_id": str(ah["mm"].id),
+                "mm_type": "ASSET_HOLDER",
+                "amount": str(quantity_per_ah)
+            })
+
+        all_orders = bid_orders + ask_orders
+        operation = LiquidityOperation(
+            id=uuid.uuid4(),
+            ticket_id=ticket.ticket_id,
+            certificate_type=certificate_type,
+            target_bid_liquidity_eur=bid_amount_eur,
+            target_ask_liquidity_eur=ask_amount_eur,
+            actual_bid_liquidity_eur=bid_amount_eur,
+            actual_ask_liquidity_eur=ask_amount_eur,
+            market_makers_used=market_makers_used,
+            orders_created=[order.id for order in all_orders],
+            reference_price=reference_price,
+            created_by=created_by_id,
+            notes=notes
+        )
+        db.add(operation)
+
+        # Step 9: Commit and return
+        await db.flush()
+        await db.refresh(operation)
+
+        return operation
