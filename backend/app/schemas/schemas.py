@@ -782,6 +782,12 @@ class AssetTypeEnum(str, Enum):
     EUA = "EUA"
 
 
+class MarketMakerTypeEnum(str, Enum):
+    """Types of market makers"""
+    ASSET_HOLDER = "ASSET_HOLDER"
+    LIQUIDITY_PROVIDER = "LIQUIDITY_PROVIDER"
+
+
 class TransactionTypeEnum(str, Enum):
     """Types of asset transactions"""
     DEPOSIT = "deposit"
@@ -846,7 +852,9 @@ class MarketMakerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     description: Optional[str] = None
+    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.ASSET_HOLDER
     initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
+    initial_eur_balance: Optional[Decimal] = None
 
 
 class MarketMakerUpdate(BaseModel):
@@ -866,8 +874,10 @@ class MarketMakerResponse(BaseModel):
     user_id: UUID
     name: str
     description: Optional[str]
+    mm_type: MarketMakerTypeEnum
     is_active: bool
     current_balances: Dict[str, MarketMakerBalance]  # {CEA: {...}, EUA: {...}}
+    eur_balance: Optional[Decimal] = None
     total_orders: int = 0
     total_trades: int = 0
     created_at: datetime
@@ -942,3 +952,73 @@ class TicketLogStats(BaseModel):
     by_action_type: Dict[str, int]
     by_user: List[Dict[str, Any]]
     actions_over_time: List[Dict[str, Any]]
+
+
+# =============================================================================
+# Liquidity Management Schemas
+# =============================================================================
+
+# Type alias for consistency
+CertificateTypeEnum = CertificateType
+
+
+class LiquidityPreviewRequest(BaseModel):
+    certificate_type: CertificateTypeEnum
+    bid_amount_eur: Decimal
+    ask_amount_eur: Decimal
+
+
+class MarketMakerAllocation(BaseModel):
+    mm_id: UUID
+    mm_name: str
+    mm_type: MarketMakerTypeEnum
+    allocation: Decimal
+    orders_count: int
+
+
+class LiquidityPlan(BaseModel):
+    mms: List[MarketMakerAllocation]
+    total_amount: Decimal
+    price_levels: List[Dict[str, Any]]
+
+
+class MissingAssets(BaseModel):
+    asset_type: str
+    required: Decimal
+    available: Decimal
+    shortfall: Decimal
+
+
+class LiquidityPreviewResponse(BaseModel):
+    can_execute: bool
+    certificate_type: str
+    bid_plan: LiquidityPlan
+    ask_plan: LiquidityPlan
+    missing_assets: Optional[MissingAssets] = None
+    suggested_actions: List[str]
+    total_orders_count: int
+    estimated_spread: Decimal
+
+
+class LiquidityCreateRequest(BaseModel):
+    certificate_type: CertificateTypeEnum
+    bid_amount_eur: Decimal
+    ask_amount_eur: Decimal
+    notes: Optional[str] = None
+
+
+class LiquidityCreateResponse(BaseModel):
+    success: bool
+    liquidity_operation_id: UUID
+    orders_created: int
+    bid_liquidity_eur: Decimal
+    ask_liquidity_eur: Decimal
+    market_makers_used: List[Dict[str, Any]]
+
+
+class ProvisionRequest(BaseModel):
+    action: str  # 'create_new' or 'fund_existing'
+    mm_type: MarketMakerTypeEnum
+    amount: Decimal
+    mm_ids: Optional[List[UUID]] = None
+    count: Optional[int] = None
