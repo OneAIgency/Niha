@@ -1,6 +1,7 @@
-import { DataTable, Badge, type Column } from '../common';
+import { DataTable, Badge, Card, type Column } from '../common';
 import { CheckCircle, XCircle, Leaf, Wind, Activity } from 'lucide-react';
-import { formatQuantity } from '../../utils';
+import { formatQuantity, formatCurrency } from '../../utils';
+import { usePrices } from '../../hooks/usePrices';
 
 interface MarketMaker {
   id: string;
@@ -22,6 +23,8 @@ interface MarketMakersListProps {
 }
 
 export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMakersListProps) {
+  const { prices } = usePrices();
+
   const columns: Column<MarketMaker>[] = [
     {
       key: 'name',
@@ -58,7 +61,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     {
       key: 'cea_balance',
       header: 'CEA Balance',
-      width: '15%',
+      width: '12%',
       align: 'right',
       render: (value) => (
         <div className="flex items-center justify-end gap-2">
@@ -70,9 +73,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       ),
     },
     {
+      key: 'cea_value',
+      header: 'CEA Value',
+      width: '12%',
+      align: 'right',
+      render: (_, row) => {
+        const value = prices ? (row.cea_balance * prices.cea.price) : 0;
+        return (
+          <div className="flex items-center justify-end font-mono text-amber-600 dark:text-amber-400">
+            {prices ? formatCurrency(value, 'EUR') : '---'}
+          </div>
+        );
+      },
+    },
+    {
       key: 'eua_balance',
       header: 'EUA Balance',
-      width: '15%',
+      width: '12%',
       align: 'right',
       render: (value) => (
         <div className="flex items-center justify-end gap-2">
@@ -84,9 +101,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       ),
     },
     {
+      key: 'eua_value',
+      header: 'EUA Value',
+      width: '12%',
+      align: 'right',
+      render: (_, row) => {
+        const value = prices ? (row.eua_balance * prices.eua.price) : 0;
+        return (
+          <div className="flex items-center justify-end font-mono text-blue-600 dark:text-blue-400">
+            {prices ? formatCurrency(value, 'EUR') : '---'}
+          </div>
+        );
+      },
+    },
+    {
       key: 'total_orders',
       header: 'Total Orders',
-      width: '13%',
+      width: '10%',
       align: 'center',
       render: (value) => (
         <div className="flex items-center justify-center gap-2">
@@ -100,7 +131,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     {
       key: 'description',
       header: 'Description',
-      width: '25%',
+      width: '17%',
       render: (value) => (
         <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-2">
           {value || '-'}
@@ -123,6 +154,49 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
         onRowClick={(mm) => onSelectMM(mm)}
         rowKey="id"
       />
+
+      {/* Summary Row - Total Portfolio Value */}
+      {marketMakers.length > 0 && prices && (
+        <Card className="mt-4">
+          <div className="flex items-center justify-between p-4">
+            <span className="text-sm font-semibold text-navy-700 dark:text-navy-300">
+              Total Portfolio Value
+            </span>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <div className="text-xs text-navy-500 dark:text-navy-400">CEA Value</div>
+                <div className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
+                  {formatCurrency(
+                    marketMakers.reduce((sum, mm) => sum + (mm.cea_balance * prices.cea.price), 0),
+                    'EUR'
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-navy-500 dark:text-navy-400">EUA Value</div>
+                <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400">
+                  {formatCurrency(
+                    marketMakers.reduce((sum, mm) => sum + (mm.eua_balance * prices.eua.price), 0),
+                    'EUR'
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-navy-500 dark:text-navy-400">Total Value</div>
+                <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(
+                    marketMakers.reduce((sum, mm) =>
+                      sum + (mm.cea_balance * prices.cea.price) + (mm.eua_balance * prices.eua.price),
+                      0
+                    ),
+                    'EUR'
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
