@@ -77,7 +77,7 @@ class TicketService:
         )
 
         db.add(ticket)
-        await db.commit()
+        await db.flush()  # Flush to get ID, but don't commit yet
         await db.refresh(ticket)
 
         logger.info(f"Created ticket {ticket_id} for {action_type} on {entity_type}")
