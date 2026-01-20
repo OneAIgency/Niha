@@ -6,6 +6,7 @@ import { MarketMakersList } from '../components/backoffice/MarketMakersList';
 import { CreateMarketMakerModal } from '../components/backoffice/CreateMarketMakerModal';
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
 import { MarketMakerTransactionsSection } from '../components/backoffice/MarketMakerTransactionsSection';
+import { getMarketMakers } from '../services/api';
 import { cn } from '../utils';
 
 interface MarketMaker {
@@ -37,14 +38,12 @@ export function MarketMakersPage() {
     setLoading(true);
     setError(null);
     try {
-      // API call will be implemented
-      const response = await fetch('/api/v1/admin/market-makers');
-      const data = await response.json();
+      const data = await getMarketMakers();
       setMarketMakers(data);
     } catch (err) {
       console.error('Failed to load market makers:', err);
       setError('Failed to load market makers. Please try again.');
-      setMarketMakers([]); // Mock data for now
+      setMarketMakers([]);
     } finally {
       setLoading(false);
     }
