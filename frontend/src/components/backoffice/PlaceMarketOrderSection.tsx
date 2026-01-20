@@ -110,6 +110,7 @@ export function PlaceMarketOrderSection({
       const response = await placeMarketMakerOrder({
         market_maker_id: selectedMM,
         certificate_type: certificateType,
+        side: 'ASK', // Selling certificates (market maker providing liquidity)
         price: priceNum,
         quantity: quantityNum,
       });

@@ -1,188 +1,174 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
-import { Card } from '../common/Card';
-import { getAdminOrderBook } from '../../services/api';
-import type { OrderBookLevel, CertificateType } from '../../types';
+import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { Button } from '../common';
+import { ProfessionalOrderBook } from '../cash-market/ProfessionalOrderBook';
+import { MMOrderPlacementModal } from './MMOrderPlacementModal';
+import { getAdminOrderBook, placeMarketMakerOrder } from '../../services/api';
+import type { OrderBook as OrderBookType, CertificateType } from '../../types';
 
 interface AdminOrderBookSectionProps {
   certificateType: CertificateType;
 }
 
-interface OrderBookData {
-  certificate_type: CertificateType;
-  bids: OrderBookLevel[];
-  asks: OrderBookLevel[];
-  spread: number | null;
-  best_bid: number | null;
-  best_ask: number | null;
-}
-
 export function AdminOrderBookSection({ certificateType }: AdminOrderBookSectionProps) {
-  const [orderBook, setOrderBook] = useState<OrderBookData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    side: 'BID' | 'ASK';
+    prefilledPrice?: number;
+  }>({
+    side: 'BID',
+  });
 
+  // Fetch order book data
   const fetchOrderBook = useCallback(async () => {
     try {
-      const { data } = await getAdminOrderBook(certificateType);
-      setOrderBook(data);
-      setError(null);
-    } catch (err: any) {
-      console.error('Failed to fetch order book:', err);
-      setError(err.response?.data?.detail || 'Failed to load order book');
+      const response = await getAdminOrderBook(certificateType);
+      setOrderBook(response.data);
+    } catch (error) {
+      console.error('Error fetching order book:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [certificateType]);
 
+  // Initial fetch
   useEffect(() => {
-    setLoading(true);
+    setIsLoading(true);
     fetchOrderBook();
+  }, [fetchOrderBook]);
 
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchOrderBook, 5000);
+  // Auto-refresh every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsRefreshing(true);
+      fetchOrderBook();
+    }, 5000);
+
     return () => clearInterval(interval);
   }, [fetchOrderBook]);
 
-  const formatNumber = (num: number, decimals: number = 2) => {
-    return num.toLocaleString(undefined, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
+  // Manual refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchOrderBook();
   };
 
-  // Get max cumulative quantity for depth bar scaling
-  const maxBidCumulative = orderBook?.bids.length
-    ? Math.max(...orderBook.bids.map(b => b.cumulative_quantity))
-    : 1;
-  const maxAskCumulative = orderBook?.asks.length
-    ? Math.max(...orderBook.asks.map(a => a.cumulative_quantity))
-    : 1;
-  const maxCumulative = Math.max(maxBidCumulative, maxAskCumulative);
+  // Open modal to place BID order
+  const handlePlaceBid = () => {
+    setModalConfig({ side: 'BID' });
+    setModalOpen(true);
+  };
 
-  // Reverse asks so lowest price is at bottom (closest to spread)
-  const displayAsks = orderBook ? [...orderBook.asks].slice(0, 10).reverse() : [];
-  const displayBids = orderBook ? orderBook.bids.slice(0, 10) : [];
+  // Open modal to place ASK order
+  const handlePlaceAsk = () => {
+    setModalConfig({ side: 'ASK' });
+    setModalOpen(true);
+  };
 
-  if (loading && !orderBook) {
+  // Handle price click from order book
+  // Clicking on a bid (buy order) -> suggest placing ASK (sell into it)
+  // Clicking on an ask (sell order) -> suggest placing BID (buy from it)
+  const handlePriceClick = (price: number, side: 'BUY' | 'SELL') => {
+    if (side === 'BUY') {
+      // User clicked on a bid (buy order), suggest selling
+      setModalConfig({ side: 'ASK', prefilledPrice: price });
+    } else {
+      // User clicked on an ask (sell order), suggest buying
+      setModalConfig({ side: 'BID', prefilledPrice: price });
+    }
+    setModalOpen(true);
+  };
+
+  // Submit order
+  const handleOrderSubmit = async (order: {
+    market_maker_id: string;
+    certificate_type: 'CEA' | 'EUA';
+    side: 'BID' | 'ASK';
+    price: number;
+    quantity: number;
+  }) => {
+    await placeMarketMakerOrder(order);
+    // Refresh order book after placing order
+    await fetchOrderBook();
+  };
+
+  if (isLoading) {
     return (
-      <Card className="h-full flex items-center justify-center">
+      <div className="bg-white dark:bg-navy-800 rounded-xl p-8 flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">{error}</p>
-          <button
-            onClick={fetchOrderBook}
-            className="text-emerald-600 hover:text-emerald-700 text-sm"
-          >
-            Try Again
-          </button>
-        </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="h-full flex flex-col" padding="none">
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700 flex items-center justify-between">
-        <h3 className="font-semibold text-navy-900 dark:text-white">Order Book</h3>
-        <RefreshCw
-          className={`w-4 h-4 text-navy-400 ${loading ? 'animate-spin' : ''}`}
-        />
-      </div>
-
-      {/* Header */}
-      <div className="grid grid-cols-3 text-xs text-navy-500 dark:text-navy-400 px-4 py-2 border-b border-navy-100 dark:border-navy-700/50">
-        <span>Price (EUR)</span>
-        <span className="text-right">Quantity</span>
-        <span className="text-right">Total</span>
-      </div>
-
-      {/* Asks (Sells) - Red */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="relative">
-          {displayAsks.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-navy-400 text-center">No sell orders</div>
-          ) : (
-            displayAsks.map((ask, idx) => (
-              <motion.div
-                key={`ask-${idx}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="relative grid grid-cols-3 text-sm px-4 py-1.5"
-              >
-                {/* Depth bar */}
-                <div
-                  className="absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/20"
-                  style={{ width: `${(ask.cumulative_quantity / maxCumulative) * 100}%` }}
-                />
-                <span className="relative text-red-600 dark:text-red-400 font-mono">
-                  {formatNumber(ask.price)}
-                </span>
-                <span className="relative text-right text-navy-700 dark:text-navy-300 font-mono">
-                  {formatNumber(ask.quantity, 0)}
-                </span>
-                <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
-                  {formatNumber(ask.cumulative_quantity, 0)}
-                </span>
-              </motion.div>
-            ))
-          )}
-        </div>
-
-        {/* Spread Indicator */}
-        <div className="px-4 py-2 bg-navy-50 dark:bg-navy-800/50 border-y border-navy-100 dark:border-navy-700/50">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-navy-500 dark:text-navy-400">Spread</span>
-            <span className="font-mono font-semibold text-navy-700 dark:text-navy-300">
-              {orderBook?.spread !== null ? `€${formatNumber(orderBook.spread, 4)}` : '-'}
-            </span>
-            {orderBook?.spread !== null && orderBook?.best_bid !== null && (
-              <span className="text-navy-400 dark:text-navy-500 text-xs">
-                ({((orderBook.spread / orderBook.best_bid) * 100).toFixed(3)}%)
-              </span>
-            )}
+    <>
+      <div className="space-y-6">
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              onClick={handlePlaceBid}
+              className="bg-emerald-500 hover:bg-emerald-600"
+              icon={<TrendingUp className="w-4 h-4" />}
+            >
+              Place BID
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handlePlaceAsk}
+              className="bg-red-500 hover:bg-red-600"
+              icon={<TrendingDown className="w-4 h-4" />}
+            >
+              Place ASK
+            </Button>
           </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            icon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+          >
+            Refresh
+          </Button>
         </div>
 
-        {/* Bids (Buys) - Green */}
-        <div className="relative">
-          {displayBids.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-navy-400 text-center">No buy orders</div>
-          ) : (
-            displayBids.map((bid, idx) => (
-              <motion.div
-                key={`bid-${idx}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="relative grid grid-cols-3 text-sm px-4 py-1.5"
-              >
-                {/* Depth bar */}
-                <div
-                  className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/20"
-                  style={{ width: `${(bid.cumulative_quantity / maxCumulative) * 100}%` }}
-                />
-                <span className="relative text-emerald-600 dark:text-emerald-400 font-mono">
-                  {formatNumber(bid.price)}
-                </span>
-                <span className="relative text-right text-navy-700 dark:text-navy-300 font-mono">
-                  {formatNumber(bid.quantity, 0)}
-                </span>
-                <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
-                  {formatNumber(bid.cumulative_quantity, 0)}
-                </span>
-              </motion.div>
-            ))
-          )}
+        {/* Order Book */}
+        {orderBook && (
+          <ProfessionalOrderBook
+            orderBook={{
+              bids: orderBook.bids,
+              asks: orderBook.asks,
+              spread: orderBook.spread,
+              best_bid: orderBook.best_bid,
+              best_ask: orderBook.best_ask,
+            }}
+            onPriceClick={handlePriceClick}
+          />
+        )}
+
+        {/* Auto-refresh indicator */}
+        <div className="flex items-center justify-center text-xs text-navy-500 dark:text-navy-400">
+          <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Auto-refreshing every 5 seconds
         </div>
       </div>
-    </Card>
+
+      {/* Order Placement Modal */}
+      <MMOrderPlacementModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleOrderSubmit}
+        certificateType={certificateType}
+        side={modalConfig.side}
+        prefilledPrice={modalConfig.prefilledPrice}
+      />
+    </>
   );
 }

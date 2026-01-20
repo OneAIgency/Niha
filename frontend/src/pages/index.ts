@@ -20,6 +20,7 @@ export { ComponentShowcasePage } from './ComponentShowcasePage';
 export { MarketMakersPage } from './MarketMakersPage';
 export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';
+export { BackofficeOrderBookPage } from './BackofficeOrderBookPage';
 
 // Onboarding sub-pages
 export {

@@ -7,3 +7,5 @@ export { BalanceCards } from './BalanceCards';
 export { TransactionForm } from './TransactionForm';
 export { MarketMakerDetailsTab } from './MarketMakerDetailsTab';
 export { MarketMakerTransactionsTab } from './MarketMakerTransactionsTab';
+export { MMOrderPlacementModal } from './MMOrderPlacementModal';
+export { AdminOrderBookSection } from './AdminOrderBookSection';

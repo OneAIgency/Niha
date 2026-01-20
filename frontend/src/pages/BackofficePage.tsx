@@ -563,7 +563,7 @@ export function BackofficePage() {
         </div>
 
         {/* Quick Navigation to New Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Link
             to="/backoffice/market-makers"
             className="group bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
@@ -597,6 +597,25 @@ export function BackofficePage() {
                 </h3>
                 <p className="text-sm text-navy-600 dark:text-navy-400">
                   Place orders for MM clients
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/backoffice/order-book"
+            className="group bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-teal-100 dark:bg-teal-900/30 group-hover:bg-teal-200 dark:group-hover:bg-teal-800/40 transition-colors">
+                <ArrowRightLeft className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
+                  Order Management
+                </h3>
+                <p className="text-sm text-navy-600 dark:text-navy-400">
+                  View order book & place MM orders
                 </p>
               </div>
             </div>

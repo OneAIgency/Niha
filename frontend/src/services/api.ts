@@ -1172,9 +1172,13 @@ export const getAdminOrderBook = (certificateType: string) =>
 export const placeMarketMakerOrder = (data: {
   market_maker_id: string;
   certificate_type: 'CEA' | 'EUA';
+  side: 'BID' | 'ASK';
   price: number;
   quantity: number;
 }) => api.post('/admin/market-orders', data);
+
+// Alias for consistency
+export const placeAdminMarketOrder = placeMarketMakerOrder;
 
 export const getMarketMakerOrders = (params?: {
   market_maker_id?: string;

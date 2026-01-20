@@ -27,6 +27,7 @@ import {
   MarketMakersPage,
   MarketOrdersPage,
   LoggingPage,
+  BackofficeOrderBookPage,
 } from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -354,6 +355,14 @@ function App() {
             element={
               <AdminRoute>
                 <LoggingPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/backoffice/order-book"
+            element={
+              <AdminRoute>
+                <BackofficeOrderBookPage />
               </AdminRoute>
             }
           />
