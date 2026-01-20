@@ -7,6 +7,7 @@ import {
   MarketDepthChart,
   RecentTrades,
   MyOrders,
+  UserOrderEntryModal,
 } from '../components/cash-market';
 import { cashMarketApi } from '../services/api';
 import type {
@@ -26,21 +27,28 @@ export function CashMarketPage() {
   const [selectedPrice, setSelectedPrice] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [userBalances, setUserBalances] = useState<{
+    eur_balance: number;
+    cea_balance: number;
+    eua_balance: number;
+  } | null>(null);
 
   // Fetch all market data
   const fetchData = useCallback(async () => {
     try {
-      const [orderBookData, depthData, tradesData, ordersData] = await Promise.all([
+      const [orderBookData, depthData, tradesData, ordersData, balancesData] = await Promise.all([
         cashMarketApi.getOrderBook(certificateType),
         cashMarketApi.getMarketDepth(certificateType),
         cashMarketApi.getRecentTrades(certificateType, 50),
         cashMarketApi.getMyOrders({ certificate_type: certificateType }),
+        cashMarketApi.getUserBalances(),
       ]);
 
       setOrderBook(orderBookData);
       setMarketDepth(depthData);
       setRecentTrades(tradesData);
       setMyOrders(ordersData);
+      setUserBalances(balancesData);
     } catch (error) {
       console.error('Error fetching market data:', error);
     } finally {
@@ -76,6 +84,55 @@ export function CashMarketPage() {
       console.error('Error placing order:', error);
     } finally {
       setIsPlacingOrder(false);
+    }
+  };
+
+  // Handle market order submission from UserOrderEntryModal
+  const handleMarketOrderSubmit = async (order: {
+    orderType: 'MARKET' | 'LIMIT';
+    limitPrice?: number;
+    amountEur: number;
+  }) => {
+    try {
+      if (order.orderType === 'MARKET') {
+        // Execute market order
+        const result = await cashMarketApi.executeMarketOrder({
+          certificate_type: certificateType,
+          side: 'BUY',
+          amount_eur: order.amountEur,
+        });
+
+        console.log('Market order executed:', result);
+
+        // Refresh all data after successful execution
+        await fetchData();
+      } else {
+        // For limit orders, place a limit order
+        // We need to calculate quantity from the preview
+        const preview = await cashMarketApi.previewOrder({
+          certificate_type: certificateType,
+          side: 'BUY',
+          amount_eur: order.amountEur,
+          order_type: 'LIMIT',
+          limit_price: order.limitPrice,
+        });
+
+        if (preview.can_execute && order.limitPrice) {
+          await cashMarketApi.placeOrder({
+            certificate_type: certificateType,
+            side: 'BUY',
+            price: order.limitPrice,
+            quantity: preview.total_quantity,
+          });
+
+          // Refresh data after placing order
+          await fetchData();
+        }
+      }
+    } catch (error: any) {
+      console.error('Error submitting order:', error);
+      // You could add a toast notification here
+      throw error; // Re-throw to let the modal handle the error
     }
   };
 
@@ -203,6 +260,18 @@ export function CashMarketPage() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* User Order Entry Modal - Full Width */}
+            {userBalances && (
+              <div className="w-full">
+                <UserOrderEntryModal
+                  certificateType={certificateType}
+                  availableBalance={userBalances.eur_balance}
+                  bestAskPrice={orderBook?.best_ask || null}
+                  onOrderSubmit={handleMarketOrderSubmit}
+                />
+              </div>
+            )}
+
             {/* Professional Order Book - Full Width */}
             <div className="w-full">
               {orderBook && (
