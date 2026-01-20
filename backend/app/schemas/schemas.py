@@ -958,21 +958,17 @@ class TicketLogStats(BaseModel):
 # Liquidity Management Schemas
 # =============================================================================
 
-# Type alias for consistency
-CertificateTypeEnum = CertificateType
-
-
 class LiquidityPreviewRequest(BaseModel):
-    certificate_type: CertificateTypeEnum
-    bid_amount_eur: Decimal
-    ask_amount_eur: Decimal
+    certificate_type: CertificateType
+    bid_amount_eur: Decimal = Field(..., gt=0)
+    ask_amount_eur: Decimal = Field(..., gt=0)
 
 
 class MarketMakerAllocation(BaseModel):
     mm_id: UUID
     mm_name: str
     mm_type: MarketMakerTypeEnum
-    allocation: Decimal
+    allocation: Decimal = Field(..., gt=0)
     orders_count: int
 
 
@@ -984,9 +980,9 @@ class LiquidityPlan(BaseModel):
 
 class MissingAssets(BaseModel):
     asset_type: str
-    required: Decimal
-    available: Decimal
-    shortfall: Decimal
+    required: Decimal = Field(..., ge=0)
+    available: Decimal = Field(..., ge=0)
+    shortfall: Decimal = Field(..., ge=0)
 
 
 class LiquidityPreviewResponse(BaseModel):
@@ -997,13 +993,13 @@ class LiquidityPreviewResponse(BaseModel):
     missing_assets: Optional[MissingAssets] = None
     suggested_actions: List[str]
     total_orders_count: int
-    estimated_spread: Decimal
+    estimated_spread: Decimal = Field(..., ge=0)
 
 
 class LiquidityCreateRequest(BaseModel):
-    certificate_type: CertificateTypeEnum
-    bid_amount_eur: Decimal
-    ask_amount_eur: Decimal
+    certificate_type: CertificateType
+    bid_amount_eur: Decimal = Field(..., gt=0)
+    ask_amount_eur: Decimal = Field(..., gt=0)
     notes: Optional[str] = None
 
 
@@ -1011,14 +1007,20 @@ class LiquidityCreateResponse(BaseModel):
     success: bool
     liquidity_operation_id: UUID
     orders_created: int
-    bid_liquidity_eur: Decimal
-    ask_liquidity_eur: Decimal
+    bid_liquidity_eur: Decimal = Field(..., gt=0)
+    ask_liquidity_eur: Decimal = Field(..., gt=0)
     market_makers_used: List[Dict[str, Any]]
 
 
+class ProvisionAction(str, Enum):
+    """Actions for provisioning market makers"""
+    CREATE_NEW = "create_new"
+    FUND_EXISTING = "fund_existing"
+
+
 class ProvisionRequest(BaseModel):
-    action: str  # 'create_new' or 'fund_existing'
+    action: ProvisionAction
     mm_type: MarketMakerTypeEnum
-    amount: Decimal
+    amount: Decimal = Field(..., gt=0)
     mm_ids: Optional[List[UUID]] = None
     count: Optional[int] = None
