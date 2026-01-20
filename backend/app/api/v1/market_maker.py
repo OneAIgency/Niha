@@ -14,7 +14,7 @@ from ...models.models import (
 )
 from ...schemas.schemas import (
     MarketMakerCreate, MarketMakerUpdate, MarketMakerResponse,
-    MarketMakerBalance, AssetTransactionCreate, AssetTransactionResponse,
+    MarketMakerBalance, AssetTransactionCreate, MarketMakerTransactionResponse,
     MessageResponse, TicketLogResponse
 )
 from ...services.market_maker_service import MarketMakerService
@@ -371,7 +371,7 @@ async def get_market_maker_balances(
     return formatted_balances
 
 
-@router.get("/{market_maker_id}/transactions", response_model=List[AssetTransactionResponse])
+@router.get("/{market_maker_id}/transactions", response_model=List[MarketMakerTransactionResponse])
 async def list_market_maker_transactions(
     market_maker_id: UUID,
     certificate_type: Optional[str] = None,
@@ -421,7 +421,7 @@ async def list_market_maker_transactions(
     transactions = result.scalars().all()
 
     return [
-        AssetTransactionResponse(
+        MarketMakerTransactionResponse(
             id=t.id,
             ticket_id=t.ticket_id,
             market_maker_id=t.market_maker_id,

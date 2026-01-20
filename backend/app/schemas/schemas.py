@@ -885,7 +885,7 @@ class AssetTransactionCreate(BaseModel):
     notes: Optional[str] = None
 
 
-class AssetTransactionResponse(BaseModel):
+class MarketMakerTransactionResponse(BaseModel):
     id: UUID
     ticket_id: str
     market_maker_id: UUID
