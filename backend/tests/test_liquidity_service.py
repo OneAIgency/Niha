@@ -2,7 +2,7 @@
 import pytest
 from decimal import Decimal
 from app.services.liquidity_service import LiquidityService
-from app.models.models import MarketMakerClient, User, MarketMakerType, UserRole
+from app.models.models import MarketMakerClient, User, MarketMakerType, UserRole, CertificateType
 
 @pytest.mark.asyncio
 async def test_get_liquidity_providers(db_session, test_admin_user):
@@ -48,3 +48,25 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     assert len(result) == 1
     assert result[0].id == lp_mm.id
     assert result[0].eur_balance == Decimal("100000")
+
+@pytest.mark.asyncio
+async def test_get_asset_holders(db_session, test_admin_user):
+    """Test fetching asset-holding market makers"""
+    from app.services.market_maker_service import MarketMakerService
+
+    # Create asset holder MM with CEA
+    ah_mm, _ = await MarketMakerService.create_market_maker(
+        db=db_session,
+        name="AH-Test-CEA",
+        email="ah@test.com",
+        description="Test",
+        created_by_id=test_admin_user.id,
+        initial_balances={"CEA": Decimal("5000")}
+    )
+
+    # Test
+    result = await LiquidityService.get_asset_holders(db_session, CertificateType.CEA)
+
+    assert len(result) >= 1
+    found = any(mm_data["mm"].id == ah_mm.id for mm_data in result)
+    assert found

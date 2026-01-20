@@ -46,3 +46,35 @@ class LiquidityService:
             .order_by(MarketMakerClient.eur_balance.desc())
         )
         return result.scalars().all()
+
+    @staticmethod
+    async def get_asset_holders(
+        db: AsyncSession,
+        certificate_type: CertificateType
+    ) -> List[Dict[str, any]]:
+        """Get all active asset-holding MMs with certificate balances"""
+        from app.services.market_maker_service import MarketMakerService
+
+        result = await db.execute(
+            select(MarketMakerClient)
+            .where(
+                and_(
+                    MarketMakerClient.mm_type == MarketMakerType.ASSET_HOLDER,
+                    MarketMakerClient.is_active == True
+                )
+            )
+        )
+        mms = result.scalars().all()
+
+        # Get balances for each MM
+        mm_data = []
+        for mm in mms:
+            balances = await MarketMakerService.get_balances(db, mm.id)
+            available = balances[certificate_type.value]["available"]
+            if available > 0:
+                mm_data.append({
+                    "mm": mm,
+                    "available": available
+                })
+
+        return mm_data
