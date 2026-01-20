@@ -41,7 +41,7 @@ export function CashMarketPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [certificateType]);
 
   // Initial fetch and polling
   useEffect(() => {

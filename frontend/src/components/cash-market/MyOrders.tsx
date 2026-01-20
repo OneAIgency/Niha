@@ -108,7 +108,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
                   <div>
                     <span className="text-navy-500 dark:text-navy-400">Price</span>
                     <p className="font-mono text-navy-900 dark:text-white">
-                      ${order.price.toFixed(2)}
+                      €{order.price.toFixed(2)}
                     </p>
                   </div>
                   <div>
@@ -120,7 +120,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
                   <div>
                     <span className="text-navy-500 dark:text-navy-400">Total</span>
                     <p className="font-mono text-navy-900 dark:text-white">
-                      ${(order.price * order.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      €{(order.price * order.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div>
