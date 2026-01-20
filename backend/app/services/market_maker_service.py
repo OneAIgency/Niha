@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from app.models.models import (
     MarketMakerClient, User, UserRole, AssetTransaction,
-    TransactionType, CertificateType, TicketStatus, Order, OrderStatus
+    TransactionType, CertificateType, TicketStatus, Order, OrderStatus,
+    MarketMakerType
 )
 from app.core.security import hash_password
 from app.services.ticket_service import TicketService
@@ -25,7 +26,9 @@ class MarketMakerService:
         email: str,
         description: Optional[str],
         created_by_id: uuid.UUID,
+        mm_type: MarketMakerType = MarketMakerType.ASSET_HOLDER,
         initial_balances: Optional[Dict[str, Decimal]] = None,
+        initial_eur_balance: Optional[Decimal] = None,
     ) -> tuple[MarketMakerClient, str]:
         """
         Create Market Maker client with associated User
@@ -51,6 +54,8 @@ class MarketMakerService:
             description=description,
             is_active=True,
             created_by=created_by_id,
+            mm_type=mm_type,
+            eur_balance=initial_eur_balance if initial_eur_balance else Decimal("0"),
         )
         db.add(mm_client)
         await db.flush()
@@ -64,8 +69,20 @@ class MarketMakerService:
             status=TicketStatus.SUCCESS,
             user_id=created_by_id,
             market_maker_id=mm_client.id,
-            request_payload={"name": name, "email": email, "description": description},
-            after_state={"id": str(mm_client.id), "name": name, "is_active": True},
+            request_payload={
+                "name": name,
+                "email": email,
+                "description": description,
+                "mm_type": mm_type.value,
+                "initial_eur_balance": str(initial_eur_balance) if initial_eur_balance else None,
+            },
+            after_state={
+                "id": str(mm_client.id),
+                "name": name,
+                "is_active": True,
+                "mm_type": mm_type.value,
+                "eur_balance": str(mm_client.eur_balance),
+            },
             tags=["market_maker", "creation"],
         )
 

@@ -10,7 +10,7 @@ from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
     User, MarketMakerClient, AssetTransaction, CertificateType,
-    TransactionType, Order, OrderStatus, TicketStatus
+    TransactionType, Order, OrderStatus, TicketStatus, MarketMakerType
 )
 from ...schemas.schemas import (
     MarketMakerCreate, MarketMakerUpdate, MarketMakerResponse,
@@ -119,6 +119,28 @@ async def create_market_maker(
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already exists")
 
+    # Convert schema enum to model enum
+    mm_type = MarketMakerType(data.mm_type.value)
+
+    # Validate constraints
+    if mm_type == MarketMakerType.LIQUIDITY_PROVIDER:
+        if data.initial_balances:
+            raise HTTPException(
+                status_code=400,
+                detail="LIQUIDITY_PROVIDER cannot have certificate balances"
+            )
+        if data.initial_eur_balance is None or data.initial_eur_balance <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="LIQUIDITY_PROVIDER must have positive initial_eur_balance"
+            )
+    elif mm_type == MarketMakerType.ASSET_HOLDER:
+        if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="ASSET_HOLDER cannot have EUR balance"
+            )
+
     # Create Market Maker
     mm_client, ticket_id = await MarketMakerService.create_market_maker(
         db=db,
@@ -126,7 +148,9 @@ async def create_market_maker(
         email=data.email,
         description=data.description,
         created_by_id=admin_user.id,
+        mm_type=mm_type,
         initial_balances=data.initial_balances,
+        initial_eur_balance=data.initial_eur_balance,
     )
 
     logger.info(f"Admin {admin_user.email} created Market Maker {mm_client.name} (ID: {mm_client.id})")
