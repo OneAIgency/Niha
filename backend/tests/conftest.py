@@ -8,6 +8,7 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy import text
 
 from app.models.models import Base, User, UserRole
+from app.core.security import RedisManager
 
 
 # Test database URL (using PostgreSQL test database)
@@ -18,12 +19,20 @@ TEST_DB_PORT = os.getenv("TEST_DB_PORT", "5432")
 TEST_DATABASE_URL = f"postgresql+asyncpg://niha_user:niha_secure_pass_2024@{TEST_DB_HOST}:{TEST_DB_PORT}/niha_carbon_test"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def event_loop():
-    """Create an event loop for the test session"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    """Create an event loop for each test function"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
+
+
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def cleanup_redis():
+    """Clean up Redis connections after each test"""
+    yield
+    await RedisManager.close()
 
 
 @pytest_asyncio.fixture(scope="function")
