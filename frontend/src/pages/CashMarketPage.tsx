@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3 } from 'lucide-react';
 import {
-  OrderBook,
+  ProfessionalOrderBook,
   TradePanel,
   MarketDepthChart,
   RecentTrades,
@@ -92,8 +92,9 @@ export function CashMarketPage() {
   };
 
   // Handle price click from order book
-  const handlePriceClick = (price: number) => {
+  const handlePriceClick = (price: number, _side: 'BUY' | 'SELL') => {
     setSelectedPrice(price);
+    // Optional: You can also pre-fill the order side based on the clicked side
   };
 
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
@@ -201,52 +202,62 @@ export function CashMarketPage() {
             <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-12 gap-6">
-            {/* Order Book - Left */}
-            <div className="col-span-12 lg:col-span-4 h-[500px]">
-              <OrderBook
-                bids={orderBook?.bids || []}
-                asks={orderBook?.asks || []}
-                spread={orderBook?.spread || null}
-                bestBid={orderBook?.best_bid || null}
-                bestAsk={orderBook?.best_ask || null}
-                onPriceClick={handlePriceClick}
-              />
+          <div className="space-y-6">
+            {/* Professional Order Book - Full Width */}
+            <div className="w-full">
+              {orderBook && (
+                <ProfessionalOrderBook
+                  orderBook={{
+                    bids: orderBook.bids,
+                    asks: orderBook.asks,
+                    spread: orderBook.spread,
+                    best_bid: orderBook.best_bid,
+                    best_ask: orderBook.best_ask,
+                  }}
+                  onPriceClick={handlePriceClick}
+                />
+              )}
             </div>
 
-            {/* Trade Panel - Center */}
-            <div className="col-span-12 lg:col-span-4 h-[500px]">
-              <TradePanel
-                certificateType={certificateType}
-                lastPrice={orderBook?.last_price || null}
-                bestBid={orderBook?.best_bid || null}
-                bestAsk={orderBook?.best_ask || null}
-                selectedPrice={selectedPrice}
-                onPlaceOrder={handlePlaceOrder}
-                isLoading={isPlacingOrder}
-              />
+            {/* Trading Panel and Market Depth */}
+            <div className="grid grid-cols-12 gap-6">
+              {/* Trade Panel - Left */}
+              <div className="col-span-12 lg:col-span-6 h-[500px]">
+                <TradePanel
+                  certificateType={certificateType}
+                  lastPrice={orderBook?.last_price || null}
+                  bestBid={orderBook?.best_bid || null}
+                  bestAsk={orderBook?.best_ask || null}
+                  selectedPrice={selectedPrice}
+                  onPlaceOrder={handlePlaceOrder}
+                  isLoading={isPlacingOrder}
+                />
+              </div>
+
+              {/* Market Depth - Right */}
+              <div className="col-span-12 lg:col-span-6 h-[500px]">
+                <MarketDepthChart
+                  bids={marketDepth?.bids || []}
+                  asks={marketDepth?.asks || []}
+                  midPrice={orderBook?.last_price ?? undefined}
+                />
+              </div>
             </div>
 
-            {/* Market Depth - Right */}
-            <div className="col-span-12 lg:col-span-4 h-[500px]">
-              <MarketDepthChart
-                bids={marketDepth?.bids || []}
-                asks={marketDepth?.asks || []}
-                midPrice={orderBook?.last_price ?? undefined}
-              />
-            </div>
+            {/* Recent Trades and My Orders */}
+            <div className="grid grid-cols-12 gap-6">
+              {/* Recent Trades - Left */}
+              <div className="col-span-12 lg:col-span-6 h-[400px]">
+                <RecentTrades trades={recentTrades} />
+              </div>
 
-            {/* Recent Trades - Bottom Left */}
-            <div className="col-span-12 lg:col-span-6 h-[400px]">
-              <RecentTrades trades={recentTrades} />
-            </div>
-
-            {/* My Orders - Bottom Right */}
-            <div className="col-span-12 lg:col-span-6 h-[400px]">
-              <MyOrders
-                orders={myOrders}
-                onCancelOrder={handleCancelOrder}
-              />
+              {/* My Orders - Right */}
+              <div className="col-span-12 lg:col-span-6 h-[400px]">
+                <MyOrders
+                  orders={myOrders}
+                  onCancelOrder={handleCancelOrder}
+                />
+              </div>
             </div>
           </div>
         )}
