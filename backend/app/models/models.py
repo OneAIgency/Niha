@@ -592,3 +592,33 @@ class TicketLog(Base):
     user = relationship("User", foreign_keys=[user_id])
     market_maker = relationship("MarketMakerClient", foreign_keys=[market_maker_id])
     session = relationship("UserSession", foreign_keys=[session_id])
+
+
+class LiquidityOperation(Base):
+    """Audit trail for liquidity creation operations"""
+    __tablename__ = "liquidity_operations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ticket_id = Column(String(30), nullable=False, unique=True, index=True)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False, index=True)
+
+    # Targets
+    target_bid_liquidity_eur = Column(Numeric(18, 2), nullable=False)
+    target_ask_liquidity_eur = Column(Numeric(18, 2), nullable=False)
+
+    # Actuals
+    actual_bid_liquidity_eur = Column(Numeric(18, 2), nullable=False)
+    actual_ask_liquidity_eur = Column(Numeric(18, 2), nullable=False)
+
+    # Execution details
+    market_makers_used = Column(JSONB, nullable=False)  # [{mm_id, mm_type, amount}, ...]
+    orders_created = Column(ARRAY(UUID(as_uuid=True)), nullable=False)
+    reference_price = Column(Numeric(18, 4), nullable=False)
+
+    # Metadata
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    creator = relationship("User", foreign_keys=[created_by])

@@ -17,7 +17,7 @@ from app.models.models import (
     User, Entity, MarketMakerClient, ContactRequest, Certificate, Trade,
     SwapRequest, KYCDocument, ActivityLog, UserSession, Order, CashMarketTrade,
     Deposit, EntityHolding, AssetTransaction, TicketLog, Seller,
-    AuthenticationAttempt, PriceHistory, ScrapingSource
+    AuthenticationAttempt, PriceHistory, ScrapingSource, LiquidityOperation
 )
 
 # this is the Alembic Config object, which provides
