@@ -332,7 +332,12 @@ class LiquidityService:
         notes: Optional[str] = None
     ) -> LiquidityOperation:
         """
-        Create liquidity by placing BID and ASK orders across market makers.
+        Execute liquidity creation by placing orders across MMs.
+        Raises InsufficientAssetsError if assets lacking.
+
+        NOTE: This method has a known TOCTOU (time-of-check-time-of-use) issue
+        between preview validation and execution. For production use, consider
+        adding row-level locking or re-validating balances after fetching MMs.
 
         Args:
             db: Database session
@@ -347,7 +352,7 @@ class LiquidityService:
 
         Raises:
             InsufficientAssetsError: If insufficient assets to execute
-            ValueError: If amounts are non-positive
+            ValueError: If amounts are non-positive or no market makers available
         """
         # Step 1: Validate using preview
         preview = await LiquidityService.preview_liquidity_creation(
@@ -375,6 +380,12 @@ class LiquidityService:
         lp_mms = await LiquidityService.get_liquidity_providers(db)
         ah_data = await LiquidityService.get_asset_holders(db, certificate_type)
 
+        # Validate we have market makers to work with
+        if not lp_mms or len(lp_mms) == 0:
+            raise ValueError("No active liquidity providers available for BID orders")
+        if not ah_data or len(ah_data) == 0:
+            raise ValueError(f"No active asset holders available for ASK orders with {certificate_type.value}")
+
         # Step 4: Create BID orders across liquidity providers
         bid_orders = []
         eur_per_lp = bid_amount_eur / len(lp_mms)
@@ -397,7 +408,9 @@ class LiquidityService:
                 db.add(order)
                 bid_orders.append(order)
 
-            # Step 5: Lock EUR by reducing eur_balance
+            # Step 5: Validate and lock EUR
+            if lp_mm.eur_balance < eur_per_lp:
+                raise InsufficientAssetsError("EUR", eur_per_lp, lp_mm.eur_balance)
             lp_mm.eur_balance -= eur_per_lp
 
         # Step 6: Create ASK orders across asset holders

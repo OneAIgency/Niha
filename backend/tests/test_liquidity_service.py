@@ -354,3 +354,30 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
     assert result.id is not None
     assert len(result.orders_created) == 6  # 3 bid + 3 ask
     assert result.actual_bid_liquidity_eur == Decimal("50000")
+
+@pytest.mark.asyncio
+async def test_create_liquidity_no_liquidity_providers(db_session, test_admin_user):
+    """Test that liquidity creation fails with no liquidity providers"""
+    from app.services.market_maker_service import MarketMakerService
+    from app.services.liquidity_service import InsufficientAssetsError
+
+    # Create only asset holder (no liquidity provider)
+    ah_mm, _ = await MarketMakerService.create_market_maker(
+        db=db_session,
+        name="AH-NoLP",
+        email="ah-nolp@test.com",
+        description="Test",
+        created_by_id=test_admin_user.id,
+        initial_balances={"CEA": Decimal("10000")}
+    )
+    await db_session.commit()
+
+    # Attempt to create liquidity (should fail - no LPs)
+    with pytest.raises(ValueError, match="No active liquidity providers available"):
+        await LiquidityService.create_liquidity(
+            db=db_session,
+            certificate_type=CertificateType.CEA,
+            bid_amount_eur=Decimal("50000"),
+            ask_amount_eur=Decimal("25000"),
+            created_by_id=test_admin_user.id
+        )
