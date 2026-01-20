@@ -175,3 +175,15 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
     # Verify overall ordering - each item should have balance >= next item
     for i in range(len(result) - 1):
         assert result[i]["available"] >= result[i + 1]["available"]
+
+@pytest.mark.asyncio
+async def test_calculate_reference_price(db_session):
+    """Test reference price calculation"""
+    # Mock orderbook data - in real test, create orders
+    result = await LiquidityService.calculate_reference_price(
+        db_session,
+        CertificateType.CEA
+    )
+
+    assert result > 0
+    assert isinstance(result, Decimal)

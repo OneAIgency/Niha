@@ -11,7 +11,11 @@ from app.models.models import Base, User, UserRole
 
 
 # Test database URL (using PostgreSQL test database)
-TEST_DATABASE_URL = "postgresql+asyncpg://niha_user:niha_secure_pass_2024@localhost:5433/niha_carbon_test"
+# Use 'db' hostname when running inside Docker, 'localhost' when running locally
+import os
+TEST_DB_HOST = os.getenv("TEST_DB_HOST", "db")
+TEST_DB_PORT = os.getenv("TEST_DB_PORT", "5432")
+TEST_DATABASE_URL = f"postgresql+asyncpg://niha_user:niha_secure_pass_2024@{TEST_DB_HOST}:{TEST_DB_PORT}/niha_carbon_test"
 
 
 @pytest.fixture(scope="session")
