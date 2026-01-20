@@ -113,6 +113,7 @@ export function UsersPage() {
   const [entityAssets, setEntityAssets] = useState<EntityAssetsDisplay | null>(null);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [loadingDeposits, setLoadingDeposits] = useState(false);
+  const [depositsError, setDepositsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -296,25 +297,62 @@ export function UsersPage() {
   };
 
   const loadDeposits = async (entityId: string) => {
+    // Validate entityId
+    if (!entityId || entityId.trim() === '') {
+      console.error('loadDeposits called with invalid entityId:', entityId);
+      setDepositsError('Invalid entity ID');
+      return;
+    }
+
     setLoadingDeposits(true);
+    setDepositsError(null); // Clear previous errors
+
     try {
+      console.log('Loading deposits for entity:', entityId);
+
       const [balance, assetsResponse, depositList] = await Promise.all([
         backofficeApi.getEntityBalance(entityId),
         backofficeApi.getEntityAssets(entityId),
         backofficeApi.getDeposits({ entity_id: entityId }),
       ]);
-      setEntityBalance(balance);
-      // Extract only the fields we need from the assets response
-      setEntityAssets({
-        entity_id: assetsResponse.entity_id,
-        entity_name: assetsResponse.entity_name,
-        eur_balance: assetsResponse.eur_balance,
-        cea_balance: assetsResponse.cea_balance,
-        eua_balance: assetsResponse.eua_balance,
+
+      console.log('Deposits loaded successfully:', {
+        balance,
+        assetsResponse,
+        depositCount: depositList.length,
       });
-      setDeposits(depositList);
-    } catch (error) {
+
+      // Validate response data
+      if (!assetsResponse || typeof assetsResponse !== 'object') {
+        throw new Error('Invalid assets response from server');
+      }
+
+      setEntityBalance(balance);
+
+      // Extract only the fields we need from the assets response with defensive checks
+      setEntityAssets({
+        entity_id: assetsResponse.entity_id || entityId,
+        entity_name: assetsResponse.entity_name || 'Unknown Entity',
+        eur_balance: assetsResponse.eur_balance ?? 0,
+        cea_balance: assetsResponse.cea_balance ?? 0,
+        eua_balance: assetsResponse.eua_balance ?? 0,
+      });
+
+      setDeposits(Array.isArray(depositList) ? depositList : []);
+    } catch (error: any) {
       console.error('Failed to load deposits:', error);
+
+      // Determine user-friendly error message
+      let errorMessage = 'Failed to load entity assets';
+      if (error.response?.status === 403) {
+        errorMessage = 'Access denied - insufficient permissions';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Entity not found';
+      } else if (error.message?.includes('Network Error')) {
+        errorMessage = 'Network error - please check your connection';
+      }
+
+      setDepositsError(errorMessage);
       setEntityBalance(null);
       setEntityAssets(null);
       setDeposits([]);
@@ -1117,6 +1155,23 @@ export function UsersPage() {
                               Deposits can only be made for users with an entity
                             </p>
                           </div>
+                        ) : depositsError ? (
+                          <div className="text-center py-8">
+                            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                            <p className="text-red-600 dark:text-red-400 font-medium mb-2">
+                              {depositsError}
+                            </p>
+                            <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+                              Unable to load entity assets. This could be due to permissions, network issues, or server problems.
+                            </p>
+                            <Button
+                              variant="secondary"
+                              onClick={() => detailUser.entity_id && loadDeposits(detailUser.entity_id)}
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                              Retry
+                            </Button>
+                          </div>
                         ) : loadingDeposits ? (
                           <div className="flex items-center justify-center py-8">
                             <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
@@ -1130,7 +1185,9 @@ export function UsersPage() {
                               </div>
                               <div>
                                 <p className="text-sm text-navy-500 dark:text-navy-400">Entity Holdings</p>
-                                <p className="font-bold text-navy-900 dark:text-white">{entityAssets?.entity_name || entityBalance?.entity_name || 'Unknown'}</p>
+                                <p className="font-bold text-navy-900 dark:text-white">
+                                  {entityAssets?.entity_name || entityBalance?.entity_name || detailUser.entity_name || 'Unknown Entity'}
+                                </p>
                               </div>
                             </div>
 
