@@ -41,7 +41,7 @@ export function TransactionForm({
     }
   }, [isOpen]);
 
-  const currentBalance = certificateType === 'CEA' ? currentBalances.cea_balance : currentBalances.eua_balance;
+  const currentBalance = certificateType === 'CEA' ? (currentBalances.cea_balance ?? 0) : (currentBalances.eua_balance ?? 0);
   const amountNum = parseFloat(amount) || 0;
   const isWithdrawal = transactionType === 'withdrawal';
   const insufficientBalance = isWithdrawal && amountNum > currentBalance;
