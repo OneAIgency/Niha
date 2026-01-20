@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3 } from 'lucide-react';
 import {
   ProfessionalOrderBook,
-  TradePanel,
-  MarketDepthChart,
   RecentTrades,
   MyOrders,
   UserOrderEntryModal,
@@ -13,7 +11,6 @@ import { cashMarketApi } from '../services/api';
 import type {
   CertificateType,
   OrderBook as OrderBookType,
-  MarketDepth,
   CashMarketTrade,
   Order,
 } from '../types';
@@ -21,12 +18,10 @@ import type {
 export function CashMarketPage() {
   const [certificateType, setCertificateType] = useState<CertificateType>('EUA');
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
-  const [marketDepth, setMarketDepth] = useState<MarketDepth | null>(null);
   const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(true);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [userBalances, setUserBalances] = useState<{
     eur_balance: number;
     cea_balance: number;
@@ -36,16 +31,14 @@ export function CashMarketPage() {
   // Fetch all market data
   const fetchData = useCallback(async () => {
     try {
-      const [orderBookData, depthData, tradesData, ordersData, balancesData] = await Promise.all([
+      const [orderBookData, tradesData, ordersData, balancesData] = await Promise.all([
         cashMarketApi.getOrderBook(certificateType),
-        cashMarketApi.getMarketDepth(certificateType),
         cashMarketApi.getRecentTrades(certificateType, 50),
         cashMarketApi.getMyOrders({ certificate_type: certificateType }),
         cashMarketApi.getUserBalances(),
       ]);
 
       setOrderBook(orderBookData);
-      setMarketDepth(depthData);
       setRecentTrades(tradesData);
       setMyOrders(ordersData);
       setUserBalances(balancesData);
@@ -65,27 +58,6 @@ export function CashMarketPage() {
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
-
-  // Handle order placement
-  const handlePlaceOrder = async (order: {
-    side: 'BUY' | 'SELL';
-    price: number;
-    quantity: number;
-  }) => {
-    setIsPlacingOrder(true);
-    try {
-      await cashMarketApi.placeOrder({
-        certificate_type: certificateType,
-        ...order,
-      });
-      // Refresh data after placing order
-      fetchData();
-    } catch (error) {
-      console.error('Error placing order:', error);
-    } finally {
-      setIsPlacingOrder(false);
-    }
-  };
 
   // Handle market order submission from UserOrderEntryModal
   const handleMarketOrderSubmit = async (order: {
@@ -254,8 +226,8 @@ export function CashMarketPage() {
 
       {/* User Order Entry Modal - Fixed/Sticky at Top */}
       {userBalances && (
-        <div className="sticky top-0 z-10 bg-navy-50 dark:bg-navy-900 border-b border-navy-200 dark:border-navy-700 shadow-lg">
-          <div className="max-w-7xl mx-auto p-6">
+        <div className="sticky top-0 z-10 bg-white dark:bg-navy-800 border-b border-navy-200 dark:border-navy-700 shadow-md">
+          <div className="max-w-7xl mx-auto px-6 py-4">
             <UserOrderEntryModal
               certificateType={certificateType}
               availableBalance={userBalances.eur_balance}
@@ -266,7 +238,7 @@ export function CashMarketPage() {
         </div>
       )}
 
-      {/* Main Grid - Scrollable Content Below */}
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
@@ -274,60 +246,37 @@ export function CashMarketPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Professional Order Book - Full Width */}
+            {/* Professional Order Book - Full Width, Prominent */}
             <div className="w-full">
               {orderBook && (
-                <ProfessionalOrderBook
-                  orderBook={{
-                    bids: orderBook.bids,
-                    asks: orderBook.asks,
-                    spread: orderBook.spread,
-                    best_bid: orderBook.best_bid,
-                    best_ask: orderBook.best_ask,
-                  }}
-                  onPriceClick={handlePriceClick}
-                />
+                <div className="h-[700px]">
+                  <ProfessionalOrderBook
+                    orderBook={{
+                      bids: orderBook.bids,
+                      asks: orderBook.asks,
+                      spread: orderBook.spread,
+                      best_bid: orderBook.best_bid,
+                      best_ask: orderBook.best_ask,
+                    }}
+                    onPriceClick={handlePriceClick}
+                  />
+                </div>
               )}
             </div>
 
-            {/* Trading Panel and Market Depth */}
-            <div className="grid grid-cols-12 gap-6">
-              {/* Trade Panel - Left */}
-              <div className="col-span-12 lg:col-span-6 h-[500px]">
-                <TradePanel
-                  certificateType={certificateType}
-                  lastPrice={orderBook?.last_price || null}
-                  bestBid={orderBook?.best_bid || null}
-                  bestAsk={orderBook?.best_ask || null}
-                  selectedPrice={selectedPrice}
-                  onPlaceOrder={handlePlaceOrder}
-                  isLoading={isPlacingOrder}
-                />
-              </div>
-
-              {/* Market Depth - Right */}
-              <div className="col-span-12 lg:col-span-6 h-[500px]">
-                <MarketDepthChart
-                  bids={marketDepth?.bids || []}
-                  asks={marketDepth?.asks || []}
-                  midPrice={orderBook?.last_price ?? undefined}
-                />
-              </div>
-            </div>
-
-            {/* Recent Trades and My Orders */}
-            <div className="grid grid-cols-12 gap-6">
-              {/* Recent Trades - Left */}
-              <div className="col-span-12 lg:col-span-6 h-[400px]">
-                <RecentTrades trades={recentTrades} />
-              </div>
-
-              {/* My Orders - Right */}
-              <div className="col-span-12 lg:col-span-6 h-[400px]">
+            {/* My Orders and Recent Trades */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* My Orders - Left (Priority) */}
+              <div className="h-[450px]">
                 <MyOrders
                   orders={myOrders}
                   onCancelOrder={handleCancelOrder}
                 />
+              </div>
+
+              {/* Recent Trades - Right */}
+              <div className="h-[450px]">
+                <RecentTrades trades={recentTrades} />
               </div>
             </div>
           </div>
