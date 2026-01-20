@@ -20,7 +20,6 @@ export function CashMarketPage() {
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
   const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
-  const [selectedPrice, setSelectedPrice] = useState<number | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [userBalances, setUserBalances] = useState<{
     eur_balance: number;
@@ -121,9 +120,8 @@ export function CashMarketPage() {
   };
 
   // Handle price click from order book
-  const handlePriceClick = (price: number, _side: 'BUY' | 'SELL') => {
-    setSelectedPrice(price);
-    // Optional: You can also pre-fill the order side based on the clicked side
+  const handlePriceClick = (_price: number, _side: 'BUY' | 'SELL') => {
+    // Future enhancement: Could pre-fill order entry modal with clicked price
   };
 
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
