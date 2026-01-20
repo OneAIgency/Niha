@@ -38,7 +38,12 @@ export function formatPercent(value: number, decimals: number = 2): string {
 }
 
 // Format quantity with proper thousand separators
-export function formatQuantity(value: number): string {
+export function formatQuantity(value: number | undefined | null): string {
+  // Add null-safety to prevent NaN display
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
+
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,

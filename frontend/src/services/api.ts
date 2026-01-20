@@ -1124,7 +1124,24 @@ export const createMarketMaker = async (data: {
   cea_balance?: number;
   eua_balance?: number;
 }): Promise<any> => {
-  const { data: response } = await api.post('/admin/market-makers', data);
+  // Transform frontend format to backend expected format
+  // Backend expects: initial_balances: {CEA: number, EUA: number}
+  // Frontend sends: cea_balance, eua_balance
+  const payload: any = {
+    name: data.name,
+    email: data.email,
+    description: data.description,
+  };
+
+  // Build initial_balances dict if any balance provided
+  // Use !== undefined to properly handle zero values
+  if (data.cea_balance !== undefined || data.eua_balance !== undefined) {
+    payload.initial_balances = {};
+    if (data.cea_balance !== undefined) payload.initial_balances.CEA = data.cea_balance;
+    if (data.eua_balance !== undefined) payload.initial_balances.EUA = data.eua_balance;
+  }
+
+  const { data: response } = await api.post('/admin/market-makers', payload);
   return response;
 };
 
@@ -1144,7 +1161,15 @@ export const deleteMarketMaker = async (id: string): Promise<MessageResponse> =>
 
 export const getMarketMakerTransactions = async (id: string, params?: any): Promise<any[]> => {
   const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
-  return data;
+
+  // Transform backend response to match frontend expectations
+  // Backend returns: transaction_type as "DEPOSIT" or "WITHDRAWAL" (uppercase)
+  // Frontend expects: transaction_type as "deposit" or "withdrawal" (lowercase)
+  return data.map((transaction: any) => ({
+    ...transaction,
+    transaction_type: transaction.transaction_type?.toLowerCase() || 'deposit',
+    amount: Math.abs(transaction.amount), // Store absolute value for display
+  }));
 };
 
 export const createTransaction = async (id: string, data: {
@@ -1153,7 +1178,13 @@ export const createTransaction = async (id: string, data: {
   amount: number;
   notes?: string;
 }): Promise<any> => {
-  const { data: response } = await api.post(`/admin/market-makers/${id}/transactions`, data);
+  // Transform to backend format (uppercase transaction_type)
+  const backendPayload = {
+    ...data,
+    transaction_type: data.transaction_type.toUpperCase(),
+  };
+
+  const { data: response } = await api.post(`/admin/market-makers/${id}/transactions`, backendPayload);
   return response;
 };
 
@@ -1162,7 +1193,14 @@ export const getMarketMakerBalances = async (id: string): Promise<{
   eua_balance: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
-  return data;
+
+  // Transform nested backend structure to flat frontend structure
+  // Backend returns: {CEA: {available, locked, total}, EUA: {...}}
+  // Frontend expects: {cea_balance, eua_balance}
+  return {
+    cea_balance: data.CEA?.total ?? 0,
+    eua_balance: data.EUA?.total ?? 0,
+  };
 };
 
 // Market Orders API (Admin)

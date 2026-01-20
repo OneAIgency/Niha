@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, RefreshCw, AlertCircle } from 'lucide-react';
+import { Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
 import { Button } from '../common';
 import { getTickets } from '../../services/api';

@@ -134,6 +134,7 @@ export function MarketMakersPage() {
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             onSuccess={handleCreateSuccess}
+            currentMMCount={marketMakers.length}
           />
         )}
 

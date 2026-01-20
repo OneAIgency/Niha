@@ -65,7 +65,7 @@ export function TransactionForm({
     try {
       await createTransaction(marketMakerId, {
         certificate_type: certificateType,
-        transaction_type: transactionType.toUpperCase() as 'DEPOSIT' | 'WITHDRAWAL',
+        transaction_type: transactionType, // Send lowercase, API will handle backend conversion
         amount: amountNum,
         notes: notes.trim() || undefined,
       });

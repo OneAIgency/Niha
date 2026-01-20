@@ -1,6 +1,5 @@
 import { Leaf, Wind } from 'lucide-react';
 import { formatQuantity } from '../../utils';
-import { cn } from '../../utils';
 
 interface SimpleBalances {
   cea_balance: number;

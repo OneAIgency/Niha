@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bot, AlertCircle, Check } from 'lucide-react';
 import { Button } from '../common';
-import { createMarketMaker } from '../../services/api';
+import { createMarketMaker, getMarketMakers } from '../../services/api';
+import { usePrices } from '../../hooks/usePrices';
 
 interface CreateMarketMakerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  currentMMCount: number;
 }
 
-export function CreateMarketMakerModal({ isOpen, onClose, onSuccess }: CreateMarketMakerModalProps) {
+export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCount }: CreateMarketMakerModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
@@ -19,6 +21,52 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess }: CreateMar
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Get current prices for EUR calculation
+  const { prices } = usePrices();
+
+  // Auto-populate name and email when modal opens
+  // Fetch latest count to avoid race conditions
+  useEffect(() => {
+    const fetchLatestCount = async () => {
+      if (isOpen) {
+        try {
+          const mms = await getMarketMakers();
+          const nextNumber = mms.length + 1;
+          setName(`mm${nextNumber}`);
+          setEmail(`mm${nextNumber}@nihaogroup.com`);
+        } catch (err) {
+          console.error('Failed to fetch MM count:', err);
+          // Fallback to prop-based count
+          const nextNumber = currentMMCount + 1;
+          setName(`mm${nextNumber}`);
+          setEmail(`mm${nextNumber}@nihaogroup.com`);
+        }
+      }
+    };
+
+    fetchLatestCount();
+  }, [isOpen, currentMMCount]);
+
+  // Calculate EUR value for balance inputs
+  const calculateEurValue = (balance: string, certificateType: 'CEA' | 'EUA'): number | null => {
+    if (!prices) return null;
+
+    const amount = parseFloat(balance) || 0;
+    if (amount === 0) return null;
+
+    if (certificateType === 'CEA') {
+      // Use backend-provided EUR price for CEA
+      const ceaPriceEur = prices.cea?.price_eur || 0;
+      if (ceaPriceEur === 0) return null;
+      return amount * ceaPriceEur;
+    } else {
+      // EUA price is already in EUR
+      const euaPriceEur = prices.eua?.price || 0;
+      if (euaPriceEur === 0) return null;
+      return amount * euaPriceEur;
+    }
+  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -152,6 +200,14 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess }: CreateMar
                   step="1"
                   className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+                {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
+                  <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    ≈ €{calculateEurValue(ceaBalance, 'CEA')!.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} EUR
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
@@ -166,6 +222,14 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess }: CreateMar
                   step="1"
                   className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {euaBalance && calculateEurValue(euaBalance, 'EUA') !== null && (
+                  <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    ≈ €{calculateEurValue(euaBalance, 'EUA')!.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })} EUR
+                  </p>
+                )}
               </div>
             </div>
 

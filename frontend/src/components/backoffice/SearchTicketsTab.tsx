@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
 import { Button } from '../common';
 import { getTickets } from '../../services/api';
