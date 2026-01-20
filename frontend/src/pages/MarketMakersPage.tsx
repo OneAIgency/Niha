@@ -5,7 +5,6 @@ import { Button, Card } from '../components/common';
 import { MarketMakersList } from '../components/backoffice/MarketMakersList';
 import { CreateMarketMakerModal } from '../components/backoffice/CreateMarketMakerModal';
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
-import { MarketMakerTransactionsSection } from '../components/backoffice/MarketMakerTransactionsSection';
 import { getMarketMakers } from '../services/api';
 import { cn } from '../utils';
 
@@ -128,32 +127,6 @@ export function MarketMakersPage() {
             />
           </Card>
         </motion.div>
-
-        {/* Selected MM Details - Transactions Section */}
-        {selectedMM && !showEditModal && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6"
-          >
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white">
-                  {selectedMM.name} - Transactions
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedMM(null)}
-                  icon={<X className="w-4 h-4" />}
-                >
-                  Close
-                </Button>
-              </div>
-              <MarketMakerTransactionsSection marketMakerId={selectedMM.id} />
-            </Card>
-          </motion.div>
-        )}
 
         {/* Create Market Maker Modal */}
         {showCreateModal && (

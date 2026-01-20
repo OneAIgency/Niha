@@ -3,3 +3,7 @@ export { ApproveInviteModal } from './ApproveInviteModal';
 export { EditAssetModal } from './EditAssetModal';
 export { KYCReviewPanel } from './KYCReviewPanel';
 export { UserOrdersSection } from './UserOrdersSection';
+export { BalanceCards } from './BalanceCards';
+export { TransactionForm } from './TransactionForm';
+export { MarketMakerDetailsTab } from './MarketMakerDetailsTab';
+export { MarketMakerTransactionsTab } from './MarketMakerTransactionsTab';
