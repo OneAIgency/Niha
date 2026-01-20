@@ -280,7 +280,7 @@ function App() {
             path="/cash-market"
             element={
               <FundedRoute>
-                <CeaCashMarketPage />
+                <CashMarketPage />
               </FundedRoute>
             }
           />
@@ -288,7 +288,7 @@ function App() {
             path="/cash-market-old"
             element={
               <FundedRoute>
-                <CashMarketPage />
+                <CeaCashMarketPage />
               </FundedRoute>
             }
           />
