@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, RefreshCw, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
   ProfessionalOrderBook,
   RecentTrades,
@@ -9,18 +9,18 @@ import {
 } from '../components/cash-market';
 import { cashMarketApi } from '../services/api';
 import type {
-  CertificateType,
   OrderBook as OrderBookType,
   CashMarketTrade,
   Order,
 } from '../types';
 
 export function CashMarketPage() {
-  const [certificateType, setCertificateType] = useState<CertificateType>('EUA');
+  const certificateType = 'CEA'; // Hardcoded to CEA only
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
   const [recentTrades, setRecentTrades] = useState<CashMarketTrade[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
   const [userBalances, setUserBalances] = useState<{
     eur_balance: number;
     cea_balance: number;
@@ -31,7 +31,7 @@ export function CashMarketPage() {
   const fetchData = useCallback(async () => {
     try {
       const [orderBookData, tradesData, ordersData, balancesData] = await Promise.all([
-        cashMarketApi.getOrderBook(certificateType),
+        cashMarketApi.getRealOrderBook(certificateType),
         cashMarketApi.getRecentTrades(certificateType, 50),
         cashMarketApi.getMyOrders({ certificate_type: certificateType }),
         cashMarketApi.getUserBalances(),
@@ -46,7 +46,7 @@ export function CashMarketPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [certificateType]);
+  }, []);
 
   // Initial fetch and polling
   useEffect(() => {
@@ -139,51 +139,32 @@ export function CashMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-50 dark:bg-navy-900">
+    <div className="min-h-screen bg-navy-50 dark:bg-navy-900 text-[11px]">
       {/* Header */}
-      <div className="bg-white dark:bg-navy-800 border-b border-navy-200 dark:border-navy-700 px-6 py-4">
+      <div className="bg-white dark:bg-navy-800 border-b border-navy-200 dark:border-navy-700 px-6 py-3">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Market Selector */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            {/* Market Title */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-6 h-6 text-emerald-500" />
-                <h1 className="text-xl font-bold text-navy-900 dark:text-white">Cash Market</h1>
-              </div>
-
-              {/* Toggle */}
-              <div className="flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600">
-                {(['EUA', 'CEA'] as CertificateType[]).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setCertificateType(type)}
-                    className={`px-4 py-2 text-sm font-semibold transition-colors ${
-                      certificateType === type
-                        ? type === 'EUA'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-amber-500 text-white'
-                        : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                <BarChart3 className="w-5 h-5 text-amber-500" />
+                <h1 className="text-lg font-bold text-navy-900 dark:text-white">CEA Cash Market</h1>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-6 text-sm">
+            {/* Stats and Actions */}
+            <div className="flex items-center gap-4 text-[11px]">
               {/* Last Price */}
               <div>
-                <span className="text-navy-500 dark:text-navy-400 mr-2">Last</span>
-                <span className="font-bold font-mono text-navy-900 dark:text-white text-lg">
-                  ${formatNumber(orderBook?.last_price)}
+                <span className="text-navy-500 dark:text-navy-400 mr-1 text-[10px]">Last</span>
+                <span className="font-bold font-mono text-navy-900 dark:text-white text-sm">
+                  €{formatNumber(orderBook?.last_price)}
                 </span>
               </div>
 
               {/* 24h Change */}
               <div className="flex items-center gap-1">
-                <span className="text-navy-500 dark:text-navy-400">24h</span>
+                <span className="text-navy-500 dark:text-navy-400 text-[10px]">24h</span>
                 {orderBook && (
                   <span className={`flex items-center font-semibold ${
                     orderBook.change_24h >= 0
@@ -191,9 +172,9 @@ export function CashMarketPage() {
                       : 'text-red-600 dark:text-red-400'
                   }`}>
                     {orderBook.change_24h >= 0 ? (
-                      <TrendingUp className="w-4 h-4 mr-1" />
+                      <TrendingUp className="w-3 h-3 mr-0.5" />
                     ) : (
-                      <TrendingDown className="w-4 h-4 mr-1" />
+                      <TrendingDown className="w-3 h-3 mr-0.5" />
                     )}
                     {orderBook.change_24h >= 0 ? '+' : ''}{orderBook.change_24h.toFixed(2)}%
                   </span>
@@ -202,7 +183,7 @@ export function CashMarketPage() {
 
               {/* Volume */}
               <div>
-                <span className="text-navy-500 dark:text-navy-400 mr-2">Vol</span>
+                <span className="text-navy-500 dark:text-navy-400 mr-1 text-[10px]">Vol</span>
                 <span className="font-semibold text-navy-700 dark:text-navy-300 font-mono">
                   {orderBook ? formatVolume(orderBook.volume_24h) : '-'}
                 </span>
@@ -213,41 +194,63 @@ export function CashMarketPage() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={fetchData}
-                className="p-2 rounded-lg hover:bg-navy-100 dark:hover:bg-navy-700 text-navy-500"
+                className="p-1.5 rounded-lg hover:bg-navy-100 dark:hover:bg-navy-700 text-navy-500"
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               </motion.button>
+
+              {/* Place Order Button */}
+              <button
+                onClick={() => setIsOrderPanelOpen(!isOrderPanelOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-[11px] transition-colors"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                Place Order
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* User Order Entry Modal - Fixed/Sticky at Top */}
-      {userBalances && (
-        <div className="sticky top-0 z-10 bg-white dark:bg-navy-800 border-b border-navy-200 dark:border-navy-700 shadow-md">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <UserOrderEntryModal
-              certificateType={certificateType}
-              availableBalance={userBalances.eur_balance}
-              bestAskPrice={orderBook?.best_ask || null}
-              onOrderSubmit={handleMarketOrderSubmit}
-            />
+      {/* Order Entry Overlay */}
+      {isOrderPanelOpen && userBalances && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/70">
+          <div className="relative w-full max-w-5xl mx-4 bg-white dark:bg-navy-800 rounded-lg shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={() => setIsOrderPanelOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-100 dark:hover:bg-navy-700 text-navy-500"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="p-6">
+              <UserOrderEntryModal
+                certificateType={certificateType}
+                availableBalance={userBalances.eur_balance}
+                bestAskPrice={orderBook?.best_ask || null}
+                onOrderSubmit={async (order) => {
+                  await handleMarketOrderSubmit(order);
+                  setIsOrderPanelOpen(false);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
-            <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Professional Order Book - Full Width, Prominent */}
             <div className="w-full">
               {orderBook && (
-                <div className="h-[700px]">
+                <div className="h-[600px]">
                   <ProfessionalOrderBook
                     orderBook={{
                       bids: orderBook.bids,
@@ -263,9 +266,9 @@ export function CashMarketPage() {
             </div>
 
             {/* My Orders and Recent Trades */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* My Orders - Left (Priority) */}
-              <div className="h-[450px]">
+              <div className="h-[350px]">
                 <MyOrders
                   orders={myOrders}
                   onCancelOrder={handleCancelOrder}
@@ -273,7 +276,7 @@ export function CashMarketPage() {
               </div>
 
               {/* Recent Trades - Right */}
-              <div className="h-[450px]">
+              <div className="h-[350px]">
                 <RecentTrades trades={recentTrades} />
               </div>
             </div>

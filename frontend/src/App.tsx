@@ -4,7 +4,6 @@ import {
   ContactPage,
   LoginPage,
   CashMarketPage,
-  CeaCashMarketPage,
   SwapPage,
   CeaSwapMarketPage,
   DashboardPage,
@@ -281,14 +280,6 @@ function App() {
             element={
               <FundedRoute>
                 <CashMarketPage />
-              </FundedRoute>
-            }
-          />
-          <Route
-            path="/cash-market-old"
-            element={
-              <FundedRoute>
-                <CeaCashMarketPage />
               </FundedRoute>
             }
           />

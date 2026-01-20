@@ -24,16 +24,16 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
   }, [orderBook]);
 
   return (
-    <div className="bg-white dark:bg-navy-800 rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-navy-800 rounded-lg overflow-hidden text-[11px]">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-navy-200 dark:border-navy-700">
+      <div className="px-4 py-2 border-b border-navy-200 dark:border-navy-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-navy-900 dark:text-white">Order Book</h2>
+          <h2 className="text-sm font-semibold text-navy-900 dark:text-white">Order Book</h2>
           {orderBook.best_bid !== null && orderBook.best_ask !== null && (
-            <div className="text-sm">
+            <div className="text-[10px]">
               <span className="text-navy-600 dark:text-navy-400">Spread: </span>
               <span className="font-mono font-semibold text-navy-900 dark:text-white">
-                ${orderBook.spread !== null ? orderBook.spread.toFixed(2) : '-'}
+                €{orderBook.spread !== null ? orderBook.spread.toFixed(2) : '-'}
               </span>
             </div>
           )}
@@ -43,22 +43,22 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
       {/* Column Headers */}
       <div className="grid grid-cols-2 border-b border-navy-200 dark:border-navy-700">
         {/* Bids Header */}
-        <div className="px-6 py-3 border-r border-navy-200 dark:border-navy-700">
-          <div className="grid grid-cols-4 gap-2 text-xs font-medium text-navy-600 dark:text-navy-400">
-            <div className="text-right">Total (CEA)</div>
+        <div className="px-4 py-1.5 border-r border-navy-200 dark:border-navy-700">
+          <div className="grid grid-cols-4 gap-2 text-[10px] font-medium text-navy-600 dark:text-navy-400">
+            <div className="text-right">Total</div>
             <div className="text-right">Quantity</div>
-            <div className="text-right">Price ($)</div>
+            <div className="text-right">Price (€)</div>
             <div className="text-center">#</div>
           </div>
         </div>
 
         {/* Asks Header */}
-        <div className="px-6 py-3">
-          <div className="grid grid-cols-4 gap-2 text-xs font-medium text-navy-600 dark:text-navy-400">
+        <div className="px-4 py-1.5">
+          <div className="grid grid-cols-4 gap-2 text-[10px] font-medium text-navy-600 dark:text-navy-400">
             <div className="text-center">#</div>
-            <div className="text-left">Price ($)</div>
+            <div className="text-left">Price (€)</div>
             <div className="text-left">Quantity</div>
-            <div className="text-left">Total (CEA)</div>
+            <div className="text-left">Total</div>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
             return (
               <div
                 key={`bid-${level.price}-${idx}`}
-                className="relative px-6 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 cursor-pointer transition-colors group"
+                className="relative px-4 py-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 cursor-pointer transition-colors group"
                 onClick={() => onPriceClick?.(level.price, 'BUY')}
               >
                 {/* Depth Visualization */}
@@ -82,7 +82,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
                 />
 
                 {/* Values */}
-                <div className="relative grid grid-cols-4 gap-2 text-sm">
+                <div className="relative grid grid-cols-4 gap-2">
                   <div className="text-right font-mono text-navy-600 dark:text-navy-400">
                     {formatQuantity(level.cumulative_quantity)}
                   </div>
@@ -92,7 +92,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
                   <div className="text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                     {level.price.toFixed(2)}
                   </div>
-                  <div className="text-center text-xs text-navy-500 dark:text-navy-500">
+                  <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
                     {level.order_count}
                   </div>
                 </div>
@@ -102,15 +102,15 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
 
           {/* Best Bid Highlight */}
           {orderBook.best_bid !== null && (
-            <div className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-y border-emerald-200 dark:border-emerald-800">
+            <div className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 border-y border-emerald-200 dark:border-emerald-800">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                   Best Bid
                 </span>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-3 h-3 text-emerald-600" />
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    ${orderBook.best_bid.toFixed(2)}
+                    €{orderBook.best_bid.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -122,15 +122,15 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
         <div>
           {/* Best Ask Highlight */}
           {orderBook.best_ask !== null && (
-            <div className="px-6 py-3 bg-red-50 dark:bg-red-900/20 border-y border-red-200 dark:border-red-800">
+            <div className="px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-y border-red-200 dark:border-red-800">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-red-600" />
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="w-3 h-3 text-red-600" />
                   <span className="font-mono font-bold text-red-600 dark:text-red-400">
-                    ${orderBook.best_ask.toFixed(2)}
+                    €{orderBook.best_ask.toFixed(2)}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-red-700 dark:text-red-400">
+                <span className="text-[10px] font-medium text-red-700 dark:text-red-400">
                   Best Ask
                 </span>
               </div>
@@ -142,7 +142,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
             return (
               <div
                 key={`ask-${level.price}-${idx}`}
-                className="relative px-6 py-2 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition-colors group"
+                className="relative px-4 py-1 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition-colors group"
                 onClick={() => onPriceClick?.(level.price, 'SELL')}
               >
                 {/* Depth Visualization */}
@@ -152,8 +152,8 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
                 />
 
                 {/* Values */}
-                <div className="relative grid grid-cols-4 gap-2 text-sm">
-                  <div className="text-center text-xs text-navy-500 dark:text-navy-500">
+                <div className="relative grid grid-cols-4 gap-2">
+                  <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
                     {level.order_count}
                   </div>
                   <div className="text-left font-mono font-semibold text-red-600 dark:text-red-400">
