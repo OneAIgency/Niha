@@ -23,6 +23,7 @@ import {
   EuEntitiesPage,
   StrategicAdvantagePage,
   ComponentShowcasePage,
+  DesignSystemPage,
   MarketMakersPage,
   MarketOrdersPage,
   LoggingPage,
@@ -376,6 +377,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Design System - Comprehensive Token & Component Reference */}
+          <Route path="/design-system" element={<DesignSystemPage />} />
         </Route>
 
         {/* Auth routes (no layout) */}
