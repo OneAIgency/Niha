@@ -18,6 +18,7 @@ from ...schemas.schemas import (
 )
 from ...services.market_maker_service import MarketMakerService
 from ...services.ticket_service import TicketService
+from ...services.order_service import determine_order_market
 from pydantic import BaseModel, Field
 import logging
 
@@ -272,6 +273,7 @@ async def create_market_order(
 
     # Create the order
     order = Order(
+        market=determine_order_market(market_maker=mm),
         market_maker_id=data.market_maker_id,
         certificate_type=cert_type,
         side=order_side,

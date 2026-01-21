@@ -42,7 +42,7 @@ from ...services.order_matching import (
 )
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...models.models import Order, CashMarketTrade, Seller, Entity, User, EntityHolding, AssetType
+from ...models.models import Order, CashMarketTrade, Seller, Entity, User, EntityHolding, AssetType, MarketType
 from ...models.models import OrderSide as OrderSideEnum, OrderStatus, CertificateType as CertTypeEnum
 
 router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
@@ -328,6 +328,7 @@ async def place_order(
 
     # Create the order in database
     new_order = Order(
+        market=MarketType.CEA_CASH,
         entity_id=current_user.entity_id,
         certificate_type=CertTypeEnum(order.certificate_type.value),
         side=OrderSideEnum(order.side.value),

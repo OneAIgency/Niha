@@ -7,7 +7,8 @@ from sqlalchemy import select, func, and_
 
 from app.models.models import (
     MarketMakerClient, MarketMakerType, Order, OrderSide, OrderStatus,
-    CertificateType, AssetTransaction, TransactionType, LiquidityOperation
+    CertificateType, AssetTransaction, TransactionType, LiquidityOperation,
+    MarketType
 )
 from app.services.ticket_service import TicketService
 from app.services.market_maker_service import MarketMakerService
@@ -398,6 +399,7 @@ class LiquidityService:
 
                 order = Order(
                     id=uuid.uuid4(),
+                    market=MarketType.CEA_CASH,
                     market_maker_id=lp_mm.id,
                     certificate_type=certificate_type,
                     side=OrderSide.BUY,
@@ -426,6 +428,7 @@ class LiquidityService:
 
                 order = Order(
                     id=uuid.uuid4(),
+                    market=MarketType.CEA_CASH,
                     market_maker_id=ah_mm.id,
                     certificate_type=certificate_type,
                     side=OrderSide.SELL,

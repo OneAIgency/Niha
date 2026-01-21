@@ -218,6 +218,23 @@ class MarketMakerClient(Base):
     mm_type = Column(SQLEnum(MarketMakerType), default=MarketMakerType.CEA_CASH_SELLER, nullable=False)
     eur_balance = Column(Numeric(18, 2), default=0, nullable=False)  # For Liquidity Providers
 
+    @property
+    def market(self) -> MarketType:
+        """
+        Determine which market this Market Maker operates in.
+
+        Returns:
+            MarketType.CEA_CASH for CEA_CASH_SELLER and CASH_BUYER
+            MarketType.SWAP for SWAP_MAKER
+        """
+        if self.mm_type in (MarketMakerType.CEA_CASH_SELLER, MarketMakerType.CASH_BUYER):
+            return MarketType.CEA_CASH
+        elif self.mm_type == MarketMakerType.SWAP_MAKER:
+            return MarketType.SWAP
+        else:
+            # Should never happen with proper enum validation
+            raise ValueError(f"Unknown market maker type: {self.mm_type}")
+
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
     creator = relationship("User", foreign_keys=[created_by], back_populates="created_market_maker_clients")

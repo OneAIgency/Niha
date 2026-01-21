@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.models import (
     Order, Seller, Entity, EntityHolding, AssetTransaction, CashMarketTrade,
-    OrderSide, OrderStatus, CertificateType, AssetType, TransactionType
+    OrderSide, OrderStatus, CertificateType, AssetType, TransactionType, MarketType
 )
 from ..services.currency_service import currency_service
 
@@ -456,6 +456,7 @@ async def execute_market_buy_order(
 
     # Create buy order record (NEW ORDERS STORED IN EUR)
     buy_order = Order(
+        market=MarketType.CEA_CASH,
         entity_id=entity_id,
         certificate_type=CertificateType.CEA,
         side=OrderSide.BUY,
