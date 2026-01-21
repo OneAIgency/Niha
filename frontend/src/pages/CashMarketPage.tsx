@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
-  ProfessionalOrderBook,
+  TradingOrderBook,
   MyOrders,
   UserOrderEntryModal,
 } from '../components/cash-market';
@@ -114,10 +114,10 @@ export function CashMarketPage() {
     }
   };
 
-  // Handle price click from order book
-  const handlePriceClick = (_price: number, _side: 'BUY' | 'SELL') => {
-    // Future enhancement: Could pre-fill order entry modal with clicked price
-  };
+  // Handle price click from order book (future enhancement)
+  // const handlePriceClick = (_price: number, _side: 'BUY' | 'SELL') => {
+  //   // Future enhancement: Could pre-fill order entry modal with clicked price
+  // };
 
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
     if (num === null || num === undefined) return '-';
@@ -242,18 +242,15 @@ export function CashMarketPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Professional Order Book - Full Width, Prominent */}
+            {/* Trading Order Book with Depth Chart */}
             <div className="w-full">
               {orderBook && (
-                <ProfessionalOrderBook
-                  orderBook={{
-                    bids: orderBook.bids,
-                    asks: orderBook.asks,
-                    spread: orderBook.spread,
-                    best_bid: orderBook.best_bid,
-                    best_ask: orderBook.best_ask,
-                  }}
-                  onPriceClick={handlePriceClick}
+                <TradingOrderBook
+                  bids={orderBook.bids}
+                  asks={orderBook.asks}
+                  spread={orderBook.spread}
+                  bestBid={orderBook.best_bid}
+                  bestAsk={orderBook.best_ask}
                 />
               )}
             </div>

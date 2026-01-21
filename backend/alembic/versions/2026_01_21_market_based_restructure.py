@@ -21,18 +21,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Drop the default value first
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type DROP DEFAULT;
-    """)
-
-    # Convert column to text to allow free-form updates
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type TYPE text;
-    """)
-
     # Update existing LIQUIDITY_PROVIDER to CASH_BUYER
     op.execute("""
         UPDATE market_maker_clients
@@ -40,83 +28,55 @@ def upgrade() -> None:
         WHERE mm_type = 'LIQUIDITY_PROVIDER';
     """)
 
-    # Update existing ASSET_HOLDER to CEA_CASH_SELLER (assume they sell CEA for cash)
+    # Update existing ASSET_HOLDER to CEA_CASH_SELLER
     op.execute("""
         UPDATE market_maker_clients
         SET mm_type = 'CEA_CASH_SELLER'
         WHERE mm_type = 'ASSET_HOLDER';
     """)
 
-    # Drop old enum and create new one
+    # Drop old enum and create new one - SINGLE BLOCK
     op.execute("""
-        DROP TYPE marketmakertype;
+        ALTER TYPE marketmakertype RENAME TO marketmakertype_old;
 
         CREATE TYPE marketmakertype AS ENUM (
             'CEA_CASH_SELLER',
             'CASH_BUYER',
             'SWAP_MAKER'
         );
-    """)
 
-    # Convert column back to enum
-    op.execute("""
         ALTER TABLE market_maker_clients
         ALTER COLUMN mm_type TYPE marketmakertype
         USING mm_type::text::marketmakertype;
-    """)
 
-    # Restore default value with new enum value
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type SET DEFAULT 'CEA_CASH_SELLER'::marketmakertype;
+        DROP TYPE marketmakertype_old;
     """)
 
 
 def downgrade() -> None:
-    # Drop the default value first
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type DROP DEFAULT;
-    """)
-
-    # Convert column to text to allow free-form updates
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type TYPE text;
-    """)
-
     # Reverse mapping
     op.execute("""
         UPDATE market_maker_clients
         SET mm_type = 'LIQUIDITY_PROVIDER'
         WHERE mm_type = 'CASH_BUYER';
-    """)
 
-    op.execute("""
         UPDATE market_maker_clients
         SET mm_type = 'ASSET_HOLDER'
         WHERE mm_type IN ('CEA_CASH_SELLER', 'SWAP_MAKER');
     """)
 
-    # Restore old enum
+    # Restore old enum - SINGLE BLOCK
     op.execute("""
-        DROP TYPE marketmakertype;
+        ALTER TYPE marketmakertype RENAME TO marketmakertype_new;
 
         CREATE TYPE marketmakertype AS ENUM (
             'ASSET_HOLDER',
             'LIQUIDITY_PROVIDER'
         );
-    """)
 
-    # Convert column back to enum
-    op.execute("""
         ALTER TABLE market_maker_clients
         ALTER COLUMN mm_type TYPE marketmakertype
         USING mm_type::text::marketmakertype;
-    """)
 
-    # Restore default value with old enum value
-    op.execute("""
-        ALTER TABLE market_maker_clients
-        ALTER COLUMN mm_type SET DEFAULT 'ASSET_HOLDER'::marketmakertype;
+        DROP TYPE marketmakertype_new;
     """)

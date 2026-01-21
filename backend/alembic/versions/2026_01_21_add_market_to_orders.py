@@ -33,7 +33,7 @@ def upgrade() -> None:
 
     # Add market column
     op.add_column('orders',
-        sa.Column('market', postgresql.ENUM('CEA_CASH', 'SWAP', name='markettype'), nullable=True)
+        sa.Column('market', sa.Enum('CEA_CASH', 'SWAP', name='markettype'), nullable=True)
     )
 
     # Backfill: All existing orders are CEA_CASH market (cash trading)

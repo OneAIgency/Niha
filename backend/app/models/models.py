@@ -406,16 +406,16 @@ class UserSession(Base):
 
 
 class Order(Base):
-    """Cash market orders for EUA/CEA trading"""
+    """Cash market orders for trading"""
     __tablename__ = "orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    market = Column(SQLEnum(MarketType), nullable=False, index=True)  # Which market
+    market = Column(SQLEnum(MarketType), nullable=False)  # NEW: Which market
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
     market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
     ticket_id = Column(String(30), nullable=True, index=True)  # Link to audit log
-    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False)  # Still needed for SWAP
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
