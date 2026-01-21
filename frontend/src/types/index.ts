@@ -486,15 +486,16 @@ export type MarketMakerType = 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
 export interface MarketMaker {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   description?: string;
   mm_type: MarketMakerType;
-  market: MarketType;
+  market?: MarketType;  // Which market this MM operates in (computed from mm_type)
   is_active: boolean;
   eur_balance: number;
   cea_balance: number;
   eua_balance: number;
   total_orders: number;
+  total_trades: number;
   created_at: string;
   ticket_id?: string;
 }
