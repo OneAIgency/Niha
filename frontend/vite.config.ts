@@ -14,8 +14,9 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        // Use localhost for local development, 'backend' service name for Docker
-        target: 'http://localhost:8000',
+        // Use 'backend' service name for Docker networking
+        // For local development outside Docker, change to 'http://localhost:8000'
+        target: 'http://backend:8000',
         changeOrigin: true,
         // Enable WebSocket proxying for /api paths (e.g., /api/v1/prices/ws)
         ws: true,
