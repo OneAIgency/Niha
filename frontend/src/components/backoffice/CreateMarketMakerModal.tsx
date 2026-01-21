@@ -4,6 +4,7 @@ import { X, Bot, AlertCircle, Check } from 'lucide-react';
 import { Button } from '../common';
 import { createMarketMaker, getMarketMakers } from '../../services/api';
 import { usePrices } from '../../hooks/usePrices';
+import { MarketType, MARKET_MAKER_TYPES } from '../../types';
 
 interface CreateMarketMakerModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
+  const [market, setMarket] = useState<MarketType>('CEA_CASH');
   const [mmType, setMmType] = useState<'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER'>('CEA_CASH_SELLER');
   const [eurBalance, setEurBalance] = useState('');
   const [ceaBalance, setCeaBalance] = useState('');
@@ -137,6 +139,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         setName('');
         setEmail('');
         setDescription('');
+        setMarket('CEA_CASH');
         setMmType('CEA_CASH_SELLER');
         setEurBalance('');
         setCeaBalance('');
@@ -224,39 +227,62 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               />
             </div>
 
-            {/* Market Maker Type */}
+            {/* Market Selection */}
             <div>
               <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                Market Maker Type *
+                Market *
+              </label>
+              <select
+                value={market}
+                onChange={(e) => {
+                  const newMarket = e.target.value as MarketType;
+                  setMarket(newMarket);
+                  // Auto-select first available type for market
+                  if (newMarket === 'CEA_CASH') {
+                    setMmType('CASH_BUYER');
+                  } else {
+                    setMmType('SWAP_MAKER');
+                  }
+                  // Clear all balances
+                  setEurBalance('');
+                  setCeaBalance('');
+                  setEuaBalance('');
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="CEA_CASH">CEA-CASH Market (Trade CEA with EUR)</option>
+                <option value="SWAP">SWAP Market (Exchange CEA↔EUA)</option>
+              </select>
+            </div>
+
+            {/* Market Maker Role */}
+            <div>
+              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                Market Maker Role *
               </label>
               <select
                 value={mmType}
                 onChange={(e) => {
                   const newType = e.target.value as 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
                   setMmType(newType);
-                  // Clear balances for the other type to prevent invalid submissions
-                  if (newType === 'CASH_BUYER') {
-                    setCeaBalance('');
-                    setEuaBalance('');
-                  } else if (newType === 'CEA_CASH_SELLER') {
-                    setEurBalance('');
-                    setEuaBalance('');
-                  } else {
-                    setEurBalance('');
-                  }
+                  // Clear balances
+                  setEurBalance('');
+                  setCeaBalance('');
+                  setEuaBalance('');
                 }}
                 className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                <option value="CEA_CASH_SELLER">CEA Cash Seller (Holds CEA only)</option>
-                <option value="CASH_BUYER">Cash Buyer (Holds EUR only)</option>
-                <option value="SWAP_MAKER">Swap Maker (Holds CEA/EUA)</option>
+                {market === 'CEA_CASH' ? (
+                  <>
+                    <option value="CASH_BUYER">CASH Buyer (Buys CEA with EUR)</option>
+                    <option value="CEA_CASH_SELLER">CEA-CASH Seller (Sells CEA for EUR)</option>
+                  </>
+                ) : (
+                  <option value="SWAP_MAKER">SWAP Maker (Facilitates CEA↔EUA swaps)</option>
+                )}
               </select>
               <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                {mmType === 'CASH_BUYER'
-                  ? 'Cash Buyers hold EUR and place BUY orders'
-                  : mmType === 'CEA_CASH_SELLER'
-                  ? 'CEA Cash Sellers hold CEA and place SELL orders'
-                  : 'Swap Makers hold certificates (CEA/EUA) for swapping'}
+                {MARKET_MAKER_TYPES[mmType].description}
               </p>
             </div>
 
