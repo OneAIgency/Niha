@@ -149,6 +149,17 @@ async def create_market_maker(
                 status_code=400,
                 detail="CEA_CASH_SELLER must have initial CEA balance"
             )
+        if data.initial_balances["CEA"] <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="CEA_CASH_SELLER must have positive CEA balance"
+            )
+        invalid_certs = set(data.initial_balances.keys()) - {"CEA"}
+        if invalid_certs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"CEA_CASH_SELLER can only have CEA balance, found: {invalid_certs}"
+            )
         if "EUA" in data.initial_balances:
             raise HTTPException(
                 status_code=400,
@@ -166,6 +177,22 @@ async def create_market_maker(
                 status_code=400,
                 detail="SWAP_MAKER must have both CEA and EUA balances"
             )
+        if data.initial_balances["CEA"] <= 0 or data.initial_balances["EUA"] <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="SWAP_MAKER must have positive CEA and EUA balances"
+            )
+        invalid_certs = set(data.initial_balances.keys()) - {"CEA", "EUA"}
+        if invalid_certs:
+            raise HTTPException(
+                status_code=400,
+                detail=f"SWAP_MAKER can only have CEA and EUA balances, found: {invalid_certs}"
+            )
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unknown market maker type: {mm_type}"
+        )
 
     # Create Market Maker
     mm_client, ticket_id = await MarketMakerService.create_market_maker(
