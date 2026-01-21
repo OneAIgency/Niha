@@ -25,6 +25,34 @@ export function TradingOrderBook({ bids, asks }: TradingOrderBookProps) {
     return { orders: totalOrders, volume: Math.round(totalVolume) };
   }, [asks]);
 
+  // Calculate cumulative EUR values for bids
+  const bidsWithCumulativeValues = useMemo(() => {
+    let cumulativeValue = 0;
+    return bids.map((level) => {
+      const orderValue = level.quantity * level.price;
+      cumulativeValue += orderValue;
+      return {
+        ...level,
+        orderValue,
+        cumulativeValue,
+      };
+    });
+  }, [bids]);
+
+  // Calculate cumulative EUR values for asks
+  const asksWithCumulativeValues = useMemo(() => {
+    let cumulativeValue = 0;
+    return asks.map((level) => {
+      const orderValue = level.quantity * level.price;
+      cumulativeValue += orderValue;
+      return {
+        ...level,
+        orderValue,
+        cumulativeValue,
+      };
+    });
+  }, [asks]);
+
   // Format number without currency symbol
   const formatNumber = (num: number) => {
     return num.toLocaleString('en-US', {
@@ -38,9 +66,17 @@ export function TradingOrderBook({ bids, asks }: TradingOrderBookProps) {
     return price.toFixed(3);
   };
 
+  // Format EUR currency value
+  const formatEurValue = (value: number) => {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   // Take top 10 levels for display
-  const displayBids = bids.slice(0, 10);
-  const displayAsks = asks.slice(0, 10);
+  const displayBids = bidsWithCumulativeValues.slice(0, 10);
+  const displayAsks = asksWithCumulativeValues.slice(0, 10);
 
   return (
     <div className="bg-white dark:bg-navy-800 rounded-3xl shadow-xl border border-gray-100 dark:border-navy-700 overflow-hidden">
@@ -56,16 +92,22 @@ export function TradingOrderBook({ bids, asks }: TradingOrderBookProps) {
         {/* Column Headers */}
         <div className="grid grid-cols-2 gap-12 mb-3">
           {/* Bids Headers */}
-          <div className="grid grid-cols-3 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="grid grid-cols-6 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             <div className="text-left">Order</div>
             <div className="text-right">Volume</div>
+            <div className="text-right">Value (EUR)</div>
+            <div className="text-right">Cum. Qty</div>
+            <div className="text-right">Cum. Value (EUR)</div>
             <div className="text-right">Buy</div>
           </div>
 
           {/* Asks Headers */}
-          <div className="grid grid-cols-3 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="grid grid-cols-6 gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             <div className="text-left">Sell</div>
             <div className="text-right">Volume</div>
+            <div className="text-right">Value (EUR)</div>
+            <div className="text-right">Cum. Qty</div>
+            <div className="text-right">Cum. Value (EUR)</div>
             <div className="text-right">Order</div>
           </div>
         </div>
@@ -77,13 +119,22 @@ export function TradingOrderBook({ bids, asks }: TradingOrderBookProps) {
             {displayBids.map((level, idx) => (
               <div
                 key={`bid-${idx}`}
-                className="grid grid-cols-3 gap-4 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors cursor-pointer group"
+                className="grid grid-cols-6 gap-4 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors cursor-pointer group"
               >
                 <div className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums">
                   {level.order_count}
                 </div>
                 <div className="text-sm text-gray-900 dark:text-white font-medium text-right tabular-nums">
                   {formatNumber(level.quantity)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatEurValue(level.orderValue)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatNumber(level.cumulative_quantity)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatEurValue(level.cumulativeValue)}
                 </div>
                 <div className="text-sm text-green-600 dark:text-green-400 font-semibold text-right tabular-nums">
                   {formatPrice(level.price)}
@@ -97,13 +148,22 @@ export function TradingOrderBook({ bids, asks }: TradingOrderBookProps) {
             {displayAsks.map((level, idx) => (
               <div
                 key={`ask-${idx}`}
-                className="grid grid-cols-3 gap-4 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer group"
+                className="grid grid-cols-6 gap-4 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer group"
               >
                 <div className="text-sm text-red-600 dark:text-red-400 font-semibold tabular-nums">
                   {formatPrice(level.price)}
                 </div>
                 <div className="text-sm text-gray-900 dark:text-white font-medium text-right tabular-nums">
                   {formatNumber(level.quantity)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatEurValue(level.orderValue)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatNumber(level.cumulative_quantity)}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-medium text-right tabular-nums">
+                  {formatEurValue(level.cumulativeValue)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 font-medium text-right tabular-nums">
                   {level.order_count}
