@@ -21,9 +21,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create market enum
+    # Create market enum if it doesn't exist
     op.execute("""
-        CREATE TYPE markettype AS ENUM ('CEA_CASH', 'SWAP');
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'markettype') THEN
+                CREATE TYPE markettype AS ENUM ('CEA_CASH', 'SWAP');
+            END IF;
+        END$$;
     """)
 
     # Add market column
