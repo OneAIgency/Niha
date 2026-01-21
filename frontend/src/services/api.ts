@@ -29,7 +29,9 @@ import type {
   Deposit,
   DepositCreate,
   EntityBalance,
+  MarketMakerType,
 } from '../types';
+import { MARKET_MAKER_TYPES } from '../types';
 import type {
   LiquidityPreviewResponse,
   LiquidityCreationRequest,
@@ -1110,15 +1112,14 @@ export const getMarketMakers = async (params?: any): Promise<any[]> => {
   return data.map((mm: any) => ({
     id: mm.id,
     name: mm.name,
-    email: mm.email || '',  // Provide default if missing
     description: mm.description,
     mm_type: mm.mm_type || 'CEA_CASH_SELLER',  // CEA_CASH_SELLER, CASH_BUYER, or SWAP_MAKER
+    market: MARKET_MAKER_TYPES[mm.mm_type as MarketMakerType]?.market || 'CEA_CASH',
     is_active: mm.is_active,
     eur_balance: mm.eur_balance ?? 0,
     cea_balance: mm.current_balances?.CEA?.total ?? 0,
     eua_balance: mm.current_balances?.EUA?.total ?? 0,
     total_orders: mm.total_orders || 0,
-    total_trades: mm.total_trades || 0,
     created_at: mm.created_at,
     ticket_id: mm.ticket_id,
   }));
@@ -1126,7 +1127,6 @@ export const getMarketMakers = async (params?: any): Promise<any[]> => {
 
 export const createMarketMaker = async (data: {
   name: string;
-  email: string;
   description?: string;
   mm_type?: 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
   initial_eur_balance?: number;
@@ -1138,7 +1138,6 @@ export const createMarketMaker = async (data: {
   // Frontend sends: mm_type, initial_eur_balance, cea_balance, eua_balance
   const payload: any = {
     name: data.name,
-    email: data.email,
     description: data.description,
     mm_type: data.mm_type || 'CEA_CASH_SELLER',
   };
