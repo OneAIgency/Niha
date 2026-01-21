@@ -4,7 +4,25 @@
 
 **Goal:** The cash market order book already combines customer orders (from Entities via entity_id) and market maker orders (via market_maker_id) in the backend. This plan documents the current architecture and confirms no changes are needed.
 
-**Market Context:** This order book is specifically for the **CEA-CASH market**, where customers buy CEA certificates with EUR cash. The platform also has a **SWAP market** (CEA↔EUA exchanges) which uses a different mechanism (swap requests, not an order book).
+## Market Context
+
+**Important:** This order book is for the **CEA-CASH market** specifically.
+
+The Niha Carbon platform operates two distinct markets:
+
+1. **CEA-CASH Market (This Order Book)**
+   - Trading: Buy and sell CEA certificates with EUR cash
+   - Participants: Customers (buyers) and Market Makers (CEA_CASH_SELLER, CASH_BUYER)
+   - Mechanism: Order book with real-time matching
+   - Certificate: CEA only
+
+2. **SWAP Market (Not This Order Book)**
+   - Trading: Exchange CEA ↔ EUA certificates
+   - Participants: Customers and SWAP_MAKER market makers
+   - Mechanism: Swap requests (not order book)
+   - Certificates: CEA and EUA
+
+This document describes the CEA-CASH market order book implementation.
 
 **Architecture:** Backend `get_real_orderbook()` function queries the CEA-CASH market orders from the Order table. Orders come from: Entities (customers placing BUY orders), CEA_CASH_SELLER market makers (SELL orders), and CASH_BUYER market makers (BUY orders for liquidity). All CEA-CASH orders are aggregated by price level and displayed together in the ProfessionalOrderBook component.
 
@@ -80,6 +98,8 @@ The Order table has a `market` field to distinguish markets and three foreign ke
 
 This design allows all CEA-CASH market orders to coexist in the same table and be queried together for the order book.
 
+> **Note:** This order book handles CEA certificates only. EUA certificates are traded in the SWAP market using a different mechanism (swap requests, not order book orders).
+
 ### Frontend Implementation
 
 **File:** `frontend/src/pages/CashMarketPage.tsx:28-54`
@@ -101,14 +121,14 @@ Displays aggregated order book data:
 
 **The system already implements the requested functionality.**
 
-The backend's `get_real_orderbook()` function queries all orders from the Order table regardless of source (customer, seller, or market maker) because:
+The backend's `get_real_orderbook()` function queries all CEA-CASH market orders from the Order table regardless of source (customer, seller, or market maker) because:
 
-1. All orders are in the same `Order` table
+1. All CEA-CASH market orders are in the same `Order` table
 2. The queries use outer joins, so orders without entity_id or seller_id are still included
 3. Orders with `market_maker_id` set will appear in the results
-4. All orders are aggregated together by price level
+4. All CEA-CASH market orders are aggregated together by price level
 
-The frontend already polls this endpoint every 3 seconds and displays the combined order book in real-time.
+The frontend already polls this endpoint every 3 seconds and displays the combined CEA-CASH market order book in real-time.
 
 ## Verification Task
 
@@ -148,7 +168,7 @@ Confirm market maker orders are aggregated with customer orders:
 
 ## No Implementation Changes Needed
 
-The system already works as requested. The order book is "live" (polls every 3 seconds) and "real" (combines all orders from customers and market makers).
+The system already works as requested. The CEA-CASH market order book is "live" (polls every 3 seconds) and "real" (combines all orders in the CEA-CASH market from customers and market makers).
 
 If verification shows market maker orders are NOT appearing, then we would need to:
 1. Debug why the outer join queries aren't including them
