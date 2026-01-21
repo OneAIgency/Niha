@@ -4,7 +4,9 @@
 
 **Goal:** The cash market order book already combines customer orders (from Entities via entity_id) and market maker orders (via market_maker_id) in the backend. This plan documents the current architecture and confirms no changes are needed.
 
-**Architecture:** Backend `get_real_orderbook()` function queries the Order table, which can have orders from three sources: Entities (customers placing BUY orders), Sellers (legacy SELL orders), and MarketMakers (orders via market_maker_id). All orders are aggregated by price level and displayed together in the ProfessionalOrderBook component.
+**Market Context:** This order book is specifically for the **CEA-CASH market**, where customers buy CEA certificates with EUR cash. The platform also has a **SWAP market** (CEA↔EUA exchanges) which uses a different mechanism (swap requests, not an order book).
+
+**Architecture:** Backend `get_real_orderbook()` function queries the CEA-CASH market orders from the Order table. Orders come from: Entities (customers placing BUY orders), CEA_CASH_SELLER market makers (SELL orders), and CASH_BUYER market makers (BUY orders for liquidity). All CEA-CASH orders are aggregated by price level and displayed together in the ProfessionalOrderBook component.
 
 **Tech Stack:** React, TypeScript, FastAPI, SQLAlchemy, PostgreSQL
 
@@ -18,7 +20,9 @@
 
 The `get_real_orderbook()` function already implements combined order book:
 
-1. **Queries BUY orders from Entities** (lines 573-585):
+1. **Queries BUY orders from the CEA-CASH market** (lines 573-585):
+   - From Entities (customers buying CEA)
+   - From CASH_BUYER market makers (providing liquidity)
    ```python
    buy_result = await db.execute(
        select(Order, Entity)
@@ -33,7 +37,9 @@ The `get_real_orderbook()` function already implements combined order book:
    )
    ```
 
-2. **Queries SELL orders from Sellers** (lines 557-570):
+2. **Queries SELL orders from the CEA-CASH market** (lines 557-570):
+   - From CEA_CASH_SELLER market makers (selling CEA for EUR)
+   - Legacy SELL orders from Sellers (deprecated)
    ```python
    sell_result = await db.execute(
        select(Order, Seller)
@@ -48,7 +54,7 @@ The `get_real_orderbook()` function already implements combined order book:
    )
    ```
 
-3. **Note:** The query uses `isouter=True` which means it includes orders even if there's no matching Entity or Seller. This allows Market Maker orders (which have `market_maker_id` set instead of `entity_id` or `seller_id`) to be included.
+3. **Note:** The query uses `isouter=True` to include all order types: customer orders (entity_id), market maker orders (market_maker_id), and legacy seller orders (seller_id). All orders for the CEA-CASH market are combined in the order book.
 
 4. **Aggregates by price level** (lines 587-621):
    - Groups orders by price
@@ -66,12 +72,13 @@ The `get_real_orderbook()` function already implements combined order book:
 
 **File:** `backend/app/models/models.py:384-391`
 
-The Order table has three foreign keys to identify order source:
-- `entity_id`: For customer BUY orders (regular users)
-- `seller_id`: For legacy SELL orders (sellers)
-- `market_maker_id`: For Market Maker orders (both BUY and SELL)
+The Order table has a `market` field to distinguish markets and three foreign keys for order source:
+- `market`: 'CEA_CASH' or 'SWAP' - which market this order belongs to
+- `entity_id`: For customer orders (Entities buying CEA)
+- `seller_id`: For legacy SELL orders (deprecated, being phased out)
+- `market_maker_id`: For Market Maker orders (CEA_CASH_SELLER, CASH_BUYER for CEA-CASH market)
 
-This design allows all three order types to coexist in the same table and be queried together.
+This design allows all CEA-CASH market orders to coexist in the same table and be queried together for the order book.
 
 ### Frontend Implementation
 
