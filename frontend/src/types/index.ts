@@ -453,6 +453,31 @@ export interface AddAssetRequest {
 }
 
 // =============================================================================
+// Market Types
+// =============================================================================
+
+export type MarketType = 'CEA_CASH' | 'SWAP';
+
+export interface Market {
+  type: MarketType;
+  name: string;
+  description: string;
+}
+
+export const MARKETS: Record<MarketType, Market> = {
+  CEA_CASH: {
+    type: 'CEA_CASH',
+    name: 'CEA-CASH Market',
+    description: 'Buy and sell CEA certificates with EUR cash'
+  },
+  SWAP: {
+    type: 'SWAP',
+    name: 'SWAP Market',
+    description: 'Exchange CEA certificates for EUA certificates'
+  }
+};
+
+// =============================================================================
 // Market Maker Types
 // =============================================================================
 
@@ -464,6 +489,7 @@ export interface MarketMaker {
   email: string;
   description?: string;
   mm_type: MarketMakerType;
+  market: MarketType;
   is_active: boolean;
   eur_balance: number;
   cea_balance: number;
@@ -472,3 +498,39 @@ export interface MarketMaker {
   created_at: string;
   ticket_id?: string;
 }
+
+export interface MarketMakerTypeInfo {
+  value: MarketMakerType;
+  market: MarketType;
+  name: string;
+  description: string;
+  balanceLabel: string;
+  color: string;
+}
+
+export const MARKET_MAKER_TYPES: Record<MarketMakerType, MarketMakerTypeInfo> = {
+  CEA_CASH_SELLER: {
+    value: 'CEA_CASH_SELLER',
+    market: 'CEA_CASH',
+    name: 'CEA-CASH Seller',
+    description: 'Holds CEA certificates, sells them for EUR on the CEA-CASH market',
+    balanceLabel: 'CEA Balance',
+    color: 'amber'
+  },
+  CASH_BUYER: {
+    value: 'CASH_BUYER',
+    market: 'CEA_CASH',
+    name: 'CASH Buyer',
+    description: 'Holds EUR cash, buys CEA certificates on the CEA-CASH market',
+    balanceLabel: 'EUR Balance',
+    color: 'emerald'
+  },
+  SWAP_MAKER: {
+    value: 'SWAP_MAKER',
+    market: 'SWAP',
+    name: 'SWAP Maker',
+    description: 'Facilitates CEA↔EUA swaps on the SWAP market',
+    balanceLabel: 'CEA/EUA Inventory',
+    color: 'blue'
+  }
+};
