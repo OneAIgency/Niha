@@ -18,7 +18,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
   const [market, setMarket] = useState<MarketType>('CEA_CASH');
-  const [mmType, setMmType] = useState<'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER'>('CEA_CASH_SELLER');
+  const [mmType, setMmType] = useState<'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER'>('CASH_BUYER');
   const [eurBalance, setEurBalance] = useState('');
   const [ceaBalance, setCeaBalance] = useState('');
   const [euaBalance, setEuaBalance] = useState('');
@@ -87,22 +87,22 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
 
     // Type-specific validation
     if (mmType === 'CASH_BUYER') {
-      if (!eurBalance || parseFloat(eurBalance) <= 0) {
+      if (!eurBalance || parseFloat(eurBalance) <= 0 || isNaN(parseFloat(eurBalance))) {
         setError('Cash Buyer must have a positive EUR balance');
         return;
       }
       // Ensure CASH_BUYER doesn't have CEA/EUA (business rule enforcement)
-      if (ceaBalance || euaBalance) {
+      if ((ceaBalance && parseFloat(ceaBalance) > 0) || (euaBalance && parseFloat(euaBalance) > 0)) {
         setError('Cash Buyer cannot have CEA/EUA balances');
         return;
       }
     } else if (mmType === 'CEA_CASH_SELLER') {
-      if (!ceaBalance || parseFloat(ceaBalance) <= 0) {
+      if (!ceaBalance || parseFloat(ceaBalance) <= 0 || isNaN(parseFloat(ceaBalance))) {
         setError('CEA Cash Seller must have a positive CEA balance');
         return;
       }
       // Ensure CEA_CASH_SELLER doesn't have EUR or EUA (business rule enforcement)
-      if (eurBalance || euaBalance) {
+      if ((eurBalance && parseFloat(eurBalance) > 0) || (euaBalance && parseFloat(euaBalance) > 0)) {
         setError('CEA Cash Seller cannot have EUR or EUA balances');
         return;
       }
@@ -112,7 +112,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         return;
       }
       // Ensure SWAP_MAKER doesn't have EUR (business rule enforcement)
-      if (eurBalance) {
+      if (eurBalance && parseFloat(eurBalance) > 0) {
         setError('Swap Maker cannot have EUR balance');
         return;
       }
