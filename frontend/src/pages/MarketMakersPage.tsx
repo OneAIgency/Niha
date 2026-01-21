@@ -7,19 +7,7 @@ import { CreateMarketMakerModal } from '../components/backoffice/CreateMarketMak
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
 import { getMarketMakers } from '../services/api';
 import { cn } from '../utils';
-
-interface MarketMaker {
-  id: string;
-  name: string;
-  email: string;
-  description?: string;
-  is_active: boolean;
-  cea_balance: number;
-  eua_balance: number;
-  total_orders: number;
-  created_at: string;
-  ticket_id?: string;
-}
+import type { MarketMaker } from '../types';
 
 export function MarketMakersPage() {
   const [loading, setLoading] = useState(true);

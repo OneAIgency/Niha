@@ -4,19 +4,7 @@ import { Save, AlertCircle, Check, Ticket } from 'lucide-react';
 import { Button } from '../common';
 import { updateMarketMaker, getMarketMakerBalances } from '../../services/api';
 import { BalanceCards } from './BalanceCards';
-
-interface MarketMaker {
-  id: string;
-  name: string;
-  email: string;
-  description?: string;
-  is_active: boolean;
-  cea_balance: number;
-  eua_balance: number;
-  total_orders: number;
-  created_at: string;
-  ticket_id?: string;
-}
+import type { MarketMaker } from '../../types';
 
 interface MarketMakerDetailsTabProps {
   marketMaker: MarketMaker;
@@ -28,6 +16,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
   const [description, setDescription] = useState(marketMaker.description || '');
   const [isActive, setIsActive] = useState(marketMaker.is_active);
   const [balances, setBalances] = useState({
+    eur_balance: marketMaker.eur_balance,
     cea_balance: marketMaker.cea_balance,
     eua_balance: marketMaker.eua_balance,
   });
@@ -37,16 +26,17 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
   const [success, setSuccess] = useState(false);
   const [ticketId, setTicketId] = useState(marketMaker.ticket_id);
 
-  // Fetch latest balances on mount
+  // Fetch latest balances on mount and when props change
   useEffect(() => {
     fetchBalances();
-  }, [marketMaker.id]);
+  }, [marketMaker.id, marketMaker.eur_balance, marketMaker.cea_balance, marketMaker.eua_balance]);
 
   const fetchBalances = async () => {
     setLoadingBalances(true);
     try {
       const data = await getMarketMakerBalances(marketMaker.id);
       setBalances({
+        eur_balance: marketMaker.eur_balance, // EUR is direct field from props, updated when parent refreshes
         cea_balance: data.cea_balance,
         eua_balance: data.eua_balance,
       });
@@ -54,6 +44,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
       console.error('Failed to fetch balances:', err);
       // Use existing balances as fallback
       setBalances({
+        eur_balance: marketMaker.eur_balance,
         cea_balance: marketMaker.cea_balance,
         eua_balance: marketMaker.eua_balance,
       });

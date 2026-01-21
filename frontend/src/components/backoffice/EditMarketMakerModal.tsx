@@ -4,19 +4,7 @@ import { X } from 'lucide-react';
 import { cn } from '../../utils';
 import { MarketMakerDetailsTab } from './MarketMakerDetailsTab';
 import { MarketMakerTransactionsTab } from './MarketMakerTransactionsTab';
-
-interface MarketMaker {
-  id: string;
-  name: string;
-  email: string;
-  description?: string;
-  is_active: boolean;
-  cea_balance: number;
-  eua_balance: number;
-  total_orders: number;
-  created_at: string;
-  ticket_id?: string;
-}
+import type { MarketMaker } from '../../types';
 
 interface EditMarketMakerModalProps {
   isOpen: boolean;
