@@ -16,6 +16,8 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
+  const [mmType, setMmType] = useState<'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER'>('CEA_CASH_SELLER');
+  const [eurBalance, setEurBalance] = useState('');
   const [ceaBalance, setCeaBalance] = useState('');
   const [euaBalance, setEuaBalance] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,39 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
       return;
     }
 
+    // Type-specific validation
+    if (mmType === 'CASH_BUYER') {
+      if (!eurBalance || parseFloat(eurBalance) <= 0) {
+        setError('Cash Buyer must have a positive EUR balance');
+        return;
+      }
+      // Ensure CASH_BUYER doesn't have CEA/EUA (business rule enforcement)
+      if (ceaBalance || euaBalance) {
+        setError('Cash Buyer cannot have CEA/EUA balances');
+        return;
+      }
+    } else if (mmType === 'CEA_CASH_SELLER') {
+      if (!ceaBalance || parseFloat(ceaBalance) <= 0) {
+        setError('CEA Cash Seller must have a positive CEA balance');
+        return;
+      }
+      // Ensure CEA_CASH_SELLER doesn't have EUR or EUA (business rule enforcement)
+      if (eurBalance || euaBalance) {
+        setError('CEA Cash Seller cannot have EUR or EUA balances');
+        return;
+      }
+    } else if (mmType === 'SWAP_MAKER') {
+      if (!ceaBalance && !euaBalance) {
+        setError('Swap Maker must have at least one certificate balance (CEA or EUA)');
+        return;
+      }
+      // Ensure SWAP_MAKER doesn't have EUR (business rule enforcement)
+      if (eurBalance) {
+        setError('Swap Maker cannot have EUR balance');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -88,8 +123,10 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         name: name.trim(),
         email: email.trim(),
         description: description.trim() || undefined,
-        cea_balance: ceaBalance ? parseFloat(ceaBalance) : undefined,
-        eua_balance: euaBalance ? parseFloat(euaBalance) : undefined,
+        mm_type: mmType,
+        initial_eur_balance: mmType === 'CASH_BUYER' && eurBalance ? parseFloat(eurBalance) : undefined,
+        cea_balance: (mmType === 'CEA_CASH_SELLER' || mmType === 'SWAP_MAKER') && ceaBalance ? parseFloat(ceaBalance) : undefined,
+        eua_balance: mmType === 'SWAP_MAKER' && euaBalance ? parseFloat(euaBalance) : undefined,
       });
 
       setSuccess(true);
@@ -100,6 +137,8 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         setName('');
         setEmail('');
         setDescription('');
+        setMmType('CEA_CASH_SELLER');
+        setEurBalance('');
         setCeaBalance('');
         setEuaBalance('');
         setSuccess(false);
@@ -185,17 +224,73 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               />
             </div>
 
-            {/* Initial Balances */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Market Maker Type */}
+            <div>
+              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                Market Maker Type *
+              </label>
+              <select
+                value={mmType}
+                onChange={(e) => {
+                  const newType = e.target.value as 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+                  setMmType(newType);
+                  // Clear balances for the other type to prevent invalid submissions
+                  if (newType === 'CASH_BUYER') {
+                    setCeaBalance('');
+                    setEuaBalance('');
+                  } else if (newType === 'CEA_CASH_SELLER') {
+                    setEurBalance('');
+                    setEuaBalance('');
+                  } else {
+                    setEurBalance('');
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="CEA_CASH_SELLER">CEA Cash Seller (Holds CEA only)</option>
+                <option value="CASH_BUYER">Cash Buyer (Holds EUR only)</option>
+                <option value="SWAP_MAKER">Swap Maker (Holds CEA/EUA)</option>
+              </select>
+              <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                {mmType === 'CASH_BUYER'
+                  ? 'Cash Buyers hold EUR and place BUY orders'
+                  : mmType === 'CEA_CASH_SELLER'
+                  ? 'CEA Cash Sellers hold CEA and place SELL orders'
+                  : 'Swap Makers hold certificates (CEA/EUA) for swapping'}
+              </p>
+            </div>
+
+            {/* Conditional Balance Inputs */}
+            {mmType === 'CASH_BUYER' ? (
+              // EUR Balance for Cash Buyer
               <div>
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  Initial CEA Balance <span className="text-navy-400">(optional)</span>
+                  Initial EUR Balance *
+                </label>
+                <input
+                  type="number"
+                  value={eurBalance}
+                  onChange={(e) => setEurBalance(e.target.value)}
+                  placeholder="10000"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                  EUR balance for placing buy orders
+                </p>
+              </div>
+            ) : mmType === 'CEA_CASH_SELLER' ? (
+              // CEA Balance only for CEA Cash Seller
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  Initial CEA Balance *
                 </label>
                 <input
                   type="number"
                   value={ceaBalance}
                   onChange={(e) => setCeaBalance(e.target.value)}
-                  placeholder="0"
+                  placeholder="1000"
                   min="0"
                   step="1"
                   className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -209,29 +304,55 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  Initial EUA Balance <span className="text-navy-400">(optional)</span>
-                </label>
-                <input
-                  type="number"
-                  value={euaBalance}
-                  onChange={(e) => setEuaBalance(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                  step="1"
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {euaBalance && calculateEurValue(euaBalance, 'EUA') !== null && (
-                  <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                    ≈ €{calculateEurValue(euaBalance, 'EUA')!.toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })} EUR
-                  </p>
-                )}
+            ) : (
+              // CEA/EUA Balances for Swap Maker
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                    Initial CEA Balance <span className="text-navy-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={ceaBalance}
+                    onChange={(e) => setCeaBalance(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
+                    <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      ≈ €{calculateEurValue(ceaBalance, 'CEA')!.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })} EUR
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                    Initial EUA Balance <span className="text-navy-400">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={euaBalance}
+                    onChange={(e) => setEuaBalance(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {euaBalance && calculateEurValue(euaBalance, 'EUA') !== null && (
+                    <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      ≈ €{calculateEurValue(euaBalance, 'EUA')!.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })} EUR
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Error Message */}
             {error && (

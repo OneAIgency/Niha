@@ -1112,7 +1112,9 @@ export const getMarketMakers = async (params?: any): Promise<any[]> => {
     name: mm.name,
     email: mm.email || '',  // Provide default if missing
     description: mm.description,
+    mm_type: mm.mm_type || 'CEA_CASH_SELLER',  // CEA_CASH_SELLER, CASH_BUYER, or SWAP_MAKER
     is_active: mm.is_active,
+    eur_balance: mm.eur_balance ?? 0,
     cea_balance: mm.current_balances?.CEA?.total ?? 0,
     eua_balance: mm.current_balances?.EUA?.total ?? 0,
     total_orders: mm.total_orders || 0,
@@ -1126,19 +1128,27 @@ export const createMarketMaker = async (data: {
   name: string;
   email: string;
   description?: string;
+  mm_type?: 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+  initial_eur_balance?: number;
   cea_balance?: number;
   eua_balance?: number;
 }): Promise<any> => {
   // Transform frontend format to backend expected format
-  // Backend expects: initial_balances: {CEA: number, EUA: number}
-  // Frontend sends: cea_balance, eua_balance
+  // Backend expects: mm_type, initial_eur_balance, initial_balances: {CEA: number, EUA: number}
+  // Frontend sends: mm_type, initial_eur_balance, cea_balance, eua_balance
   const payload: any = {
     name: data.name,
     email: data.email,
     description: data.description,
+    mm_type: data.mm_type || 'CEA_CASH_SELLER',
   };
 
-  // Build initial_balances dict if any balance provided
+  // Add EUR balance for CASH_BUYER
+  if (data.initial_eur_balance !== undefined) {
+    payload.initial_eur_balance = data.initial_eur_balance;
+  }
+
+  // Build initial_balances dict if any balance provided for CEA_CASH_SELLER or SWAP_MAKER
   // Use !== undefined to properly handle zero values
   if (data.cea_balance !== undefined || data.eua_balance !== undefined) {
     payload.initial_balances = {};

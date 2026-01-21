@@ -2,19 +2,7 @@ import { DataTable, Badge, Card, type Column } from '../common';
 import { CheckCircle, XCircle, Leaf, Wind, Activity } from 'lucide-react';
 import { formatQuantity, formatCurrency } from '../../utils';
 import { usePrices } from '../../hooks/usePrices';
-
-interface MarketMaker {
-  id: string;
-  name: string;
-  email: string;
-  description?: string;
-  is_active: boolean;
-  cea_balance: number;
-  eua_balance: number;
-  total_orders: number;
-  created_at: string;
-  ticket_id?: string;
-}
+import type { MarketMaker } from '../../types';
 
 interface MarketMakersListProps {
   marketMakers: MarketMaker[];
@@ -115,6 +103,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       },
     },
     {
+      key: 'eur_balance',
+      header: 'EUR Balance',
+      width: '12%',
+      align: 'right',
+      render: (value, row) => {
+        // Only show EUR for CASH_BUYER type
+        if (row.mm_type !== 'CASH_BUYER') {
+          return <span className="text-navy-400 dark:text-navy-500">-</span>;
+        }
+        return (
+          <div className="flex items-center justify-end font-mono font-bold text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(value, 'EUR')}
+          </div>
+        );
+      },
+    },
+    {
       key: 'total_orders',
       header: 'Total Orders',
       width: '10%',
@@ -182,13 +187,30 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                 </div>
               </div>
               <div className="text-right">
+                <div className="text-xs text-navy-500 dark:text-navy-400">Direct EUR</div>
+                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(
+                    marketMakers
+                      .filter(mm => mm.mm_type === 'CASH_BUYER')
+                      .reduce((sum, mm) => sum + mm.eur_balance, 0),
+                    'EUR'
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
                 <div className="text-xs text-navy-500 dark:text-navy-400">Total Value</div>
                 <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(
-                    marketMakers.reduce((sum, mm) =>
-                      sum + (mm.cea_balance * prices.cea.price) + (mm.eua_balance * prices.eua.price),
-                      0
-                    ),
+                    marketMakers.reduce((sum, mm) => {
+                      let value = sum;
+                      // Add EUR for CASH_BUYER
+                      if (mm.mm_type === 'CASH_BUYER') {
+                        value += mm.eur_balance;
+                      }
+                      // Add CEA/EUA value for all types
+                      value += (mm.cea_balance * prices.cea.price) + (mm.eua_balance * prices.eua.price);
+                      return value;
+                    }, 0),
                     'EUR'
                   )}
                 </div>
