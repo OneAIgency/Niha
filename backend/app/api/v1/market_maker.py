@@ -125,22 +125,22 @@ async def create_market_maker(
     mm_type = MarketMakerType(data.mm_type.value)
 
     # Validate constraints
-    if mm_type == MarketMakerType.LIQUIDITY_PROVIDER:
+    if mm_type == MarketMakerType.CASH_BUYER:
         if data.initial_balances:
             raise HTTPException(
                 status_code=400,
-                detail="LIQUIDITY_PROVIDER cannot have certificate balances"
+                detail="CASH_BUYER cannot have certificate balances"
             )
         if data.initial_eur_balance is None or data.initial_eur_balance <= 0:
             raise HTTPException(
                 status_code=400,
-                detail="LIQUIDITY_PROVIDER must have positive initial_eur_balance"
+                detail="CASH_BUYER must have positive initial_eur_balance"
             )
-    elif mm_type == MarketMakerType.ASSET_HOLDER:
+    elif mm_type == MarketMakerType.CEA_CASH_SELLER:
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
                 status_code=400,
-                detail="ASSET_HOLDER cannot have EUR balance"
+                detail="CEA_CASH_SELLER cannot have EUR balance"
             )
 
     # Create Market Maker

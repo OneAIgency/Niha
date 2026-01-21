@@ -784,8 +784,9 @@ class AssetTypeEnum(str, Enum):
 
 class MarketMakerTypeEnum(str, Enum):
     """Types of market makers"""
-    ASSET_HOLDER = "ASSET_HOLDER"
-    LIQUIDITY_PROVIDER = "LIQUIDITY_PROVIDER"
+    CEA_CASH_SELLER = "CEA_CASH_SELLER"
+    CASH_BUYER = "CASH_BUYER"
+    SWAP_MAKER = "SWAP_MAKER"
 
 
 class TransactionTypeEnum(str, Enum):
@@ -852,7 +853,7 @@ class MarketMakerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     description: Optional[str] = None
-    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.ASSET_HOLDER
+    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_CASH_SELLER
     initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
     initial_eur_balance: Optional[Decimal] = None
 

@@ -26,7 +26,7 @@ class MarketMakerService:
         email: str,
         description: Optional[str],
         created_by_id: uuid.UUID,
-        mm_type: MarketMakerType = MarketMakerType.ASSET_HOLDER,
+        mm_type: MarketMakerType = MarketMakerType.CEA_CASH_SELLER,
         initial_balances: Optional[Dict[str, Decimal]] = None,
         initial_eur_balance: Optional[Decimal] = None,
     ) -> tuple[MarketMakerClient, str]:

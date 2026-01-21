@@ -49,7 +49,7 @@ class LiquidityService:
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.LIQUIDITY_PROVIDER,
+                    MarketMakerClient.mm_type == MarketMakerType.CASH_BUYER,
                     MarketMakerClient.is_active == True,
                     MarketMakerClient.eur_balance > 0
                 )
@@ -73,7 +73,7 @@ class LiquidityService:
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.ASSET_HOLDER,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_CASH_SELLER,
                     MarketMakerClient.is_active == True
                 )
             )
@@ -261,7 +261,7 @@ class LiquidityService:
                 bid_plan["mms"].append({
                     "mm_id": str(mm.id),
                     "mm_name": mm.name,
-                    "mm_type": "LIQUIDITY_PROVIDER",
+                    "mm_type": "CASH_BUYER",
                     "allocation": float(eur_per_mm),
                     "orders_count": LiquidityService.ORDERS_PER_MM
                 })
@@ -287,7 +287,7 @@ class LiquidityService:
                 ask_plan["mms"].append({
                     "mm_id": str(ah["mm"].id),
                     "mm_name": ah["mm"].name,
-                    "mm_type": "ASSET_HOLDER",
+                    "mm_type": "CEA_CASH_SELLER",
                     "allocation": float(quantity_per_mm),
                     "orders_count": LiquidityService.ORDERS_PER_MM
                 })
@@ -475,13 +475,13 @@ class LiquidityService:
         for lp_mm in lp_mms:
             market_makers_used.append({
                 "mm_id": str(lp_mm.id),
-                "mm_type": "LIQUIDITY_PROVIDER",
+                "mm_type": "CASH_BUYER",
                 "amount": str(eur_per_lp)
             })
         for ah in ah_data:
             market_makers_used.append({
                 "mm_id": str(ah["mm"].id),
-                "mm_type": "ASSET_HOLDER",
+                "mm_type": "CEA_CASH_SELLER",
                 "amount": str(quantity_per_ah)
             })
 

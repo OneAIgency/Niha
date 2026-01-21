@@ -24,7 +24,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Test",
-        mm_type=MarketMakerType.LIQUIDITY_PROVIDER,
+        mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("100000"),
         is_active=True,
         created_by=test_admin_user.id
@@ -35,7 +35,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     ah_mm = MarketMakerClient(
         user_id=ah_user.id,
         name="AH-Test",
-        mm_type=MarketMakerType.ASSET_HOLDER,
+        mm_type=MarketMakerType.CEA_CASH_SELLER,
         is_active=True,
         created_by=test_admin_user.id
     )
@@ -266,7 +266,7 @@ async def test_preview_liquidity_creation_sufficient_assets(
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Preview",
-        mm_type=MarketMakerType.LIQUIDITY_PROVIDER,
+        mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
         created_by=test_admin_user.id
@@ -325,7 +325,7 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Execute",
-        mm_type=MarketMakerType.LIQUIDITY_PROVIDER,
+        mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
         created_by=test_admin_user.id

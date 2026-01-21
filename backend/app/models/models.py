@@ -602,7 +602,7 @@ class LiquidityOperation(Base):
     [
         {
             "mm_id": "uuid-string",
-            "mm_type": "ASSET_HOLDER" | "LIQUIDITY_PROVIDER",
+            "mm_type": "CEA_CASH_SELLER" | "CASH_BUYER" | "SWAP_MAKER",
             "amount": "decimal-as-string"
         },
         ...
