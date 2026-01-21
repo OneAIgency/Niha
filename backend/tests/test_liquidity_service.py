@@ -383,3 +383,56 @@ async def test_create_liquidity_no_liquidity_providers(db_session, test_admin_us
             ask_amount_eur=Decimal("25000"),
             created_by_id=test_admin_user.id
         )
+
+@pytest.mark.asyncio
+async def test_get_cash_buyers_only(db_session, test_admin_user):
+    """CASH_BUYER market makers should be selected for CEA-CASH liquidity"""
+    from app.services.market_maker_service import MarketMakerService
+
+    # Create CASH_BUYER MM
+    cash_buyer = MarketMakerClient(
+        user_id=test_admin_user.id,
+        name="Cash-Buyer-Test",
+        mm_type=MarketMakerType.CASH_BUYER,
+        eur_balance=Decimal("100000"),
+        is_active=True,
+        created_by=test_admin_user.id
+    )
+    db_session.add(cash_buyer)
+
+    # Create CEA_CASH_SELLER MM with CEA balance
+    cea_seller, _ = await MarketMakerService.create_market_maker(
+        db=db_session,
+        name="CEA-Seller-Test",
+        email="cea-seller@test.com",
+        description="Test",
+        created_by_id=test_admin_user.id,
+        initial_balances={"CEA": Decimal("10000")}
+    )
+
+    # Create SWAP_MAKER MM (should NOT be selected)
+    swap_maker = MarketMakerClient(
+        user_id=test_admin_user.id,
+        name="Swap-Maker-Test",
+        mm_type=MarketMakerType.SWAP_MAKER,
+        is_active=True,
+        created_by=test_admin_user.id
+    )
+    db_session.add(swap_maker)
+    await db_session.commit()
+
+    # Query for CEA-CASH market liquidity preview
+    plan = await LiquidityService.preview_liquidity_creation(
+        db=db_session,
+        certificate_type=CertificateType.CEA,
+        bid_amount_eur=Decimal("50000"),
+        ask_amount_eur=Decimal("25000")
+    )
+
+    # Only CASH_BUYER should be in bid plan
+    assert len(plan["bid_plan"]["mms"]) == 1
+    assert plan["bid_plan"]["mms"][0]["mm_type"] == "CASH_BUYER"
+
+    # Only CEA_CASH_SELLER should be in ask plan
+    assert len(plan["ask_plan"]["mms"]) == 1
+    assert plan["ask_plan"]["mms"][0]["mm_type"] == "CEA_CASH_SELLER"

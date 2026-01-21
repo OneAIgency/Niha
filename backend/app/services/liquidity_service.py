@@ -262,7 +262,7 @@ class LiquidityService:
                 bid_plan["mms"].append({
                     "mm_id": str(mm.id),
                     "mm_name": mm.name,
-                    "mm_type": "CASH_BUYER",
+                    "mm_type": mm.mm_type.value,
                     "allocation": float(eur_per_mm),
                     "orders_count": LiquidityService.ORDERS_PER_MM
                 })
@@ -288,7 +288,7 @@ class LiquidityService:
                 ask_plan["mms"].append({
                     "mm_id": str(ah["mm"].id),
                     "mm_name": ah["mm"].name,
-                    "mm_type": "CEA_CASH_SELLER",
+                    "mm_type": ah["mm"].mm_type.value,
                     "allocation": float(quantity_per_mm),
                     "orders_count": LiquidityService.ORDERS_PER_MM
                 })
@@ -478,13 +478,13 @@ class LiquidityService:
         for lp_mm in lp_mms:
             market_makers_used.append({
                 "mm_id": str(lp_mm.id),
-                "mm_type": "CASH_BUYER",
+                "mm_type": lp_mm.mm_type.value,
                 "amount": str(eur_per_lp)
             })
         for ah in ah_data:
             market_makers_used.append({
                 "mm_id": str(ah["mm"].id),
-                "mm_type": "CEA_CASH_SELLER",
+                "mm_type": ah["mm"].mm_type.value,
                 "amount": str(quantity_per_ah)
             })
 
