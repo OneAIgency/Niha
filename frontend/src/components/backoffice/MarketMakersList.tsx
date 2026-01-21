@@ -22,7 +22,9 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       render: (value, row) => (
         <div>
           <div className="font-medium text-navy-900 dark:text-white">{value}</div>
-          <div className="text-xs text-navy-500 dark:text-navy-400">{row.email}</div>
+          {row.description && (
+            <div className="text-xs text-navy-500 dark:text-navy-400">{row.description}</div>
+          )}
         </div>
       ),
     },

@@ -111,19 +111,6 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
         />
       </div>
 
-      {/* Email - Read Only */}
-      <div>
-        <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-          Email
-        </label>
-        <input
-          type="email"
-          value={marketMaker.email}
-          disabled
-          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-900/50 text-navy-500 dark:text-navy-400 cursor-not-allowed"
-        />
-      </div>
-
       {/* Description */}
       <div>
         <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">

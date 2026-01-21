@@ -40,9 +40,11 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
               <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
                 Edit Market Maker
               </h2>
-              <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
-                {marketMaker.email}
-              </p>
+              {marketMaker.description && (
+                <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
+                  {marketMaker.description}
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}
