@@ -126,10 +126,11 @@ async def create_market_maker(
 
     # Validate constraints
     if mm_type == MarketMakerType.CASH_BUYER:
+        # CASH_BUYER: CEA-CASH market, buys CEA with EUR
         if data.initial_balances:
             raise HTTPException(
                 status_code=400,
-                detail="CASH_BUYER cannot have certificate balances"
+                detail="CASH_BUYER cannot have certificate balances, only EUR"
             )
         if data.initial_eur_balance is None or data.initial_eur_balance <= 0:
             raise HTTPException(
@@ -137,10 +138,33 @@ async def create_market_maker(
                 detail="CASH_BUYER must have positive initial_eur_balance"
             )
     elif mm_type == MarketMakerType.CEA_CASH_SELLER:
+        # CEA_CASH_SELLER: CEA-CASH market, sells CEA for EUR
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
                 status_code=400,
                 detail="CEA_CASH_SELLER cannot have EUR balance"
+            )
+        if not data.initial_balances or "CEA" not in data.initial_balances:
+            raise HTTPException(
+                status_code=400,
+                detail="CEA_CASH_SELLER must have initial CEA balance"
+            )
+        if "EUA" in data.initial_balances:
+            raise HTTPException(
+                status_code=400,
+                detail="CEA_CASH_SELLER operates in CEA-CASH market, cannot have EUA"
+            )
+    elif mm_type == MarketMakerType.SWAP_MAKER:
+        # SWAP_MAKER: SWAP market, facilitates CEA↔EUA conversions
+        if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="SWAP_MAKER operates in SWAP market, cannot have EUR"
+            )
+        if not data.initial_balances or "CEA" not in data.initial_balances or "EUA" not in data.initial_balances:
+            raise HTTPException(
+                status_code=400,
+                detail="SWAP_MAKER must have both CEA and EUA balances"
             )
 
     # Create Market Maker
