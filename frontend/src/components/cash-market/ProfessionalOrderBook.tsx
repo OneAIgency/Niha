@@ -18,25 +18,17 @@ interface ProfessionalOrderBookProps {
 
 export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalOrderBookProps) {
   const maxQuantity = useMemo(() => {
-    const bidMax = Math.max(...orderBook.bids.map((b) => b.cumulative_quantity), 0);
-    const askMax = Math.max(...orderBook.asks.map((a) => a.cumulative_quantity), 0);
+    const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulative_quantity)) : 0;
+    const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulative_quantity)) : 0;
     return Math.max(bidMax, askMax);
   }, [orderBook]);
 
   return (
-    <div className="bg-white dark:bg-navy-800 rounded-lg overflow-hidden text-[11px]">
+    <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-lg border border-navy-100 dark:border-navy-700 overflow-hidden text-[11px]">
       {/* Header */}
       <div className="px-4 py-2 border-b border-navy-200 dark:border-navy-700">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-navy-900 dark:text-white">Order Book</h2>
-          {orderBook.best_bid !== null && orderBook.best_ask !== null && (
-            <div className="text-[10px]">
-              <span className="text-navy-600 dark:text-navy-400">Spread: </span>
-              <span className="font-mono font-semibold text-navy-900 dark:text-white">
-                €{orderBook.spread !== null ? orderBook.spread.toFixed(2) : '-'}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -67,7 +59,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
       <div className="grid grid-cols-2">
         {/* Bids (Buy Orders) */}
         <div className="border-r border-navy-200 dark:border-navy-700">
-          {orderBook.bids.slice(0, 15).map((level, idx) => {
+          {orderBook.bids.slice(0, 7).map((level, idx) => {
             const depthPercentage = maxQuantity > 0 ? (level.cumulative_quantity / maxQuantity) * 100 : 0;
             return (
               <div
@@ -99,45 +91,11 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
               </div>
             );
           })}
-
-          {/* Best Bid Highlight */}
-          {orderBook.best_bid !== null && (
-            <div className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 border-y border-emerald-200 dark:border-emerald-800">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                  Best Bid
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-3 h-3 text-emerald-600" />
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    €{orderBook.best_bid.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Asks (Sell Orders) */}
         <div>
-          {/* Best Ask Highlight */}
-          {orderBook.best_ask !== null && (
-            <div className="px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-y border-red-200 dark:border-red-800">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="w-3 h-3 text-red-600" />
-                  <span className="font-mono font-bold text-red-600 dark:text-red-400">
-                    €{orderBook.best_ask.toFixed(2)}
-                  </span>
-                </div>
-                <span className="text-[10px] font-medium text-red-700 dark:text-red-400">
-                  Best Ask
-                </span>
-              </div>
-            </div>
-          )}
-
-          {orderBook.asks.slice(0, 15).map((level, idx) => {
+          {orderBook.asks.slice(0, 7).map((level, idx) => {
             const depthPercentage = maxQuantity > 0 ? (level.cumulative_quantity / maxQuantity) * 100 : 0;
             return (
               <div
@@ -171,6 +129,54 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
           })}
         </div>
       </div>
+
+      {/* Center Spread Line - Professional Trading Platform Style */}
+      {orderBook.best_bid !== null && orderBook.best_ask !== null && (
+        <div className="border-y-2 border-navy-300 dark:border-navy-600 bg-gradient-to-r from-emerald-50 via-navy-50 to-red-50 dark:from-emerald-900/20 dark:via-navy-800 dark:to-red-900/20">
+          <div className="grid grid-cols-2 px-4 py-3">
+            {/* Best Bid (Left Side) */}
+            <div className="flex items-center justify-start gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                  Best Bid
+                </span>
+                <span className="font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+                  €{orderBook.best_bid.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Best Ask (Right Side) */}
+            <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
+                  Best Ask
+                </span>
+                <span className="font-mono font-bold text-base text-red-600 dark:text-red-400">
+                  €{orderBook.best_ask.toFixed(2)}
+                </span>
+              </div>
+              <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+
+          {/* Spread Info (Centered Below) */}
+          <div className="px-4 pb-2 flex justify-center">
+            <div className="text-[10px] text-navy-600 dark:text-navy-400">
+              <span className="font-medium">Spread: </span>
+              <span className="font-mono font-semibold text-navy-900 dark:text-white">
+                €{orderBook.spread !== null ? orderBook.spread.toFixed(2) : '-'}
+              </span>
+              {orderBook.spread !== null && orderBook.best_bid !== null && orderBook.best_ask !== null && (
+                <span className="ml-1 text-navy-500 dark:text-navy-500">
+                  ({((orderBook.spread / ((orderBook.best_bid + orderBook.best_ask) / 2)) * 100).toFixed(2)}%)
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
