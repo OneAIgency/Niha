@@ -135,6 +135,12 @@ class MarketMakerType(str, enum.Enum):
     SWAP_MAKER = "SWAP_MAKER"              # SWAP market: Facilitates CEA↔EUA swaps
 
 
+class MarketType(str, enum.Enum):
+    """Trading markets"""
+    CEA_CASH = "CEA_CASH"  # Cash market: Buy/sell CEA with EUR
+    SWAP = "SWAP"          # Swap market: Exchange CEA↔EUA
+
+
 class Entity(Base):
     __tablename__ = "entities"
 
@@ -387,6 +393,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market = Column(SQLEnum(MarketType), nullable=False, index=True)  # Which market
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
     seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
     market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
