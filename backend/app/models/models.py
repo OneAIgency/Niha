@@ -129,9 +129,10 @@ class Currency(str, enum.Enum):
 
 
 class MarketMakerType(str, enum.Enum):
-    """Types of market maker clients"""
-    ASSET_HOLDER = "ASSET_HOLDER"          # Holds CEA/EUA, places SELL orders
-    LIQUIDITY_PROVIDER = "LIQUIDITY_PROVIDER"  # Holds EUR, places BUY orders
+    """Types of market maker clients - organized by market"""
+    CEA_CASH_SELLER = "CEA_CASH_SELLER"    # CEA-CASH market: Holds CEA, places SELL orders
+    CASH_BUYER = "CASH_BUYER"              # CEA-CASH market: Holds EUR, places BUY orders
+    SWAP_MAKER = "SWAP_MAKER"              # SWAP market: Facilitates CEA↔EUA swaps
 
 
 class Entity(Base):
@@ -208,7 +209,7 @@ class MarketMakerClient(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    mm_type = Column(SQLEnum(MarketMakerType), default=MarketMakerType.ASSET_HOLDER, nullable=False)
+    mm_type = Column(SQLEnum(MarketMakerType), default=MarketMakerType.CEA_CASH_SELLER, nullable=False)
     eur_balance = Column(Numeric(18, 2), default=0, nullable=False)  # For Liquidity Providers
 
     # Relationships
