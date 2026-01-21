@@ -4,7 +4,7 @@ import { X, Bot, AlertCircle, Check } from 'lucide-react';
 import { Button } from '../common';
 import { createMarketMaker, getMarketMakers } from '../../services/api';
 import { usePrices } from '../../hooks/usePrices';
-import { MarketType, MARKET_MAKER_TYPES } from '../../types';
+import { MarketType, MarketMakerType, MARKET_MAKER_TYPES } from '../../types';
 
 interface CreateMarketMakerModalProps {
   isOpen: boolean;
@@ -15,10 +15,9 @@ interface CreateMarketMakerModalProps {
 
 export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCount }: CreateMarketMakerModalProps) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
   const [market, setMarket] = useState<MarketType>('CEA_CASH');
-  const [mmType, setMmType] = useState<'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER'>('CASH_BUYER');
+  const [mmType, setMmType] = useState<MarketMakerType>('CASH_BUYER');
   const [eurBalance, setEurBalance] = useState('');
   const [ceaBalance, setCeaBalance] = useState('');
   const [euaBalance, setEuaBalance] = useState('');
@@ -29,7 +28,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
   // Get current prices for EUR calculation
   const { prices } = usePrices();
 
-  // Auto-populate name and email when modal opens
+  // Auto-populate name when modal opens
   // Fetch latest count to avoid race conditions
   useEffect(() => {
     const fetchLatestCount = async () => {
@@ -38,13 +37,11 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
           const mms = await getMarketMakers();
           const nextNumber = mms.length + 1;
           setName(`mm${nextNumber}`);
-          setEmail(`mm${nextNumber}@nihaogroup.com`);
         } catch (err) {
           console.error('Failed to fetch MM count:', err);
           // Fallback to prop-based count
           const nextNumber = currentMMCount + 1;
           setName(`mm${nextNumber}`);
-          setEmail(`mm${nextNumber}@nihaogroup.com`);
         }
       }
     };
@@ -78,10 +75,6 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
     // Validation
     if (!name.trim()) {
       setError('Please enter a name');
-      return;
-    }
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email');
       return;
     }
 
@@ -123,7 +116,6 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
     try {
       await createMarketMaker({
         name: name.trim(),
-        email: email.trim(),
         description: description.trim() || undefined,
         mm_type: mmType,
         initial_eur_balance: mmType === 'CASH_BUYER' && eurBalance ? parseFloat(eurBalance) : undefined,
@@ -137,10 +129,9 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         onClose();
         // Reset form
         setName('');
-        setEmail('');
         setDescription('');
         setMarket('CEA_CASH');
-        setMmType('CEA_CASH_SELLER');
+        setMmType('CASH_BUYER');
         setEurBalance('');
         setCeaBalance('');
         setEuaBalance('');
@@ -199,20 +190,6 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               />
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                Email *
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g., mm-alpha@nihao.trade"
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
@@ -263,7 +240,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               <select
                 value={mmType}
                 onChange={(e) => {
-                  const newType = e.target.value as 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+                  const newType = e.target.value as MarketMakerType;
                   setMmType(newType);
                   // Clear balances
                   setEurBalance('');
@@ -418,7 +395,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               variant="primary"
               onClick={handleSubmit}
               loading={loading}
-              disabled={!name.trim() || !email.trim()}
+              disabled={!name.trim()}
               icon={<Bot className="w-4 h-4" />}
             >
               Create Market Maker
