@@ -126,8 +126,8 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
           {/* Bid area (green) */}
           <path
             d={chartData.bidPath}
-            fill="rgba(34, 197, 94, 0.2)"
-            stroke="rgb(34, 197, 94)"
+            fill="var(--color-bid-bg)"
+            stroke="var(--color-bid)"
             strokeWidth="0.5"
             vectorEffect="non-scaling-stroke"
           />
@@ -135,8 +135,8 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
           {/* Ask area (red) */}
           <path
             d={chartData.askPath}
-            fill="rgba(239, 68, 68, 0.2)"
-            stroke="rgb(239, 68, 68)"
+            fill="var(--color-ask-bg)"
+            stroke="var(--color-ask)"
             strokeWidth="0.5"
             vectorEffect="non-scaling-stroke"
           />
