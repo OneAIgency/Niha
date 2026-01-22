@@ -90,7 +90,77 @@ assertEqual(
   'Should parse complex types like functions and React nodes'
 );
 
-// Test 4: extractDescription should extract JSDoc
+// Test 4: extractProps should handle multi-line object types
+const multiLineObjectString = `
+  currentBalances: {
+    cea_balance: number;
+    eua_balance: number;
+  };
+  config: {
+    enabled: boolean;
+  };
+`;
+const expectedMultiLineProps = [
+  { name: 'currentBalances', type: '{ cea_balance: number; eua_balance: number; }', optional: false },
+  { name: 'config', type: '{ enabled: boolean; }', optional: false }
+];
+assertEqual(
+  extractProps(multiLineObjectString),
+  expectedMultiLineProps,
+  'Should parse multi-line object types as single props'
+);
+
+// Test 5: extractProps should handle nested braces
+const nestedBracesString = `
+  data: {
+    user: {
+      name: string;
+      profile: {
+        age: number;
+      };
+    };
+  };
+`;
+const expectedNestedProps = [
+  { name: 'data', type: '{ user: { name: string; profile: { age: number; }; }; }', optional: false }
+];
+assertEqual(
+  extractProps(nestedBracesString),
+  expectedNestedProps,
+  'Should parse nested braces correctly'
+);
+
+// Test 6: extractProps should handle function types with object params
+const functionWithObjectString = `
+  onSubmit?: (data: { name: string; value: number; }) => void;
+  onChange: (event: { target: { value: string } }) => void;
+`;
+const expectedFunctionObjectProps = [
+  { name: 'onSubmit', type: '(data: { name: string; value: number; }) => void', optional: true },
+  { name: 'onChange', type: '(event: { target: { value: string } }) => void', optional: false }
+];
+assertEqual(
+  extractProps(functionWithObjectString),
+  expectedFunctionObjectProps,
+  'Should parse function types with object parameters'
+);
+
+// Test 7: extractProps should handle array of objects
+const arrayOfObjectsString = `
+  items: Array<{ id: number; name: string; }>;
+  options?: { label: string; value: string; }[];
+`;
+const expectedArrayObjectProps = [
+  { name: 'items', type: 'Array<{ id: number; name: string; }>', optional: false },
+  { name: 'options', type: '{ label: string; value: string; }[]', optional: true }
+];
+assertEqual(
+  extractProps(arrayOfObjectsString),
+  expectedArrayObjectProps,
+  'Should parse array of objects'
+);
+
+// Test 8: extractDescription should extract JSDoc
 console.log('\nTest Suite: extractDescription');
 const contentWithJSDoc = `
 /**
@@ -105,7 +175,7 @@ assert(
   'Should extract first line of JSDoc comment'
 );
 
-// Test 5: extractDescription should return empty for no JSDoc
+// Test 9: extractDescription should return empty for no JSDoc
 const contentWithoutJSDoc = `
 export function Button() {}
 `;
@@ -115,7 +185,7 @@ assertEqual(
   'Should return empty string when no JSDoc found'
 );
 
-// Test 6: scanDirectory should find components
+// Test 10: scanDirectory should find components
 console.log('\nTest Suite: scanDirectory');
 // We can test with the actual components directory
 const componentsDir = path.join(__dirname, '../src/components');

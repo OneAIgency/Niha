@@ -65,24 +65,135 @@ function scanDirectory(dir, category = '') {
 
 /**
  * Extracts prop metadata from interface string
+ * Handles multi-line types using bracket/brace depth tracking
  * @param {string} propsString - The interface body content
  * @returns {Array} Array of prop metadata objects
  */
 function extractProps(propsString) {
   const props = [];
-  const propLines = propsString
-    .split('\n')
-    .filter(line => line.trim() && !line.trim().startsWith('//') && !line.trim().startsWith('/*'));
 
-  for (const line of propLines) {
-    // Match patterns like: propName?: type; or propName: type;
-    const match = line.match(/(\w+)(\??):\s*([^;]+)/);
-    if (match) {
-      const [, name, optional, type] = match;
+  // Remove comments first (both single-line and multi-line)
+  let cleaned = propsString
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim();
+      return trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*');
+    })
+    .join('\n');
+
+  let i = 0;
+  while (i < cleaned.length) {
+    // Skip whitespace
+    while (i < cleaned.length && /\s/.test(cleaned[i])) {
+      i++;
+    }
+
+    if (i >= cleaned.length) break;
+
+    // Try to extract a prop definition
+    // Match: propName?: type; or propName: type;
+    const propNameMatch = cleaned.slice(i).match(/^(\w+)(\??)\s*:\s*/);
+    if (!propNameMatch) {
+      // Skip to next semicolon or newline if we can't parse
+      const nextSemi = cleaned.indexOf(';', i);
+      const nextNewline = cleaned.indexOf('\n', i);
+      if (nextSemi === -1 && nextNewline === -1) {
+        i = cleaned.length;
+      } else if (nextSemi === -1) {
+        i = nextNewline + 1;
+      } else if (nextNewline === -1) {
+        i = nextSemi + 1;
+      } else {
+        i = Math.min(nextSemi, nextNewline) + 1;
+      }
+      continue;
+    }
+
+    const propName = propNameMatch[1];
+    const optional = propNameMatch[2] === '?';
+    i += propNameMatch[0].length;
+
+    // Now extract the type by tracking brace/bracket/paren depth
+    let type = '';
+    let braceDepth = 0;
+    let bracketDepth = 0;
+    let parenDepth = 0;
+    let angleDepth = 0;
+    let startI = i;
+
+    while (i < cleaned.length) {
+      const char = cleaned[i];
+      const prevChar = i > 0 ? cleaned[i - 1] : '';
+      const nextChar = i < cleaned.length - 1 ? cleaned[i + 1] : '';
+
+      // Track depth FIRST
+      if (char === '{') {
+        braceDepth++;
+      } else if (char === '}') {
+        braceDepth--;
+      } else if (char === '[') {
+        bracketDepth++;
+      } else if (char === ']') {
+        bracketDepth--;
+      } else if (char === '(') {
+        parenDepth++;
+      } else if (char === ')') {
+        parenDepth--;
+      } else if (char === '<' && prevChar !== '=' && nextChar !== '=') {
+        // Only track < if it's not part of <= or =>
+        angleDepth++;
+      } else if (char === '>' && prevChar !== '=' && nextChar !== '=') {
+        // Only track > if it's not part of >= or =>
+        angleDepth--;
+      }
+
+      // Then check for end conditions at depth 0
+      if (braceDepth === 0 && bracketDepth === 0 && parenDepth === 0 && angleDepth === 0) {
+        // Semicolon always ends the type
+        if (char === ';') {
+          type = cleaned.slice(startI, i);
+          i++; // Move past the semicolon
+          break;
+        }
+
+        // Newline might end the type - check if next non-whitespace is a prop name
+        if (char === '\n') {
+          // Look ahead to see if the next non-whitespace starts a new prop
+          let j = i + 1;
+          while (j < cleaned.length && /[ \t]/.test(cleaned[j])) {
+            j++;
+          }
+
+          // Check conditions
+          const atEnd = j >= cleaned.length;
+          const nextIsNewline = !atEnd && cleaned[j] === '\n';
+          const nextMatchesProp = !atEnd && /^\w+\??:/.test(cleaned.slice(j));
+
+          // If we found another newline or end of string, or a valid prop pattern, this newline ends the type
+          if (atEnd || nextIsNewline || nextMatchesProp) {
+            type = cleaned.slice(startI, i);
+            i++; // Move past the newline
+            break;
+          }
+        }
+      }
+
+      i++;
+    }
+
+    // Handle case where we reached end of string without semicolon or newline
+    if (i >= cleaned.length && !type) {
+      type = cleaned.slice(startI, i);
+    }
+
+    // Normalize whitespace in the type (collapse multiple spaces/newlines to single space)
+    type = type.replace(/\s+/g, ' ').trim();
+
+    if (propName && type) {
       props.push({
-        name: name.trim(),
-        type: type.trim(),
-        optional: optional === '?'
+        name: propName,
+        type: type,
+        optional: optional
       });
     }
   }

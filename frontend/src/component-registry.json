@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-22T13:24:00.081Z",
+  "generatedAt": "2026-01-22T14:07:04.757Z",
   "components": [
     {
       "name": "AddAssetModal",
@@ -311,32 +311,7 @@
         },
         {
           "name": "onSubmit",
-          "type": "(order: {",
-          "optional": false
-        },
-        {
-          "name": "market_maker_id",
-          "type": "string",
-          "optional": false
-        },
-        {
-          "name": "certificate_type",
-          "type": "'CEA' | 'EUA'",
-          "optional": false
-        },
-        {
-          "name": "side",
-          "type": "'BID' | 'ASK'",
-          "optional": false
-        },
-        {
-          "name": "price",
-          "type": "number",
-          "optional": false
-        },
-        {
-          "name": "quantity",
-          "type": "number",
+          "type": "(order: { market_maker_id: string; certificate_type: 'CEA' | 'EUA'; side: 'BID' | 'ASK'; price: number; quantity: number;",
           "optional": false
         }
       ],
@@ -514,17 +489,7 @@
         },
         {
           "name": "currentBalances",
-          "type": "{",
-          "optional": false
-        },
-        {
-          "name": "cea_balance",
-          "type": "number",
-          "optional": false
-        },
-        {
-          "name": "eua_balance",
-          "type": "number",
+          "type": "{ cea_balance: number; eua_balance: number;",
           "optional": false
         }
       ],
@@ -765,22 +730,7 @@
         },
         {
           "name": "onPlaceOrder",
-          "type": "(order: {",
-          "optional": false
-        },
-        {
-          "name": "side",
-          "type": "OrderSide",
-          "optional": false
-        },
-        {
-          "name": "price",
-          "type": "number",
-          "optional": false
-        },
-        {
-          "name": "quantity",
-          "type": "number",
+          "type": "(order: { side: OrderSide; price: number; quantity: number;",
           "optional": false
         }
       ],
@@ -853,22 +803,7 @@
         },
         {
           "name": "onOrderSubmit",
-          "type": "(order: {",
-          "optional": false
-        },
-        {
-          "name": "orderType",
-          "type": "'MARKET' | 'LIMIT'",
-          "optional": false
-        },
-        {
-          "name": "limitPrice",
-          "type": "number",
-          "optional": true
-        },
-        {
-          "name": "amountEur",
-          "type": "number",
+          "type": "(order: { orderType: 'MARKET' | 'LIMIT'; limitPrice?: number; amountEur: number;",
           "optional": false
         }
       ],
@@ -1091,7 +1026,7 @@
         },
         {
           "name": "details",
-          "type": "{ label: string",
+          "type": "{ label: string; value: string",
           "optional": true
         }
       ],
@@ -1409,18 +1344,8 @@
         },
         {
           "name": "trend",
-          "type": "{",
+          "type": "{ value: number; direction: 'up' | 'down';",
           "optional": true
-        },
-        {
-          "name": "value",
-          "type": "number",
-          "optional": false
-        },
-        {
-          "name": "direction",
-          "type": "'up' | 'down'",
-          "optional": false
         }
       ],
       "description": ""
