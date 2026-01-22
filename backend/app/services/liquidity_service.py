@@ -31,7 +31,17 @@ class InsufficientAssetsError(Exception):
 
 
 class LiquidityService:
-    """Service for managing liquidity operations"""
+    """
+    Service for managing liquidity operations.
+    
+    Provides automated liquidity injection by coordinating orders across multiple
+    market makers. Supports two market maker types:
+    - CASH_BUYER: Holds EUR, places BUY orders (BID liquidity)
+    - CEA_CASH_SELLER: Holds certificates, places SELL orders (ASK liquidity)
+    
+    Orders are distributed across 3 price levels with tight spreads (0.2-0.5%)
+    and volume allocation (50/30/20) for optimal market depth.
+    """
 
     # Default prices when no market data available
     DEFAULT_PRICES = {
@@ -45,7 +55,18 @@ class LiquidityService:
 
     @staticmethod
     async def get_liquidity_providers(db: AsyncSession) -> List[MarketMakerClient]:
-        """Get all active EUR-holding market makers with balances"""
+        """
+        Get all active EUR-holding market makers with balances.
+        
+        Returns market makers of type CASH_BUYER that have positive EUR balance
+        and are active. Used for placing BID orders.
+        
+        Args:
+            db: Database session
+            
+        Returns:
+            List of MarketMakerClient instances, sorted by EUR balance descending
+        """
         result = await db.execute(
             select(MarketMakerClient)
             .where(
@@ -64,7 +85,25 @@ class LiquidityService:
         db: AsyncSession,
         certificate_type: CertificateType
     ) -> List[Dict[str, Any]]:
-        """Get all active asset-holding MMs with certificate balances"""
+        """
+        Get all active asset-holding market makers with certificate balances.
+        
+        Returns market makers of type CEA_CASH_SELLER that have available
+        certificate balance for the specified type. Used for placing ASK orders.
+        
+        Args:
+            db: Database session
+            certificate_type: Type of certificate (CEA or EUA)
+            
+        Returns:
+            List of dictionaries with 'mm' (MarketMakerClient) and 'available'
+            (Decimal balance) keys, sorted by available balance descending
+            
+        Note:
+            This method has a known N+1 query issue. It fetches all asset holder
+            MMs in one query, then separately queries balances for each MM.
+            Future optimization: Refactor balance calculation to use joins.
+        """
         # NOTE: This method has a known N+1 query issue. It fetches all asset holder MMs
         # in one query, then separately queries balances for each MM. This results in
         # 1 + (N × 5) queries where N is the number of asset holders.
