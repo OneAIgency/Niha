@@ -9,6 +9,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "check-design-system": "node scripts/check-design-system.js",
+    "generate:registry": "node scripts/generate-registry.cjs",
+    "prebuild": "npm run generate:registry",
     "prepare": "cd .. && husky"
   },
   "dependencies": {

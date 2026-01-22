@@ -1,0 +1,1709 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-01-22T13:24:00.081Z",
+  "components": [
+    {
+      "name": "AddAssetModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/AddAssetModal.tsx",
+      "importPath": "components/backoffice/AddAssetModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "entityId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "entityName",
+          "type": "string",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "AdminOrderBookSection",
+      "category": "backoffice",
+      "path": "src/components/backoffice/AdminOrderBookSection.tsx",
+      "importPath": "components/backoffice/AdminOrderBookSection",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "AllTicketsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/AllTicketsTab.tsx",
+      "importPath": "components/backoffice/AllTicketsTab",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "ApproveInviteModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/ApproveInviteModal.tsx",
+      "importPath": "components/backoffice/ApproveInviteModal",
+      "props": [
+        {
+          "name": "contactRequest",
+          "type": "ContactRequestResponse",
+          "optional": false
+        },
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "BalanceCards",
+      "category": "backoffice",
+      "path": "src/components/backoffice/BalanceCards.tsx",
+      "importPath": "components/backoffice/BalanceCards",
+      "props": [
+        {
+          "name": "balances",
+          "type": "SimpleBalances | DetailedBalances",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "variant",
+          "type": "'simple' | 'detailed'",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "CreateMarketMakerModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/CreateMarketMakerModal.tsx",
+      "importPath": "components/backoffice/CreateMarketMakerModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "currentMMCount",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "EditAssetModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/EditAssetModal.tsx",
+      "importPath": "components/backoffice/EditAssetModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "entityId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "entityName",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "assetType",
+          "type": "AssetType",
+          "optional": false
+        },
+        {
+          "name": "currentBalance",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "EditMarketMakerModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/EditMarketMakerModal.tsx",
+      "importPath": "components/backoffice/EditMarketMakerModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "marketMaker",
+          "type": "MarketMaker",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "FailedActionsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/FailedActionsTab.tsx",
+      "importPath": "components/backoffice/FailedActionsTab",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "KYCReviewPanel",
+      "category": "backoffice",
+      "path": "src/components/backoffice/KYCReviewPanel.tsx",
+      "importPath": "components/backoffice/KYCReviewPanel",
+      "props": [
+        {
+          "name": "userId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "userEmail",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "userName",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "entityName",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "documents",
+          "type": "KYCDocument[]",
+          "optional": false
+        },
+        {
+          "name": "onDocumentApprove",
+          "type": "(docId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onDocumentReject",
+          "type": "(docId: string, notes?: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onDocumentPreview",
+          "type": "(doc: KYCDocument) => void",
+          "optional": false
+        },
+        {
+          "name": "onUserApprove",
+          "type": "() => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onUserReject",
+          "type": "() => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "actionLoading",
+          "type": "string | null",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "LoggingOverview",
+      "category": "backoffice",
+      "path": "src/components/backoffice/LoggingOverview.tsx",
+      "importPath": "components/backoffice/LoggingOverview",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "MMOrderPlacementModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MMOrderPlacementModal.tsx",
+      "importPath": "components/backoffice/MMOrderPlacementModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSubmit",
+          "type": "(order: {",
+          "optional": false
+        },
+        {
+          "name": "market_maker_id",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "certificate_type",
+          "type": "'CEA' | 'EUA'",
+          "optional": false
+        },
+        {
+          "name": "side",
+          "type": "'BID' | 'ASK'",
+          "optional": false
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketMakerActionsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakerActionsTab.tsx",
+      "importPath": "components/backoffice/MarketMakerActionsTab",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "MarketMakerDetailsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakerDetailsTab.tsx",
+      "importPath": "components/backoffice/MarketMakerDetailsTab",
+      "props": [
+        {
+          "name": "marketMaker",
+          "type": "MarketMaker",
+          "optional": false
+        },
+        {
+          "name": "onUpdateSuccess",
+          "type": "() => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketMakerOrdersList",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakerOrdersList.tsx",
+      "importPath": "components/backoffice/MarketMakerOrdersList",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketMakerTransactionsSection",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakerTransactionsSection.tsx",
+      "importPath": "components/backoffice/MarketMakerTransactionsSection",
+      "props": [
+        {
+          "name": "marketMakerId",
+          "type": "string",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketMakerTransactionsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakerTransactionsTab.tsx",
+      "importPath": "components/backoffice/MarketMakerTransactionsTab",
+      "props": [
+        {
+          "name": "marketMakerId",
+          "type": "string",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketMakersList",
+      "category": "backoffice",
+      "path": "src/components/backoffice/MarketMakersList.tsx",
+      "importPath": "components/backoffice/MarketMakersList",
+      "props": [
+        {
+          "name": "marketMakers",
+          "type": "MarketMaker[]",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onSelectMM",
+          "type": "(mm: MarketMaker) => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "PlaceMarketOrderSection",
+      "category": "backoffice",
+      "path": "src/components/backoffice/PlaceMarketOrderSection.tsx",
+      "importPath": "components/backoffice/PlaceMarketOrderSection",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "onOrderPlaced",
+          "type": "() => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "SearchTicketsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/SearchTicketsTab.tsx",
+      "importPath": "components/backoffice/SearchTicketsTab",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "TicketDetailModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/TicketDetailModal.tsx",
+      "importPath": "components/backoffice/TicketDetailModal",
+      "props": [
+        {
+          "name": "ticket",
+          "type": "TicketLog | null",
+          "optional": false
+        },
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "TransactionForm",
+      "category": "backoffice",
+      "path": "src/components/backoffice/TransactionForm.tsx",
+      "importPath": "components/backoffice/TransactionForm",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "marketMakerId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "currentBalances",
+          "type": "{",
+          "optional": false
+        },
+        {
+          "name": "cea_balance",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "eua_balance",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "UserOrdersSection",
+      "category": "backoffice",
+      "path": "src/components/backoffice/UserOrdersSection.tsx",
+      "importPath": "components/backoffice/UserOrdersSection",
+      "props": [
+        {
+          "name": "entityId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "entityName",
+          "type": "string",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "DepthChart",
+      "category": "cash-market",
+      "path": "src/components/cash-market/DepthChart.tsx",
+      "importPath": "components/cash-market/DepthChart",
+      "props": [
+        {
+          "name": "bids",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        },
+        {
+          "name": "asks",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MarketDepthChart",
+      "category": "cash-market",
+      "path": "src/components/cash-market/MarketDepthChart.tsx",
+      "importPath": "components/cash-market/MarketDepthChart",
+      "props": [
+        {
+          "name": "bids",
+          "type": "MarketDepthPoint[]",
+          "optional": false
+        },
+        {
+          "name": "asks",
+          "type": "MarketDepthPoint[]",
+          "optional": false
+        },
+        {
+          "name": "midPrice",
+          "type": "number",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "MyOrders",
+      "category": "cash-market",
+      "path": "src/components/cash-market/MyOrders.tsx",
+      "importPath": "components/cash-market/MyOrders",
+      "props": [
+        {
+          "name": "orders",
+          "type": "Order[]",
+          "optional": false
+        },
+        {
+          "name": "onCancelOrder",
+          "type": "(orderId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "OrderBook",
+      "category": "cash-market",
+      "path": "src/components/cash-market/OrderBook.tsx",
+      "importPath": "components/cash-market/OrderBook",
+      "props": [
+        {
+          "name": "bids",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        },
+        {
+          "name": "asks",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        },
+        {
+          "name": "spread",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestBid",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestAsk",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "onPriceClick",
+          "type": "(price: number) => void",
+          "optional": true
+        },
+        {
+          "name": "maxRows",
+          "type": "number",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "OrderBookRow",
+      "category": "cash-market",
+      "path": "src/components/cash-market/OrderBookRow.tsx",
+      "importPath": "components/cash-market/OrderBookRow",
+      "props": [
+        {
+          "name": "level",
+          "type": "OrderBookLevel",
+          "optional": false
+        },
+        {
+          "name": "side",
+          "type": "'bid' | 'ask'",
+          "optional": false
+        },
+        {
+          "name": "maxQuantity",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "onPriceClick",
+          "type": "(price: number, side: 'BUY' | 'SELL') => void",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "OrderBookSpreadIndicator",
+      "category": "cash-market",
+      "path": "src/components/cash-market/OrderBookSpreadIndicator.tsx",
+      "importPath": "components/cash-market/OrderBookSpreadIndicator",
+      "props": [
+        {
+          "name": "bestBid",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "bestAsk",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "spread",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "ProfessionalOrderBook",
+      "category": "cash-market",
+      "path": "src/components/cash-market/ProfessionalOrderBook.tsx",
+      "importPath": "components/cash-market/ProfessionalOrderBook",
+      "props": [
+        {
+          "name": "orderBook",
+          "type": "OrderBookData",
+          "optional": false
+        },
+        {
+          "name": "onPriceClick",
+          "type": "(price: number, side: 'BUY' | 'SELL') => void",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "TradePanel",
+      "category": "cash-market",
+      "path": "src/components/cash-market/TradePanel.tsx",
+      "importPath": "components/cash-market/TradePanel",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "lastPrice",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestBid",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestAsk",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "selectedPrice",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "onPlaceOrder",
+          "type": "(order: {",
+          "optional": false
+        },
+        {
+          "name": "side",
+          "type": "OrderSide",
+          "optional": false
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "TradingOrderBook",
+      "category": "cash-market",
+      "path": "src/components/cash-market/TradingOrderBook.tsx",
+      "importPath": "components/cash-market/TradingOrderBook",
+      "props": [
+        {
+          "name": "bids",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        },
+        {
+          "name": "asks",
+          "type": "OrderBookLevel[]",
+          "optional": false
+        },
+        {
+          "name": "spread",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestBid",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "bestAsk",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "isLoading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "onPriceClick",
+          "type": "(price: number) => void",
+          "optional": true
+        }
+      ],
+      "description": "Props for the TradingOrderBook component"
+    },
+    {
+      "name": "UserOrderEntryModal",
+      "category": "cash-market",
+      "path": "src/components/cash-market/UserOrderEntryModal.tsx",
+      "importPath": "components/cash-market/UserOrderEntryModal",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "availableBalance",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "bestAskPrice",
+          "type": "number | null",
+          "optional": false
+        },
+        {
+          "name": "onOrderSubmit",
+          "type": "(order: {",
+          "optional": false
+        },
+        {
+          "name": "orderType",
+          "type": "'MARKET' | 'LIMIT'",
+          "optional": false
+        },
+        {
+          "name": "limitPrice",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "amountEur",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "AnimatedCounter",
+      "category": "common",
+      "path": "src/components/common/AnimatedCounter.tsx",
+      "importPath": "components/common/AnimatedCounter",
+      "props": [
+        {
+          "name": "value",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "prefix",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "suffix",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "decimals",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Badge",
+      "category": "common",
+      "path": "src/components/common/Badge.tsx",
+      "importPath": "components/common/Badge",
+      "props": [
+        {
+          "name": "variant",
+          "type": "'default' | 'success' | 'warning' | 'danger' | 'info' | 'eua' | 'cea' | 'blue' | 'purple' | 'amber' | 'emerald'",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "BlurOverlay",
+      "category": "common",
+      "path": "src/components/common/BlurOverlay.tsx",
+      "importPath": "components/common/BlurOverlay",
+      "props": [
+        {
+          "name": "show",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "showContactButton",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Button",
+      "category": "common",
+      "path": "src/components/common/Button.tsx",
+      "importPath": "components/common/Button",
+      "props": [
+        {
+          "name": "variant",
+          "type": "'primary' | 'secondary' | 'outline' | 'ghost'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "icon",
+          "type": "React.ReactNode",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Card",
+      "category": "common",
+      "path": "src/components/common/Card.tsx",
+      "importPath": "components/common/Card",
+      "props": [
+        {
+          "name": "variant",
+          "type": "'default' | 'glass' | 'hover'",
+          "optional": true
+        },
+        {
+          "name": "padding",
+          "type": "'none' | 'sm' | 'md' | 'lg'",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "CertificateBadge",
+      "category": "common",
+      "path": "src/components/common/CertificateBadge.tsx",
+      "importPath": "components/common/CertificateBadge",
+      "props": [
+        {
+          "name": "type",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "showLabel",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "variant",
+          "type": "'default' | 'outline' | 'solid'",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "ConfirmationModal",
+      "category": "common",
+      "path": "src/components/common/ConfirmationModal.tsx",
+      "importPath": "components/common/ConfirmationModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onConfirm",
+          "type": "() => void | Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "confirmText",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "cancelText",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "variant",
+          "type": "'danger' | 'warning' | 'info'",
+          "optional": true
+        },
+        {
+          "name": "requireConfirmation",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "details",
+          "type": "{ label: string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "DataTable",
+      "category": "common",
+      "path": "src/components/common/DataTable.tsx",
+      "importPath": "components/common/DataTable",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "DepthBar",
+      "category": "common",
+      "path": "src/components/common/DepthBar.tsx",
+      "importPath": "components/common/DepthBar",
+      "props": [
+        {
+          "name": "percentage",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "side",
+          "type": "'bid' | 'ask'",
+          "optional": false
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Divider",
+      "category": "common",
+      "path": "src/components/common/Divider.tsx",
+      "importPath": "components/common/Divider",
+      "props": [
+        {
+          "name": "orientation",
+          "type": "'horizontal' | 'vertical'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Input",
+      "category": "common",
+      "path": "src/components/common/Input.tsx",
+      "importPath": "components/common/Input",
+      "props": [
+        {
+          "name": "label",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "icon",
+          "type": "React.ReactNode",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Logo",
+      "category": "common",
+      "path": "src/components/common/Logo.tsx",
+      "importPath": "components/common/Logo",
+      "props": [
+        {
+          "name": "variant",
+          "type": "'light' | 'dark'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "PageHeader",
+      "category": "common",
+      "path": "src/components/common/PageHeader.tsx",
+      "importPath": "components/common/PageHeader",
+      "props": [
+        {
+          "name": "title",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "actions",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "breadcrumbs",
+          "type": "Breadcrumb[]",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "PriceDisplay",
+      "category": "common",
+      "path": "src/components/common/PriceDisplay.tsx",
+      "importPath": "components/common/PriceDisplay",
+      "props": [
+        {
+          "name": "price",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "change",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "currency",
+          "type": "'USD' | 'EUR' | 'CNY'",
+          "optional": true
+        },
+        {
+          "name": "showIcon",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "showCurrency",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "PriceTicker",
+      "category": "common",
+      "path": "src/components/common/PriceTicker.tsx",
+      "importPath": "components/common/PriceTicker",
+      "props": [
+        {
+          "name": "prices",
+          "type": "Prices | null",
+          "optional": false
+        },
+        {
+          "name": "variant",
+          "type": "'compact' | 'full'",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "ProgressBar",
+      "category": "common",
+      "path": "src/components/common/ProgressBar.tsx",
+      "importPath": "components/common/ProgressBar",
+      "props": [
+        {
+          "name": "value",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "variant",
+          "type": "'default' | 'gradient' | 'success' | 'warning' | 'danger'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "showLabel",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "animated",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Skeleton",
+      "category": "common",
+      "path": "src/components/common/Skeleton.tsx",
+      "importPath": "components/common/Skeleton",
+      "props": [
+        {
+          "name": "variant",
+          "type": "SkeletonVariant",
+          "optional": true
+        },
+        {
+          "name": "width",
+          "type": "string | number",
+          "optional": true
+        },
+        {
+          "name": "height",
+          "type": "string | number",
+          "optional": true
+        },
+        {
+          "name": "lines",
+          "type": "number",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "StatCard",
+      "category": "common",
+      "path": "src/components/common/StatCard.tsx",
+      "importPath": "components/common/StatCard",
+      "props": [
+        {
+          "name": "icon",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "iconColor",
+          "type": "'emerald' | 'blue' | 'amber' | 'purple' | 'red'",
+          "optional": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "type": "string | number",
+          "optional": false
+        },
+        {
+          "name": "valueColor",
+          "type": "'default' | 'amber' | 'blue' | 'emerald' | 'red'",
+          "optional": true
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "subtitleVariant",
+          "type": "'default' | 'warning'",
+          "optional": true
+        },
+        {
+          "name": "trend",
+          "type": "{",
+          "optional": true
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "direction",
+          "type": "'up' | 'down'",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Tabs",
+      "category": "common",
+      "path": "src/components/common/Tabs.tsx",
+      "importPath": "components/common/Tabs",
+      "props": [
+        {
+          "name": "tabs",
+          "type": "Tab[]",
+          "optional": false
+        },
+        {
+          "name": "activeTab",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "onChange",
+          "type": "(tabId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "variant",
+          "type": "'default' | 'pills' | 'toggle' | 'underline'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "fullWidth",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "ToggleGroup",
+      "category": "common",
+      "path": "src/components/common/ToggleGroup.tsx",
+      "importPath": "components/common/ToggleGroup",
+      "props": [
+        {
+          "name": "options",
+          "type": "ToggleOption[]",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "onChange",
+          "type": "(value: string) => void",
+          "optional": false
+        },
+        {
+          "name": "variant",
+          "type": "'default' | 'filled'",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "fullWidth",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Typography",
+      "category": "common",
+      "path": "src/components/common/Typography.tsx",
+      "importPath": "components/common/Typography",
+      "props": [
+        {
+          "name": "as",
+          "type": "TextElement",
+          "optional": true
+        },
+        {
+          "name": "variant",
+          "type": "TextVariant",
+          "optional": true
+        },
+        {
+          "name": "color",
+          "type": "TextColor",
+          "optional": true
+        },
+        {
+          "name": "mono",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "Footer",
+      "category": "layout",
+      "path": "src/components/layout/Footer.tsx",
+      "importPath": "components/layout/Footer",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "Header",
+      "category": "layout",
+      "path": "src/components/layout/Header.tsx",
+      "importPath": "components/layout/Header",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "Layout",
+      "category": "layout",
+      "path": "src/components/layout/Layout.tsx",
+      "importPath": "components/layout/Layout",
+      "props": [],
+      "description": ""
+    },
+    {
+      "name": "LiquidityPreviewModal",
+      "category": "liquidity",
+      "path": "src/components/liquidity/LiquidityPreviewModal.tsx",
+      "importPath": "components/liquidity/LiquidityPreviewModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "preview",
+          "type": "LiquidityPreviewResponse | null",
+          "optional": false
+        },
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "bidEur",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "askEur",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "onConfirm",
+          "type": "() => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "isCreating",
+          "type": "boolean",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "KycUploadModal",
+      "category": "onboarding",
+      "path": "src/components/onboarding/KycUploadModal.tsx",
+      "importPath": "components/onboarding/KycUploadModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onProgressChange",
+          "type": "(progress: number) => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "LivePriceDisplay",
+      "category": "onboarding",
+      "path": "src/components/onboarding/LivePriceDisplay.tsx",
+      "importPath": "components/onboarding/LivePriceDisplay",
+      "props": [
+        {
+          "name": "type",
+          "type": "'eua' | 'cea'",
+          "optional": false
+        },
+        {
+          "name": "showChange",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "OnboardingLayout",
+      "category": "onboarding",
+      "path": "src/components/onboarding/OnboardingLayout.tsx",
+      "importPath": "components/onboarding/OnboardingLayout",
+      "props": [
+        {
+          "name": "children",
+          "type": "ReactNode",
+          "optional": false
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "showBreadcrumb",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    }
+  ],
+  "categories": [
+    "backoffice",
+    "cash-market",
+    "common",
+    "layout",
+    "liquidity",
+    "onboarding"
+  ]
+}
