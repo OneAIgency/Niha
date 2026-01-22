@@ -103,16 +103,16 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
           {/* Bid area (green) */}
           <path
             d={bidPath}
-            fill="rgba(16, 185, 129, 0.2)"
-            stroke="rgb(16, 185, 129)"
+            fill="var(--color-bid-bg)"
+            stroke="var(--color-bid)"
             strokeWidth="2"
           />
 
           {/* Ask area (red) */}
           <path
             d={askPath}
-            fill="rgba(239, 68, 68, 0.2)"
-            stroke="rgb(239, 68, 68)"
+            fill="var(--color-ask-bg)"
+            stroke="var(--color-ask)"
             strokeWidth="2"
           />
 
