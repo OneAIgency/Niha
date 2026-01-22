@@ -450,7 +450,7 @@ const UploadModal = ({
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-700 transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-600 transition-colors"
             >
               <X className="w-6 h-6" style={{ color: colors.textSecondary }} />
             </button>
