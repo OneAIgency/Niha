@@ -107,11 +107,11 @@ export function ComponentShowcasePage() {
     <div className={darkMode ? 'dark' : ''}>
       <div className="page-container-dark min-h-screen">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-slate-900 border-b border-slate-800">
+        <header className="sticky top-0 z-50 bg-navy-800 border-b border-navy-700">
           <div className="content-container flex justify-between items-center py-4">
             <div>
               <h1 className="text-xl font-bold text-white">Design System</h1>
-              <p className="text-sm text-slate-400">Component Library & Style Guide</p>
+              <p className="text-sm text-navy-400">Component Library & Style Guide</p>
             </div>
             <Button
               variant="outline"
@@ -140,7 +140,7 @@ export function ComponentShowcasePage() {
                       'block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors',
                       activeSection === section.id
                         ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        : 'text-navy-400 hover:text-white hover:bg-navy-700'
                     )}
                   >
                     {section.label}
@@ -156,7 +156,7 @@ export function ComponentShowcasePage() {
                 <h2 className="section-heading text-white mb-2">Typography</h2>
                 <p className="text-muted mb-6">Text styles and typography components</p>
                 <div className="space-y-6">
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <div className="space-y-4">
                       <Typography variant="pageTitle">Page Title (h1)</Typography>
                       <Typography variant="pageTitleSm">Page Title Small (h1)</Typography>
@@ -184,7 +184,7 @@ export function ComponentShowcasePage() {
                 <h2 className="section-heading text-white mb-2">Buttons</h2>
                 <p className="text-muted mb-6">Button variants, sizes, and states</p>
                 <div className="space-y-6">
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Variants</h3>
                     <div className="flex flex-wrap gap-3">
                       <Button variant="primary">Primary</Button>
@@ -193,7 +193,7 @@ export function ComponentShowcasePage() {
                       <Button variant="ghost">Ghost</Button>
                     </div>
                   </Card>
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Sizes</h3>
                     <div className="flex flex-wrap items-center gap-3">
                       <Button size="sm">Small</Button>
@@ -201,7 +201,7 @@ export function ComponentShowcasePage() {
                       <Button size="lg">Large</Button>
                     </div>
                   </Card>
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">With Icons</h3>
                     <div className="flex flex-wrap gap-3">
                       <Button icon={<ShoppingCart className="w-4 h-4" />}>Buy CEA</Button>
@@ -209,7 +209,7 @@ export function ComponentShowcasePage() {
                       <Button variant="ghost" icon={<ArrowRightLeft className="w-4 h-4" />}>Swap</Button>
                     </div>
                   </Card>
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">States</h3>
                     <div className="flex flex-wrap gap-3">
                       <Button disabled>Disabled</Button>
@@ -223,7 +223,7 @@ export function ComponentShowcasePage() {
               <section id="inputs">
                 <h2 className="section-heading text-white mb-2">Form Inputs</h2>
                 <p className="text-muted mb-6">Input fields and form controls</p>
-                <Card variant="hover" className="bg-slate-900 border-slate-800">
+                <Card variant="hover" className="bg-navy-800 border-navy-700">
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <Input label="Email Address" placeholder="name@company.com" />
@@ -276,7 +276,7 @@ export function ComponentShowcasePage() {
               <section id="badges">
                 <h2 className="section-heading text-white mb-2">Badges</h2>
                 <p className="text-muted mb-6">Status badges and labels</p>
-                <Card variant="hover" className="bg-slate-900 border-slate-800">
+                <Card variant="hover" className="bg-navy-800 border-navy-700">
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-white font-semibold mb-3">Status Badges</h3>
@@ -325,7 +325,7 @@ export function ComponentShowcasePage() {
                 <h2 className="section-heading text-white mb-2">Tabs & Toggles</h2>
                 <p className="text-muted mb-6">Tab navigation and toggle controls</p>
                 <div className="space-y-6">
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Tab Variants</h3>
                     <div className="space-y-4">
                       <div>
@@ -368,7 +368,7 @@ export function ComponentShowcasePage() {
                       </div>
                     </div>
                   </Card>
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Toggle Groups</h3>
                     <div className="space-y-4">
                       <div>
@@ -450,7 +450,7 @@ export function ComponentShowcasePage() {
               <section id="certificates">
                 <h2 className="section-heading text-white mb-2">Certificate Displays</h2>
                 <p className="text-muted mb-6">Certificate type badges and indicators</p>
-                <Card variant="hover" className="bg-slate-900 border-slate-800">
+                <Card variant="hover" className="bg-navy-800 border-navy-700">
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-white font-semibold mb-3">Certificate Badges</h3>
@@ -489,25 +489,25 @@ export function ComponentShowcasePage() {
               <section id="trading">
                 <h2 className="section-heading text-white mb-2">Trading Components</h2>
                 <p className="text-muted mb-6">Order book and trading interface elements</p>
-                <Card variant="hover" className="bg-slate-900 border-slate-800">
+                <Card variant="hover" className="bg-navy-800 border-navy-700">
                   <h3 className="text-white font-semibold mb-4">Depth Bars</h3>
                   <div className="space-y-2">
-                    <div className="relative h-8 bg-slate-800 rounded flex items-center px-4">
+                    <div className="relative h-8 bg-navy-700 rounded flex items-center px-4">
                       <DepthBar percentage={80} side="bid" />
                       <span className="relative z-10 text-sm price-positive">80.24 (80%)</span>
                     </div>
-                    <div className="relative h-8 bg-slate-800 rounded flex items-center px-4">
+                    <div className="relative h-8 bg-navy-700 rounded flex items-center px-4">
                       <DepthBar percentage={60} side="bid" />
                       <span className="relative z-10 text-sm price-positive">80.22 (60%)</span>
                     </div>
                     <div className="h-4 flex items-center justify-center text-xs text-muted">
                       Spread: 0.02
                     </div>
-                    <div className="relative h-8 bg-slate-800 rounded flex items-center px-4">
+                    <div className="relative h-8 bg-navy-700 rounded flex items-center px-4">
                       <DepthBar percentage={45} side="ask" />
                       <span className="relative z-10 text-sm price-negative">80.26 (45%)</span>
                     </div>
-                    <div className="relative h-8 bg-slate-800 rounded flex items-center px-4">
+                    <div className="relative h-8 bg-navy-700 rounded flex items-center px-4">
                       <DepthBar percentage={70} side="ask" />
                       <span className="relative z-10 text-sm price-negative">80.28 (70%)</span>
                     </div>
@@ -520,7 +520,7 @@ export function ComponentShowcasePage() {
                 <h2 className="section-heading text-white mb-2">Loading & Feedback</h2>
                 <p className="text-muted mb-6">Loading states and progress indicators</p>
                 <div className="space-y-6">
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Skeleton Loaders</h3>
                     <div className="space-y-4">
                       <div>
@@ -539,7 +539,7 @@ export function ComponentShowcasePage() {
                       </div>
                     </div>
                   </Card>
-                  <Card variant="hover" className="bg-slate-900 border-slate-800">
+                  <Card variant="hover" className="bg-navy-800 border-navy-700">
                     <h3 className="text-white font-semibold mb-4">Progress Bars</h3>
                     <div className="space-y-4">
                       <ProgressBar value={40} showLabel label="Transfer Progress" />
@@ -555,7 +555,7 @@ export function ComponentShowcasePage() {
               <section id="layout">
                 <h2 className="section-heading text-white mb-2">Layout Utilities</h2>
                 <p className="text-muted mb-6">Layout patterns and spacing</p>
-                <Card variant="hover" className="bg-slate-900 border-slate-800">
+                <Card variant="hover" className="bg-navy-800 border-navy-700">
                   <h3 className="text-white font-semibold mb-4">Dividers</h3>
                   <div className="space-y-4">
                     <div>
@@ -574,7 +574,7 @@ export function ComponentShowcasePage() {
                     </div>
                   </div>
                 </Card>
-                <Card variant="hover" className="bg-slate-900 border-slate-800 mt-6">
+                <Card variant="hover" className="bg-navy-800 border-navy-700 mt-6">
                   <h3 className="text-white font-semibold mb-4">Page Header</h3>
                   <PageHeader
                     title="Dashboard"
