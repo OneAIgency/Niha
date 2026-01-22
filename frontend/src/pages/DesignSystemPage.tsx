@@ -23,7 +23,6 @@ import {
   Upload,
   RefreshCw,
   BarChart3,
-  PieChart,
   Activity,
 } from 'lucide-react';
 
