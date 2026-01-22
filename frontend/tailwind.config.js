@@ -7,7 +7,49 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      // =============================================================================
+      // DESIGN SYSTEM COLORS
+      // =============================================================================
+      //
+      // This application uses a standardized color system built on three palettes:
+      //
+      // 1. NAVY (Primary Neutrals)
+      //    - Replaces ALL slate-* and gray-* colors throughout the application
+      //    - Used for: backgrounds, borders, text, surfaces, and muted elements
+      //    - Light mode: navy-50 to navy-200 for backgrounds, navy-600+ for text
+      //    - Dark mode: navy-800 to navy-900 for backgrounds, navy-400- for text
+      //
+      // 2. EMERALD (Brand / Primary Actions)
+      //    - Used for: primary buttons, success states, bid/buy indicators
+      //    - Represents positive actions and the brand identity
+      //
+      // 3. PRIMARY (Sky Blue Accent)
+      //    - Secondary accent color for highlights and interactive elements
+      //
+      // COLOR MIGRATION (if you see legacy colors):
+      //    slate-950 → navy-900    |    gray-100 → navy-100
+      //    slate-900 → navy-800    |    gray-200 → navy-200
+      //    slate-800 → navy-700    |    gray-300 → navy-300
+      //    slate-700 → navy-600    |    gray-400 → navy-400
+      //    slate-600 → navy-500    |    gray-500 → navy-500
+      //
+      // FOR THEME-AWARE COLORS IN CHARTS/SVG:
+      //    Use CSS variables defined in src/styles/design-tokens.css:
+      //    - var(--color-bid)       → Emerald for buy orders
+      //    - var(--color-ask)       → Red for sell orders
+      //    - var(--color-eua)       → Blue for EUA certificates
+      //    - var(--color-cea)       → Amber for CEA certificates
+      //    - var(--color-primary)   → Brand color
+      //    - var(--color-background), var(--color-surface), etc.
+      //
+      // DOCUMENTATION:
+      //    - Full Guide: docs/DESIGN_SYSTEM.md
+      //    - Dev Rules: .claude/CLAUDE.md
+      //    - Live Showcase: http://localhost:5173/design-system
+      //
+      // =============================================================================
       colors: {
+        // Sky blue accent palette - used for secondary highlights
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -21,32 +63,42 @@ export default {
           900: '#0c4a6e',
           950: '#082f49',
         },
+
+        // Navy: Standardized neutral palette (REPLACES slate-* and gray-*)
+        // Usage: bg-navy-800 (dark bg), text-navy-600 (muted text), border-navy-200
+        // Always pair with dark: variants for theme support
         navy: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
+          50: '#f8fafc',   // Lightest - subtle backgrounds in light mode
+          100: '#f1f5f9',  // Light backgrounds, hover states in light mode
+          200: '#e2e8f0',  // Borders in light mode, muted backgrounds
+          300: '#cbd5e1',  // Disabled states, subtle borders
+          400: '#94a3b8',  // Muted text in dark mode, placeholders
+          500: '#64748b',  // Secondary text (both modes)
+          600: '#475569',  // Primary text in light mode
+          700: '#334155',  // Dark backgrounds in light mode, borders in dark mode
+          800: '#1e293b',  // Primary dark mode background (cards, surfaces)
+          900: '#0f172a',  // Darkest background (page background in dark mode)
+          950: '#020617',  // Reserved for extreme contrast needs
         },
+
+        // Emerald: Brand color and positive actions
+        // Usage: bg-emerald-500 (buttons), text-emerald-600 (links), bid/buy indicators
         emerald: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          300: '#6ee7b7',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
-          900: '#064e3b',
-          950: '#022c22',
+          50: '#ecfdf5',   // Success backgrounds (light mode)
+          100: '#d1fae5',  // Hover states for success elements
+          200: '#a7f3d0',  // Light success accents
+          300: '#6ee7b7',  // Success indicators
+          400: '#34d399',  // Success text in dark mode
+          500: '#10b981',  // Primary brand color - buttons, links
+          600: '#059669',  // Hover state for primary buttons, text in light mode
+          700: '#047857',  // Active/pressed states
+          800: '#065f46',  // Dark success accents
+          900: '#064e3b',  // Darkest success
+          950: '#022c22',  // Reserved for extreme contrast
         },
+
+        // Note: Additional colors (red, blue, amber) are available via Tailwind defaults
+        // and are used for: ask/sell (red), EUA certificates (blue), CEA certificates (amber)
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
