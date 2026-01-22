@@ -32,9 +32,9 @@ export function LearnMorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-navy-800 via-navy-700 to-navy-800 text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50">
+      <header className="sticky top-0 z-50 bg-navy-800/80 backdrop-blur-lg border-b border-navy-600/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
@@ -45,12 +45,12 @@ export function LearnMorePage() {
                 <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                   Nihao Group
                 </h1>
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Carbon Bridge</span>
+                <span className="text-xs text-navy-400 uppercase tracking-wider">Carbon Bridge</span>
               </div>
             </div>
             <Link
               to="/onboarding"
-              className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-navy-300 hover:text-white hover:bg-navy-600/50 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Onboarding
@@ -77,7 +77,7 @@ export function LearnMorePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl text-slate-300 max-w-3xl mx-auto mb-12"
+            className="text-xl text-navy-300 max-w-3xl mx-auto mb-12"
           >
             Understand how EU and China carbon markets work, and how Nihao Group bridges these two worlds
             to create unique opportunities for qualified partners.
@@ -98,12 +98,12 @@ export function LearnMorePage() {
             ].map((stat, i) => (
               <div
                 key={i}
-                className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 hover:border-emerald-500/50 transition-colors"
+                className="bg-navy-700/50 border border-navy-600 rounded-2xl p-4 hover:border-emerald-500/50 transition-colors"
               >
                 <stat.icon className={`w-8 h-8 ${stat.color} mx-auto mb-2`} />
                 <div className={`text-2xl md:text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-                <div className="text-sm text-slate-400">{stat.label}</div>
-                <div className="text-xs text-slate-500">{stat.sublabel}</div>
+                <div className="text-sm text-navy-400">{stat.label}</div>
+                <div className="text-xs text-navy-400">{stat.sublabel}</div>
               </div>
             ))}
           </motion.div>
@@ -117,7 +117,7 @@ export function LearnMorePage() {
         <section className="mb-12">
           <button
             onClick={() => toggleSection('market')}
-            className="w-full flex items-center justify-between p-6 bg-slate-800/50 border border-slate-700 rounded-2xl hover:border-emerald-500/50 transition-all"
+            className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-xl">
@@ -125,13 +125,13 @@ export function LearnMorePage() {
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold">Understanding Carbon Markets</h3>
-                <p className="text-slate-400">EU ETS vs China ETS - Key Differences</p>
+                <p className="text-navy-400">EU ETS vs China ETS - Key Differences</p>
               </div>
             </div>
             {expandedSection === 'market' ? (
-              <ChevronUp className="w-6 h-6 text-slate-400" />
+              <ChevronUp className="w-6 h-6 text-navy-400" />
             ) : (
-              <ChevronDown className="w-6 h-6 text-slate-400" />
+              <ChevronDown className="w-6 h-6 text-navy-400" />
             )}
           </button>
 
@@ -144,7 +144,7 @@ export function LearnMorePage() {
               {/* Price Comparison Cards */}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* EU ETS Card */}
-                <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -157,30 +157,30 @@ export function LearnMorePage() {
                   </div>
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-4xl font-bold text-blue-400">€88</span>
-                    <span className="text-slate-400">/tCO2</span>
+                    <span className="text-navy-400">/tCO2</span>
                   </div>
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Market Maturity</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Market Maturity</span>
                       <span className="text-white font-medium">Since 2005 (20 years)</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Daily Volume</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Daily Volume</span>
                       <span className="text-white font-medium">~37M tonnes</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Allocation Method</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Allocation Method</span>
                       <span className="text-white font-medium">57% Auctions</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-slate-400">2030 Forecast</span>
+                      <span className="text-navy-400">2030 Forecast</span>
                       <span className="text-emerald-400 font-medium">€130-150 (+50%)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* China ETS Card */}
-                <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -193,23 +193,23 @@ export function LearnMorePage() {
                   </div>
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-4xl font-bold text-red-400">€10</span>
-                    <span className="text-slate-400">/tCO2 (~¥63)</span>
+                    <span className="text-navy-400">/tCO2 (~¥63)</span>
                   </div>
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Market Maturity</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Market Maturity</span>
                       <span className="text-white font-medium">Since 2021 (3.5 years)</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Daily Volume</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Daily Volume</span>
                       <span className="text-white font-medium">~0.5M tonnes</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-700">
-                      <span className="text-slate-400">Allocation Method</span>
+                    <div className="flex justify-between py-2 border-b border-navy-600">
+                      <span className="text-navy-400">Allocation Method</span>
                       <span className="text-white font-medium">100% Free</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-slate-400">2030 Forecast</span>
+                      <span className="text-navy-400">2030 Forecast</span>
                       <span className="text-emerald-400 font-medium">€25-35 (+200%)</span>
                     </div>
                   </div>
@@ -224,7 +224,7 @@ export function LearnMorePage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-emerald-400 mb-2">The Opportunity</h4>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-navy-300 leading-relaxed">
                       The 8-9x price difference between EU and China carbon markets creates significant
                       arbitrage opportunities. While both markets aim to reduce emissions, their different
                       stages of maturity and regulatory approaches result in vastly different carbon prices.
@@ -242,7 +242,7 @@ export function LearnMorePage() {
         <section className="mb-12">
           <button
             onClick={() => toggleSection('benefits')}
-            className="w-full flex items-center justify-between p-6 bg-slate-800/50 border border-slate-700 rounded-2xl hover:border-emerald-500/50 transition-all"
+            className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-xl">
@@ -250,13 +250,13 @@ export function LearnMorePage() {
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold">Who Benefits from Our Platform</h3>
-                <p className="text-slate-400">Three types of partners, each with unique advantages</p>
+                <p className="text-navy-400">Three types of partners, each with unique advantages</p>
               </div>
             </div>
             {expandedSection === 'benefits' ? (
-              <ChevronUp className="w-6 h-6 text-slate-400" />
+              <ChevronUp className="w-6 h-6 text-navy-400" />
             ) : (
-              <ChevronDown className="w-6 h-6 text-slate-400" />
+              <ChevronDown className="w-6 h-6 text-navy-400" />
             )}
           </button>
 
@@ -267,104 +267,104 @@ export function LearnMorePage() {
               className="mt-4 grid md:grid-cols-3 gap-6"
             >
               {/* Chinese CEA Sellers */}
-              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-red-500/50 transition-all">
+              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-red-500/50 transition-all">
                 <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mb-4">
                   <Factory className="w-7 h-7 text-white" />
                 </div>
                 <h4 className="text-lg font-bold mb-2">Chinese CEA Sellers</h4>
-                <p className="text-slate-400 text-sm mb-4">
+                <p className="text-navy-400 text-sm mb-4">
                   Power plants and industrial facilities with surplus emission allowances
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">15-20% better prices than Shanghai Exchange</span>
+                    <span className="text-sm text-navy-300">15-20% better prices than Shanghai Exchange</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Settlement in 48 hours vs 3-5 weeks</span>
+                    <span className="text-sm text-navy-300">Settlement in 48 hours vs 3-5 weeks</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Export VAT treatment (0% vs 6%)</span>
+                    <span className="text-sm text-navy-300">Export VAT treatment (0% vs 6%)</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Complete confidentiality (no market signal)</span>
+                    <span className="text-sm text-navy-300">Complete confidentiality (no market signal)</span>
                   </div>
                 </div>
                 <div className="mt-4 p-3 bg-red-500/10 rounded-lg">
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Example Gain</div>
+                  <div className="text-xs text-navy-400 uppercase tracking-wider mb-1">Example Gain</div>
                   <div className="text-xl font-bold text-red-400">+€2M</div>
-                  <div className="text-xs text-slate-400">on 2M CEA sale vs exchange</div>
+                  <div className="text-xs text-navy-400">on 2M CEA sale vs exchange</div>
                 </div>
               </div>
 
               {/* EU Buyers & Swappers */}
-              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-blue-500/50 transition-all">
+              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-blue-500/50 transition-all">
                 <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4">
                   <Building2 className="w-7 h-7 text-white" />
                 </div>
                 <h4 className="text-lg font-bold mb-2">EU Industrial Partners</h4>
-                <p className="text-slate-400 text-sm mb-4">
+                <p className="text-navy-400 text-sm mb-4">
                   European companies with EUA holdings or compliance needs
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Access China market without WFOE setup</span>
+                    <span className="text-sm text-navy-300">Access China market without WFOE setup</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">CBAM optimization for imports</span>
+                    <span className="text-sm text-navy-300">CBAM optimization for imports</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">EUA→CEA swap for diversification</span>
+                    <span className="text-sm text-navy-300">EUA→CEA swap for diversification</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Supply chain carbon cost reduction</span>
+                    <span className="text-sm text-navy-300">Supply chain carbon cost reduction</span>
                   </div>
                 </div>
                 <div className="mt-4 p-3 bg-blue-500/10 rounded-lg">
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">CBAM Savings</div>
+                  <div className="text-xs text-navy-400 uppercase tracking-wider mb-1">CBAM Savings</div>
                   <div className="text-xl font-bold text-blue-400">€40/tonne</div>
-                  <div className="text-xs text-slate-400">on steel/aluminum imports</div>
+                  <div className="text-xs text-navy-400">on steel/aluminum imports</div>
                 </div>
               </div>
 
               {/* Investment Funds */}
-              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-purple-500/50 transition-all">
+              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-purple-500/50 transition-all">
                 <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
                   <Briefcase className="w-7 h-7 text-white" />
                 </div>
                 <h4 className="text-lg font-bold mb-2">Investment Funds</h4>
-                <p className="text-slate-400 text-sm mb-4">
+                <p className="text-navy-400 text-sm mb-4">
                   Pension funds, sovereign wealth, and climate-focused investors
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Geographic diversification (EU + China)</span>
+                    <span className="text-sm text-navy-300">Geographic diversification (EU + China)</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Higher upside potential in CEA</span>
+                    <span className="text-sm text-navy-300">Higher upside potential in CEA</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Secure custody in Hong Kong</span>
+                    <span className="text-sm text-navy-300">Secure custody in Hong Kong</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-300">Professional exit liquidity</span>
+                    <span className="text-sm text-navy-300">Professional exit liquidity</span>
                   </div>
                 </div>
                 <div className="mt-4 p-3 bg-purple-500/10 rounded-lg">
-                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">CEA Upside</div>
+                  <div className="text-xs text-navy-400 uppercase tracking-wider mb-1">CEA Upside</div>
                   <div className="text-xl font-bold text-purple-400">+200%</div>
-                  <div className="text-xs text-slate-400">projected by 2030</div>
+                  <div className="text-xs text-navy-400">projected by 2030</div>
                 </div>
               </div>
             </motion.div>
@@ -375,7 +375,7 @@ export function LearnMorePage() {
         <section className="mb-12">
           <button
             onClick={() => toggleSection('swap')}
-            className="w-full flex items-center justify-between p-6 bg-slate-800/50 border border-slate-700 rounded-2xl hover:border-emerald-500/50 transition-all"
+            className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-xl">
@@ -383,13 +383,13 @@ export function LearnMorePage() {
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold">EUA↔CEA Swap Mechanism</h3>
-                <p className="text-slate-400">How cross-border certificate swaps work</p>
+                <p className="text-navy-400">How cross-border certificate swaps work</p>
               </div>
             </div>
             {expandedSection === 'swap' ? (
-              <ChevronUp className="w-6 h-6 text-slate-400" />
+              <ChevronUp className="w-6 h-6 text-navy-400" />
             ) : (
-              <ChevronDown className="w-6 h-6 text-slate-400" />
+              <ChevronDown className="w-6 h-6 text-navy-400" />
             )}
           </button>
 
@@ -402,46 +402,46 @@ export function LearnMorePage() {
               {/* Comparison: Direct Sale vs Swap */}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Direct Sale Option */}
-                <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-sm font-bold">A</div>
-                    <h4 className="font-bold text-slate-300">Traditional Route: Sell EUA → Buy CEA</h4>
+                    <div className="w-8 h-8 bg-navy-500 rounded-full flex items-center justify-center text-sm font-bold">A</div>
+                    <h4 className="font-bold text-navy-300">Traditional Route: Sell EUA → Buy CEA</h4>
                   </div>
-                  <div className="bg-slate-900/50 rounded-lg p-4 font-mono text-sm space-y-2 mb-4">
+                  <div className="bg-navy-800/50 rounded-lg p-4 font-mono text-sm space-y-2 mb-4">
                     <div className="flex gap-2">
-                      <span className="text-slate-500">1.</span>
-                      <span className="text-slate-300">Sell 100,000 EUA on EU market at €88/t</span>
+                      <span className="text-navy-400">1.</span>
+                      <span className="text-navy-300">Sell 100,000 EUA on EU market at €88/t</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">2.</span>
-                      <span className="text-slate-300">Receive <span className="text-amber-400">€8.8M</span> in cash</span>
+                      <span className="text-navy-400">2.</span>
+                      <span className="text-navy-300">Receive <span className="text-amber-400">€8.8M</span> in cash</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">3.</span>
-                      <span className="text-slate-300">Transfer cash to China (SAFE approval)</span>
+                      <span className="text-navy-400">3.</span>
+                      <span className="text-navy-300">Transfer cash to China (SAFE approval)</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">4.</span>
+                      <span className="text-navy-400">4.</span>
                       <span className="text-red-400">Wait 2-4 weeks for capital controls</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">5.</span>
-                      <span className="text-slate-300">Convert EUR→RMB (<span className="text-red-400">-1.5% FX spread</span>)</span>
+                      <span className="text-navy-400">5.</span>
+                      <span className="text-navy-300">Convert EUR→RMB (<span className="text-red-400">-1.5% FX spread</span>)</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">6.</span>
-                      <span className="text-slate-300">Buy CEA on Shanghai market</span>
+                      <span className="text-navy-400">6.</span>
+                      <span className="text-navy-300">Buy CEA on Shanghai market</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">7.</span>
-                      <span className="text-slate-300">Obtain ~<span className="text-amber-400">1,089,523 CEA</span></span>
+                      <span className="text-navy-400">7.</span>
+                      <span className="text-navy-300">Obtain ~<span className="text-amber-400">1,089,523 CEA</span></span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <h5 className="text-red-400 font-medium flex items-center gap-2">
                       <XCircle className="w-4 h-4" /> Issues
                     </h5>
-                    <ul className="space-y-1 text-sm text-slate-400">
+                    <ul className="space-y-1 text-sm text-navy-400">
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
                         Capital controls delay: 2-4 weeks
@@ -463,7 +463,7 @@ export function LearnMorePage() {
                 </div>
 
                 {/* Swap Option */}
-                <div className="bg-slate-800/50 border-2 border-emerald-500/50 rounded-2xl p-6 relative">
+                <div className="bg-navy-700/50 border-2 border-emerald-500/50 rounded-2xl p-6 relative">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 rounded-full text-sm font-bold">
                     RECOMMENDED
                   </div>
@@ -471,21 +471,21 @@ export function LearnMorePage() {
                     <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-sm font-bold">B</div>
                     <h4 className="font-bold text-emerald-400">Direct Swap via Nihao</h4>
                   </div>
-                  <div className="bg-slate-900/50 rounded-lg p-4 font-mono text-sm space-y-2 mb-4">
+                  <div className="bg-navy-800/50 rounded-lg p-4 font-mono text-sm space-y-2 mb-4">
                     <div className="flex gap-2">
-                      <span className="text-slate-500">1.</span>
-                      <span className="text-slate-300">Swap 100,000 EUA for 1,000,000 CEA</span>
+                      <span className="text-navy-400">1.</span>
+                      <span className="text-navy-300">Swap 100,000 EUA for 1,000,000 CEA</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">2.</span>
+                      <span className="text-navy-400">2.</span>
                       <span className="text-emerald-400">Settlement in 48 hours</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">3.</span>
+                      <span className="text-navy-400">3.</span>
                       <span className="text-emerald-400">Zero cash cross-border transfer</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-slate-500">4.</span>
+                      <span className="text-navy-400">4.</span>
                       <span className="text-emerald-400">Zero FX exposure</span>
                     </div>
                   </div>
@@ -493,7 +493,7 @@ export function LearnMorePage() {
                     <h5 className="text-emerald-400 font-medium flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" /> Benefits
                     </h5>
-                    <ul className="space-y-1 text-sm text-slate-300">
+                    <ul className="space-y-1 text-sm text-navy-300">
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
                         Instant compliance: CEA received immediately
@@ -519,20 +519,20 @@ export function LearnMorePage() {
               <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
                 <h4 className="font-bold text-emerald-400 mb-4">Economic Analysis: 100,000 EUA Swap</h4>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-slate-900/50 rounded-xl">
+                  <div className="text-center p-4 bg-navy-800/50 rounded-xl">
                     <div className="text-2xl font-bold text-emerald-400">€34k</div>
-                    <div className="text-sm text-slate-400">Net Savings</div>
-                    <div className="text-xs text-slate-500">vs traditional route</div>
+                    <div className="text-sm text-navy-400">Net Savings</div>
+                    <div className="text-xs text-navy-400">vs traditional route</div>
                   </div>
-                  <div className="text-center p-4 bg-slate-900/50 rounded-xl">
+                  <div className="text-center p-4 bg-navy-800/50 rounded-xl">
                     <div className="text-2xl font-bold text-blue-400">48h</div>
-                    <div className="text-sm text-slate-400">vs 4 weeks</div>
-                    <div className="text-xs text-slate-500">settlement time</div>
+                    <div className="text-sm text-navy-400">vs 4 weeks</div>
+                    <div className="text-xs text-navy-400">settlement time</div>
                   </div>
-                  <div className="text-center p-4 bg-slate-900/50 rounded-xl">
+                  <div className="text-center p-4 bg-navy-800/50 rounded-xl">
                     <div className="text-2xl font-bold text-amber-400">0%</div>
-                    <div className="text-sm text-slate-400">FX Risk</div>
-                    <div className="text-xs text-slate-500">no currency exposure</div>
+                    <div className="text-sm text-navy-400">FX Risk</div>
+                    <div className="text-xs text-navy-400">no currency exposure</div>
                   </div>
                 </div>
               </div>
@@ -544,7 +544,7 @@ export function LearnMorePage() {
         <section className="mb-12">
           <button
             onClick={() => toggleSection('why')}
-            className="w-full flex items-center justify-between p-6 bg-slate-800/50 border border-slate-700 rounded-2xl hover:border-emerald-500/50 transition-all"
+            className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-xl">
@@ -552,13 +552,13 @@ export function LearnMorePage() {
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold">Why Choose Nihao Group</h3>
-                <p className="text-slate-400">Our unique position and guarantees</p>
+                <p className="text-navy-400">Our unique position and guarantees</p>
               </div>
             </div>
             {expandedSection === 'why' ? (
-              <ChevronUp className="w-6 h-6 text-slate-400" />
+              <ChevronUp className="w-6 h-6 text-navy-400" />
             ) : (
-              <ChevronDown className="w-6 h-6 text-slate-400" />
+              <ChevronDown className="w-6 h-6 text-navy-400" />
             )}
           </button>
 
@@ -609,13 +609,13 @@ export function LearnMorePage() {
                 ].map((item, i) => (
                   <div
                     key={i}
-                    className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 hover:border-slate-500 transition-all"
+                    className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-navy-400 transition-all"
                   >
                     <div className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-4`}>
                       <item.icon className="w-6 h-6 text-white" />
                     </div>
                     <h4 className="font-bold mb-2">{item.title}</h4>
-                    <p className="text-slate-400 text-sm leading-relaxed">{item.description}</p>
+                    <p className="text-navy-400 text-sm leading-relaxed">{item.description}</p>
                   </div>
                 ))}
               </div>
@@ -627,7 +627,7 @@ export function LearnMorePage() {
         <section className="mb-12">
           <button
             onClick={() => toggleSection('onboarding')}
-            className="w-full flex items-center justify-between p-6 bg-slate-800/50 border border-slate-700 rounded-2xl hover:border-emerald-500/50 transition-all"
+            className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center text-xl">
@@ -635,13 +635,13 @@ export function LearnMorePage() {
               </div>
               <div className="text-left">
                 <h3 className="text-xl font-bold">Onboarding Requirements</h3>
-                <p className="text-slate-400">What you need to get started</p>
+                <p className="text-navy-400">What you need to get started</p>
               </div>
             </div>
             {expandedSection === 'onboarding' ? (
-              <ChevronUp className="w-6 h-6 text-slate-400" />
+              <ChevronUp className="w-6 h-6 text-navy-400" />
             ) : (
-              <ChevronDown className="w-6 h-6 text-slate-400" />
+              <ChevronDown className="w-6 h-6 text-navy-400" />
             )}
           </button>
 
@@ -651,8 +651,8 @@ export function LearnMorePage() {
               animate={{ opacity: 1, height: 'auto' }}
               className="mt-4"
             >
-              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-                <p className="text-slate-300 mb-6">
+              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6">
+                <p className="text-navy-300 mb-6">
                   To participate in carbon certificate trading through Nihao Group, your company must complete
                   KYC verification for Union Registry account access. All partners need active accounts in the
                   EU's centralized electronic database for emissions certificates.
@@ -673,10 +673,10 @@ export function LearnMorePage() {
                         { name: 'GHG Permit', note: 'For EU ETS operators only (optional)' },
                       ].map((doc, i) => (
                         <li key={i} className="flex items-start gap-3 text-sm">
-                          <FileText className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                          <FileText className="w-5 h-5 text-navy-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <span className="text-slate-200">{doc.name}</span>
-                            <span className="text-slate-500 block text-xs">{doc.note}</span>
+                            <span className="text-navy-200">{doc.name}</span>
+                            <span className="text-navy-400 block text-xs">{doc.note}</span>
                           </div>
                         </li>
                       ))}
@@ -695,10 +695,10 @@ export function LearnMorePage() {
                         { name: 'Contact Information', note: 'Email and phone for verification' },
                       ].map((doc, i) => (
                         <li key={i} className="flex items-start gap-3 text-sm">
-                          <FileText className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                          <FileText className="w-5 h-5 text-navy-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <span className="text-slate-200">{doc.name}</span>
-                            <span className="text-slate-500 block text-xs">{doc.note}</span>
+                            <span className="text-navy-200">{doc.name}</span>
+                            <span className="text-navy-400 block text-xs">{doc.note}</span>
                           </div>
                         </li>
                       ))}
@@ -711,7 +711,7 @@ export function LearnMorePage() {
                     <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <h5 className="font-medium text-amber-400 mb-1">Review Timeline</h5>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-navy-400">
                         Our team typically reviews applications within 1-2 business days. Complete and accurate
                         documentation speeds up the verification process.
                       </p>
@@ -730,7 +730,7 @@ export function LearnMorePage() {
           className="text-center py-12"
         >
           <h3 className="text-2xl font-bold mb-4">Ready to Get Started?</h3>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+          <p className="text-navy-400 mb-8 max-w-xl mx-auto">
             Complete your KYC verification to unlock access to our carbon trading platform
             and start benefiting from cross-border carbon market opportunities.
           </p>
