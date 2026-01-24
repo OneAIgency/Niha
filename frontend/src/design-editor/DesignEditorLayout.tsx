@@ -1,3 +1,5 @@
+import React from 'react';
+
 interface DesignEditorLayoutProps {
   componentBrowser: React.ReactNode;
   liveCanvas: React.ReactNode;
