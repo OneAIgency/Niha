@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DesignEditorLayout } from '../design-editor/DesignEditorLayout';
 import { ComponentBrowser } from '../design-editor/ComponentBrowser';
 import { LiveCanvas } from '../design-editor/LiveCanvas';
+import { PropsPanel } from '../design-editor/PropsPanel';
 import type { ComponentMetadata } from '../tools/component-registry';
 
 export function DesignEditorPage() {
@@ -27,11 +28,11 @@ export function DesignEditorPage() {
         />
       }
       propsPanel={
-        <div className="p-6">
-          <p className="text-navy-600 dark:text-navy-400">
-            PropsPanel placeholder
-          </p>
-        </div>
+        <PropsPanel
+          component={selectedComponent}
+          props={componentProps}
+          onPropsChange={setComponentProps}
+        />
       }
       codeGenerator={
         <div className="p-6">
