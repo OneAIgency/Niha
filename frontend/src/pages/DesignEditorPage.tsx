@@ -1,27 +1,30 @@
 import { useState } from 'react';
 import { DesignEditorLayout } from '../design-editor/DesignEditorLayout';
 import { ComponentBrowser } from '../design-editor/ComponentBrowser';
+import { LiveCanvas } from '../design-editor/LiveCanvas';
 import type { ComponentMetadata } from '../tools/component-registry';
 
 export function DesignEditorPage() {
   const [selectedComponent, setSelectedComponent] = useState<ComponentMetadata | null>(null);
+  const [componentProps, setComponentProps] = useState<Record<string, any>>({});
 
   return (
     <DesignEditorLayout
       componentBrowser={
         <ComponentBrowser
           selectedComponent={selectedComponent}
-          onSelectComponent={setSelectedComponent}
+          onSelectComponent={(component) => {
+            setSelectedComponent(component);
+            // Reset props when component changes
+            setComponentProps({});
+          }}
         />
       }
       liveCanvas={
-        <div className="flex h-full items-center justify-center p-6">
-          <p className="text-navy-600 dark:text-navy-400">
-            {selectedComponent
-              ? `Selected: ${selectedComponent.name}`
-              : 'Select a component to preview'}
-          </p>
-        </div>
+        <LiveCanvas
+          selectedComponent={selectedComponent}
+          componentProps={componentProps}
+        />
       }
       propsPanel={
         <div className="p-6">
