@@ -182,9 +182,15 @@ export function TradingOrderBook({
     });
   };
 
-  // Take top 10 levels for display
-  const displayBids = bidsWithCumulativeValues.slice(0, 10);
-  const displayAsks = asksWithCumulativeValues.slice(0, 10);
+  // Take top 5 levels for each side (merged layout)
+  const displayBids = bidsWithCumulativeValues.slice(0, 5);
+  const displayAsks = asksWithCumulativeValues.slice(0, 5);
+
+  // Extract best bid/ask for center row
+  // @ts-expect-error - Will be used in subsequent tasks for merged layout
+  const bestBidData = displayBids[0] || null;
+  // @ts-expect-error - Will be used in subsequent tasks for merged layout
+  const bestAskData = displayAsks[0] || null;
 
   /**
    * Checks if a price matches the best bid price.
