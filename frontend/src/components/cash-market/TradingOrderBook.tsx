@@ -187,9 +187,7 @@ export function TradingOrderBook({
   const displayAsks = asksWithCumulativeValues.slice(0, 5);
 
   // Extract best bid/ask for center row
-  // @ts-expect-error - Will be used in subsequent tasks for merged layout
   const bestBidData = displayBids[0] || null;
-  // @ts-expect-error - Will be used in subsequent tasks for merged layout
   const bestAskData = displayAsks[0] || null;
 
   /**
@@ -292,37 +290,7 @@ export function TradingOrderBook({
 
         {/* Orders Container - Single column merged layout */}
         <div className="space-y-0">
-          {displayBids.map((level, idx) => (
-              <div
-                key={`bid-${level.price}-${idx}`}
-                role="row"
-                tabIndex={0}
-                aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total value ${formatEurValue(level.orderValue)} EUR`}
-                className="grid grid-cols-5 gap-2 py-1.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                onClick={() => onPriceClick?.(level.price)}
-                onKeyDown={(e) => handleKeyDown(e, level.price)}
-              >
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatEurValue(level.cumulativeValue)}
-                </div>
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatNumber(level.cumulative_quantity)}
-                </div>
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatEurValue(level.orderValue)}
-                </div>
-                <div className="text-xs text-navy-900 dark:text-white font-mono font-medium text-right tabular-nums">
-                  {formatNumber(level.quantity)}
-                </div>
-                <div className={`text-xs text-right font-mono tabular-nums ${
-                  isBestBid(level.price)
-                    ? 'text-emerald-700 dark:text-emerald-300 font-bold text-sm'
-                    : 'text-emerald-600 dark:text-emerald-400 font-semibold'
-                }`}>
-                  {formatPrice(level.price)}
-                </div>
-              </div>
-            ))}
+          {/* Ask Orders (rendered first - at top) */}
           {displayAsks.map((level, idx) => (
               <div
                 key={`ask-${level.price}-${idx}`}
@@ -351,6 +319,99 @@ export function TradingOrderBook({
                 </div>
                 <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
                   {formatEurValue(level.cumulativeValue)}
+                </div>
+              </div>
+            ))}
+
+          {/* Center Highlight Row - Best Bid and Best Ask */}
+          <div
+            className="grid grid-cols-3 gap-4 py-3 px-4 my-2 bg-gradient-to-r from-emerald-50 via-navy-50 to-red-50 dark:from-emerald-900/20 dark:via-navy-800 dark:to-red-900/20 border-y-2 border-navy-300 dark:border-navy-600"
+            role="status"
+            aria-label={`Best bid ${bestBidData ? formatPrice(bestBidData.price) : 'none'}, best ask ${bestAskData ? formatPrice(bestAskData.price) : 'none'}, spread ${spread !== null && isFinite(spread) ? formatPrice(spread) : 'none'}`}
+          >
+            {/* Left: Best Bid */}
+            <div className="flex flex-col items-start">
+              {bestBidData ? (
+                <>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-0.5">
+                    BID
+                  </span>
+                  <span className="text-base text-emerald-700 dark:text-emerald-300 font-bold font-mono tabular-nums">
+                    {formatPrice(bestBidData.price)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-base text-navy-500 dark:text-navy-400 font-bold">
+                  --
+                </span>
+              )}
+            </div>
+
+            {/* Center: Spread */}
+            <div className="flex items-center justify-center">
+              {spread !== null && isFinite(spread) ? (
+                <div className="bg-white dark:bg-navy-700 rounded-full px-3 py-1 border border-navy-200 dark:border-navy-600">
+                  <span className="text-xs text-navy-600 dark:text-navy-400 font-medium tabular-nums">
+                    Spread: {formatPrice(spread)}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-navy-700 rounded-full px-3 py-1 border border-dashed border-navy-300 dark:border-navy-600">
+                  <span className="text-xs text-navy-500 dark:text-navy-400 font-medium">
+                    No Spread
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Best Ask */}
+            <div className="flex flex-col items-end">
+              {bestAskData ? (
+                <>
+                  <span className="text-xs text-red-600 dark:text-red-400 font-medium mb-0.5">
+                    ASK
+                  </span>
+                  <span className="text-base text-red-700 dark:text-red-300 font-bold font-mono tabular-nums">
+                    {formatPrice(bestAskData.price)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-base text-navy-500 dark:text-navy-400 font-bold">
+                  --
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Bid Orders (rendered second - at bottom) */}
+          {displayBids.map((level, idx) => (
+              <div
+                key={`bid-${level.price}-${idx}`}
+                role="row"
+                tabIndex={0}
+                aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total value ${formatEurValue(level.orderValue)} EUR`}
+                className="grid grid-cols-5 gap-2 py-1.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                onClick={() => onPriceClick?.(level.price)}
+                onKeyDown={(e) => handleKeyDown(e, level.price)}
+              >
+                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
+                  {formatEurValue(level.cumulativeValue)}
+                </div>
+                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
+                  {formatNumber(level.cumulative_quantity)}
+                </div>
+                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
+                  {formatEurValue(level.orderValue)}
+                </div>
+                <div className="text-xs text-navy-900 dark:text-white font-mono font-medium text-right tabular-nums">
+                  {formatNumber(level.quantity)}
+                </div>
+                <div className={`text-xs text-right font-mono tabular-nums ${
+                  isBestBid(level.price)
+                    ? 'text-emerald-700 dark:text-emerald-300 font-bold text-sm'
+                    : 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                }`}>
+                  {formatPrice(level.price)}
                 </div>
               </div>
             ))}
@@ -391,26 +452,6 @@ export function TradingOrderBook({
             </div>
           </div>
         )}
-
-        {/* Center Spread Indicator */}
-        <div className="mt-4 mb-4 relative">
-          {/* Divider Lines */}
-          <div className="absolute inset-x-0 top-1/2 flex items-center">
-            <div className="flex-1 h-px bg-emerald-500 dark:bg-emerald-400"></div>
-            <div className="flex-1 h-px bg-red-500 dark:bg-red-400"></div>
-          </div>
-
-          {/* Center Content - Spread */}
-          <div className="relative flex items-center justify-center py-2">
-            {spread !== null && isFinite(spread) && (
-              <div className="bg-white dark:bg-navy-800 px-3 py-1 rounded border border-navy-200 dark:border-navy-700">
-                <span className="text-xs text-navy-600 dark:text-navy-400 font-medium tabular-nums">
-                  Spread: {formatPrice(spread)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Depth Chart */}
         <div className="mt-8">
