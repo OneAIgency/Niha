@@ -29,6 +29,7 @@ import {
   LoggingPage,
   BackofficeOrderBookPage,
   CreateLiquidityPage,
+  DesignEditorPage,
 } from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -381,6 +382,9 @@ function App() {
           {/* Design System - Comprehensive Token & Component Reference */}
           <Route path="/design-system" element={<DesignSystemPage />} />
         </Route>
+
+        {/* Design Editor - Development Tool (no layout) */}
+        <Route path="/design-editor" element={<DesignEditorPage />} />
 
         {/* Auth routes (no layout) */}
         <Route path="/login" element={<LoginPage />} />

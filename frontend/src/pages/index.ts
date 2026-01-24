@@ -22,6 +22,7 @@ export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';
 export { BackofficeOrderBookPage } from './BackofficeOrderBookPage';
 export { CreateLiquidityPage } from './CreateLiquidityPage';
+export { DesignEditorPage } from './DesignEditorPage';
 
 // Onboarding sub-pages
 export {
