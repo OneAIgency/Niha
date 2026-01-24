@@ -3,6 +3,7 @@ import { DesignEditorLayout } from '../design-editor/DesignEditorLayout';
 import { ComponentBrowser } from '../design-editor/ComponentBrowser';
 import { LiveCanvas } from '../design-editor/LiveCanvas';
 import { PropsPanel } from '../design-editor/PropsPanel';
+import { CodeGenerator } from '../design-editor/CodeGenerator';
 import type { ComponentMetadata } from '../tools/component-registry';
 
 export function DesignEditorPage() {
@@ -35,11 +36,10 @@ export function DesignEditorPage() {
         />
       }
       codeGenerator={
-        <div className="p-6">
-          <p className="text-navy-600 dark:text-navy-400">
-            CodeGenerator placeholder
-          </p>
-        </div>
+        <CodeGenerator
+          component={selectedComponent}
+          props={componentProps}
+        />
       }
     />
   );
