@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Code2, Copy, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Code2, Copy, Check, X } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import type { ComponentMetadata } from '../tools/component-registry';
 
 interface CodeGeneratorProps {
   component: ComponentMetadata | null;
-  props: Record<string, any>;
+  props: Record<string, unknown>;
 }
 
 type Language = 'tsx' | 'jsx';
@@ -13,6 +13,48 @@ type Language = 'tsx' | 'jsx';
 export function CodeGenerator({ component, props }: CodeGeneratorProps) {
   const [language, setLanguage] = useState<Language>('tsx');
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
+  // Memoize generated code to avoid recalculation on every render
+  const generatedCode = useMemo(() => {
+    if (!component) return '';
+
+    // Generate import statement
+    const importStatement = `import { ${component.name} } from '@/components/${component.category}/${component.name}';`;
+
+    // Generate props string
+    const propsString = Object.entries(props)
+      .filter(([, value]) => value !== undefined && value !== '')
+      .map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `${key}="${value}"`;
+        }
+        if (typeof value === 'boolean') {
+          return value ? key : '';  // True: just prop name, False: omit
+        }
+        return `${key}={${JSON.stringify(value)}}`;
+      })
+      .filter(Boolean)
+      .join('\n  ');
+
+    // Generate component usage
+    const componentUsage = propsString
+      ? `<${component.name}\n  ${propsString}\n/>`
+      : `<${component.name} />`;
+
+    return `${importStatement}\n\n${componentUsage}`;
+  }, [component, props]);
+
+  // Memoize stats calculations
+  const propsCount = useMemo(() => {
+    return Object.entries(props).filter(
+      ([, value]) => value !== undefined && value !== ''
+    ).length;
+  }, [props]);
+
+  const lineCount = useMemo(() => {
+    return generatedCode.split('\n').length;
+  }, [generatedCode]);
 
   // Empty state when no component selected
   if (!component) {
@@ -26,46 +68,17 @@ export function CodeGenerator({ component, props }: CodeGeneratorProps) {
     );
   }
 
-  // Generate import statement
-  const importStatement = `import { ${component.name} } from '@/components/${component.category}/${component.name}';`;
-
-  // Generate props string
-  const propsString = Object.entries(props)
-    .filter(([, value]) => value !== undefined && value !== '')
-    .map(([key, value]) => {
-      if (typeof value === 'string') {
-        return `${key}="${value}"`;
-      }
-      if (typeof value === 'boolean') {
-        return value ? key : '';  // True: just prop name, False: omit
-      }
-      return `${key}={${JSON.stringify(value)}}`;
-    })
-    .filter(Boolean)
-    .join('\n  ');
-
-  // Generate component usage
-  const componentUsage = propsString
-    ? `<${component.name}\n  ${propsString}\n/>`
-    : `<${component.name} />`;
-
-  // Final generated code
-  const generatedCode = `${importStatement}\n\n${componentUsage}`;
-
-  // Calculate stats
-  const propsCount = Object.entries(props).filter(
-    ([, value]) => value !== undefined && value !== ''
-  ).length;
-  const lineCount = generatedCode.split('\n').length;
-
-  // Copy to clipboard handler
+  // Copy to clipboard handler with error feedback
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(generatedCode);
       setCopied(true);
+      setCopyError(false);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      setCopyError(true);
+      setTimeout(() => setCopyError(false), 2000);
     }
   };
 
@@ -85,6 +98,8 @@ export function CodeGenerator({ component, props }: CodeGeneratorProps) {
           <div className="inline-flex rounded-lg bg-navy-100 dark:bg-navy-700 p-1">
             <button
               onClick={() => setLanguage('tsx')}
+              aria-label="Switch to TypeScript JSX"
+              aria-pressed={language === 'tsx'}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
                 language === 'tsx'
                   ? 'bg-emerald-500 text-white shadow-lg'
@@ -95,6 +110,8 @@ export function CodeGenerator({ component, props }: CodeGeneratorProps) {
             </button>
             <button
               onClick={() => setLanguage('jsx')}
+              aria-label="Switch to JavaScript JSX"
+              aria-pressed={language === 'jsx'}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
                 language === 'jsx'
                   ? 'bg-emerald-500 text-white shadow-lg'
@@ -108,12 +125,22 @@ export function CodeGenerator({ component, props }: CodeGeneratorProps) {
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl"
+            aria-label={copied ? 'Code copied to clipboard' : copyError ? 'Failed to copy code' : 'Copy code to clipboard'}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl ${
+              copyError
+                ? 'bg-red-500 hover:bg-red-600 shadow-red-500/25'
+                : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
+            }`}
           >
             {copied ? (
               <>
                 <Check className="h-4 w-4" />
                 Copied!
+              </>
+            ) : copyError ? (
+              <>
+                <X className="h-4 w-4" />
+                Failed
               </>
             ) : (
               <>
