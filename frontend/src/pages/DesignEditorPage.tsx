@@ -22,7 +22,7 @@ export function DesignEditorPage() {
       }
       liveCanvas={
         <LiveCanvas
-          selectedComponent={selectedComponent}
+          component={selectedComponent}
           componentProps={componentProps}
         />
       }

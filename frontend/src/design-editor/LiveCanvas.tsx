@@ -6,7 +6,7 @@ import type { ComponentMetadata } from '../tools/component-registry';
 type Viewport = 'desktop' | 'tablet' | 'mobile';
 
 interface LiveCanvasProps {
-  selectedComponent: ComponentMetadata | null;
+  component: ComponentMetadata | null;
   componentProps: Record<string, any>;
 }
 
@@ -22,7 +22,7 @@ const VIEWPORT_ICONS = {
   mobile: Smartphone,
 };
 
-export function LiveCanvas({ selectedComponent, componentProps }: LiveCanvasProps) {
+export function LiveCanvas({ component, componentProps }: LiveCanvasProps) {
   const [viewport, setViewport] = useState<Viewport>('desktop');
   const [isDark, setIsDark] = useState(false);
 
@@ -66,7 +66,7 @@ export function LiveCanvas({ selectedComponent, componentProps }: LiveCanvasProp
       {/* Preview Area */}
       <div className="flex-1 overflow-auto p-8">
         <div className="flex h-full items-center justify-center">
-          {selectedComponent ? (
+          {component ? (
             <div
               className={`${VIEWPORT_SIZES[viewport]} transition-all duration-300 ${
                 isDark ? 'dark' : ''
@@ -74,7 +74,7 @@ export function LiveCanvas({ selectedComponent, componentProps }: LiveCanvasProp
             >
               <div className="rounded-2xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 p-6 shadow-lg">
                 <ComponentLoader
-                  metadata={selectedComponent}
+                  metadata={component}
                   props={componentProps}
                 />
               </div>
@@ -92,6 +92,16 @@ export function LiveCanvas({ selectedComponent, componentProps }: LiveCanvasProp
           )}
         </div>
       </div>
+
+      {/* Component Info Footer */}
+      {component && (
+        <div className="border-t border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-4 py-2">
+          <div className="flex items-center justify-between text-xs text-navy-600 dark:text-navy-400">
+            <span>Path: {component.path}</span>
+            <span>{component.props.length} props</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
