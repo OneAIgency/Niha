@@ -388,37 +388,46 @@ export function TradingOrderBook({
           </div>
         </div>
 
-        {/* Totals Row - Below orders container */}
-        {/* Show totals if either side has data, handling partial data scenarios gracefully */}
+        {/* Totals Summary - Below bids */}
         {(displayBids.length > 0 || displayAsks.length > 0) && (
           <div className="mt-4 pt-3 border-t border-navy-200 dark:border-navy-700">
             <div className="grid grid-cols-2 gap-8">
               {/* Bid Totals */}
               {displayBids.length > 0 ? (
-                <div className="flex items-center justify-between gap-4 border-r border-navy-200 dark:border-navy-700 pr-4">
-                  <div className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
-                    {formatEurValue(bidLiquidity.value)} EUR
-                  </div>
-                  <div className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
-                    {formatNumber(bidLiquidity.volume)} cert.
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
+                    Total Bids
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                      {formatEurValue(bidLiquidity.value)} EUR
+                    </span>
+                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                      {formatNumber(bidLiquidity.volume)} cert.
+                    </span>
                   </div>
                 </div>
               ) : (
-                <div className="border-r border-navy-200 dark:border-navy-700 pr-4"></div>
+                <div></div>
               )}
 
               {/* Ask Totals */}
               {displayAsks.length > 0 ? (
-                <div className="flex items-center justify-between gap-4 pl-4">
-                  <div className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
-                    {formatNumber(askLiquidity.volume)} cert.
-                  </div>
-                  <div className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
-                    {formatEurValue(askLiquidity.value)} EUR
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wide">
+                    Total Asks
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                      {formatEurValue(askLiquidity.value)} EUR
+                    </span>
+                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                      {formatNumber(askLiquidity.volume)} cert.
+                    </span>
                   </div>
                 </div>
               ) : (
-                <div className="pl-4"></div>
+                <div></div>
               )}
             </div>
           </div>
