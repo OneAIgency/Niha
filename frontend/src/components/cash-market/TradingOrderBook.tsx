@@ -53,7 +53,7 @@ const validateOrderBookLevel = (level: OrderBookLevel | null | undefined): boole
  *
  * Displays a comprehensive order book with merged vertical layout:
  * - Simplified 3-column display (Price | Volume | Total EUR)
- * - Ask orders flow from top (highest to lowest)
+ * - Ask orders displayed from top to bottom (best ask to higher prices)
  * - Prominent center row showing best bid, best ask, and spread
  * - Bid orders flow below center (highest to lowest)
  * - Totals summary showing bid and ask liquidity
