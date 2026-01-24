@@ -277,32 +277,9 @@ export function TradingOrderBook({
 
       {/* Order Book Table */}
       <div className="px-4 py-4">
-        {/* Column Headers */}
-        <div className="grid grid-cols-2 gap-8 mb-3">
-          {/* Bids Headers */}
-          <div className="grid grid-cols-5 gap-2 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider border-r border-navy-200 dark:border-navy-700 pr-4">
-            <div className="text-right">Total Value (EUR)</div>
-            <div className="text-right">Total Volume</div>
-            <div className="text-right">Value (EUR)</div>
-            <div className="text-right">Volume</div>
-            <div className="text-right">Price</div>
-          </div>
-
-          {/* Asks Headers */}
-          <div className="grid grid-cols-5 gap-2 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider pl-4">
-            <div className="text-left">Price</div>
-            <div className="text-right">Volume</div>
-            <div className="text-right">Value (EUR)</div>
-            <div className="text-right">Total Volume</div>
-            <div className="text-right">Total Value (EUR)</div>
-          </div>
-        </div>
-
-        {/* Orders Container - Contains all bid and ask orders */}
-        <div className="grid grid-cols-2 gap-8">
-          {/* Bids Column */}
-          <div className="space-y-0.5 border-r border-navy-200 dark:border-navy-700 pr-4">
-            {displayBids.map((level, idx) => (
+        {/* Orders Container - Single column merged layout */}
+        <div className="space-y-0">
+          {displayBids.map((level, idx) => (
               <div
                 key={`bid-${level.price}-${idx}`}
                 role="row"
@@ -333,11 +310,7 @@ export function TradingOrderBook({
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Asks Column */}
-          <div className="space-y-0.5 pl-4">
-            {displayAsks.map((level, idx) => (
+          {displayAsks.map((level, idx) => (
               <div
                 key={`ask-${level.price}-${idx}`}
                 role="row"
@@ -368,7 +341,6 @@ export function TradingOrderBook({
                 </div>
               </div>
             ))}
-          </div>
         </div>
 
         {/* Totals Row - Below orders container */}
