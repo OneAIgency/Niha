@@ -8,6 +8,22 @@ interface NumberControlProps {
 }
 
 export function NumberControl({ label, value, optional, onChange, min, max }: NumberControlProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    // Allow empty string (user clearing input)
+    if (val === '') {
+      onChange(0);
+      return;
+    }
+
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      onChange(num);
+    }
+    // If invalid, don't call onChange (input stays at current value)
+  };
+
   return (
     <div>
       <label className="mb-2 block text-sm font-medium text-navy-900 dark:text-white">
@@ -21,7 +37,7 @@ export function NumberControl({ label, value, optional, onChange, min, max }: Nu
       <input
         type="number"
         value={value ?? 0}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onChange={handleChange}
         placeholder={`Enter ${label.toLowerCase()}...`}
         min={min}
         max={max}

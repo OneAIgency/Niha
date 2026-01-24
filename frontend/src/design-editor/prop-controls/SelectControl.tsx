@@ -7,6 +7,25 @@ interface SelectControlProps {
 }
 
 export function SelectControl({ label, value, optional, options, onChange }: SelectControlProps) {
+  // Validate options array is not empty
+  if (options.length === 0) {
+    return (
+      <div>
+        <label className="mb-2 block text-sm font-medium text-navy-900 dark:text-white">
+          {label}
+          {optional && (
+            <span className="ml-1 text-xs text-navy-500 dark:text-navy-500">
+              (optional)
+            </span>
+          )}
+        </label>
+        <div className="w-full rounded-lg border-2 border-red-200 dark:border-red-600 bg-red-50 dark:bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400">
+          Invalid options for this prop
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="mb-2 block text-sm font-medium text-navy-900 dark:text-white">

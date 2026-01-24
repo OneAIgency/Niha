@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import type { ComponentMetadata } from '../tools/component-registry';
 import { StringControl } from './prop-controls/StringControl';
@@ -28,10 +29,11 @@ const inferControlType = (type: string): ControlType => {
 /**
  * Extract string literal options from a union type
  * e.g., "'primary' | 'secondary' | 'ghost'" => ['primary', 'secondary', 'ghost']
+ * Handles both single and double quoted strings
  */
 const extractOptions = (type: string): string[] => {
-  const matches = type.match(/'([^']+)'/g);
-  return matches ? matches.map(m => m.replace(/'/g, '')) : [];
+  const matches = type.match(/['"]([^'"]+)['"]/g);
+  return matches ? matches.map(m => m.replace(/['"]/g, '')) : [];
 };
 
 export function PropsPanel({ component, props, onPropsChange }: PropsPanelProps) {
@@ -51,6 +53,17 @@ export function PropsPanel({ component, props, onPropsChange }: PropsPanelProps)
 
   // Check if any props have been set
   const hasSetProps = Object.keys(props).length > 0;
+
+  // Memoize controls to avoid re-computing on every render
+  const controls = useMemo(() => {
+    if (!component) return [];
+
+    return component.props.map(prop => ({
+      prop,
+      controlType: inferControlType(prop.type),
+      options: inferControlType(prop.type) === 'select' ? extractOptions(prop.type) : []
+    }));
+  }, [component]);
 
   // Empty state: no component selected
   if (!component) {
@@ -96,8 +109,7 @@ export function PropsPanel({ component, props, onPropsChange }: PropsPanelProps)
       {/* Scrollable Body with Controls */}
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-4">
-          {component.props.map((prop) => {
-            const controlType = inferControlType(prop.type);
+          {controls.map(({ prop, controlType, options }) => {
             const currentValue = props[prop.name];
 
             switch (controlType) {
@@ -123,8 +135,7 @@ export function PropsPanel({ component, props, onPropsChange }: PropsPanelProps)
                   />
                 );
 
-              case 'select': {
-                const options = extractOptions(prop.type);
+              case 'select':
                 return (
                   <SelectControl
                     key={prop.name}
@@ -135,7 +146,6 @@ export function PropsPanel({ component, props, onPropsChange }: PropsPanelProps)
                     onChange={(value) => handlePropChange(prop.name, value)}
                   />
                 );
-              }
 
               case 'string':
               default:

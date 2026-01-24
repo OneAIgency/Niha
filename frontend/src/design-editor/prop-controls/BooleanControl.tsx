@@ -8,6 +8,13 @@ interface BooleanControlProps {
 export function BooleanControl({ label, value, optional, onChange }: BooleanControlProps) {
   const isChecked = value ?? false;
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      onChange(!isChecked);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between">
       <label className="text-sm font-medium text-navy-900 dark:text-white">
@@ -20,6 +27,7 @@ export function BooleanControl({ label, value, optional, onChange }: BooleanCont
       </label>
       <button
         onClick={() => onChange(!isChecked)}
+        onKeyDown={handleKeyDown}
         className={`relative h-6 w-11 rounded-full transition-all ${
           isChecked
             ? 'bg-emerald-500'
