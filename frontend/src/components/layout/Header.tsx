@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Users, Briefcase, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, User, Sun, Moon, Settings, Users, Briefcase, ChevronDown, Palette } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
@@ -261,6 +261,18 @@ export function Header() {
                             >
                               <Briefcase className="w-4 h-4" />
                               Backoffice
+                            </button>
+                            <button
+                              onClick={() => handleMenuItemClick('/design-editor')}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                                isDark
+                                  ? 'text-navy-200 hover:bg-navy-700'
+                                  : 'text-navy-700 hover:bg-navy-50'
+                              )}
+                            >
+                              <Palette className="w-4 h-4" />
+                              Design Editor
                             </button>
                           </>
                         )}
