@@ -39,7 +39,7 @@ export function ComponentBrowser({ selectedComponent, onSelectComponent }: Compo
         <h2 className="text-lg font-bold text-navy-900 dark:text-white">
           Components
         </h2>
-        <p className="text-xs text-navy-600 dark:text-navy-400">
+        <p className="text-xs text-navy-600 dark:text-navy-400" aria-live="polite" aria-atomic="true">
           {filteredComponents.length} available
         </p>
       </div>
@@ -53,6 +53,7 @@ export function ComponentBrowser({ selectedComponent, onSelectComponent }: Compo
             placeholder="Search components..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search components"
             className="w-full rounded-xl border-2 border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 py-2 pl-10 pr-4 text-sm text-navy-900 dark:text-white placeholder-navy-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
@@ -60,12 +61,14 @@ export function ComponentBrowser({ selectedComponent, onSelectComponent }: Compo
 
       {/* Category Filter */}
       <div className="border-b border-navy-200 dark:border-navy-700 p-4">
-        <label className="text-xs font-medium text-navy-600 dark:text-navy-400">
+        <label htmlFor="category-filter" className="text-xs font-medium text-navy-600 dark:text-navy-400">
           Category
         </label>
         <select
+          id="category-filter"
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
+          aria-label="Filter components by category"
           className="mt-2 w-full rounded-xl border-2 border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 px-3 py-2 text-sm text-navy-900 dark:text-white transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           <option value="all">All Categories</option>
@@ -88,7 +91,10 @@ export function ComponentBrowser({ selectedComponent, onSelectComponent }: Compo
             <ComponentBrowserItem
               key={`${component.category}-${component.name}`}
               component={component}
-              isSelected={selectedComponent?.name === component.name}
+              isSelected={
+                selectedComponent?.name === component.name &&
+                selectedComponent?.category === component.category
+              }
               onClick={() => onSelectComponent(component)}
             />
           ))
