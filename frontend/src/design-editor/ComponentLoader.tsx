@@ -1,4 +1,4 @@
-import { lazy, Suspense, ComponentType } from 'react';
+import { lazy, Suspense, ComponentType, useMemo } from 'react';
 import type { ComponentMetadata } from '../tools/component-registry';
 
 interface ComponentLoaderProps {
@@ -32,7 +32,10 @@ export function loadComponent(metadata: ComponentMetadata): ComponentType<any> {
  * Renders a dynamically loaded component with Suspense fallback
  */
 export function ComponentLoader({ metadata, props = {} }: ComponentLoaderProps) {
-  const Component = loadComponent(metadata);
+  const Component = useMemo(
+    () => loadComponent(metadata),
+    [metadata.importPath]
+  );
 
   return (
     <Suspense
