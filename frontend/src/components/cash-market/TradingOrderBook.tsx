@@ -277,6 +277,19 @@ export function TradingOrderBook({
 
       {/* Order Book Table */}
       <div className="px-4 py-4">
+        {/* Column Headers - Single row for merged layout */}
+        <div className="grid grid-cols-3 gap-4 pb-2 mb-2 border-b border-navy-200 dark:border-navy-700">
+          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-left">
+            Price
+          </div>
+          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-right">
+            Volume
+          </div>
+          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-right">
+            Total (EUR)
+          </div>
+        </div>
+
         {/* Orders Container - Single column merged layout */}
         <div className="space-y-0">
           {displayBids.map((level, idx) => (
