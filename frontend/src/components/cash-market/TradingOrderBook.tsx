@@ -92,7 +92,8 @@ export function TradingOrderBook({
   isLoading = false,
   onPriceClick,
 }: TradingOrderBookProps) {
-  // Note: bestAsk prop is kept for interface compatibility but not used in simplified layout
+  // Note: bestBid and bestAsk props are kept for interface compatibility but not used in simplified layout
+  void bestBid;
   void bestAsk;
 
   // Validate and filter data
@@ -192,20 +193,6 @@ export function TradingOrderBook({
   // Extract best bid/ask for center row
   const bestBidData = displayBids[0] || null;
   const bestAskData = displayAsks[0] || null;
-
-  /**
-   * Checks if a price matches the best bid price.
-   * Uses relative epsilon comparison for floating-point precision across different price ranges.
-   * 
-   * @param price - The price to check
-   * @returns true if the price matches the best bid, false otherwise
-   */
-  const isBestBid = (price: number): boolean => {
-    if (bestBid === null || !isFinite(price) || !isFinite(bestBid)) return false;
-    // Use relative epsilon for better precision across different price ranges
-    const epsilon = Math.max(Math.abs(bestBid) * 1e-10, 1e-6);
-    return Math.abs(price - bestBid) < epsilon;
-  };
 
 
   /**
@@ -370,38 +357,35 @@ export function TradingOrderBook({
             </div>
           </div>
 
-          {/* Bid Orders (rendered second - at bottom) */}
-          {displayBids.map((level, idx) => (
+          {/* Bid Orders Section - Below center row */}
+          <div className="space-y-0.5 mt-2">
+            {displayBids.map((level, idx) => (
               <div
                 key={`bid-${level.price}-${idx}`}
                 role="row"
                 tabIndex={0}
-                aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total value ${formatEurValue(level.orderValue)} EUR`}
-                className="grid grid-cols-5 gap-2 py-1.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
+                className="grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                 onClick={() => onPriceClick?.(level.price)}
                 onKeyDown={(e) => handleKeyDown(e, level.price)}
               >
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatEurValue(level.cumulativeValue)}
+                {/* Price */}
+                <div className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold font-mono tabular-nums text-left">
+                  {formatPrice(level.price)}
                 </div>
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatNumber(level.cumulative_quantity)}
-                </div>
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono font-medium text-right tabular-nums">
-                  {formatEurValue(level.orderValue)}
-                </div>
-                <div className="text-xs text-navy-900 dark:text-white font-mono font-medium text-right tabular-nums">
+
+                {/* Volume */}
+                <div className="text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
                   {formatNumber(level.quantity)}
                 </div>
-                <div className={`text-xs text-right font-mono tabular-nums ${
-                  isBestBid(level.price)
-                    ? 'text-emerald-700 dark:text-emerald-300 font-bold text-sm'
-                    : 'text-emerald-600 dark:text-emerald-400 font-semibold'
-                }`}>
-                  {formatPrice(level.price)}
+
+                {/* Total (EUR) */}
+                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
+                  {formatEurValue(level.orderValue)}
                 </div>
               </div>
             ))}
+          </div>
         </div>
 
         {/* Totals Row - Below orders container */}
