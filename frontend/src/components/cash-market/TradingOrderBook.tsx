@@ -50,26 +50,27 @@ const validateOrderBookLevel = (level: OrderBookLevel | null | undefined): boole
 
 /**
  * TradingOrderBook Component
- * 
- * Displays a comprehensive order book with bid and ask levels, including:
- * - Total Value (EUR) and Total Volume columns
- * - Individual order Value (EUR) and Volume
- * - Price levels with best bid/ask highlighting
- * - Cumulative values for depth analysis
- * - Totals summary showing total liquidity
+ *
+ * Displays a comprehensive order book with merged vertical layout:
+ * - Simplified 3-column display (Price | Volume | Total EUR)
+ * - Ask orders flow from top (highest to lowest)
+ * - Prominent center row showing best bid, best ask, and spread
+ * - Bid orders flow below center (highest to lowest)
+ * - Totals summary showing bid and ask liquidity
  * - Integrated depth chart visualization
- * 
+ *
  * Features:
  * - Monospace font for all numeric values for better readability
  * - Keyboard navigation support (Enter/Space to select price)
  * - Accessible with ARIA labels and semantic HTML
- * - Responsive grid layout
+ * - Responsive 3-column grid layout
  * - Loading and empty states
  * - Dark mode support
- * 
+ * - Prominent visual hierarchy with gradient center row
+ *
  * @param props - Component props
  * @returns The rendered TradingOrderBook component
- * 
+ *
  * @example
  * ```tsx
  * <TradingOrderBook
