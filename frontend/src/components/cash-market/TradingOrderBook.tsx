@@ -333,7 +333,7 @@ export function TradingOrderBook({
             <div className="flex flex-col items-start">
               {bestBidData ? (
                 <>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-0.5">
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
                     BID
                   </span>
                   <span className="text-base text-emerald-700 dark:text-emerald-300 font-bold font-mono tabular-nums">
@@ -368,7 +368,7 @@ export function TradingOrderBook({
             <div className="flex flex-col items-end">
               {bestAskData ? (
                 <>
-                  <span className="text-xs text-red-600 dark:text-red-400 font-medium mb-0.5">
+                  <span className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
                     ASK
                   </span>
                   <span className="text-base text-red-700 dark:text-red-300 font-bold font-mono tabular-nums">
