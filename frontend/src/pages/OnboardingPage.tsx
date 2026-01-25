@@ -37,24 +37,8 @@ interface DocumentType {
   category: 'company' | 'representative';
 }
 
-// Color palette
-const colors = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#5eead4',
-  secondary: '#1e40af',
-  secondaryLight: '#3b82f6',
-  accent: '#f59e0b',
-  danger: '#dc2626',
-  success: '#16a34a',
-  bgDark: '#0f172a',
-  bgCard: '#1e293b',
-  bgCardHover: '#334155',
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  border: '#334155',
-};
+// Note: Colors now use design tokens via Tailwind classes
+// See frontend/src/styles/design-tokens.css for available tokens
 
 // Navigation sections
 const navSections = [
@@ -356,12 +340,11 @@ const FloatingUploadButton = ({
   return (
     <motion.button
       onClick={onClick}
-      className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
-      style={{
-        background: isComplete
-          ? `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)`
-          : `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)`,
-      }}
+      className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl ${
+        isComplete
+          ? 'bg-gradient-to-br from-emerald-500 to-teal-500'
+          : 'bg-gradient-to-br from-amber-500 to-red-500'
+      }`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       animate={!isComplete ? {
@@ -436,30 +419,28 @@ const UploadModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/90"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl p-8"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl p-8 bg-navy-800 border border-navy-700"
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-600 transition-colors"
             >
-              <X className="w-6 h-6" style={{ color: colors.textSecondary }} />
+              <X className="w-6 h-6 text-navy-200" />
             </button>
 
             <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-2" style={{ color: colors.textPrimary }}>
+              <h2 className="text-2xl font-bold mb-2 text-white">
                 Complete Your KYC Documentation
               </h2>
-              <p style={{ color: colors.textSecondary }}>
+              <p className="text-navy-200">
                 Upload the required documents to complete your account verification and unlock full platform access
               </p>
             </div>
@@ -467,15 +448,12 @@ const UploadModal = ({
             {/* Progress Bar */}
             <div className="mb-8">
               <div className="flex justify-between mb-2">
-                <span style={{ color: colors.textSecondary }}>Progress</span>
-                <span style={{ color: colors.primaryLight }}>{progress}%</span>
+                <span className="text-navy-200">Progress</span>
+                <span className="text-teal-300">{progress}%</span>
               </div>
-              <div className="h-3 rounded-full" style={{ backgroundColor: colors.bgCardHover }}>
+              <div className="h-3 rounded-full bg-navy-700">
                 <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    background: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.primaryLight} 100%)`
-                  }}
+                  className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-300"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.5 }}
@@ -485,20 +463,20 @@ const UploadModal = ({
 
             {/* Company Documents */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.secondaryLight }}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-400">
                 <Building2 className="w-5 h-5" />
                 Company Documents
               </h3>
               <div className="grid gap-4">
                 {companyDocs.map(doc => (
-                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color={colors.secondaryLight} />
+                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="#60a5fa" />
                 ))}
               </div>
             </div>
 
             {/* Representative Documents */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#8b5cf6' }}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-400">
                 <Users className="w-5 h-5" />
                 Representative Documents
               </h3>
@@ -513,14 +491,11 @@ const UploadModal = ({
             <button
               onClick={onSubmit}
               disabled={!canSubmit}
-              className="w-full py-4 rounded-xl font-semibold text-white transition-all"
-              style={{
-                background: canSubmit
-                  ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-                  : colors.bgCardHover,
-                opacity: canSubmit ? 1 : 0.5,
-                cursor: canSubmit ? 'pointer' : 'not-allowed',
-              }}
+              className={`w-full px-6 py-4 rounded-xl font-semibold text-white transition-all ${
+                canSubmit
+                  ? 'bg-gradient-to-br from-teal-500 to-blue-700 opacity-100 cursor-pointer'
+                  : 'bg-navy-700 opacity-50 cursor-not-allowed'
+              }`}
             >
               {canSubmit ? 'Submit for Verification' : `Upload ${requiredCount - uploadedCount} more document(s)`}
             </button>
@@ -556,13 +531,9 @@ const DocumentCard = ({
 
   return (
     <div
-      className="p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100"
-      style={{
-        backgroundColor: colors.bgCardHover,
-        borderColor: doc.uploaded ? colors.success : color,
-        borderWidth: '1px',
-        borderStyle: doc.uploaded ? 'solid' : 'dashed',
-      }}
+      className={`p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100 ${
+        doc.uploaded ? 'bg-navy-700 border-emerald-500 border-solid' : 'bg-navy-700 border-dashed border-navy-600 dark:border-navy-500'
+      }`}
       onClick={handleClick}
     >
       <input
@@ -575,26 +546,24 @@ const DocumentCard = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {doc.uploaded ? (
-            <CheckCircle className="w-5 h-5" style={{ color: colors.success }} />
+            <CheckCircle className="w-5 h-5 text-emerald-500" />
           ) : (
-            <FileText className="w-5 h-5" style={{ color }} />
+            <FileText className="w-5 h-5 text-navy-600 dark:text-navy-400" />
           )}
           <div>
-            <div className="font-medium" style={{ color: colors.textPrimary }}>
+            <div className="font-medium text-white">
               {doc.name}
-              {doc.required && <span style={{ color: colors.danger }}> *</span>}
+              {doc.required && <span className="text-red-500"> *</span>}
             </div>
-            <div className="text-sm" style={{ color: colors.textMuted }}>
+            <div className="text-sm text-navy-400">
               {doc.description}
             </div>
           </div>
         </div>
         <div
-          className="px-3 py-1 rounded-full text-xs font-medium"
-          style={{
-            backgroundColor: doc.uploaded ? `${colors.success}20` : `${color}20`,
-            color: doc.uploaded ? colors.success : color,
-          }}
+          className={`px-3 py-1 rounded-full text-xs font-medium ${
+            doc.uploaded ? 'bg-emerald-500/20 text-emerald-500' : 'bg-navy-100 dark:bg-navy-500/20 text-navy-600 dark:text-navy-400'
+          }`}
         >
           {doc.uploaded ? 'Uploaded' : 'Upload'}
         </div>
@@ -623,17 +592,13 @@ const EntityCategoryCard = ({
 
   return (
     <motion.div
-      className="p-6 rounded-2xl cursor-pointer transition-all"
-      style={{
-        backgroundColor: isActive ? 'transparent' : colors.bgCard,
-        border: `2px solid ${isActive ? colors.primary : colors.border}`,
-        background: isActive
-          ? `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)`
-          : colors.bgCard,
-        opacity: isActive ? 1 : 0.6,
-      }}
+      className={`p-6 rounded-2xl cursor-pointer transition-all ${
+        isActive
+          ? 'bg-gradient-to-br from-teal-500/15 to-transparent border-2 border-teal-500 opacity-100'
+          : 'bg-navy-800 border-2 border-navy-700 opacity-60'
+      }`}
       onClick={onClick}
-      whileHover={{ y: -4, borderColor: colors.primary, opacity: 1 }}
+      whileHover={{ y: -4, opacity: 1 }}
     >
       <div
         className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
@@ -643,24 +608,18 @@ const EntityCategoryCard = ({
       >
         <Icon className="w-7 h-7 text-white" />
       </div>
-      <h4 className="font-bold text-lg mb-2" style={{ color: colors.textPrimary }}>{category.title}</h4>
-      <span
-        className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3"
-        style={{ backgroundColor: `${colors.primary}30`, color: colors.primaryLight }}
-      >
+      <h4 className="font-bold text-lg mb-2 text-white">{category.title}</h4>
+      <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3 bg-teal-500/30 text-teal-300">
         {category.tag}
       </span>
-      <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+      <p className="text-sm mb-4 text-navy-200">
         {category.description}
       </p>
-      <div
-        className="text-center p-3 rounded-lg"
-        style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-      >
-        <div className="text-2xl font-bold" style={{ color: colors.success }}>
+      <div className="text-center p-3 rounded-lg bg-white/5">
+        <div className="text-2xl font-bold text-emerald-500">
           {category.advantage}
         </div>
-        <div className="text-xs" style={{ color: colors.textMuted }}>
+        <div className="text-xs text-navy-400">
           {category.advantageLabel}
         </div>
       </div>
@@ -687,10 +646,9 @@ const EntityCategoryDetail = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="rounded-2xl p-8 mt-8"
-      style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+      className="rounded-2xl p-8 mt-8 bg-navy-800 border border-navy-700"
     >
-      <div className="flex items-center gap-4 pb-6 mb-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
+      <div className="flex items-center gap-4 pb-6 mb-6 border-b border-navy-700">
         <div
           className="w-16 h-16 rounded-xl flex items-center justify-center"
           style={{
@@ -700,44 +658,40 @@ const EntityCategoryDetail = ({
           <Icon className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+          <h3 className="text-2xl font-bold text-white">
             {category.title}
           </h3>
-          <span
-            className="inline-block px-4 py-1 rounded-full text-sm font-semibold mt-2"
-            style={{ backgroundColor: colors.primary, color: 'white' }}
-          >
+          <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mt-2 bg-teal-500 text-white">
             {category.tag}
           </span>
         </div>
         <div className="ml-auto text-right">
-          <div className="text-4xl font-extrabold" style={{ color: colors.success }}>
+          <div className="text-4xl font-extrabold text-emerald-500">
             {category.advantage}
           </div>
-          <div className="text-sm" style={{ color: colors.textSecondary }}>
+          <div className="text-sm text-navy-200">
             {category.advantageLabel}
           </div>
         </div>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
+        <h4 className="text-lg font-semibold mb-4 text-white">
           Sub-Categories
         </h4>
         <div className="grid md:grid-cols-2 gap-4">
           {category.subCategories.map((sub, i) => (
             <div
               key={i}
-              className="p-4 rounded-xl"
-              style={{ backgroundColor: colors.bgCardHover }}
+              className="p-4 rounded-xl bg-navy-700"
             >
               <div className="flex items-start gap-3">
-                <ChevronRight className="w-5 h-5 mt-0.5" style={{ color: colors.primaryLight }} />
+                <ChevronRight className="w-5 h-5 mt-0.5 text-teal-300" />
                 <div>
-                  <div className="font-semibold" style={{ color: colors.textPrimary }}>
+                  <div className="font-semibold text-white">
                     {sub.name}
                   </div>
-                  <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  <div className="text-sm mt-1 text-navy-200">
                     {sub.details}
                   </div>
                 </div>
@@ -747,32 +701,26 @@ const EntityCategoryDetail = ({
         </div>
       </div>
 
-      <div
-        className="p-6 rounded-xl"
-        style={{
-          background: `linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)`,
-          border: `1px solid ${colors.success}`,
-        }}
-      >
-        <h5 className="font-semibold mb-3" style={{ color: colors.success }}>
+      <div className="p-6 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500 dark:border-emerald-400">
+        <h5 className="font-semibold mb-3 text-emerald-500">
           Key Advantages via Nihao Platform
         </h5>
         <div className="grid md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold" style={{ color: colors.primaryLight }}>8-15%</div>
-            <div className="text-xs" style={{ color: colors.textSecondary }}>Price Premium</div>
+            <div className="text-2xl font-bold text-teal-300">8-15%</div>
+            <div className="text-xs text-navy-200">Price Premium</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold" style={{ color: colors.accent }}>High</div>
-            <div className="text-xs" style={{ color: colors.textSecondary }}>Confidentiality</div>
+            <div className="text-2xl font-bold text-amber-500">High</div>
+            <div className="text-xs text-navy-200">Confidentiality</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold" style={{ color: colors.success }}>Medium</div>
-            <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory</div>
+            <div className="text-2xl font-bold text-emerald-500">Medium</div>
+            <div className="text-xs text-navy-200">Regulatory</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold" style={{ color: colors.secondaryLight }}>High</div>
-            <div className="text-xs" style={{ color: colors.textSecondary }}>Structuring</div>
+            <div className="text-2xl font-bold text-blue-400">High</div>
+            <div className="text-xs text-navy-200">Structuring</div>
           </div>
         </div>
       </div>
@@ -794,33 +742,29 @@ const WorkflowStepCard = ({
 
   return (
     <motion.div
-      className="p-4 rounded-xl cursor-pointer transition-all"
-      style={{
-        backgroundColor: isActive ? colors.primary : colors.bgCard,
-        border: `2px solid ${isActive ? colors.primaryLight : colors.border}`,
-      }}
+      className={`p-4 rounded-xl cursor-pointer transition-all ${
+        isActive ? 'bg-teal-500 border-2 border-teal-300' : 'bg-navy-800 border-2 border-navy-700'
+      }`}
       onClick={onClick}
       whileHover={{ scale: 1.02 }}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center font-bold"
-          style={{
-            backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : colors.bgCardHover,
-            color: isActive ? 'white' : colors.primaryLight,
-          }}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${
+            isActive ? 'bg-white/20 text-white' : 'bg-navy-700 text-teal-300'
+          }`}
         >
           {step.step}
         </div>
         <div className="flex-1">
-          <div className="font-semibold text-sm" style={{ color: isActive ? 'white' : colors.textPrimary }}>
+          <div className="font-semibold text-sm text-white">
             {step.title}
           </div>
-          <div className="text-xs" style={{ color: isActive ? 'rgba(255,255,255,0.7)' : colors.textMuted }}>
+          <div className={`text-xs ${isActive ? 'text-white/70' : 'text-navy-600 dark:text-navy-400'}`}>
             {step.duration}
           </div>
         </div>
-        <Icon className="w-5 h-5" style={{ color: isActive ? 'white' : colors.textSecondary }} />
+        <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-navy-200'}`} />
       </div>
     </motion.div>
   );
@@ -835,65 +779,52 @@ const WorkflowStepDetail = ({ step }: { step: typeof workflowSteps[0] }) => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="rounded-2xl p-8"
-      style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+      className="rounded-2xl p-8 bg-navy-800 border border-navy-700"
     >
       <div className="flex items-center gap-4 mb-6">
-        <div
-          className="w-16 h-16 rounded-xl flex items-center justify-center"
-          style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-        >
+        <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-blue-700">
           <Icon className="w-8 h-8 text-white" />
         </div>
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <span
-              className="px-3 py-1 rounded-full text-sm font-bold"
-              style={{ backgroundColor: colors.primary, color: 'white' }}
-            >
+            <span className="px-3 py-1 rounded-full text-sm font-bold bg-teal-500 text-white">
               Step {step.step}
             </span>
-            <span className="flex items-center gap-1 text-sm" style={{ color: colors.accent }}>
+            <span className="flex items-center gap-1 text-sm text-amber-500">
               <Clock className="w-4 h-4" />
               {step.duration}
             </span>
           </div>
-          <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+          <h3 className="text-2xl font-bold text-white">
             {step.title}
           </h3>
         </div>
       </div>
 
-      <p className="text-lg mb-6" style={{ color: colors.textSecondary }}>
+      <p className="text-lg mb-6 text-navy-200">
         {step.description}
       </p>
 
       <div className="mb-6">
-        <h4 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>
+        <h4 className="font-semibold mb-4 text-white">
           Process Details
         </h4>
         <div className="space-y-3">
           {step.details.map((detail, i) => (
             <div key={i} className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: colors.success }} />
-              <span style={{ color: colors.textSecondary }}>{detail}</span>
+              <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-emerald-500" />
+              <span className="text-navy-200">{detail}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div
-        className="p-6 rounded-xl"
-        style={{
-          background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`,
-          border: `1px solid ${colors.primary}`,
-        }}
-      >
+      <div className="p-6 rounded-xl border border-teal-500 bg-gradient-to-br from-teal-500/15 to-blue-700/15">
         <div className="flex items-center gap-2 mb-2">
-          <Zap className="w-5 h-5" style={{ color: colors.primaryLight }} />
-          <span className="font-semibold" style={{ color: colors.primaryLight }}>Outcome</span>
+          <Zap className="w-5 h-5 text-teal-300" />
+          <span className="font-semibold text-teal-300">Outcome</span>
         </div>
-        <p style={{ color: colors.textPrimary }}>{step.outcome}</p>
+        <p className="text-white">{step.outcome}</p>
       </div>
     </motion.div>
   );
@@ -940,51 +871,32 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>
+    <div className="min-h-screen bg-navy-900 text-white">
       {/* Header */}
-      <header
-        className="sticky top-0 z-40"
-        style={{
-          background: 'linear-gradient(180deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)',
-          borderBottom: `1px solid ${colors.border}`,
-          backdropFilter: 'blur(20px)',
-        }}
-      >
+      <header className="sticky top-0 z-40 bg-gradient-to-b from-teal-500/15 to-transparent border-b border-navy-700 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-gradient-to-br from-teal-500 to-blue-700">
               N
             </div>
             <div>
-              <h1
-                className="text-xl font-bold"
-                style={{
-                  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
+              <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-blue-700 bg-clip-text text-transparent">
                 Nihao Group
               </h1>
-              <span className="text-xs uppercase tracking-widest" style={{ color: colors.textSecondary }}>
+              <span className="text-xs uppercase tracking-widest text-navy-200">
                 Onboarding
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <nav className="hidden lg:flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
+            <nav className="hidden lg:flex gap-1 p-1 rounded-xl bg-navy-800">
               {navSections.map(nav => (
                 <button
                   key={nav.id}
                   onClick={() => scrollToSection(nav.id)}
-                  className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                  style={{
-                    backgroundColor: activeNav === nav.id ? colors.primary : 'transparent',
-                    color: activeNav === nav.id ? 'white' : colors.textSecondary,
-                  }}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    activeNav === nav.id ? 'bg-teal-500 text-white' : 'bg-transparent text-navy-200'
+                  }`}
                 >
                   {nav.label}
                 </button>
@@ -992,8 +904,7 @@ export default function OnboardingPage() {
             </nav>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20"
-              style={{ color: colors.danger }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20 text-red-500"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -1014,31 +925,23 @@ export default function OnboardingPage() {
           <h2 className="text-5xl font-extrabold mb-4 relative">
             Welcome to
             <br />
-            <span
-              style={{
-                background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
+            <span className="bg-gradient-to-r from-emerald-500 to-blue-700 bg-clip-text text-transparent">
               Nihao Group
             </span>
           </h2>
-          <p className="text-xl max-w-3xl mx-auto mb-8" style={{ color: colors.textSecondary }}>
+          <p className="text-xl max-w-3xl mx-auto mb-8 text-navy-200">
             Your gateway to the world's two largest carbon markets. We bridge the EU ETS and China ETS through innovative bilateral trading solutions.
           </p>
           <div className="flex justify-center gap-4">
             <button
               onClick={() => scrollToSection('market')}
-              className="px-6 py-3 rounded-xl font-semibold text-white transition-all"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              className="px-6 py-3 rounded-xl font-semibold text-white transition-all bg-gradient-to-br from-teal-500 to-blue-700"
             >
               Learn More
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-6 py-3 rounded-xl font-semibold transition-all"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+              className="px-6 py-3 rounded-xl font-semibold transition-all bg-navy-800 border border-navy-700 text-white"
             >
               Complete KYC
             </button>
@@ -1048,27 +951,23 @@ export default function OnboardingPage() {
         {/* Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
           {[
-            { icon: '🇪🇺', value: 'EUR 88/t', label: 'Current EUA Price', color: colors.secondaryLight },
-            { icon: '🇨🇳', value: 'CNY 63/t', label: 'Current CEA Price (~EUR 8)', color: colors.danger },
-            { icon: '🌍', value: '6.1B tonnes', label: 'Combined Market Coverage', color: colors.primaryLight },
-            { icon: '💹', value: '15-25%', label: 'Value Improvement via Nihao', color: colors.success },
+            { icon: '🇪🇺', value: 'EUR 88/t', label: 'Current EUA Price', colorClass: 'text-blue-500 dark:text-blue-400' },
+            { icon: '🇨🇳', value: 'CNY 63/t', label: 'Current CEA Price (~EUR 8)', colorClass: 'text-red-500 dark:text-red-400' },
+            { icon: '🌍', value: '6.1B tonnes', label: 'Combined Market Coverage', colorClass: 'text-teal-300' },
+            { icon: '💹', value: '15-25%', label: 'Value Improvement via Nihao', colorClass: 'text-emerald-500 dark:text-emerald-400' },
           ].map((stat, i) => (
             <motion.div
               key={i}
-              className="p-6 rounded-2xl text-center transition-all"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
-              whileHover={{ y: -4, borderColor: colors.primary }}
+              className="p-6 rounded-2xl text-center transition-all bg-navy-800 border border-navy-700"
+              whileHover={{ y: -4 }}
             >
-              <div
-                className="w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center text-2xl"
-                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-              >
+              <div className="w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br from-teal-500 to-blue-700">
                 {stat.icon}
               </div>
-              <div className="text-3xl font-extrabold mb-1" style={{ color: stat.color }}>
+              <div className={`text-3xl font-extrabold mb-1 ${stat.colorClass}`}>
                 {stat.value}
               </div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>
+              <div className="text-sm text-navy-200">
                 {stat.label}
               </div>
             </motion.div>
@@ -1078,107 +977,92 @@ export default function OnboardingPage() {
         {/* SECTION 1: Market Overview */}
         <section id="market" className="mb-20">
           <div className="flex items-center gap-4 mb-8">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-gradient-to-br from-teal-500 to-blue-700">
               1
             </div>
             <div>
               <h3 className="text-3xl font-bold">Market Overview</h3>
-              <p style={{ color: colors.textSecondary }}>Understanding the world's two largest carbon markets</p>
+              <p className="text-navy-200">Understanding the world's two largest carbon markets</p>
             </div>
           </div>
 
           {/* Market Comparison Cards */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             {/* EU ETS Card */}
-            <div
-              className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
-            >
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.secondaryLight }} />
+            <div className="rounded-2xl p-6 relative overflow-hidden bg-navy-800 border border-navy-700">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 dark:bg-blue-400" />
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <div className="text-lg font-semibold">EU Emissions Trading System</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>European Union Allowances (EUA)</div>
+                  <div className="text-sm text-navy-200">European Union Allowances (EUA)</div>
                 </div>
-                <span
-                  className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.secondaryLight }}
-                >
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
                   EU ETS
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-5xl font-extrabold">EUR 88</span>
-                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2</span>
+                <span className="text-xl text-navy-200">/tCO2</span>
               </div>
-              <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Emissions Coverage:</span>
+              <div className="p-4 rounded-xl space-y-3 bg-white/5">
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Emissions Coverage:</span>
                   <span className="font-semibold">1.6 billion tonnes CO2</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Covered Entities:</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Covered Entities:</span>
                   <span className="font-semibold">~10,000-11,000 installations</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Market Maturity:</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Market Maturity:</span>
                   <span className="font-semibold">Phase 4 (since 2021)</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>2030 Projection:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>EUR 130-150/t (+48-70%)</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">2030 Projection:</span>
+                  <span className="font-semibold text-emerald-500">EUR 130-150/t (+48-70%)</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>Annual Trading Volume:</span>
+                  <span className="text-navy-200">Annual Trading Volume:</span>
                   <span className="font-semibold">8-9 billion tonnes</span>
                 </div>
               </div>
             </div>
 
             {/* China ETS Card */}
-            <div
-              className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
-            >
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.danger }} />
+            <div className="rounded-2xl p-6 relative overflow-hidden bg-navy-800 border border-navy-700">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <div className="text-lg font-semibold">China Emissions Trading Scheme</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>Chinese Emission Allowances (CEA)</div>
+                  <div className="text-sm text-navy-200">Chinese Emission Allowances (CEA)</div>
                 </div>
-                <span
-                  className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: colors.danger }}
-                >
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400">
                   China ETS
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-5xl font-extrabold">CNY 63</span>
-                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2 (~EUR 8)</span>
+                <span className="text-xl text-navy-200">/tCO2 (~EUR 8)</span>
               </div>
-              <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Emissions Coverage:</span>
+              <div className="p-4 rounded-xl space-y-3 bg-white/5">
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Emissions Coverage:</span>
                   <span className="font-semibold">4.5 billion tonnes CO2</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Covered Entities:</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Covered Entities:</span>
                   <span className="font-semibold">2,162+ companies</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Market Status:</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">Market Status:</span>
                   <span className="font-semibold">Expanding (2024+)</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>2030 Projection:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>CNY 200/t (+212%)</span>
+                <div className="flex justify-between py-2 border-b border-navy-200 dark:border-navy-600">
+                  <span className="text-navy-200">2030 Projection:</span>
+                  <span className="font-semibold text-emerald-500">CNY 200/t (+212%)</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>Annual Trading Volume:</span>
+                  <span className="text-navy-200">Annual Trading Volume:</span>
                   <span className="font-semibold">200-250 million tonnes</span>
                 </div>
               </div>
@@ -1188,7 +1072,7 @@ export default function OnboardingPage() {
           {/* Market Comparison Table */}
           <div
             className="rounded-2xl p-6 overflow-x-auto"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">Key Regulatory Differences</h4>
             <table className="w-full">
@@ -1210,13 +1094,13 @@ export default function OnboardingPage() {
                   { dimension: 'Compliance Penalty', eu: 'EUR 100/tonne fixed', china: 'Up to 500% of shortage value' },
                 ].map((row, i) => (
                   <tr key={i} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-semibold" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                    <td className="p-4 font-semibold border-b border-navy-700">
                       {row.dimension}
                     </td>
-                    <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
+                    <td className="p-4 border-b border-navy-700 text-navy-200">
                       {row.eu}
                     </td>
-                    <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
+                    <td className="p-4 border-b border-navy-700 text-navy-200">
                       {row.china}
                     </td>
                   </tr>
@@ -1230,11 +1114,11 @@ export default function OnboardingPage() {
             className="p-6 rounded-xl text-center mt-8"
             style={{
               background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-              border: `1px solid ${colors.accent}`,
+              border: "1px solid #8b5cf6",
             }}
           >
-            <strong style={{ color: colors.accent }}>Key Opportunity:</strong>{' '}
-            <span style={{ color: colors.textSecondary }}>
+            <strong className="text-amber-500">Key Opportunity:</strong>{' '}
+            <span className="text-navy-200">
               The 7-10x price differential between EU EUA (EUR 88/t) and China CEA (EUR 8/t) creates significant arbitrage opportunities.
               Foreign participation in China ETS is explicitly prohibited - Nihao provides the bridge.
             </span>
@@ -1246,13 +1130,13 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              className="bg-gradient-to-br from-teal-500 to-blue-700"
             >
               2
             </div>
             <div>
               <h3 className="text-3xl font-bold">About Nihao Group</h3>
-              <p style={{ color: colors.textSecondary }}>Strategic intermediary bridging EU and China carbon markets</p>
+              <p className="text-navy-200">Strategic intermediary bridging EU and China carbon markets</p>
             </div>
           </div>
 
@@ -1260,37 +1144,37 @@ export default function OnboardingPage() {
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div
               className="rounded-2xl p-6"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+              className="bg-navy-800 border border-navy-700"
             >
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+                className="bg-gradient-to-br from-teal-500 to-blue-700"
               >
                 <Globe className="w-7 h-7 text-white" />
               </div>
               <h4 className="font-bold text-lg mb-2">Hong Kong Headquarters</h4>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
+              <p className="text-sm text-navy-200">
                 Strategic positioning at the intersection of European and Chinese carbon markets, leveraging Hong Kong's unique role as a gateway.
               </p>
             </div>
             <div
               className="rounded-2xl p-6"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+              className="bg-navy-800 border border-navy-700"
             >
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` }}
+                style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ef4444 100%)` }}
               >
                 <Scale className="w-7 h-7 text-white" />
               </div>
               <h4 className="font-bold text-lg mb-2">Regulatory Compliance</h4>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
+              <p className="text-sm text-navy-200">
                 Full compliance with Hong Kong SFC oversight, AML/KYC standards comparable to EU, and FATCA/CRS requirements.
               </p>
             </div>
             <div
               className="rounded-2xl p-6"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+              className="bg-navy-800 border border-navy-700"
             >
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
@@ -1299,7 +1183,7 @@ export default function OnboardingPage() {
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <h4 className="font-bold text-lg mb-2">Secure Infrastructure</h4>
-              <p className="text-sm" style={{ color: colors.textSecondary }}>
+              <p className="text-sm text-navy-200">
                 Custody and settlement services, multi-currency transaction capabilities, and direct Yuan/RMB convertibility access.
               </p>
             </div>
@@ -1308,7 +1192,7 @@ export default function OnboardingPage() {
           {/* Service Offerings */}
           <div
             className="rounded-2xl p-8 mb-8"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">Our Services</h4>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1320,12 +1204,12 @@ export default function OnboardingPage() {
                 { title: 'Regulatory Compliance', items: ['KYC/AML documentation', 'Ongoing monitoring', 'Transaction reporting'] },
                 { title: 'Technology Platform', items: ['Secure marketplace portal', 'Real-time deal tracking', 'Audit trail maintenance'] },
               ].map((service, i) => (
-                <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h5 className="font-semibold mb-3" style={{ color: colors.primaryLight }}>{service.title}</h5>
+                <div key={i} className="p-4 rounded-xl bg-navy-700">
+                  <h5 className="font-semibold mb-3 text-teal-300">{service.title}</h5>
                   <ul className="space-y-2">
                     {service.items.map((item, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm" style={{ color: colors.textSecondary }}>
-                        <CheckCircle className="w-4 h-4" style={{ color: colors.success }} />
+                      <li key={j} className="flex items-center gap-2 text-sm text-navy-200">
+                        <CheckCircle className="w-4 h-4 text-emerald-500" />
                         {item}
                       </li>
                     ))}
@@ -1338,12 +1222,12 @@ export default function OnboardingPage() {
           {/* Hong Kong Advantages */}
           <div
             className="rounded-2xl p-8"
+            className="border border-teal-500"
             style={{
-              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`,
-              border: `1px solid ${colors.primary}`,
+              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`
             }}
           >
-            <h4 className="text-xl font-semibold mb-6" style={{ color: colors.primaryLight }}>
+            <h4 className="text-xl font-semibold mb-6 text-teal-300">
               Why Hong Kong?
             </h4>
             <div className="grid md:grid-cols-4 gap-6">
@@ -1354,8 +1238,8 @@ export default function OnboardingPage() {
                 { label: '24-Hour Trading', desc: 'Asian/European/American coverage' },
               ].map((item, i) => (
                 <div key={i} className="text-center">
-                  <div className="text-lg font-bold mb-1" style={{ color: colors.textPrimary }}>{item.label}</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>{item.desc}</div>
+                  <div className="text-lg font-bold mb-1 text-white">{item.label}</div>
+                  <div className="text-sm text-navy-200">{item.desc}</div>
                 </div>
               ))}
             </div>
@@ -1367,19 +1251,19 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-4 mb-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.danger} 0%, #f97316 100%)` }}
+              style={{ background: `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` }}
             >
               3
             </div>
             <div>
               <h3 className="text-3xl font-bold">For CEA Holders</h3>
-              <p style={{ color: colors.textSecondary }}>Private bilateral deals offer 8-25% value improvement over SEEE exchange trading</p>
+              <p className="text-navy-200">Private bilateral deals offer 8-25% value improvement over SEEE exchange trading</p>
             </div>
           </div>
 
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: `${colors.danger}20`, color: colors.danger }}
+            style={{ backgroundColor: "rgba(239, 68, 68, 0.13)", color: "#ef4444" }}
           >
             <span className="animate-pulse">👆</span>
             Select an entity category to view full details
@@ -1414,32 +1298,32 @@ export default function OnboardingPage() {
             className="p-6 rounded-xl mt-8"
             style={{
               background: `linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%)`,
-              border: `1px solid ${colors.danger}`,
+              border: "1px solid #ef4444",
             }}
           >
-            <h5 className="font-semibold mb-4" style={{ color: colors.danger }}>
+            <h5 className="font-semibold mb-4 text-red-500">
               Key Advantages for CEA Holders via Nihao
             </h5>
             <div className="grid md:grid-cols-4 gap-4">
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <DollarSign className="w-8 h-8 mx-auto mb-2" style={{ color: colors.success }} />
-                <div className="text-xl font-bold" style={{ color: colors.success }}>8-15%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Premium</div>
+                <DollarSign className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
+                <div className="text-xl font-bold text-emerald-500">8-15%</div>
+                <div className="text-xs text-navy-200">Price Premium</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <Shield className="w-8 h-8 mx-auto mb-2" style={{ color: colors.primaryLight }} />
-                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>High</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Confidentiality</div>
+                <Shield className="w-8 h-8 mx-auto mb-2 text-teal-300" />
+                <div className="text-xl font-bold text-teal-300">High</div>
+                <div className="text-xs text-navy-200">Confidentiality</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <Scale className="w-8 h-8 mx-auto mb-2" style={{ color: colors.accent }} />
-                <div className="text-xl font-bold" style={{ color: colors.accent }}>Lower</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory Scrutiny</div>
+                <Scale className="w-8 h-8 mx-auto mb-2 text-amber-500" />
+                <div className="text-xl font-bold text-amber-500">Lower</div>
+                <div className="text-xs text-navy-200">Regulatory Scrutiny</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <Zap className="w-8 h-8 mx-auto mb-2" style={{ color: colors.secondaryLight }} />
-                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>Custom</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Transaction Structuring</div>
+                <Zap className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                <div className="text-xl font-bold text-blue-400">Custom</div>
+                <div className="text-xs text-navy-200">Transaction Structuring</div>
               </div>
             </div>
           </div>
@@ -1450,19 +1334,19 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-4 mb-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.secondaryLight} 0%, #8b5cf6 100%)` }}
+              style={{ background: `linear-gradient(135deg, #60a5fa 0%, #8b5cf6 100%)` }}
             >
               4
             </div>
             <div>
               <h3 className="text-3xl font-bold">For EUA Holders</h3>
-              <p style={{ color: colors.textSecondary }}>EUA-to-CEA swaps generate 10-22% total value improvement</p>
+              <p className="text-navy-200">EUA-to-CEA swaps generate 10-22% total value improvement</p>
             </div>
           </div>
 
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: `${colors.secondaryLight}20`, color: colors.secondaryLight }}
+            style={{ backgroundColor: "rgba(96, 165, 250, 0.13)", color: "#60a5fa" }}
           >
             <span className="animate-pulse">👆</span>
             Select an entity category to view full details
@@ -1497,32 +1381,32 @@ export default function OnboardingPage() {
             className="p-6 rounded-xl mt-8"
             style={{
               background: `linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)`,
-              border: `1px solid ${colors.secondaryLight}`,
+              border: "1px solid #60a5fa",
             }}
           >
-            <h5 className="font-semibold mb-4" style={{ color: colors.secondaryLight }}>
+            <h5 className="font-semibold mb-4 text-blue-400">
               EUA-to-CEA Swap Value Breakdown
             </h5>
             <div className="grid md:grid-cols-5 gap-4">
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.success }}>8-18%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Arbitrage</div>
+                <div className="text-xl font-bold" className="text-emerald-500">8-18%</div>
+                <div className="text-xs" className="text-navy-200">Price Arbitrage</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>1-8%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Timing Optimization</div>
+                <div className="text-xl font-bold" className="text-teal-300">1-8%</div>
+                <div className="text-xs" className="text-navy-200">Timing Optimization</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.accent }}>1-3%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Operational Efficiency</div>
+                <div className="text-xl font-bold text-amber-500">1-3%</div>
+                <div className="text-xs text-navy-200">Operational Efficiency</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>1-2%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Currency Management</div>
+                <div className="text-xl font-bold text-blue-400">1-2%</div>
+                <div className="text-xs text-navy-200">Currency Management</div>
               </div>
               <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: '#8b5cf6' }}>1-4%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Strategic Positioning</div>
+                <div className="text-xl font-bold text-purple-400">1-4%</div>
+                <div className="text-xs text-navy-200">Strategic Positioning</div>
               </div>
             </div>
           </div>
@@ -1533,13 +1417,13 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)` }}
+              style={{ background: `linear-gradient(135deg, #10b981 0%, #10b981 100%)` }}
             >
               5
             </div>
             <div>
               <h3 className="text-3xl font-bold">For EU Entities</h3>
-              <p style={{ color: colors.textSecondary }}>Complete 7-step workflow delivering 15-25% total value improvement</p>
+              <p className="text-navy-200">Complete 7-step workflow delivering 15-25% total value improvement</p>
             </div>
           </div>
 
@@ -1570,17 +1454,17 @@ export default function OnboardingPage() {
           {/* KYC Documents Section */}
           <div
             className="rounded-2xl p-8 mt-8"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">KYC Documentation Requirements (23 Documents)</h4>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {kycDocuments.map((category, i) => (
-                <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h5 className="font-semibold mb-3" style={{ color: colors.primaryLight }}>{category.category}</h5>
+                <div key={i} className="p-4 rounded-xl bg-navy-700">
+                  <h5 className="font-semibold mb-3 text-teal-300">{category.category}</h5>
                   <ul className="space-y-2">
                     {category.items.map((item, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm" style={{ color: colors.textSecondary }}>
-                        <FileText className="w-4 h-4" style={{ color: colors.textMuted }} />
+                      <li key={j} className="flex items-center gap-2 text-sm text-navy-200">
+                        <FileText className="w-4 h-4 text-navy-400" />
                         {item}
                       </li>
                     ))}
@@ -1595,36 +1479,36 @@ export default function OnboardingPage() {
             className="p-6 rounded-xl mt-8"
             style={{
               background: `linear-gradient(135deg, rgba(22, 163, 74, 0.15) 0%, rgba(13, 148, 136, 0.15) 100%)`,
-              border: `1px solid ${colors.success}`,
+              border: "1px solid #10b981",
             }}
           >
-            <h5 className="font-semibold mb-4" style={{ color: colors.success }}>
+            <h5 className="font-semibold mb-4 text-emerald-500">
               Total Value Advantages for EU Entities
             </h5>
             <div className="grid md:grid-cols-6 gap-4">
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.success }}>8-15%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Price Advantage</div>
+                <div className="text-xl font-bold" className="text-emerald-500">8-15%</div>
+                <div className="text-xs" className="text-navy-200">Price Advantage</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>EUR 45-340K</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Cost Reduction</div>
+                <div className="text-xl font-bold" className="text-teal-300">EUR 45-340K</div>
+                <div className="text-xs" className="text-navy-200">Cost Reduction</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.accent }}>EUR 25-150K</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Working Capital</div>
+                <div className="text-xl font-bold text-amber-500">EUR 25-150K</div>
+                <div className="text-xs text-navy-200">Working Capital</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.secondaryLight }}>EUR 25-250K</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Regulatory Savings</div>
+                <div className="text-xl font-bold text-blue-400">EUR 25-250K</div>
+                <div className="text-xs text-navy-200">Regulatory Savings</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: '#8b5cf6' }}>1-3%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Operational</div>
+                <div className="text-xl font-bold text-purple-400">1-3%</div>
+                <div className="text-xs text-navy-200">Operational</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" style={{ color: colors.success }}>15-25%</div>
-                <div className="text-xs" style={{ color: colors.textSecondary }}>Total Benefit</div>
+                <div className="text-xl font-bold text-emerald-500">15-25%</div>
+                <div className="text-xs text-navy-200">Total Benefit</div>
               </div>
             </div>
           </div>
@@ -1634,19 +1518,19 @@ export default function OnboardingPage() {
         <section className="text-center py-16">
           <div
             className="rounded-3xl p-12"
+            className="border border-teal-500"
             style={{
-              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%)`,
-              border: `1px solid ${colors.primary}`,
+              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%)`
             }}
           >
             <h3 className="text-3xl font-bold mb-4">Ready to Get Started?</h3>
-            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: colors.textSecondary }}>
+            <p className="text-lg mb-8 max-w-2xl mx-auto text-navy-200">
               Complete your KYC documentation to access the Nihao marketplace and start benefiting from bilateral carbon trading opportunities.
             </p>
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              className="bg-gradient-to-br from-teal-500 to-blue-700"
             >
               Complete Your KYC Documentation
             </button>
@@ -1657,12 +1541,12 @@ export default function OnboardingPage() {
       {/* Footer */}
       <footer
         className="text-center py-12"
-        style={{ borderTop: `1px solid ${colors.border}` }}
+        style={{ borderTop: "1px solid #475569" }}
       >
-        <p className="font-semibold" style={{ color: colors.textSecondary }}>
+        <p className="font-semibold text-navy-200">
           Nihao Group Hong Kong | Carbon Market Intermediation | January 2026
         </p>
-        <p className="text-sm mt-2" style={{ color: colors.textMuted }}>
+        <p className="text-sm mt-2 text-navy-400">
           Bridging the EU ETS and China ETS through innovative bilateral trading solutions
         </p>
       </footer>

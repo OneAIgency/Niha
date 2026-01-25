@@ -30,7 +30,7 @@ import {
   Building,
   BadgeCheck,
 } from 'lucide-react';
-import { OnboardingLayout, colors } from '@/components/onboarding';
+import { OnboardingLayout } from '@/components/onboarding';
 
 // =============================================================================
 // Executive Summary Data
@@ -553,29 +553,29 @@ const MarketInefficienciesSection = () => (
   <div className="space-y-8">
     {/* Intermediary Problem */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="p-6 rounded-xl border-2" style={{ borderColor: colors.danger, backgroundColor: `${colors.danger}10` }}>
-        <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.danger }}>
+      <div className="p-6 rounded-xl border-2" className="border-2 border-red-500 bg-red-500/10">
+        <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-red-600 dark:text-red-400">
           <AlertTriangle className="w-5 h-5" />
           Current Reality: {marketInefficiencies.intermediaryProblem.title}
         </h4>
         <ul className="space-y-3">
           {marketInefficiencies.intermediaryProblem.currentReality.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-3 text-sm" style={{ color: colors.textSecondary }}>
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.danger }} />
+            <li key={idx} className="flex items-start gap-3 text-sm" className="text-navy-600 dark:text-navy-400">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-red-600 dark:text-red-400" />
               {item}
             </li>
           ))}
         </ul>
       </div>
-      <div className="p-6 rounded-xl border-2" style={{ borderColor: colors.success, backgroundColor: `${colors.success}10` }}>
-        <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.success }}>
+      <div className="p-6 rounded-xl border-2" className="border-2 border-emerald-500 bg-emerald-500/10">
+        <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
           <CheckCircle className="w-5 h-5" />
           Nihao Platform Solution
         </h4>
         <ul className="space-y-3">
           {marketInefficiencies.intermediaryProblem.nihaoSolution.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-3 text-sm" style={{ color: colors.textSecondary }}>
-              <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+            <li key={idx} className="flex items-start gap-3 text-sm" className="text-navy-600 dark:text-navy-400">
+              <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
               {item}
             </li>
           ))}
@@ -584,28 +584,28 @@ const MarketInefficienciesSection = () => (
     </div>
 
     {/* Transparency Crisis */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.textPrimary }}>
-        <Eye className="w-5 h-5" style={{ color: colors.secondary }} />
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-white">
+        <Eye className="w-5 h-5" className="text-blue-500 dark:text-blue-400" />
         {marketInefficiencies.transparencyCrisis.title}
       </h4>
-      <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+      <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
         {marketInefficiencies.transparencyCrisis.intro}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.danger }}>Issues:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-red-600 dark:text-red-400">Issues:</h5>
           <ul className="space-y-2">
             {marketInefficiencies.transparencyCrisis.issues.map((item, idx) => (
-              <li key={idx} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
+              <li key={idx} className="text-sm" className="text-navy-600 dark:text-navy-400">• {item}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Platform Innovation:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Platform Innovation:</h5>
           <ul className="space-y-2">
             {marketInefficiencies.transparencyCrisis.platformInnovation.map((item, idx) => (
-              <li key={idx} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
+              <li key={idx} className="text-sm" className="text-navy-600 dark:text-navy-400">• {item}</li>
             ))}
           </ul>
         </div>
@@ -613,28 +613,28 @@ const MarketInefficienciesSection = () => (
     </div>
 
     {/* Counterparty Risk */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.textPrimary }}>
-        <Shield className="w-5 h-5" style={{ color: colors.accent }} />
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-white">
+        <Shield className="w-5 h-5" className="text-violet-500" />
         {marketInefficiencies.counterpartyRisk.title}
       </h4>
-      <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+      <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
         {marketInefficiencies.counterpartyRisk.intro}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg border" style={{ borderColor: colors.danger }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.danger }}>VCM Risks:</h5>
+        <div className="p-4 rounded-lg border" className="border-red-500">
+          <h5 className="font-semibold mb-3" className="text-red-600 dark:text-red-400">VCM Risks:</h5>
           <ul className="space-y-2">
             {marketInefficiencies.counterpartyRisk.risks.map((item, idx) => (
-              <li key={idx} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
+              <li key={idx} className="text-sm" className="text-navy-600 dark:text-navy-400">• {item}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg border" style={{ borderColor: colors.success }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Risk Mitigation Infrastructure:</h5>
+        <div className="p-4 rounded-lg border" className="border-emerald-500">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Risk Mitigation Infrastructure:</h5>
           <ul className="space-y-2">
             {marketInefficiencies.counterpartyRisk.mitigation.map((item, idx) => (
-              <li key={idx} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
+              <li key={idx} className="text-sm" className="text-navy-600 dark:text-navy-400">• {item}</li>
             ))}
           </ul>
         </div>
@@ -665,8 +665,8 @@ const StakeholderBenefitsSection = () => {
               onClick={() => setActiveStakeholder(s.id)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: activeStakeholder === s.id ? colors.primary : colors.bgCard,
-                color: activeStakeholder === s.id ? 'white' : colors.textSecondary,
+                backgroundColor: activeStakeholder === s.id ? '#10b981' : '#1e293b', // emerald-500 : navy-800
+                color: activeStakeholder === s.id ? 'white' : '#cbd5e1', // navy-200
               }}
             >
               <Icon className="w-4 h-4" />
@@ -685,34 +685,34 @@ const StakeholderBenefitsSection = () => {
         >
           {activeStakeholder === 'buyers' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+              <h3 className="text-xl font-bold text-white">
                 {stakeholderAdvantages.buyers.title}
               </h3>
 
               {/* Cost Efficiency */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.success }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <DollarSign className="w-5 h-5" />
                   {stakeholderAdvantages.buyers.costEfficiency.title}
                 </h4>
-                <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+                <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
                   {stakeholderAdvantages.buyers.costEfficiency.context}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-                    <h5 className="font-semibold mb-2" style={{ color: colors.primary }}>Quantified Benefits:</h5>
+                  <div className="p-4 rounded-lg" className="bg-navy-800">
+                    <h5 className="font-semibold mb-2" className="text-emerald-500">Quantified Benefits:</h5>
                     <ul className="space-y-2">
                       {stakeholderAdvantages.buyers.costEfficiency.benefits.map((b, i) => (
-                        <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+                        <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                           {b}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-                    <h5 className="font-semibold mb-2" style={{ color: colors.secondary }}>Market Context:</h5>
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>
+                  <div className="p-4 rounded-lg" className="bg-navy-800">
+                    <h5 className="font-semibold mb-2" className="text-blue-500 dark:text-blue-400">Market Context:</h5>
+                    <p className="text-sm" className="text-navy-600 dark:text-navy-400">
                       {stakeholderAdvantages.buyers.costEfficiency.marketContext}
                     </p>
                   </div>
@@ -720,17 +720,17 @@ const StakeholderBenefitsSection = () => {
               </div>
 
               {/* Quality Assurance */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <BadgeCheck className="w-5 h-5" />
                   {stakeholderAdvantages.buyers.qualityAssurance.title}
                 </h4>
-                <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+                <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
                   {stakeholderAdvantages.buyers.qualityAssurance.context}
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {stakeholderAdvantages.buyers.qualityAssurance.features.map((f, i) => (
-                    <div key={i} className="p-3 rounded-lg text-center text-sm" style={{ backgroundColor: colors.bgCard, color: colors.textSecondary }}>
+                    <div key={i} className="p-3 rounded-lg text-center text-sm bg-navy-800 text-navy-600 dark:text-navy-400">
                       {f}
                     </div>
                   ))}
@@ -738,20 +738,20 @@ const StakeholderBenefitsSection = () => {
               </div>
 
               {/* Multi-Jurisdictional */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
                   <Globe className="w-5 h-5" />
                   {stakeholderAdvantages.buyers.multiJurisdictional.title}
                 </h4>
                 <ul className="space-y-2 mb-4">
                   {stakeholderAdvantages.buyers.multiJurisdictional.features.map((f, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.primary }} />
+                    <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                       {f}
                     </li>
                   ))}
                 </ul>
-                <div className="p-4 rounded-lg" style={{ backgroundColor: colors.success }}>
+                <div className="p-4 rounded-lg" className="bg-emerald-500">
                   <p className="text-sm text-white font-medium">
                     {stakeholderAdvantages.buyers.multiJurisdictional.savings}
                   </p>
@@ -762,28 +762,28 @@ const StakeholderBenefitsSection = () => {
 
           {activeStakeholder === 'developers' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+              <h3 className="text-xl font-bold text-white">
                 {stakeholderAdvantages.developers.title}
               </h3>
 
               {/* Revenue Optimization */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.success }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <TrendingUp className="w-5 h-5" />
                   {stakeholderAdvantages.developers.revenueOptimization.title}
                 </h4>
-                <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+                <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
                   {stakeholderAdvantages.developers.revenueOptimization.context}
                 </p>
                 <ul className="space-y-2 mb-4">
                   {stakeholderAdvantages.developers.revenueOptimization.transformation.map((t, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+                    <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                       {t}
                     </li>
                   ))}
                 </ul>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: colors.accent }}>
+                <div className="p-3 rounded-lg" className="bg-violet-500">
                   <p className="text-sm text-white font-medium">
                     {stakeholderAdvantages.developers.revenueOptimization.marketGrowth}
                   </p>
@@ -791,37 +791,37 @@ const StakeholderBenefitsSection = () => {
               </div>
 
               {/* Market Access */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <Globe className="w-5 h-5" />
                   {stakeholderAdvantages.developers.marketAccess.title}
                 </h4>
                 <ul className="space-y-2 mb-4">
                   {stakeholderAdvantages.developers.marketAccess.features.map((f, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.primary }} />
+                    <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                       {f}
                     </li>
                   ))}
                 </ul>
-                <p className="text-sm font-medium" style={{ color: colors.accent }}>
+                <p className="text-sm font-medium" className="text-violet-500">
                   {stakeholderAdvantages.developers.marketAccess.growth}
                 </p>
               </div>
 
               {/* Technical Support */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
                   <Cpu className="w-5 h-5" />
                   {stakeholderAdvantages.developers.technicalSupport.title}
                 </h4>
-                <p className="text-sm mb-2" style={{ color: colors.textMuted }}>Digital MRV Capabilities:</p>
+                <p className="text-sm mb-2" className="text-navy-500 dark:text-navy-500">Digital MRV Capabilities:</p>
                 <ul className="space-y-2 mb-4">
                   {stakeholderAdvantages.developers.technicalSupport.capabilities.map((c, i) => (
-                    <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {c}</li>
+                    <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {c}</li>
                   ))}
                 </ul>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: colors.primary }}>
+                <div className="p-3 rounded-lg" className="bg-emerald-500">
                   <p className="text-sm text-white font-medium">
                     Time-to-Market Advantage: {stakeholderAdvantages.developers.technicalSupport.timeAdvantage}
                   </p>
@@ -832,32 +832,32 @@ const StakeholderBenefitsSection = () => {
 
           {activeStakeholder === 'institutions' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+              <h3 className="text-xl font-bold text-white">
                 {stakeholderAdvantages.institutions.title}
               </h3>
 
               {/* Liquidity */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <BarChart3 className="w-5 h-5" />
                   {stakeholderAdvantages.institutions.liquidity.title}
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {stakeholderAdvantages.institutions.liquidity.stats.map((s, i) => (
-                    <div key={i} className="p-4 rounded-lg text-center" style={{ backgroundColor: colors.bgCard }}>
-                      <p className="text-sm" style={{ color: colors.textSecondary }}>{s}</p>
+                    <div key={i} className="p-4 rounded-lg text-center bg-navy-800">
+                      <p className="text-sm" className="text-navy-600 dark:text-navy-400">{s}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Investment Drivers */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3" style={{ color: colors.success }}>Investment Thesis Drivers:</h4>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3" className="text-emerald-500">Investment Thesis Drivers:</h4>
                 <ul className="space-y-2">
                   {stakeholderAdvantages.institutions.investmentDrivers.map((d, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                      <TrendingUp className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+                    <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                      <TrendingUp className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-500" />
                       {d}
                     </li>
                   ))}
@@ -865,17 +865,17 @@ const StakeholderBenefitsSection = () => {
               </div>
 
               {/* Risk Management */}
-              <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+              <div className="p-6 rounded-xl" className="bg-navy-700">
+                <h4 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
                   <Shield className="w-5 h-5" />
                   {stakeholderAdvantages.institutions.riskManagement.title}
                 </h4>
                 <ul className="space-y-2 mb-4">
                   {stakeholderAdvantages.institutions.riskManagement.tools.map((t, i) => (
-                    <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {t}</li>
+                    <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {t}</li>
                   ))}
                 </ul>
-                <p className="text-sm" style={{ color: colors.textMuted }}>
+                <p className="text-sm" className="text-navy-500 dark:text-navy-500">
                   {stakeholderAdvantages.institutions.riskManagement.stability}
                 </p>
               </div>
@@ -884,63 +884,63 @@ const StakeholderBenefitsSection = () => {
 
           {activeStakeholder === 'regulators' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+              <h3 className="text-xl font-bold text-white">
                 {stakeholderAdvantages.regulators.title}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* EU MAR */}
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h4 className="font-bold mb-3" style={{ color: colors.primary }}>
+                <div className="p-4 rounded-xl" className="bg-navy-700">
+                  <h4 className="font-bold mb-3" className="text-emerald-500">
                     {stakeholderAdvantages.regulators.euMar.title}
                   </h4>
                   <ul className="space-y-2">
                     {stakeholderAdvantages.regulators.euMar.features.map((f, i) => (
-                      <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {f}</li>
+                      <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {f}</li>
                     ))}
                   </ul>
                 </div>
 
                 {/* AML */}
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h4 className="font-bold mb-3" style={{ color: colors.secondary }}>
+                <div className="p-4 rounded-xl" className="bg-navy-700">
+                  <h4 className="font-bold mb-3" className="text-blue-500 dark:text-blue-400">
                     {stakeholderAdvantages.regulators.aml.title}
                   </h4>
                   <ul className="space-y-2">
                     {stakeholderAdvantages.regulators.aml.features.map((f, i) => (
-                      <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {f}</li>
+                      <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {f}</li>
                     ))}
                   </ul>
                 </div>
 
                 {/* Data Protection */}
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h4 className="font-bold mb-3" style={{ color: colors.accent }}>
+                <div className="p-4 rounded-xl" className="bg-navy-700">
+                  <h4 className="font-bold mb-3" className="text-violet-500">
                     {stakeholderAdvantages.regulators.dataProtection.title}
                   </h4>
                   <ul className="space-y-2">
                     {stakeholderAdvantages.regulators.dataProtection.features.map((f, i) => (
-                      <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {f}</li>
+                      <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {f}</li>
                     ))}
                   </ul>
                 </div>
 
                 {/* Integrity */}
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                  <h4 className="font-bold mb-3" style={{ color: colors.success }}>
+                <div className="p-4 rounded-xl" className="bg-navy-700">
+                  <h4 className="font-bold mb-3" className="text-emerald-500">
                     {stakeholderAdvantages.regulators.integrity.title}
                   </h4>
                   <ul className="space-y-2">
                     {stakeholderAdvantages.regulators.integrity.transparency.map((b, i) => (
-                      <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {b}</li>
+                      <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {b}</li>
                     ))}
                   </ul>
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-                <h5 className="font-semibold mb-2" style={{ color: colors.textPrimary }}>Standards Alignment:</h5>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>
+              <div className="p-4 rounded-lg" className="bg-navy-800">
+                <h5 className="font-semibold mb-2" className="text-white">Standards Alignment:</h5>
+                <p className="text-sm" className="text-navy-600 dark:text-navy-400">
                   {stakeholderAdvantages.regulators.integrity.standards}
                 </p>
               </div>
@@ -955,24 +955,24 @@ const StakeholderBenefitsSection = () => {
 const HongKongPositionSection = () => (
   <div className="space-y-8">
     {/* Geographic Benefits */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.primary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
         <MapPin className="w-5 h-5" />
         {hongKongPosition.geographic.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>24/7 Global Trading Access:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">24/7 Global Trading Access:</h5>
           <ul className="space-y-2">
             {hongKongPosition.geographic.tradingAccess.map((t, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <Globe className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.primary }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <Globe className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                 {t}
               </li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.success }}>
+        <div className="p-4 rounded-lg" className="bg-emerald-500">
           <h5 className="font-semibold mb-2 text-white">Market Growth Trajectory:</h5>
           <p className="text-sm text-white opacity-90">
             {hongKongPosition.geographic.marketGrowth}
@@ -982,25 +982,25 @@ const HongKongPositionSection = () => (
     </div>
 
     {/* One Country Two Systems */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.accent }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-violet-500">
         <Link2 className="w-5 h-5" />
         {hongKongPosition.oneCountryTwoSystems.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>China-International Bridge Function:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">China-International Bridge Function:</h5>
           <ul className="space-y-2">
             {hongKongPosition.oneCountryTwoSystems.bridge.map((b, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {b}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {b}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>Market Integration Infrastructure:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">Market Integration Infrastructure:</h5>
           <ul className="space-y-2">
             {hongKongPosition.oneCountryTwoSystems.integration.map((i, idx) => (
-              <li key={idx} className="text-sm" style={{ color: colors.textSecondary }}>• {i}</li>
+              <li key={idx} className="text-sm" className="text-navy-600 dark:text-navy-400">• {i}</li>
             ))}
           </ul>
         </div>
@@ -1008,20 +1008,20 @@ const HongKongPositionSection = () => (
     </div>
 
     {/* Policy Support */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.secondary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
         <Building className="w-5 h-5" />
         {hongKongPosition.policySupport.title}
       </h4>
-      <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: colors.bgCard }}>
-        <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>Government-Led Initiatives:</h5>
+      <div className="p-4 rounded-lg mb-4" className="bg-navy-800">
+        <h5 className="font-semibold mb-3" className="text-emerald-500">Government-Led Initiatives:</h5>
         <ul className="space-y-2">
           {hongKongPosition.policySupport.government.map((g, i) => (
-            <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {g}</li>
+            <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {g}</li>
           ))}
         </ul>
       </div>
-      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.primary }}>
+      <div className="p-4 rounded-lg" className="bg-emerald-500">
         <h5 className="font-semibold mb-2 text-white">Strategic Objectives:</h5>
         <p className="text-sm text-white opacity-90">
           {hongKongPosition.policySupport.objectives}
@@ -1034,29 +1034,29 @@ const HongKongPositionSection = () => (
 const TechnologyPlatformSection = () => (
   <div className="space-y-8">
     {/* Digital Platform */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.primary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
         <Database className="w-5 h-5" />
         {technologyInfrastructure.digitalPlatform.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>Core Transformation:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Core Transformation:</h5>
           <ul className="space-y-2">
             {technologyInfrastructure.digitalPlatform.coreTransformation.map((c, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                 {c}
               </li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>Operational Advantages:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">Operational Advantages:</h5>
           <ul className="space-y-2">
             {technologyInfrastructure.digitalPlatform.operationalAdvantages.map((o, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <Zap className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.accent }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <Zap className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-violet-500" />
                 {o}
               </li>
             ))}
@@ -1066,25 +1066,25 @@ const TechnologyPlatformSection = () => (
     </div>
 
     {/* AI/ML */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.secondary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
         <Brain className="w-5 h-5" />
         {technologyInfrastructure.ai.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>Quality Assessment Innovation:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Quality Assessment Innovation:</h5>
           <ul className="space-y-2">
             {technologyInfrastructure.ai.qualityAssessment.map((q, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {q}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {q}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>Market Intelligence:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">Market Intelligence:</h5>
           <ul className="space-y-2">
             {technologyInfrastructure.ai.marketIntelligence.map((m, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {m}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {m}</li>
             ))}
           </ul>
         </div>
@@ -1096,19 +1096,19 @@ const TechnologyPlatformSection = () => (
 const EconomicValueSection = () => (
   <div className="space-y-8">
     {/* Buyer Savings Table */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.success }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
         <Building2 className="w-5 h-5" />
         Cost Savings Analysis: For Buyers
       </h4>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ backgroundColor: colors.bgCard }}>
-              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Cost Category</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional Market</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Savings</th>
+            <tr className="bg-navy-800">
+              <th className="px-4 py-3 text-left" className="text-white">Cost Category</th>
+              <th className="px-4 py-3 text-center" className="text-red-600 dark:text-red-400">Traditional Market</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Nihao Platform</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Savings</th>
             </tr>
           </thead>
           <tbody>
@@ -1116,19 +1116,19 @@ const EconomicValueSection = () => (
               <tr
                 key={i}
                 style={{
-                  backgroundColor: row.isTotal ? colors.primary : (i % 2 === 0 ? colors.bgCard : colors.bgCardHover),
+                  backgroundColor: row.isTotal ? "#10b981" : (i % 2 === 0 ? "#1e293b" : "#334155"),
                 }}
               >
-                <td className={`px-4 py-3 ${row.isTotal ? 'font-bold text-white' : ''}`} style={{ color: row.isTotal ? 'white' : colors.textPrimary }}>
+                <td className={`px-4 py-3 ${row.isTotal ? 'font-bold text-white' : ''}`} className={row.isTotal ? "text-white" : "text-navy-900 dark:text-white"}>
                   {row.category}
                 </td>
-                <td className="px-4 py-3 text-center" style={{ color: row.isTotal ? 'white' : colors.textSecondary }}>
+                <td className="px-4 py-3 text-center" className={row.isTotal ? "text-white" : "text-navy-600 dark:text-navy-400"}>
                   {row.traditional}
                 </td>
-                <td className="px-4 py-3 text-center" style={{ color: row.isTotal ? 'white' : colors.textSecondary }}>
+                <td className="px-4 py-3 text-center" className={row.isTotal ? "text-white" : "text-navy-600 dark:text-navy-400"}>
                   {row.nihao}
                 </td>
-                <td className="px-4 py-3 text-center font-bold" style={{ color: row.isTotal ? 'white' : colors.success }}>
+                <td className="px-4 py-3 text-center font-bold" className={row.isTotal ? "text-white" : "text-emerald-600 dark:text-emerald-400"}>
                   {row.savings}
                 </td>
               </tr>
@@ -1139,28 +1139,28 @@ const EconomicValueSection = () => (
     </div>
 
     {/* Developer Savings Table */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.primary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
         <Factory className="w-5 h-5" />
         Cost Savings Analysis: For Project Developers
       </h4>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ backgroundColor: colors.bgCard }}>
-              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Revenue Category</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Improvement</th>
+            <tr className="bg-navy-800">
+              <th className="px-4 py-3 text-left" className="text-white">Revenue Category</th>
+              <th className="px-4 py-3 text-center" className="text-red-600 dark:text-red-400">Traditional</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Nihao Platform</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Improvement</th>
             </tr>
           </thead>
           <tbody>
             {economicValue.developerSavings.map((row, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
-                <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.nihao}</td>
-                <td className="px-4 py-3 text-center font-bold" style={{ color: colors.success }}>{row.improvement}</td>
+              <tr key={i} className={i % 2 === 0 ? "bg-navy-800" : "bg-navy-700"}>
+                <td className="px-4 py-3" className="text-white">{row.category}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.traditional}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.nihao}</td>
+                <td className="px-4 py-3 text-center font-bold" className="text-emerald-500">{row.improvement}</td>
               </tr>
             ))}
           </tbody>
@@ -1169,28 +1169,28 @@ const EconomicValueSection = () => (
     </div>
 
     {/* Institutional Investors Value Table */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.secondary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
         <Landmark className="w-5 h-5" />
         Value Analysis: For Institutional Investors & Financial Institutions
       </h4>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ backgroundColor: colors.bgCard }}>
-              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Value Category</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional Market</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Improvement</th>
+            <tr className="bg-navy-800">
+              <th className="px-4 py-3 text-left" className="text-white">Value Category</th>
+              <th className="px-4 py-3 text-center" className="text-red-600 dark:text-red-400">Traditional Market</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Nihao Platform</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Improvement</th>
             </tr>
           </thead>
           <tbody>
             {economicValue.institutionalValue.map((row, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
-                <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.nihao}</td>
-                <td className="px-4 py-3 text-center font-bold" style={{ color: colors.success }}>{row.improvement}</td>
+              <tr key={i} className={i % 2 === 0 ? "bg-navy-800" : "bg-navy-700"}>
+                <td className="px-4 py-3" className="text-white">{row.category}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.traditional}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.nihao}</td>
+                <td className="px-4 py-3 text-center font-bold" className="text-emerald-500">{row.improvement}</td>
               </tr>
             ))}
           </tbody>
@@ -1199,28 +1199,28 @@ const EconomicValueSection = () => (
     </div>
 
     {/* Regulators & Standards Bodies Value Table */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.accent }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-violet-500">
         <Shield className="w-5 h-5" />
         Value Analysis: For Regulators & Standards Bodies
       </h4>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ backgroundColor: colors.bgCard }}>
-              <th className="px-4 py-3 text-left" style={{ color: colors.textPrimary }}>Oversight Category</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.danger }}>Traditional Market</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.success }}>Nihao Platform</th>
-              <th className="px-4 py-3 text-center" style={{ color: colors.primary }}>Efficiency Gain</th>
+            <tr className="bg-navy-800">
+              <th className="px-4 py-3 text-left" className="text-white">Oversight Category</th>
+              <th className="px-4 py-3 text-center" className="text-red-600 dark:text-red-400">Traditional Market</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Nihao Platform</th>
+              <th className="px-4 py-3 text-center" className="text-emerald-500">Efficiency Gain</th>
             </tr>
           </thead>
           <tbody>
             {economicValue.regulatorValue.map((row, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? colors.bgCard : colors.bgCardHover }}>
-                <td className="px-4 py-3" style={{ color: colors.textPrimary }}>{row.category}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.traditional}</td>
-                <td className="px-4 py-3 text-center" style={{ color: colors.textSecondary }}>{row.nihao}</td>
-                <td className="px-4 py-3 text-center font-bold" style={{ color: colors.success }}>{row.improvement}</td>
+              <tr key={i} className={i % 2 === 0 ? "bg-navy-800" : "bg-navy-700"}>
+                <td className="px-4 py-3" className="text-white">{row.category}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.traditional}</td>
+                <td className="px-4 py-3 text-center" className="text-navy-600 dark:text-navy-400">{row.nihao}</td>
+                <td className="px-4 py-3 text-center font-bold" className="text-emerald-500">{row.improvement}</td>
               </tr>
             ))}
           </tbody>
@@ -1230,28 +1230,28 @@ const EconomicValueSection = () => (
 
     {/* Market Projections */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-        <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+      <div className="p-4 rounded-xl" className="bg-navy-700">
+        <h5 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
           <TrendingUp className="w-4 h-4" />
           VCM Projections
         </h5>
         {economicValue.marketProjections.vcm.map((v, i) => (
-          <div key={i} className="flex justify-between py-2 border-b" style={{ borderColor: colors.border }}>
-            <span className="text-sm" style={{ color: colors.textMuted }}>{v.year}</span>
-            <span className="text-sm font-medium" style={{ color: colors.success }}>{v.value}</span>
+          <div key={i} className="flex justify-between py-2 border-b" className="border-navy-200 dark:border-navy-600">
+            <span className="text-sm" className="text-navy-500 dark:text-navy-500">{v.year}</span>
+            <span className="text-sm font-medium" className="text-emerald-500">{v.value}</span>
           </div>
         ))}
       </div>
 
-      <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-        <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+      <div className="p-4 rounded-xl" className="bg-navy-700">
+        <h5 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
           <BarChart3 className="w-4 h-4" />
           EU ETS Market Size
         </h5>
         {economicValue.marketProjections.euEts.map((e, i) => (
-          <div key={i} className="py-2 border-b" style={{ borderColor: colors.border }}>
-            <span className="text-xs" style={{ color: colors.textMuted }}>{e.metric}</span>
-            <div className="text-sm font-medium" style={{ color: colors.primary }}>{e.value}</div>
+          <div key={i} className="py-2 border-b" className="border-navy-200 dark:border-navy-600">
+            <span className="text-xs" className="text-navy-500 dark:text-navy-500">{e.metric}</span>
+            <div className="text-sm font-medium" className="text-emerald-500">{e.value}</div>
           </div>
         ))}
       </div>
@@ -1263,28 +1263,28 @@ const EconomicValueSection = () => (
 const CompetitiveEdgeSection = () => (
   <div className="space-y-8">
     {/* vs Brokers */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4" style={{ color: colors.textPrimary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4" className="text-white">
         {platformBenefits.vsBrokers.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.danger }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.danger }}>Traditional Challenges:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-red-500">
+          <h5 className="font-semibold mb-3" className="text-red-600 dark:text-red-400">Traditional Challenges:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsBrokers.challenges.map((l, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.danger }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-red-600 dark:text-red-400" />
                 {l}
               </li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.success }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Platform Benefits:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-emerald-500">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Platform Benefits:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsBrokers.benefits.map((s, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                 {s}
               </li>
             ))}
@@ -1294,28 +1294,28 @@ const CompetitiveEdgeSection = () => (
     </div>
 
     {/* vs Exchanges */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4" style={{ color: colors.textPrimary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4" className="text-white">
         {platformBenefits.vsExchanges.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.danger }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.danger }}>Traditional Challenges:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-red-500">
+          <h5 className="font-semibold mb-3" className="text-red-600 dark:text-red-400">Traditional Challenges:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsExchanges.challenges.map((l, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.danger }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-red-600 dark:text-red-400" />
                 {l}
               </li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.success }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Platform Benefits:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-emerald-500">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Platform Benefits:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsExchanges.benefits.map((a, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                 {a}
               </li>
             ))}
@@ -1325,28 +1325,28 @@ const CompetitiveEdgeSection = () => (
     </div>
 
     {/* vs Registries */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4" style={{ color: colors.textPrimary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4" className="text-white">
         {platformBenefits.vsRegistries.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.danger }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.danger }}>Traditional Challenges:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-red-500">
+          <h5 className="font-semibold mb-3" className="text-red-600 dark:text-red-400">Traditional Challenges:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsRegistries.challenges.map((l, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.danger }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-red-600 dark:text-red-400" />
                 {l}
               </li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: colors.success }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Platform Benefits:</h5>
+        <div className="p-4 rounded-lg border-2" className="border-emerald-500">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Platform Benefits:</h5>
           <ul className="space-y-2">
             {platformBenefits.vsRegistries.benefits.map((a, i) => (
-              <li key={i} className="text-sm flex items-start gap-2" style={{ color: colors.textSecondary }}>
-                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
+              <li key={i} className="text-sm flex items-start gap-2" className="text-navy-600 dark:text-navy-400">
+                <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
                 {a}
               </li>
             ))}
@@ -1360,28 +1360,28 @@ const CompetitiveEdgeSection = () => (
 const RiskLegalSection = () => (
   <div className="space-y-8">
     {/* EUR 10M Penalty */}
-    <div className="p-6 rounded-xl border-2" style={{ borderColor: colors.danger, backgroundColor: `${colors.danger}10` }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.danger }}>
+    <div className="p-6 rounded-xl border-2" className="border-2 border-red-500 bg-red-500/10">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-red-600 dark:text-red-400">
         <Gavel className="w-5 h-5" />
         {riskAndLegal.penaltyProvision.title}
       </h4>
-      <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+      <p className="text-sm mb-4" className="text-navy-600 dark:text-navy-400">
         {riskAndLegal.penaltyProvision.intro}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>Deterrent Effect:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Deterrent Effect:</h5>
           <ul className="space-y-2">
             {riskAndLegal.penaltyProvision.deterrent.map((d, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {d}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {d}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>Breach Categories Covered:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">Breach Categories Covered:</h5>
           <ol className="space-y-2">
             {riskAndLegal.penaltyProvision.breachCategories.map((b, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>{i + 1}. {b}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">{i + 1}. {b}</li>
             ))}
           </ol>
         </div>
@@ -1389,25 +1389,25 @@ const RiskLegalSection = () => (
     </div>
 
     {/* Legal Architecture */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.secondary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
         <Scale className="w-5 h-5" />
         {riskAndLegal.legalArchitecture.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.primary }}>Tailored Governing Law:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-emerald-500">Tailored Governing Law:</h5>
           <ul className="space-y-2">
             {riskAndLegal.legalArchitecture.governingLaw.map((g, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {g}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {g}</li>
             ))}
           </ul>
         </div>
-        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-          <h5 className="font-semibold mb-3" style={{ color: colors.secondary }}>Dispute Resolution Framework:</h5>
+        <div className="p-4 rounded-lg" className="bg-navy-800">
+          <h5 className="font-semibold mb-3" className="text-blue-500 dark:text-blue-400">Dispute Resolution Framework:</h5>
           <ul className="space-y-2">
             {riskAndLegal.legalArchitecture.disputeResolution.map((d, i) => (
-              <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {d}</li>
+              <li key={i} className="text-sm" className="text-navy-600 dark:text-navy-400">• {d}</li>
             ))}
           </ul>
         </div>
@@ -1415,16 +1415,16 @@ const RiskLegalSection = () => (
     </div>
 
     {/* Compliance Infrastructure */}
-    <div className="p-6 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: colors.primary }}>
+    <div className="p-6 rounded-xl" className="bg-navy-700">
+      <h4 className="font-bold text-lg mb-4 flex items-center gap-2" className="text-emerald-500">
         <ShieldCheck className="w-5 h-5" />
         {riskAndLegal.complianceInfrastructure.title}
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {riskAndLegal.complianceInfrastructure.regulations.map((r, i) => (
-          <div key={i} className="p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: colors.bgCard }}>
-            <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.success }} />
-            <span className="text-sm" style={{ color: colors.textSecondary }}>{r}</span>
+          <div key={i} className="p-3 rounded-lg flex items-start gap-2" className="bg-navy-800">
+            <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" className="text-emerald-500" />
+            <span className="text-sm" className="text-navy-600 dark:text-navy-400">{r}</span>
           </div>
         ))}
       </div>
@@ -1450,14 +1450,14 @@ export default function StrategicAdvantagePage() {
           className="rounded-2xl p-8"
           style={{
             background: `linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)`,
-            border: `1px solid ${colors.secondaryLight}`,
+            border: "1px solid #60a5fa",
           }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Award className="w-8 h-8" style={{ color: colors.secondaryLight }} />
-            <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>Executive Summary</h3>
+            <Award className="w-8 h-8" className="text-blue-400" />
+            <h3 className="text-xl font-bold" className="text-white">Executive Summary</h3>
           </div>
-          <p className="text-sm mb-6" style={{ color: colors.textSecondary }}>
+          <p className="text-sm mb-6" className="text-navy-600 dark:text-navy-400">
             {executiveSummary.intro}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1466,16 +1466,16 @@ export default function StrategicAdvantagePage() {
                 key={idx}
                 className="p-4 rounded-xl text-center"
                 style={{
-                  backgroundColor: item.issue ? `${colors.danger}20` : colors.bgCard,
-                  border: item.issue ? `1px solid ${colors.danger}` : `1px solid ${colors.border}`,
+                  backgroundColor: item.issue ? `${"#ef4444"}20` : "#1e293b",
+                  border: item.issue ? `1px solid ${"#ef4444"}` : `1px solid ${"#475569"}`,
                 }}
               >
-                <div className="text-2xl font-bold mb-1" style={{ color: item.issue ? colors.danger : colors.success }}>
+                <div className="text-2xl font-bold mb-1" className={item.issue ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}>
                   {item.value}
                 </div>
-                <div className="text-xs" style={{ color: colors.textMuted }}>{item.label}</div>
-                {item.growth && <div className="text-xs mt-1" style={{ color: colors.accent }}>{item.growth}</div>}
-                {item.detail && <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>{item.detail}</div>}
+                <div className="text-xs" className="text-navy-500 dark:text-navy-500">{item.label}</div>
+                {item.growth && <div className="text-xs mt-1" className="text-violet-500">{item.growth}</div>}
+                {item.detail && <div className="text-xs mt-1" className="text-navy-600 dark:text-navy-400">{item.detail}</div>}
               </div>
             ))}
           </div>
@@ -1492,9 +1492,9 @@ export default function StrategicAdvantagePage() {
               onClick={() => setActiveTab(tab.id)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm"
               style={{
-                backgroundColor: activeTab === tab.id ? colors.primary : colors.bgCard,
-                color: activeTab === tab.id ? 'white' : colors.textSecondary,
-                border: `1px solid ${activeTab === tab.id ? colors.primary : colors.border}`,
+                backgroundColor: activeTab === tab.id ? "#10b981" : "#1e293b",
+                color: activeTab === tab.id ? "white" : "#475569",
+                border: `1px solid ${activeTab === tab.id ? "#10b981" : "#475569"}`,
               }}
             >
               <Icon className="w-4 h-4" />
@@ -1526,74 +1526,74 @@ export default function StrategicAdvantagePage() {
               className="rounded-2xl p-8"
               style={{
                 background: `linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(13, 148, 136, 0.15) 100%)`,
-                border: `1px solid ${colors.primary}`,
+                border: "1px solid #10b981",
               }}
             >
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3" style={{ color: colors.textPrimary }}>
-                <CheckCircle className="w-8 h-8" style={{ color: colors.success }} />
+              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3" className="text-white">
+                <CheckCircle className="w-8 h-8" className="text-emerald-500" />
                 Platform Benefits Summary
               </h3>
-              <p className="text-sm mb-6" style={{ color: colors.textSecondary }}>
+              <p className="text-sm mb-6" className="text-navy-600 dark:text-navy-400">
                 {conclusion.intro}
               </p>
 
               {/* Quantified Benefits Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-                  <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+                <div className="p-4 rounded-xl" className="bg-navy-800">
+                  <h5 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                     <Building2 className="w-4 h-4" />
                     For Buyers
                   </h5>
                   <ul className="space-y-1">
                     {conclusion.buyers.map((b, i) => (
-                      <li key={i} className="text-xs" style={{ color: colors.textSecondary }}>• {b}</li>
+                      <li key={i} className="text-xs" className="text-navy-600 dark:text-navy-400">• {b}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-                  <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.success }}>
+                <div className="p-4 rounded-xl" className="bg-navy-800">
+                  <h5 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                     <Factory className="w-4 h-4" />
                     For Developers
                   </h5>
                   <ul className="space-y-1">
                     {conclusion.developers.map((d, i) => (
-                      <li key={i} className="text-xs" style={{ color: colors.textSecondary }}>• {d}</li>
+                      <li key={i} className="text-xs" className="text-navy-600 dark:text-navy-400">• {d}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-                  <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+                <div className="p-4 rounded-xl" className="bg-navy-800">
+                  <h5 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
                     <Landmark className="w-4 h-4" />
                     For Institutions
                   </h5>
                   <ul className="space-y-1">
                     {conclusion.institutions.map((inst, i) => (
-                      <li key={i} className="text-xs" style={{ color: colors.textSecondary }}>• {inst}</li>
+                      <li key={i} className="text-xs" className="text-navy-600 dark:text-navy-400">• {inst}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-                  <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.accent }}>
+                <div className="p-4 rounded-xl" className="bg-navy-800">
+                  <h5 className="font-bold mb-3 flex items-center gap-2" className="text-violet-500">
                     <Shield className="w-4 h-4" />
                     For Regulators
                   </h5>
                   <ul className="space-y-1">
                     {conclusion.regulators.map((r, i) => (
-                      <li key={i} className="text-xs" style={{ color: colors.textSecondary }}>• {r}</li>
+                      <li key={i} className="text-xs" className="text-navy-600 dark:text-navy-400">• {r}</li>
                     ))}
                   </ul>
                 </div>
               </div>
 
               {/* Hong Kong Advantages */}
-              <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: colors.bgCard }}>
-                <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+              <div className="p-4 rounded-xl mb-6" className="bg-navy-800">
+                <h5 className="font-bold mb-3 flex items-center gap-2" className="text-emerald-500">
                   <Globe className="w-5 h-5" />
                   Hong Kong Strategic Position
                 </h5>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {conclusion.hkAdvantages.map((a, i) => (
-                    <div key={i} className="p-3 rounded-lg text-center text-xs" style={{ backgroundColor: colors.bgCardHover, color: colors.textSecondary }}>
+                    <div key={i} className="p-3 rounded-lg text-center text-xs" style={{ backgroundColor: "#334155", color: "#000000" }}>
                       {a}
                     </div>
                   ))}
@@ -1601,23 +1601,23 @@ export default function StrategicAdvantagePage() {
               </div>
 
               {/* Technology Leadership */}
-              <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: colors.bgCard }}>
-                <h5 className="font-bold mb-3 flex items-center gap-2" style={{ color: colors.secondary }}>
+              <div className="p-4 rounded-xl mb-6" className="bg-navy-800">
+                <h5 className="font-bold mb-3 flex items-center gap-2" className="text-blue-500 dark:text-blue-400">
                   <Cpu className="w-5 h-5" />
                   Technology Infrastructure
                 </h5>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {conclusion.technology.map((t, i) => (
-                    <div key={i} className="p-3 rounded-lg" style={{ backgroundColor: colors.bgCardHover }}>
-                      <div className="font-semibold text-sm mb-1" style={{ color: colors.primary }}>{t.name}</div>
-                      <div className="text-xs" style={{ color: colors.textSecondary }}>{t.desc}</div>
+                    <div key={i} className="p-3 rounded-lg" className="bg-navy-700">
+                      <div className="font-semibold text-sm mb-1" className="text-emerald-500">{t.name}</div>
+                      <div className="text-xs" className="text-navy-600 dark:text-navy-400">{t.desc}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Final Statement */}
-              <div className="p-4 rounded-xl" style={{ backgroundColor: colors.primary }}>
+              <div className="p-4 rounded-xl" className="bg-emerald-500">
                 <p className="text-sm text-white">
                   {conclusion.finalStatement}
                 </p>
@@ -1628,11 +1628,11 @@ export default function StrategicAdvantagePage() {
       </AnimatePresence>
 
       {/* Navigation Footer */}
-      <div className="flex justify-between items-center pt-8 border-t" style={{ borderColor: colors.border }}>
+      <div className="flex justify-between items-center pt-8 border-t" className="border-navy-200 dark:border-navy-600">
         <Link
           to="/onboarding/about-nihao"
           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
-          style={{ backgroundColor: colors.bgCard, color: colors.textSecondary }}
+          style={{ backgroundColor: "#1e293b", color: "#000000" }}
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           About Nihao
@@ -1640,7 +1640,7 @@ export default function StrategicAdvantagePage() {
         <Link
           to="/onboarding/cea-holders"
           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
-          style={{ backgroundColor: colors.primary, color: 'white' }}
+          style={{ backgroundColor: "#10b981", color: 'white' }}
         >
           CEA Holders
           <ArrowRight className="w-4 h-4" />

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import {
   ArrowRightLeft,
   LayoutDashboard,
@@ -25,16 +26,20 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 import { usePrices } from '../hooks/usePrices';
-import { usersApi, cashMarketApi } from '../services/api';
+import { usersApi, cashMarketApi, swapsApi } from '../services/api';
 import {
   DataTable,
   Tabs,
   ProgressBar,
   Skeleton,
+  Subheader,
   type Column,
   type Tab,
 } from '../components/common';
-import type { Order } from '../types';
+import { EuaScrapped, CeaScrapped } from '../components/dashboard';
+import { SettlementTransactions } from '../components/dashboard/SettlementTransactions';
+import { SettlementDetails } from '../components/dashboard/SettlementDetails';
+import type { Order, SettlementBatch } from '../types';
 
 interface EntityBalance {
   entity_id: string;
@@ -97,10 +102,10 @@ const transactionColumns: Column<Transaction>[] = [
         SELL: 'text-red-400 bg-red-500/20',
         DEPOSIT: 'text-blue-400 bg-blue-500/20',
         WITHDRAW: 'text-orange-400 bg-orange-500/20',
-        SYSTEM: 'text-slate-400 bg-slate-500/20',
+        SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
       };
       return (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[value] || colors.SYSTEM}`}>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[value] || "#000000"}`}>
           {value}
         </span>
       );
@@ -164,20 +169,34 @@ const historyTabs: Tab[] = [
   { id: 'all', label: 'All' },
   { id: 'pending', label: 'Pending' },
   { id: 'completed', label: 'Completed' },
+  { id: 'settlements', label: 'Settlements' },
 ];
 
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { prices } = usePrices();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
   const [entityAssets, setEntityAssets] = useState<EntityAssets | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [swaps, setSwaps] = useState<any[]>([]);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSettlement, setSelectedSettlement] = useState<SettlementBatch | null>(null);
+  const lastLocationRef = useRef<string>('');
+  const isRefreshingBalanceRef = useRef<boolean>(false);
+
+  // Type definition for balance update event
+  interface BalanceUpdatedEvent extends CustomEvent {
+    detail: {
+      type: string;
+      source?: string;
+    };
+  }
 
   // Derive portfolio from real data (prefer entityAssets over entityBalance for cash)
   const eurBalance = entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0;
@@ -215,23 +234,63 @@ export function DashboardPage() {
 
   const portfolioValue = calculatePortfolioValue();
 
-  // Fetch balance and assets data
-  const fetchBalance = useCallback(async () => {
+  /**
+   * Fetches balance and assets data from the cash market API endpoint.
+   * 
+   * Uses the same endpoint as the cash market page (`cashMarketApi.getUserBalances()`)
+   * to ensure data consistency across the application. This endpoint queries the
+   * EntityHolding table directly, providing accurate real-time balance data.
+   * 
+   * Features:
+   * - Prevents overlapping calls using ref-based flag (race condition prevention)
+   * - Maps API response to EntityAssets format for compatibility
+   * - Fetches entity balance separately for deposit count (non-blocking)
+   * - Returns boolean indicating success/failure for event dispatch logic
+   * 
+   * @returns Promise<boolean> - true if fetch succeeded, false otherwise
+   */
+  const fetchBalance = useCallback(async (): Promise<boolean> => {
     if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
+      // Prevent overlapping calls using ref to avoid dependency issues
+      if (isRefreshingBalanceRef.current) {
+        return false;
+      }
+
+      isRefreshingBalanceRef.current = true;
       try {
-        // Fetch both balance and assets in parallel
-        const [balance, assets] = await Promise.all([
-          usersApi.getMyEntityBalance(),
-          usersApi.getMyEntityAssets(),
-        ]);
-        setEntityBalance(balance);
-        setEntityAssets(assets);
+        // Use cash market balances endpoint for accurate, real-time balance data
+        // This ensures consistency with the cash market page
+        const balances = await cashMarketApi.getUserBalances();
+        
+        // Map to entityAssets format for compatibility
+        setEntityAssets({
+          entity_id: balances.entity_id || '',
+          entity_name: '',
+          eur_balance: balances.eur_balance,
+          cea_balance: balances.cea_balance,
+          eua_balance: balances.eua_balance,
+        });
+        
+        // Also fetch entity balance for deposit count if needed
+        try {
+          const balance = await usersApi.getMyEntityBalance();
+          setEntityBalance(balance);
+        } catch (err) {
+          // If this fails, continue with assets data only
+          console.warn('Failed to fetch entity balance:', err);
+        }
+        
         setError(null);
+        return true; // Success
       } catch (err) {
         console.error('Failed to fetch balance/assets:', err);
         setError('Failed to load balance');
+        return false; // Failure
+      } finally {
+        isRefreshingBalanceRef.current = false;
       }
     }
+    return false;
   }, [user?.role]);
 
   // Fetch orders
@@ -247,24 +306,117 @@ export function DashboardPage() {
     }
   }, [expandedOrder]);
 
-  // Initial fetch
+  /**
+   * Fetches completed swap transactions for display in transaction history.
+   * Only includes swaps with status 'completed' or 'matched'.
+   * 
+   * Note: Errors are logged but not displayed to users as swap transactions
+   * are supplementary data and failures should not interrupt the main dashboard experience.
+   */
+  const fetchSwaps = useCallback(async () => {
+    try {
+      const swapsData = await swapsApi.getMySwaps();
+      // Filter for completed/matched swaps
+      const completedSwaps = swapsData.data.filter(
+        swap => swap.status === 'completed' || swap.status === 'matched'
+      );
+      setSwaps(completedSwaps);
+    } catch (err) {
+      console.error('Failed to fetch swaps:', err);
+      // Note: We don't set error state here to avoid overwriting more critical errors
+      // Swap transactions are supplementary data, so failure is non-critical
+    }
+  }, []);
+
+  // Initial fetch on mount
   useEffect(() => {
     const init = async () => {
       setLoadingBalance(true);
       setLoadingOrders(true);
-      await Promise.all([fetchBalance(), fetchOrders()]);
+      await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
       setLoadingBalance(false);
       setLoadingOrders(false);
     };
     init();
-  }, [fetchBalance, fetchOrders]);
+    lastLocationRef.current = location.pathname;
+  }, [fetchBalance, fetchOrders, fetchSwaps]);
+
+  /**
+   * Listens for balance update events triggered after trade execution.
+   * 
+   * Provides immediate balance refresh when trades are executed on other pages
+   * (e.g., cash market page). Uses namespaced event name `nihao:balanceUpdated`
+   * to avoid conflicts with other features.
+   * 
+   * Event payload structure:
+   * - detail.type: 'trade_executed'
+   * - detail.source: 'cash_market' (or other source)
+   * 
+   * The event listener is properly cleaned up on component unmount to prevent memory leaks.
+   */
+  useEffect(() => {
+    const handleBalanceUpdate = (event: Event) => {
+      const customEvent = event as BalanceUpdatedEvent;
+      // Could use customEvent.detail.type or customEvent.detail.source for future filtering
+      // Immediately refresh balance when trade is executed
+      fetchBalance();
+    };
+
+    window.addEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
+    return () => {
+      window.removeEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
+    };
+  }, [fetchBalance]);
+
+  /**
+   * Continuous polling for balance updates (streaming-like behavior).
+   * 
+   * Refreshes balance every 5 seconds when the dashboard page is active to keep
+   * balance data up-to-date. Uses ref-based flag check to prevent race conditions
+   * from overlapping API calls.
+   * 
+   * Polling only occurs when:
+   * - User is on the dashboard page (`location.pathname === '/dashboard'`)
+   * - No balance refresh is currently in progress (`!isRefreshingBalanceRef.current`)
+   * 
+   * The polling interval is automatically cleaned up when:
+   * - Component unmounts
+   * - User navigates away from dashboard
+   */
+  useEffect(() => {
+    if (location.pathname !== '/dashboard') return;
+
+    const interval = setInterval(() => {
+      // Only poll if not already refreshing to prevent race conditions
+      if (!isRefreshingBalanceRef.current) {
+        fetchBalance();
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchBalance, location.pathname]);
+
+  /**
+   * Refreshes balance when navigating back to dashboard from other pages.
+   * 
+   * Ensures balance is updated after executing orders on the cash market page
+   * or other pages that modify balance. Only triggers on actual navigation
+   * (not on initial mount) by tracking previous location in a ref.
+   */
+  useEffect(() => {
+    if (location.pathname === '/dashboard' && lastLocationRef.current !== location.pathname && lastLocationRef.current !== '') {
+      // User navigated back to dashboard, refresh balance to show updated amounts
+      fetchBalance();
+    }
+    lastLocationRef.current = location.pathname;
+  }, [location.pathname, fetchBalance]);
 
   // Refresh handler
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchBalance(), fetchOrders()]);
+    await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
     setIsRefreshing(false);
-  }, [fetchBalance, fetchOrders]);
+  }, [fetchBalance, fetchOrders, fetchSwaps]);
 
   // Format helpers
   const formatNumber = (num: number, decimals = 0) => {
@@ -278,20 +430,60 @@ export function DashboardPage() {
     return `€${formatNumber(amount, decimals)}`;
   };
 
-  // Convert orders to transactions for display
-  const transactions: Transaction[] = orders.map(order => ({
-    id: order.id,
-    date: new Date(order.created_at).toLocaleString(),
-    type: order.side,
-    description: `${order.side} ${order.certificate_type}`,
-    details: `${formatNumber(order.quantity)} ${order.certificate_type} @ €${order.price.toFixed(2)}`,
-    amount: order.side === 'BUY' ? -(order.quantity * order.price) : (order.quantity * order.price),
-    status: order.status === 'FILLED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
-    ref: order.id.substring(0, 16),
-  }));
+  /**
+   * Converts order records to transaction display format.
+   * Handles both regular market orders (BUY/SELL) and swap orders.
+   * Swap orders are identified by order.market === 'SWAP' and formatted differently.
+   */
+  const orderTransactions: Transaction[] = orders.map(order => {
+    // Check if this is a swap order (SWAP market orders use price field for ratio)
+    const isSwap = order.market === 'SWAP';
+    
+    return {
+      id: order.id,
+      date: new Date(order.created_at).toLocaleString(),
+      type: isSwap ? 'SWAP' : order.side,
+      description: isSwap 
+        ? `SWAP ${order.certificate_type}` 
+        : `${order.side} ${order.certificate_type}`,
+      details: isSwap
+        ? `${formatNumber(order.quantity)} ${order.certificate_type} @ ratio ${order.price.toFixed(4)}`
+        : `${formatNumber(order.quantity)} ${order.certificate_type} @ €${order.price.toFixed(2)}`,
+      amount: isSwap ? null : (order.side === 'BUY' ? -(order.quantity * order.price) : (order.quantity * order.price)),
+      status: order.status === 'FILLED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
+      ref: order.id.substring(0, 16),
+    };
+  });
+
+  /**
+   * Converts swap request records to transaction display format.
+   * Calculates equivalent quantities and rates for display.
+   */
+  const swapTransactions: Transaction[] = swaps.map(swap => {
+    const fromQty = swap.quantity;
+    const toQty = swap.equivalent_quantity || (swap.quantity * (swap.desired_rate || 0));
+    const rate = swap.desired_rate || (toQty / fromQty);
+    
+    return {
+      id: swap.id,
+      date: new Date(swap.created_at).toLocaleString(),
+      type: 'SWAP',
+      description: `SWAP ${swap.from_type} → ${swap.to_type}`,
+      details: `${formatNumber(fromQty)} ${swap.from_type} → ${formatNumber(toQty)} ${swap.to_type} @ ${rate.toFixed(4)}`,
+      amount: null, // Swaps don't have EUR amount
+      status: swap.status === 'completed' || swap.status === 'matched' ? 'completed' : 'pending',
+      ref: swap.anonymous_code || swap.id.substring(0, 16),
+    };
+  });
+
+  // Combine and sort by date (most recent first)
+  const transactions: Transaction[] = [...orderTransactions, ...swapTransactions].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
 
   // Filter transactions based on active tab
   const filteredTransactions = transactions.filter(tx => {
+    if (activeTab === 'settlements') return false; // Settlements shown separately
     if (activeTab === 'all') return true;
     if (activeTab === 'pending') return tx.status === 'pending';
     if (activeTab === 'completed') return tx.status === 'completed';
@@ -354,87 +546,33 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* Header Bar */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <LayoutDashboard className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Portfolio Dashboard</h1>
-                <p className="text-sm text-slate-400">
-                  {entityBalance?.entity_name || 'Real-time portfolio overview'}
-                </p>
-              </div>
-            </div>
-
-            {/* Market Prices */}
-            <div className="flex items-center gap-6 text-sm">
-              {prices && (
-                <>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Wind className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">EUA Price</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-white">
-                          €{prices.eua.price.toFixed(2)}
-                        </span>
-                        <span className={`flex items-center gap-0.5 text-xs ${
-                          prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                        }`}>
-                          {prices.eua.change_24h >= 0 ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <Leaf className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">CEA Price</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-white">
-                          €{prices.cea.price.toFixed(2)}
-                        </span>
-                        <span className={`flex items-center gap-0.5 text-xs ${
-                          prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                        }`}>
-                          {prices.cea.change_24h >= 0 ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Page Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Subheader
+          icon={<LayoutDashboard className="w-5 h-5 text-emerald-500" />}
+          title="Portfolio Dashboard"
+          description="Nihao Group"
+        >
+          {prices && (
+            <>
+              <EuaScrapped priceData={prices.eua} />
+              <CeaScrapped priceData={prices.cea} />
+            </>
+          )}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </motion.button>
+        </Subheader>
+      </motion.div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
@@ -456,7 +594,7 @@ export function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5"
+            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5 contained"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-emerald-300/70">Total Portfolio Value</span>
@@ -468,7 +606,7 @@ export function DashboardPage() {
               <Skeleton variant="textLg" width="60%" />
             ) : (
               <>
-                <div className="text-3xl font-bold text-white font-mono mb-1">
+                <div className="text-value-contained text-white mb-1">
                   {formatCurrency(portfolioValue.total, 2)}
                 </div>
                 {portfolioValue.pending > 0 && (
@@ -489,7 +627,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-5"
+            className="bg-slate-900 rounded-xl border border-slate-800 p-5 contained"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-slate-400">Cash ({entityBalance?.balance_currency || 'EUR'})</span>
@@ -525,7 +663,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-5"
+            className="bg-slate-900 rounded-xl border border-slate-800 p-5 contained"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-slate-400">CEA Holdings</span>
@@ -558,7 +696,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 p-5"
+            className="bg-slate-900 rounded-xl border border-slate-800 p-5 contained"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-slate-400">EUA Holdings</span>
@@ -594,7 +732,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden"
+            className="lg:col-span-2 bg-slate-900 rounded-xl border border-slate-800 contained"
           >
             <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -682,7 +820,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden"
+            className="bg-slate-900 rounded-xl border border-slate-800 contained"
           >
             <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -812,7 +950,7 @@ export function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden"
+          className="bg-slate-900 rounded-xl border border-slate-800 contained"
         >
           <div className="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -835,7 +973,13 @@ export function DashboardPage() {
               </button>
             </div>
           </div>
-          {loadingOrders ? (
+          {activeTab === 'settlements' ? (
+            <div className="p-6">
+              <SettlementTransactions
+                onSettlementClick={setSelectedSettlement}
+              />
+            </div>
+          ) : loadingOrders ? (
             <div className="p-6 space-y-3">
               <Skeleton variant="rectangular" height={50} />
               <Skeleton variant="rectangular" height={50} />
@@ -849,10 +993,26 @@ export function DashboardPage() {
               rowKey="id"
               emptyMessage="No orders found. Place your first order in the Cash Market."
               className="border-none rounded-none"
+              getRowClassName={(row) => {
+                // Style swap transactions with violet accent to distinguish from regular BUY/SELL orders
+                // Matches the SWAP badge color scheme used elsewhere in the application
+                if (row.type === 'SWAP') {
+                  return 'bg-violet-500/5 border-l-4 border-l-violet-500/50 hover:bg-violet-500/10';
+                }
+                return '';
+              }}
             />
           )}
         </motion.div>
       </div>
+
+      {/* Settlement Details Modal */}
+      {selectedSettlement && (
+        <SettlementDetails
+          settlementId={selectedSettlement.id}
+          onClose={() => setSelectedSettlement(null)}
+        />
+      )}
     </div>
   );
 }

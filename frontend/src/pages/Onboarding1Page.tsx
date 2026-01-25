@@ -51,24 +51,7 @@ interface ScenarioData {
   economics: { value: string; label: string; color: string }[];
 }
 
-// Color palette from swap-analysis.html
-const colors = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#5eead4',
-  secondary: '#1e40af',
-  secondaryLight: '#3b82f6',
-  accent: '#f59e0b',
-  danger: '#dc2626',
-  success: '#16a34a',
-  bgDark: '#0f172a',
-  bgCard: '#1e293b',
-  bgCardHover: '#334155',
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  border: '#334155',
-};
+// Colors replaced with Tailwind classes - see className attributes
 
 // All 6 scenarios data from swap-analysis.html - COMPLETE DATA
 const scenariosData: ScenarioData[] = [
@@ -129,9 +112,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: 'EUR100,000+', label: 'Cost avoided (FX spread + delay + compliance)', color: colors.success },
-      { value: 'EUR66,000', label: 'Nihao Fee (1.5% x EUR4.4M)', color: colors.accent },
-      { value: 'EUR34,000+', label: 'Net savings + timing risk elimination', color: colors.primaryLight },
+      { value: 'EUR100,000+', label: 'Cost avoided (FX spread + delay + compliance)', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'EUR66,000', label: 'Nihao Fee (1.5% x EUR4.4M)', color: 'text-amber-600 dark:text-amber-400' },
+      { value: 'EUR34,000+', label: 'Net savings + timing risk elimination', color: 'text-emerald-500 dark:text-emerald-400' },
     ],
   },
   {
@@ -185,9 +168,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: '-3.4%', label: 'Downside (portfolio if CEA fails)', color: colors.danger },
-      { value: '+39%', label: 'Upside (portfolio if CEA thesis correct)', color: colors.success },
-      { value: 'Asymmetric', label: 'Risk-Reward justifies swap', color: colors.primaryLight },
+      { value: '-3.4%', label: 'Downside (portfolio if CEA fails)', color: 'text-red-600 dark:text-red-400' },
+      { value: '+39%', label: 'Upside (portfolio if CEA thesis correct)', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'Asymmetric', label: 'Risk-Reward justifies swap', color: 'text-emerald-500 dark:text-emerald-400' },
     ],
   },
   {
@@ -237,9 +220,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: 'EUR2M/year', label: 'CBAM savings for EU Company', color: colors.success },
-      { value: 'EUR80/t', label: '"Gift" to supplier (maintaining relationship)', color: colors.accent },
-      { value: 'Win-Win', label: 'Supply chain strengthening', color: colors.primaryLight },
+      { value: 'EUR2M/year', label: 'CBAM savings for EU Company', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'EUR80/t', label: '"Gift" to supplier (maintaining relationship)', color: 'text-amber-600 dark:text-amber-400' },
+      { value: 'Win-Win', label: 'Supply chain strengthening', color: 'text-emerald-500 dark:text-emerald-400' },
     ],
   },
   {
@@ -305,9 +288,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: '-EUR1.45M', label: 'Value difference (8%)', color: colors.danger },
-      { value: '+EUR264k', label: 'FX spread avoided', color: colors.success },
-      { value: '~EUR1.2M', label: 'Net cost for certainty & speed', color: colors.accent },
+      { value: '-EUR1.45M', label: 'Value difference (8%)', color: 'text-red-600 dark:text-red-400' },
+      { value: '+EUR264k', label: 'FX spread avoided', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: '~EUR1.2M', label: 'Net cost for certainty & speed', color: 'text-amber-600 dark:text-amber-400' },
     ],
   },
   {
@@ -363,9 +346,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: '0%', label: 'Withholding Tax (vs 15%)', color: colors.success },
-      { value: 'Zero', label: 'Capital Controls Friction', color: colors.success },
-      { value: 'Better', label: 'Effective FX Rate', color: colors.success },
+      { value: '0%', label: 'Withholding Tax (vs 15%)', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'Zero', label: 'Capital Controls Friction', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'Better', label: 'Effective FX Rate', color: 'text-emerald-600 dark:text-emerald-400' },
     ],
   },
   {
@@ -417,9 +400,9 @@ const scenariosData: ScenarioData[] = [
       ],
     },
     economics: [
-      { value: 'Access', label: 'To otherwise inaccessible China market', color: colors.success },
-      { value: 'Secure', label: 'Hong Kong custody arrangement', color: colors.success },
-      { value: '2%', label: 'Intermediation fee (justified for access)', color: colors.accent },
+      { value: 'Access', label: 'To otherwise inaccessible China market', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: 'Secure', label: 'Hong Kong custody arrangement', color: 'text-emerald-600 dark:text-emerald-400' },
+      { value: '2%', label: 'Intermediation fee (justified for access)', color: 'text-amber-600 dark:text-amber-400' },
     ],
   },
 ];
@@ -458,12 +441,11 @@ const FloatingUploadButton = ({
   return (
     <motion.button
       onClick={onClick}
-      className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
-      style={{
-        background: isComplete
-          ? `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)`
-          : `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)`,
-      }}
+      className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl ${
+        isComplete
+          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
+          : 'bg-gradient-to-r from-amber-500 to-red-600'
+      }`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       animate={!isComplete ? {
@@ -538,30 +520,28 @@ const UploadModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/90"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl p-8"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl border border-navy-700 bg-navy-800 p-8"
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-600 transition-colors"
             >
-              <X className="w-6 h-6" style={{ color: colors.textSecondary }} />
+              <X className="w-6 h-6 text-navy-600 dark:text-navy-400" />
             </button>
 
             <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-2" style={{ color: colors.textPrimary }}>
+              <h2 className="text-2xl font-bold mb-2 text-navy-900 dark:text-white">
                 Complete Your KYC Documentation
               </h2>
-              <p style={{ color: colors.textSecondary }}>
+              <p className="text-navy-600 dark:text-navy-400">
                 Upload the required documents to complete your account verification and unlock full platform access
               </p>
             </div>
@@ -569,15 +549,12 @@ const UploadModal = ({
             {/* Progress Bar */}
             <div className="mb-8">
               <div className="flex justify-between mb-2">
-                <span style={{ color: colors.textSecondary }}>Progress</span>
-                <span style={{ color: colors.primaryLight }}>{progress}%</span>
+                <span className="text-navy-600 dark:text-navy-400">Progress</span>
+                <span className="text-emerald-500 dark:text-emerald-400">{progress}%</span>
               </div>
-              <div className="h-3 rounded-full" style={{ backgroundColor: colors.bgCardHover }}>
+              <div className="h-3 rounded-full bg-navy-700">
                 <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    background: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.primaryLight} 100%)`
-                  }}
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.5 }}
@@ -587,26 +564,26 @@ const UploadModal = ({
 
             {/* Company Documents */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.secondaryLight }}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-500 dark:text-blue-400">
                 <Building2 className="w-5 h-5" />
                 Company Documents
               </h3>
               <div className="grid gap-4">
                 {companyDocs.map(doc => (
-                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color={colors.secondaryLight} />
+                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="text-blue-500 dark:text-blue-400" />
                 ))}
               </div>
             </div>
 
             {/* Representative Documents */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#8b5cf6' }}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-purple-500 dark:text-purple-400">
                 <Users className="w-5 h-5" />
                 Representative Documents
               </h3>
               <div className="grid gap-4">
                 {representativeDocs.map(doc => (
-                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="#8b5cf6" />
+                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="text-purple-500 dark:text-purple-400" />
                 ))}
               </div>
             </div>
@@ -615,14 +592,11 @@ const UploadModal = ({
             <button
               onClick={onSubmit}
               disabled={!canSubmit}
-              className="w-full py-4 rounded-xl font-semibold text-white transition-all"
-              style={{
-                background: canSubmit
-                  ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-                  : colors.bgCardHover,
-                opacity: canSubmit ? 1 : 0.5,
-                cursor: canSubmit ? 'pointer' : 'not-allowed',
-              }}
+              className={`w-full py-4 rounded-xl font-semibold text-white transition-all ${
+                canSubmit
+                  ? 'bg-gradient-to-r from-emerald-500 to-blue-500 cursor-pointer'
+                  : 'bg-navy-700 opacity-50 cursor-not-allowed'
+              }`}
             >
               {canSubmit ? 'Submit for Verification' : `Upload ${requiredCount - uploadedCount} more document(s)`}
             </button>
@@ -658,13 +632,10 @@ const DocumentCard = ({
 
   return (
     <div
-      className="p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100"
-      style={{
-        backgroundColor: colors.bgCardHover,
-        borderColor: doc.uploaded ? colors.success : color,
-        borderWidth: '1px',
-        borderStyle: doc.uploaded ? 'solid' : 'dashed',
-      }}
+      className={`p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100 bg-navy-700 ${
+        doc.uploaded ? 'border-emerald-500 border-solid' : `border-dashed`
+      }`}
+      style={{ borderColor: doc.uploaded ? undefined : color.includes('blue') ? '#3b82f6' : '#a855f7' }}
       onClick={handleClick}
     >
       <input
@@ -677,26 +648,28 @@ const DocumentCard = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {doc.uploaded ? (
-            <CheckCircle className="w-5 h-5" style={{ color: colors.success }} />
+            <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           ) : (
-            <FileText className="w-5 h-5" style={{ color }} />
+            <FileText className={`w-5 h-5 ${color}`} />
           )}
           <div>
-            <div className="font-medium" style={{ color: colors.textPrimary }}>
+            <div className="font-medium text-navy-900 dark:text-white">
               {doc.name}
-              {doc.required && <span style={{ color: colors.danger }}> *</span>}
+              {doc.required && <span className="text-red-600 dark:text-red-400"> *</span>}
             </div>
-            <div className="text-sm" style={{ color: colors.textMuted }}>
+            <div className="text-sm text-navy-600 dark:text-navy-500">
               {doc.description}
             </div>
           </div>
         </div>
         <div
-          className="px-3 py-1 rounded-full text-xs font-medium"
-          style={{
-            backgroundColor: doc.uploaded ? `${colors.success}20` : `${color}20`,
-            color: doc.uploaded ? colors.success : color,
-          }}
+          className={`px-3 py-1 rounded-full text-xs font-medium ${
+            doc.uploaded
+              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+              : color.includes('blue')
+              ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400'
+              : 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400'
+          }`}
         >
           {doc.uploaded ? 'Uploaded' : 'Upload'}
         </div>
@@ -712,67 +685,56 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="rounded-2xl p-8 mt-8"
-      style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+      className="rounded-2xl border border-navy-700 bg-navy-800 p-8 mt-8"
     >
       {/* Header */}
-      <div className="flex items-center gap-4 pb-6 mb-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
+      <div className="flex items-center gap-4 pb-6 mb-6 border-b border-navy-700">
         <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center text-3xl"
-          style={{
-            background: scenario.iconClass === 's1' ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` :
-                        scenario.iconClass === 's2' ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` :
-                        scenario.iconClass === 's3' ? `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` :
-                        scenario.iconClass === 's4' ? `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` :
-                        scenario.iconClass === 's5' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
-                        `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`
-          }}
+          className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${
+            scenario.iconClass === 's1' ? 'bg-gradient-to-br from-emerald-500 to-blue-500' :
+            scenario.iconClass === 's2' ? 'bg-gradient-to-br from-amber-500 to-red-600' :
+            scenario.iconClass === 's3' ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
+            scenario.iconClass === 's4' ? 'bg-gradient-to-br from-red-500 to-orange-500' :
+            scenario.iconClass === 's5' ? 'bg-gradient-to-br from-emerald-500 to-blue-500' :
+            'bg-gradient-to-br from-indigo-500 to-purple-500'
+          }`}
         >
           {scenario.icon}
         </div>
         <div>
-          <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+          <h3 className="text-2xl font-bold text-navy-900 dark:text-white">
             Scenario {scenario.id}: {scenario.titleEn}
           </h3>
-          <span
-            className="inline-block px-4 py-1 rounded-full text-sm font-semibold mt-2"
-            style={{ backgroundColor: colors.primary, color: 'white' }}
-          >
+          <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mt-2 bg-emerald-500 text-white">
             {scenario.tag}
           </span>
         </div>
       </div>
 
       {/* Context Box */}
-      <div
-        className="p-6 rounded-xl mb-8"
-        style={{
-          background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-          border: `1px solid ${colors.accent}`,
-        }}
-      >
-        <strong style={{ color: colors.accent }}>Context:</strong>{' '}
-        <span style={{ color: colors.textSecondary }}>{scenario.context}</span>
+      <div className="p-6 rounded-xl mb-8 border border-amber-600 bg-gradient-to-br from-amber-500/10 to-red-500/10">
+        <strong className="text-amber-600 dark:text-amber-400">Context:</strong>{' '}
+        <span className="text-navy-600 dark:text-navy-400">{scenario.context}</span>
       </div>
 
       {/* Options Comparison */}
-      <h4 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>
+      <h4 className="text-xl font-semibold mb-6 text-navy-900 dark:text-white">
         Comparison: Why Swap Instead of Direct Sale?
       </h4>
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {/* Option A - Sale/Problem */}
         <div
           className="p-6 rounded-xl"
-          style={{ border: `2px solid ${colors.border}` }}
+          style={{ border: "2px solid #475569" }}
         >
           <div className="flex items-center gap-2 mb-4">
             <span
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: colors.textMuted, color: 'white' }}
+              style={{ backgroundColor: "#000000", color: 'white' }}
             >
               A
             </span>
-            <span className="font-semibold text-lg" style={{ color: colors.textPrimary }}>
+            <span className="font-semibold text-lg text-navy-900 dark:text-white">
               {scenario.optionA.title}
             </span>
           </div>
@@ -784,8 +746,8 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
             >
               {scenario.optionA.steps.map((step, i) => (
                 <div key={i} className="flex gap-2 py-1">
-                  <span style={{ color: colors.textMuted }}>{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
-                  <span style={{ color: colors.textSecondary }}>{step}</span>
+                  <span className="text-navy-500 dark:text-navy-500">{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
+                  <span className="text-navy-600 dark:text-navy-400">{step}</span>
                 </div>
               ))}
             </div>
@@ -793,7 +755,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
 
           {scenario.optionA.issues.length > 0 && (
             <div>
-              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: colors.danger }}>
+              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3 text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4" />
                 Problems & Frictions
               </h5>
@@ -801,10 +763,9 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
                 {scenario.optionA.issues.map((issue, i) => (
                   <li
                     key={i}
-                    className="py-1 pl-6 relative text-sm"
-                    style={{ color: colors.textSecondary }}
+                    className="py-1 pl-6 relative text-sm text-navy-600 dark:text-navy-400"
                   >
-                    <span className="absolute left-0 font-bold" style={{ color: colors.danger }}>✗</span>
+                    <span className="absolute left-0 font-bold text-red-600 dark:text-red-400">✗</span>
                     {issue}
                   </li>
                 ))}
@@ -817,13 +778,13 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
         <div
           className="p-6 rounded-xl relative"
           style={{
-            border: `2px solid ${colors.success}`,
+            border: "2px solid #10b981",
             background: `linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, transparent 100%)`,
           }}
         >
           <div
             className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold uppercase"
-            style={{ backgroundColor: colors.success, color: 'white' }}
+            style={{ backgroundColor: "#10b981", color: 'white' }}
           >
             RECOMMENDED
           </div>
@@ -831,11 +792,11 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
           <div className="flex items-center gap-2 mb-4 mt-2">
             <span
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: colors.success, color: 'white' }}
+              style={{ backgroundColor: "#10b981", color: 'white' }}
             >
               B
             </span>
-            <span className="font-semibold text-lg" style={{ color: colors.textPrimary }}>
+            <span className="font-semibold text-lg text-navy-900 dark:text-white">
               {scenario.optionB.title}
             </span>
           </div>
@@ -847,8 +808,8 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
             >
               {scenario.optionB.steps.map((step, i) => (
                 <div key={i} className="flex gap-2 py-1">
-                  <span style={{ color: colors.textMuted }}>{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
-                  <span style={{ color: colors.textSecondary }}>{step}</span>
+                  <span className="text-navy-500 dark:text-navy-500">{step.startsWith(String(i+1)) ? '' : `${i + 1}.`}</span>
+                  <span className="text-navy-600 dark:text-navy-400">{step}</span>
                 </div>
               ))}
             </div>
@@ -856,7 +817,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
 
           {scenario.optionB.benefits.length > 0 && (
             <div>
-              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: colors.success }}>
+              <h5 className="flex items-center gap-2 text-sm font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle className="w-4 h-4" />
                 Benefits
               </h5>
@@ -864,10 +825,9 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
                 {scenario.optionB.benefits.map((benefit, i) => (
                   <li
                     key={i}
-                    className="py-1 pl-6 relative text-sm"
-                    style={{ color: colors.textSecondary }}
+                    className="py-1 pl-6 relative text-sm text-navy-600 dark:text-navy-400"
                   >
-                    <span className="absolute left-0 font-bold" style={{ color: colors.success }}>✓</span>
+                    <span className="absolute left-0 font-bold text-emerald-600 dark:text-emerald-400">✓</span>
                     {benefit}
                   </li>
                 ))}
@@ -881,33 +841,33 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
       <div
         className="p-6 rounded-xl mb-8"
         style={{
-          backgroundColor: colors.bgCardHover,
-          borderLeft: `4px solid ${colors.accent}`,
+          backgroundColor: "#334155",
+          borderLeft: "4px solid #8b5cf6",
         }}
       >
-        <h5 className="font-semibold mb-4 text-lg" style={{ color: colors.textPrimary }}>
+        <h5 className="font-semibold mb-4 text-lg text-navy-900 dark:text-white">
           💡 {scenario.example.title}
         </h5>
         <div className="grid md:grid-cols-2 gap-8">
           <div>
-            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide text-navy-600 dark:text-navy-400">
               📍 Situation
             </h6>
             <ul className="space-y-2">
               {scenario.example.situation.map((item, i) => (
-                <li key={i} className="text-sm" style={{ color: colors.textPrimary }}>
+                <li key={i} className="text-sm text-navy-900 dark:text-white">
                   • {item}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+            <h6 className="text-sm font-semibold mb-3 uppercase tracking-wide text-navy-600 dark:text-navy-400">
               💡 Solution
             </h6>
             <ul className="space-y-2">
               {scenario.example.solution.map((item, i) => (
-                <li key={i} className="text-sm" style={{ color: colors.textPrimary }}>
+                <li key={i} className="text-sm text-navy-900 dark:text-white">
                   • {item}
                 </li>
               ))}
@@ -921,10 +881,10 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
         className="p-6 rounded-xl"
         style={{
           background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`,
-          border: `1px solid ${colors.primary}`,
+          border: "1px solid #10b981",
         }}
       >
-        <h5 className="font-semibold mb-6 text-lg" style={{ color: colors.primaryLight }}>
+        <h5 className="font-semibold mb-6 text-lg text-emerald-300">
           📊 Economic Analysis
         </h5>
         <div className="grid md:grid-cols-3 gap-4">
@@ -937,7 +897,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
               <div className="text-3xl font-extrabold mb-2" style={{ color: item.color }}>
                 {item.value}
               </div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>
+              <div className="text-sm text-navy-600 dark:text-navy-400">
                 {item.label}
               </div>
             </div>
@@ -987,13 +947,13 @@ export default function Onboarding1Page() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#000000", color: "#000000" }}>
       {/* Header */}
       <header
         className="sticky top-0 z-40"
         style={{
           background: 'linear-gradient(180deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)',
-          borderBottom: `1px solid ${colors.border}`,
+          borderBottom: "1px solid #475569",
           backdropFilter: 'blur(20px)',
         }}
       >
@@ -1001,7 +961,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
             >
               N
             </div>
@@ -1009,28 +969,28 @@ export default function Onboarding1Page() {
               <h1
                 className="text-xl font-bold"
                 style={{
-                  background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+                  background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)`,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
               >
                 Nihao Group
               </h1>
-              <span className="text-xs uppercase tracking-widest" style={{ color: colors.textSecondary }}>
+              <span className="text-xs uppercase tracking-widest text-navy-600 dark:text-navy-400">
                 Strategic Analysis Report
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <nav className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
+            <nav className="flex gap-1 p-1 rounded-xl bg-navy-800">
               {['overview', 'scenarios', 'comparison'].map(nav => (
                 <button
                   key={nav}
                   onClick={() => scrollToSection(nav)}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                   style={{
-                    backgroundColor: activeNav === nav ? colors.primary : 'transparent',
-                    color: activeNav === nav ? 'white' : colors.textSecondary,
+                    backgroundColor: activeNav === nav ? "#10b981" : "transparent",
+                    color: activeNav === nav ? "white" : "#475569",
                   }}
                 >
                   {nav.charAt(0).toUpperCase() + nav.slice(1)}
@@ -1039,8 +999,7 @@ export default function Onboarding1Page() {
             </nav>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20"
-              style={{ color: colors.danger }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20 text-red-600 dark:text-red-400"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -1063,7 +1022,7 @@ export default function Onboarding1Page() {
             <br />
             <span
               style={{
-                background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+                background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -1071,35 +1030,35 @@ export default function Onboarding1Page() {
               EUA→CEA Swap
             </span>
           </h2>
-          <p className="text-xl max-w-3xl mx-auto mb-8" style={{ color: colors.textSecondary }}>
+          <p className="text-xl max-w-3xl mx-auto mb-8 text-navy-600 dark:text-navy-400">
             Detailed analysis of why EUA-holding entities would prefer swapping for CEA instead of direct market sale. Based on extensive research and current market data from EU ETS and China ETS markets.
           </p>
         </section>
 
         {/* Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          {[
-            { icon: '📈', value: 'EUR88/t', label: 'Current EUA Price (January 2026)', color: colors.secondaryLight },
-            { icon: '🇨🇳', value: '63 CNY/t', label: 'Current CEA Price (~EUR8/t)', color: colors.accent },
-            { icon: '🔄', value: '1:10', label: 'EUA to CEA Swap Ratio', color: colors.primaryLight },
-            { icon: '💰', value: '+212%', label: 'CEA Potential Upside 2030', color: colors.success },
+          { [
+            { icon: '📈', value: 'EUR88/t', label: 'Current EUA Price (January 2026)', color: "#60a5fa"  },
+            { icon: '🇨🇳', value: '63 CNY/t', label: 'Current CEA Price (~EUR8/t)', color: "#8b5cf6"  },
+            { icon: '🔄', value: '1:10', label: 'EUA to CEA Swap Ratio', color: "#d1fae5"  },
+            { icon: '💰', value: '+212%', label: 'CEA Potential Upside 2030', color: "#10b981"  },
           ].map((stat, i) => (
             <motion.div
               key={i}
               className="p-6 rounded-2xl text-center transition-all"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
-              whileHover={{ y: -4, borderColor: colors.primary }}
+              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+              whileHover={{ y: -4, borderColor: "#10b981" }}
             >
               <div
                 className="w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center text-2xl"
-                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+                style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
               >
                 {stat.icon}
               </div>
               <div className="text-3xl font-extrabold mb-1" style={{ color: stat.color }}>
                 {stat.value}
               </div>
-              <div className="text-sm" style={{ color: colors.textSecondary }}>
+              <div className="text-sm text-navy-600 dark:text-navy-400">
                 {stat.label}
               </div>
             </motion.div>
@@ -1111,7 +1070,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
             >
               1
             </div>
@@ -1122,37 +1081,37 @@ export default function Onboarding1Page() {
             {/* EUA Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
             >
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.secondaryLight }} />
+              <div className="absolute top-0 left-0 right-0 h-1 bg-blue-400" />
               <div className="flex justify-between items-start mb-6">
                 <div className="text-lg font-semibold">European Union Allowances (EUA)</div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.secondaryLight }}
+                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: "#60a5fa" }}
                 >
                   EU ETS
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-5xl font-extrabold">EUR88</span>
-                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2</span>
+                <span className="text-xl text-navy-600 dark:text-navy-400">/tCO2</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>2030 Projection:</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">2030 Projection:</span>
                   <span className="font-semibold">EUR130-150/t</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Potential Upside:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>+48-70%</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">Potential Upside:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">+48-70%</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>EU Gas Correlation:</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">EU Gas Correlation:</span>
                   <span className="font-semibold">89% at peak</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>2024 Volume Traded:</span>
+                  <span className="text-navy-600 dark:text-navy-400">2024 Volume Traded:</span>
                   <span className="font-semibold">13.7 Gt CO2</span>
                 </div>
               </div>
@@ -1161,37 +1120,37 @@ export default function Onboarding1Page() {
             {/* CEA Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
             >
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: colors.danger }} />
+              <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
               <div className="flex justify-between items-start mb-6">
                 <div className="text-lg font-semibold">Chinese Emission Allowances (CEA)</div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: colors.danger }}
+                  style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: "#ef4444" }}
                 >
                   China ETS
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <span className="text-5xl font-extrabold">63 CNY</span>
-                <span className="text-xl" style={{ color: colors.textSecondary }}>/tCO2 (~EUR8)</span>
+                <span className="text-xl text-navy-600 dark:text-navy-400">/tCO2 (~EUR8)</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>2030 Projection (with reforms):</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">2030 Projection (with reforms):</span>
                   <span className="font-semibold">200 CNY/t (~EUR25)</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Potential Upside:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>+212%</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">Potential Upside:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">+212%</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.textSecondary }}>Upside vs EUA:</span>
-                  <span className="font-semibold" style={{ color: colors.success }}>3-4x higher</span>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                  <span className="text-navy-600 dark:text-navy-400">Upside vs EUA:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">3-4x higher</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span style={{ color: colors.textSecondary }}>Emissions Covered:</span>
+                  <span className="text-navy-600 dark:text-navy-400">Emissions Covered:</span>
                   <span className="font-semibold">~5.1 Gt CO2/year</span>
                 </div>
               </div>
@@ -1203,12 +1162,12 @@ export default function Onboarding1Page() {
             className="p-6 rounded-xl text-center"
             style={{
               background: `linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)`,
-              border: `1px solid ${colors.success}`,
+              border: "1px solid #10b981",
             }}
           >
-            <strong style={{ color: colors.success }}>Key Investment Thesis:</strong>{' '}
-            <span style={{ color: colors.textSecondary }}>
-              CEA has growth potential <strong style={{ color: colors.textPrimary }}>3-4x higher</strong> than EUA.
+            <strong className="text-emerald-600 dark:text-emerald-400">Key Investment Thesis:</strong>{' '}
+            <span className="text-navy-600 dark:text-navy-400">
+              CEA has growth potential <strong className="text-navy-900 dark:text-white">3-4x higher</strong> than EUA.
               EUA: +48-70% upside to 2030 → CEA: +212% upside to 2030.
               The asymmetric opportunity justifies the swap for investors seeking China carbon exposure.
             </span>
@@ -1220,19 +1179,19 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
             >
               2
             </div>
             <h3 className="text-2xl font-bold">The 6 Economic Scenarios</h3>
           </div>
-          <p className="mb-4 text-lg" style={{ color: colors.textSecondary }}>
+          <p className="mb-4 text-lg text-navy-600 dark:text-navy-400">
             Click on each scenario to see complete details, including step-by-step comparison of options,
             real-world examples, and economic analysis.
           </p>
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: `${colors.accent}20`, color: colors.accent }}
+            style={{ backgroundColor: "rgba(139, 92, 246, 0.13)", color: "#8b5cf6" }}
           >
             <span className="animate-pulse">👆</span>
             Select a scenario card below to view full analysis
@@ -1245,21 +1204,21 @@ export default function Onboarding1Page() {
                 key={scenario.id}
                 className="p-6 rounded-2xl cursor-pointer transition-all"
                 style={{
-                  backgroundColor: activeScenario === scenario.id ? 'transparent' : colors.bgCard,
-                  border: `2px solid ${activeScenario === scenario.id ? colors.primary : colors.border}`,
+                  backgroundColor: activeScenario === scenario.id ? "transparent" : "#1e293b",
+                  border: `2px solid ${activeScenario === scenario.id ? "#10b981" : "#475569"}`,
                   background: activeScenario === scenario.id
                     ? `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)`
-                    : colors.bgCard,
+                    : "#1e293b",
                   opacity: activeScenario === scenario.id ? 1 : 0.5,
                 }}
                 onClick={() => setActiveScenario(scenario.id)}
-                whileHover={{ y: -4, borderColor: colors.primary, opacity: 1 }}
+                whileHover={{ y: -4, borderColor: "#10b981", opacity: 1 }}
               >
                 <div
                   className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4"
                   style={{
-                    background: scenario.iconClass === 's1' ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` :
-                                scenario.iconClass === 's2' ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)` :
+                    background: scenario.iconClass === 's1' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
+                                scenario.iconClass === 's2' ? `linear-gradient(135deg, #8b5cf6 0%, #ef4444 100%)` :
                                 scenario.iconClass === 's3' ? `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` :
                                 scenario.iconClass === 's4' ? `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` :
                                 scenario.iconClass === 's5' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
@@ -1269,7 +1228,7 @@ export default function Onboarding1Page() {
                   {scenario.icon}
                 </div>
                 <h4 className="font-bold text-lg mb-2">{scenario.title}</h4>
-                <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+                <p className="text-sm mb-4 text-navy-600 dark:text-navy-400">
                   {scenario.description}
                 </p>
                 <div className="flex gap-4">
@@ -1279,10 +1238,10 @@ export default function Onboarding1Page() {
                       className="flex-1 text-center p-3 rounded-lg"
                       style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
                     >
-                      <div className="text-xl font-bold" style={{ color: colors.primaryLight }}>
+                      <div className="text-xl font-bold text-emerald-300">
                         {metric.value}
                       </div>
-                      <div className="text-xs" style={{ color: colors.textMuted }}>
+                      <div className="text-xs text-navy-500 dark:text-navy-500">
                         {metric.label}
                       </div>
                     </div>
@@ -1308,7 +1267,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
+              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
             >
               3
             </div>
@@ -1317,7 +1276,7 @@ export default function Onboarding1Page() {
 
           <div
             className="rounded-2xl p-6 overflow-x-auto"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
           >
             <table className="w-full">
               <thead>
@@ -1331,25 +1290,24 @@ export default function Onboarding1Page() {
               <tbody>
                 {comparisonData.map((row, i) => (
                   <tr key={i} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-semibold" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                    <td className="p-4 font-semibold" style={{ borderBottom: "1px solid #475569" }}>
                       {row.criteria}
                     </td>
-                    <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
+                    <td className="p-4" style={ { borderBottom: "1px solid #475569", color: "#475569"  }}>
                       {row.sale}
                     </td>
-                    <td className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary }}>
+                    <td className="p-4" style={ { borderBottom: "1px solid #475569", color: "#475569"  }}>
                       {row.swap}
                     </td>
-                    <td className="p-4 text-center" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                    <td className="p-4 text-center" style={{ borderBottom: "1px solid #475569" }}>
                       <span
                         className="px-4 py-1 rounded-full text-xs font-bold uppercase"
                         style={{
                           backgroundColor: row.winner === 'swap' ? 'rgba(22, 163, 74, 0.2)' :
                                           row.winner === 'sale' ? 'rgba(59, 130, 246, 0.2)' :
                                           'rgba(100, 116, 139, 0.2)',
-                          color: row.winner === 'swap' ? colors.success :
-                                row.winner === 'sale' ? colors.secondaryLight :
-                                colors.textSecondary,
+                          color: row.winner === 'swap' ? "#10b981" :
+                                row.winner === 'sale' ? "#60a5fa" : "#475569",
                         }}
                       >
                         {row.winner === 'swap' ? 'SWAP' : row.winner === 'sale' ? 'SALE' : 'TIE'}
@@ -1365,13 +1323,13 @@ export default function Onboarding1Page() {
             className="p-6 rounded-xl text-center mt-8"
             style={{
               background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-              border: `1px solid ${colors.accent}`,
+              border: "1px solid #8b5cf6",
             }}
           >
-            <strong style={{ color: colors.accent }}>Conclusion:</strong>{' '}
-            <span style={{ color: colors.textSecondary }}>
-              Swap wins when <strong style={{ color: colors.textPrimary }}>non-cash benefits are valuable</strong> (speed, regulatory simplicity, access)
-              and when there is a <strong style={{ color: colors.textPrimary }}>specific use case for CEA</strong> in China.
+            <strong className="text-violet-500 dark:text-violet-400">Conclusion:</strong>{' '}
+            <span className="text-navy-600 dark:text-navy-400">
+              Swap wins when <strong className="text-navy-900 dark:text-white">non-cash benefits are valuable</strong> (speed, regulatory simplicity, access)
+              and when there is a <strong className="text-navy-900 dark:text-white">specific use case for CEA</strong> in China.
               Score: Swap wins 5 criteria, Sale wins 2, Tie on 1.
             </span>
           </div>
@@ -1382,12 +1340,12 @@ export default function Onboarding1Page() {
       {/* Footer */}
       <footer
         className="text-center py-12"
-        style={{ borderTop: `1px solid ${colors.border}` }}
+        style={{ borderTop: "1px solid #475569" }}
       >
-        <p className="font-semibold" style={{ color: colors.textSecondary }}>
+        <p className="font-semibold text-navy-600 dark:text-navy-400">
           Nihao Group | Strategic Analysis Report | January 2026
         </p>
-        <p className="text-sm mt-2" style={{ color: colors.textMuted }}>
+        <p className="text-sm mt-2 text-navy-500 dark:text-navy-500">
           Analysis based on extensive research and current market data from EU ETS and China ETS markets
         </p>
       </footer>
