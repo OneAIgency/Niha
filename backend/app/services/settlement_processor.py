@@ -5,7 +5,7 @@ Runs periodically to advance settlement statuses based on timeline.
 """
 import logging
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,78 +27,116 @@ class SettlementProcessor:
     """Automatic settlement status processor"""
 
     @staticmethod
-    async def process_pending_settlements():
+    async def process_pending_settlements(db: Optional[AsyncSession] = None):
         """Main processor - auto-advance settlements based on expected dates"""
-        async with AsyncSessionLocal() as db:
-            try:
-                logger.info("Starting settlement batch processing...")
+        # Use provided session (for testing) or create new one (for production)
+        if db is not None:
+            await SettlementProcessor._process_with_session(db)
+        else:
+            async with AsyncSessionLocal() as session:
+                await SettlementProcessor._process_with_session(session)
 
-                # Get all non-final settlements
-                result = await db.execute(
-                    select(SettlementBatch).where(
-                        SettlementBatch.status.notin_([
-                            SettlementStatus.SETTLED,
-                            SettlementStatus.FAILED
-                        ])
-                    )
+    @staticmethod
+    async def _process_with_session(db: AsyncSession):
+        """Internal method that does the actual processing"""
+        try:
+            logger.info("Starting settlement batch processing...")
+
+            # Get all non-final settlements
+            result = await db.execute(
+                select(SettlementBatch).where(
+                    SettlementBatch.status.notin_([
+                        SettlementStatus.SETTLED,
+                        SettlementStatus.FAILED
+                    ])
                 )
-                settlements = result.scalars().all()
+            )
+            settlements = result.scalars().all()
 
-                processed_count = 0
-                for settlement in settlements:
-                    if await SettlementProcessor._should_advance_status(settlement):
-                        next_status = SettlementProcessor._get_next_status(settlement)
-                        if next_status:
-                            system_user_id = await SettlementProcessor._get_system_user_id(db)
+            processed_count = 0
+            for settlement in settlements:
+                if SettlementProcessor._should_advance_status(settlement):
+                    next_status = SettlementProcessor._get_next_status(settlement)
+                    if next_status:
+                        system_user_id = await SettlementProcessor._get_system_user_id(db)
 
-                            await SettlementService.update_settlement_status(
-                                db=db,
-                                settlement_id=settlement.id,
-                                new_status=next_status,
-                                notes=f"Automatic status update by settlement processor",
-                                updated_by=system_user_id
-                            )
+                        await SettlementService.update_settlement_status(
+                            db=db,
+                            settlement_id=settlement.id,
+                            new_status=next_status,
+                            notes=f"Automatic status update by settlement processor",
+                            updated_by=system_user_id
+                        )
 
-                            # TODO: Send email notification
-                            # await send_settlement_status_email(settlement, next_status)
+                        # TODO: Send email notification
+                        # await send_settlement_status_email(settlement, next_status)
 
-                            processed_count += 1
-                            logger.info(
-                                f"Advanced settlement {settlement.batch_reference} to {next_status}"
-                            )
+                        processed_count += 1
+                        logger.info(
+                            f"Advanced settlement {settlement.batch_reference} to {next_status}"
+                        )
 
-                logger.info(f"Settlement processing complete. Advanced {processed_count} settlements.")
+            logger.info(f"Settlement processing complete. Advanced {processed_count} settlements.")
 
-            except Exception as e:
-                logger.error(f"Error in settlement processor: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error in settlement processor: {e}", exc_info=True)
 
     @staticmethod
     def _should_advance_status(settlement: SettlementBatch) -> bool:
-        """Check if settlement should advance to next status"""
+        """Check if settlement should advance to next status based on expected timeline"""
         now = datetime.utcnow()
-        created = settlement.created_at
 
-        # Calculate business days elapsed
+        # Terminal statuses should never advance
+        if settlement.status in [SettlementStatus.SETTLED, SettlementStatus.FAILED]:
+            return False
+
+        # Calculate how far we are in the settlement timeline
+        # For CEA (T+3): expected_settlement_date is 3 business days from creation
+        # Calculate business days from creation to expected date
+        if settlement.settlement_type.value == "CEA_PURCHASE":
+            total_days_for_settlement = 3  # T+3
+        elif settlement.settlement_type.value == "SWAP_CEA_TO_EUA":
+            if settlement.asset_type.value == "CEA":
+                total_days_for_settlement = 2  # T+2 for CEA swaps
+            else:
+                total_days_for_settlement = 3  # T+3-T+5 for EUA swaps
+        else:
+            total_days_for_settlement = 3  # Default T+3
+
+        # Calculate business days elapsed from creation
+        created = settlement.created_at
         days_elapsed = 0
-        current = created
-        while current < now:
-            current += timedelta(days=1)
-            if current.weekday() < 5:  # Monday-Friday
+        current_date = created.date()
+        now_date = now.date()
+
+        # Count business days between created date and now date
+        while current_date < now_date:
+            current_date += timedelta(days=1)
+            if current_date.weekday() < 5:  # Monday-Friday
                 days_elapsed += 1
 
+        # Also check if expected date has passed (failsafe)
+        expected_date_passed = (
+            settlement.expected_settlement_date and
+            now >= settlement.expected_settlement_date
+        )
+
         # Status advancement timeline
-        if settlement.status == SettlementStatus.PENDING and days_elapsed >= 1:
-            return True  # T+1: PENDING -> TRANSFER_INITIATED
-        elif settlement.status == SettlementStatus.TRANSFER_INITIATED and days_elapsed >= 2:
-            return True  # T+2: TRANSFER_INITIATED -> IN_TRANSIT
+        if settlement.status == SettlementStatus.PENDING:
+            # Advance if 1+ business day elapsed OR expected date passed
+            return days_elapsed >= 1 or expected_date_passed
+        elif settlement.status == SettlementStatus.TRANSFER_INITIATED:
+            # Advance if 2+ business days elapsed OR expected date passed
+            return days_elapsed >= 2 or expected_date_passed
         elif settlement.status == SettlementStatus.IN_TRANSIT:
-            if settlement.settlement_type.value == "CEA_PURCHASE" and days_elapsed >= 3:
-                return True  # T+3: IN_TRANSIT -> AT_CUSTODY (CEA)
+            # Advance if timeline complete OR expected date passed
+            if settlement.settlement_type.value == "CEA_PURCHASE":
+                return days_elapsed >= 3 or expected_date_passed
             elif settlement.settlement_type.value == "SWAP_CEA_TO_EUA":
-                if settlement.asset_type.value == "CEA" and days_elapsed >= 2:
-                    return True  # T+2: CEA swap out
-                elif settlement.asset_type.value == "EUA" and days_elapsed >= 3:
-                    return True  # T+3-T+5: EUA swap in
+                if settlement.asset_type.value == "CEA":
+                    return days_elapsed >= 2 or expected_date_passed
+                elif settlement.asset_type.value == "EUA":
+                    return days_elapsed >= 3 or expected_date_passed
         elif settlement.status == SettlementStatus.AT_CUSTODY:
             return True  # Immediately advance to SETTLED
 
