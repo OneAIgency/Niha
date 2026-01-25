@@ -1,299 +1,123 @@
 # Rebuild Instructions
 
-**Date:** 2026-01-25  
-**Purpose:** Complete rebuild of all services after Market Maker Order Book integration
+**Last updated:** 2026-01-25  
+**Purpose:** Full rebuild of the Nihao Docker stack (stop → build without cache → start).
 
 ## Prerequisites
 
-1. **Docker Desktop** must be running
-2. **Docker Compose** v2+ installed
-3. All code changes committed (optional but recommended)
+- **Docker Desktop** running
+- **Docker Compose** v2+ (`docker compose`, not `docker-compose`)
 
-## Full Rebuild Process
+## Quick Rebuild (Recommended)
 
-### Step 1: Stop All Running Containers
+From the project root:
 
-```bash
-cd /Users/victorsafta/work/Niha
-docker-compose down
-```
-
-This stops and removes all containers, networks, and volumes (if using `--volumes` flag).
-
-### Step 2: Clean Build (Recommended)
-
-For a complete clean rebuild:
-
-```bash
-# Remove all containers, networks, and volumes
-docker-compose down --volumes
-
-# Remove old images (optional - frees disk space)
-docker-compose rm -f
-docker image prune -f
-```
-
-### Step 3: Rebuild All Services
-
-```bash
-# Rebuild all services from scratch
-docker-compose build --no-cache
-
-# Start all services
-docker-compose up -d
-```
-
-Or combine in one command:
-
-```bash
-docker-compose up --build --force-recreate
-```
-
-### Step 4: Verify Services
-
-Check that all services are running:
-
-```bash
-docker-compose ps
-```
-
-Expected output:
-```
-NAME            STATUS          PORTS
-niha_backend    Up (healthy)    0.0.0.0:8000->8000/tcp
-niha_db         Up (healthy)    0.0.0.0:5433->5432/tcp
-niha_frontend   Up              0.0.0.0:5173->5173/tcp
-niha_redis      Up (healthy)    6379/tcp
-```
-
-### Step 5: Check Logs
-
-Verify services started correctly:
-
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f db
-```
-
-### Step 6: Run Database Migrations
-
-After backend starts, run migrations:
-
-```bash
-docker-compose exec backend alembic upgrade head
-```
-
-## Service-Specific Rebuilds
-
-### Backend Only
-
-```bash
-docker-compose build --no-cache backend
-docker-compose up -d backend
-```
-
-### Frontend Only
-
-```bash
-docker-compose build --no-cache frontend
-docker-compose up -d frontend
-```
-
-### Database Only (Preserves Data)
-
-```bash
-docker-compose stop db
-docker-compose rm -f db
-docker-compose up -d db
-```
-
-## Troubleshooting
-
-### Docker Daemon Not Running
-
-**Error:** `Cannot connect to the Docker daemon`
-
-**Solution:**
-1. Start Docker Desktop application
-2. Wait for Docker to fully start (whale icon in menu bar)
-3. Verify: `docker ps` should work without errors
-
-### Port Already in Use
-
-**Error:** `Bind for 0.0.0.0:8000 failed: port is already allocated`
-
-**Solution:**
-```bash
-# Find process using port
-lsof -i :8000
-
-# Kill process (replace PID with actual process ID)
-kill -9 <PID>
-
-# Or change port in docker-compose.yml
-```
-
-### Build Cache Issues
-
-**Error:** Old code still running after rebuild
-
-**Solution:**
-```bash
-# Force rebuild without cache
-docker-compose build --no-cache
-
-# Recreate containers
-docker-compose up -d --force-recreate
-```
-
-### Database Connection Errors
-
-**Error:** Backend can't connect to database
-
-**Solution:**
-```bash
-# Wait for database to be healthy
-docker-compose ps db
-
-# Check database logs
-docker-compose logs db
-
-# Restart database
-docker-compose restart db
-```
-
-### Frontend Build Errors
-
-**Error:** Frontend build fails
-
-**Solution:**
-```bash
-# Clean node_modules
-docker-compose exec frontend rm -rf node_modules
-
-# Reinstall dependencies
-docker-compose exec frontend npm install
-
-# Rebuild
-docker-compose restart frontend
-```
-
-## Quick Rebuild Script
-
-Create a script `rebuild.sh`:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "Stopping all services..."
-docker-compose down
-
-echo "Rebuilding all services..."
-docker-compose build --no-cache
-
-echo "Starting all services..."
-docker-compose up -d
-
-echo "Waiting for services to be healthy..."
-sleep 10
-
-echo "Running database migrations..."
-docker-compose exec -T backend alembic upgrade head
-
-echo "Checking service status..."
-docker-compose ps
-
-echo "Rebuild complete!"
-echo "Backend: http://localhost:8000"
-echo "Frontend: http://localhost:5173"
-echo "API Docs: http://localhost:8000/docs"
-```
-
-Make it executable:
-```bash
-chmod +x rebuild.sh
-```
-
-Run it:
 ```bash
 ./rebuild.sh
 ```
 
-## Post-Rebuild Verification
-
-### 1. Backend Health Check
+With fresh database (removes volumes, **data loss**):
 
 ```bash
+./rebuild.sh --volumes
+```
+
+## Manual Rebuild
+
+```bash
+cd /Users/victorsafta/work/Niha   # or your repo path
+
+# 1. Stop and remove containers
+docker compose down --remove-orphans
+
+# 2. Rebuild images (no cache)
+docker compose build --no-cache
+
+# 3. Start services
+docker compose up -d
+```
+
+## Project and Services
+
+- **Compose project name:** `niha_platform` (set in `docker-compose.yml` via `name:`).
+- **Services:** `db`, `redis`, `backend`, `frontend`
+- **Containers:** `niha_db`, `niha_backend`, `niha_frontend`; Redis uses a generated name (no fixed `container_name` to avoid stale refs).
+
+## Verify After Rebuild
+
+```bash
+docker compose ps
 curl http://localhost:8000/health
 ```
 
-Expected: `{"status":"ok"}` or similar
+- **Frontend:** http://localhost:5173  
+- **Backend:** http://localhost:8000  
+- **API docs:** http://localhost:8000/docs  
 
-### 2. API Documentation
+## Database and Migrations
 
-Open in browser: http://localhost:8000/docs
-
-### 3. Frontend
-
-Open in browser: http://localhost:5173
-
-### 4. Database Connection
+- **Fresh install:** The backend runs `init_db()` on startup and creates tables from SQLAlchemy models. No Alembic run needed.
+- **Migrations:** Use only when upgrading an **existing** database that was previously managed by Alembic. Do **not** run `alembic upgrade head` on a fresh DB.
 
 ```bash
-docker-compose exec db psql -U niha_user -d niha_carbon -c "SELECT version();"
+# Only if you have an existing DB and use Alembic
+docker compose exec backend alembic upgrade head
 ```
 
-### 5. Test Market Maker Order Book
+## Troubleshooting
+
+### "No such container" / Stale container reference
+
+**Symptom:** `Error response from daemon: No such container: ...`
+
+**Cause:** Compose still references a container that was removed outside Compose (e.g. manual `docker rm`).
+
+**Fix:**
 
 ```bash
-# Get order book (should include Market Maker orders)
-curl http://localhost:8000/api/v1/cash-market/real/orderbook/CEA
+docker compose down --remove-orphans
+docker container prune -f
+docker compose up -d
 ```
 
-## What Was Changed
+Or use `./rebuild.sh`, which runs `down --remove-orphans` by default.
 
-This rebuild includes:
+### Port already in use
 
-1. **Order Book Integration**
-   - Market Maker orders now included in order book queries
-   - Defensive checks for data integrity
-   - Error handling improvements
+```bash
+lsof -i :8000
+lsof -i :5173
+lsof -i :5433
+# kill -9 <PID> if needed
+```
 
-2. **Code Updates**
-   - `backend/app/services/order_matching.py` - Updated `get_real_orderbook()`
-   - Added logging and error handling
-   - Added defensive checks for multiple source IDs
+### Frontend build / dependency issues
 
-3. **Tests**
-   - New test file: `backend/tests/test_order_matching.py`
-   - 10 comprehensive unit tests
+```bash
+docker compose exec frontend rm -rf node_modules
+docker compose exec frontend npm install
+docker compose restart frontend
+```
 
-4. **Documentation**
-   - Updated API documentation
-   - Updated admin guide
-   - New architecture document
+### Backend won’t start / DB errors
+
+- Ensure `db` and `redis` are healthy: `docker compose ps`
+- Check logs: `docker compose logs backend`
+- Restart: `./restart.sh` or `docker compose restart backend`
+
+## Rebuild Only One Service
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d backend
+```
+
+```bash
+docker compose build --no-cache frontend
+docker compose up -d frontend
+```
 
 ## Notes
 
-- **Data Preservation:** Using `docker-compose down` (without `--volumes`) preserves database data
-- **Clean Slate:** Using `docker-compose down --volumes` removes all data (fresh start)
-- **Development Mode:** Services run with hot-reload enabled (code changes reflect immediately)
-- **Production:** For production builds, use `docker-compose -f docker-compose.prod.yml up --build`
-
-## Next Steps After Rebuild
-
-1. Verify all services are running
-2. Run database migrations
-3. Test Market Maker order placement
-4. Verify orders appear in order book
-5. Check logs for any errors
-
----
-
-**Last Updated:** 2026-01-25
+- **Data:** `docker compose down` keeps volumes. Use `./rebuild.sh --volumes` or `down --volumes` for a clean DB.
+- **Hot-reload:** Backend and frontend use dev servers; code changes apply without rebuild.

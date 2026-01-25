@@ -171,6 +171,7 @@ npm run lint
    ```bash
    docker compose up --build
    ```
+   **Rebuild (clean):** `./rebuild.sh` · **Restart:** `./restart.sh` — see [Rebuild](REBUILD_INSTRUCTIONS.md) and [Restart](RESTART_INSTRUCTIONS.md).
 
 2. **Backend (if running locally):**
    ```bash
