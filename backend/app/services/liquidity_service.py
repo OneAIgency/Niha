@@ -481,13 +481,20 @@ class LiquidityService:
             # Lock certificates by creating asset transaction
             # Note: AssetTransaction uses 'amount' field, not 'quantity'
             # TRADE_DEBIT is used to lock assets when order is placed
+
+            # Convert CertificateType to AssetType (same values: CEA/EUA)
+            from app.models.models import AssetType
+            asset_type_value = AssetType(certificate_type.value)
+
             transaction = AssetTransaction(
                 id=uuid.uuid4(),
                 market_maker_id=ah_mm.id,
+                asset_type=asset_type_value,  # Populate for backward compatibility
                 certificate_type=certificate_type,
                 transaction_type=TransactionType.TRADE_DEBIT,
                 amount=-quantity_per_ah,  # Negative for debit (lock)
-                balance_after=ah["available"] - quantity_per_ah,  # Required field
+                balance_before=ah["available"],  # Balance before the lock
+                balance_after=ah["available"] - quantity_per_ah,  # Balance after the lock
                 created_by=created_by_id
             )
             db.add(transaction)
