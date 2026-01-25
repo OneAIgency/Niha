@@ -9,6 +9,8 @@ from .core.database import init_db
 from .core.security import RedisManager
 from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market, settlement, market_maker, admin_market_orders, admin_logging, liquidity
 from .services.settlement_processor import SettlementProcessor
+from .services.settlement_monitoring import SettlementMonitoring
+from .core.database import AsyncSessionLocal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,10 +41,31 @@ async def lifespan(app: FastAPI):
             # Wait 1 hour
             await asyncio.sleep(3600)
 
-    # Start background task
+    # Start settlement monitoring background task
+    async def settlement_monitoring_loop():
+        """Run settlement monitoring every hour"""
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    result = await SettlementMonitoring.run_monitoring_cycle(db)
+                    if result.get("success"):
+                        logger.info(
+                            f"Settlement monitoring cycle completed: "
+                            f"{result.get('alert_count', 0)} alerts detected"
+                        )
+                    else:
+                        logger.error(f"Settlement monitoring cycle failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"Settlement monitoring error: {e}", exc_info=True)
+
+            # Wait 1 hour
+            await asyncio.sleep(3600)
+
+    # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())
-    _background_tasks.append(processor_task)
-    logger.info("Settlement processor started (running every 1 hour)")
+    monitoring_task = asyncio.create_task(settlement_monitoring_loop())
+    _background_tasks.extend([processor_task, monitoring_task])
+    logger.info("Settlement processor and monitoring started (running every 1 hour)")
 
     yield
 

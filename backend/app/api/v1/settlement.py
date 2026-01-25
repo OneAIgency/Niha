@@ -14,6 +14,7 @@ from ...models.models import User, SettlementBatch, SettlementStatusHistory, Set
 from ...services.settlement_service import (
     get_pending_settlements, get_settlement_timeline, calculate_settlement_progress
 )
+from ...services.settlement_monitoring import SettlementMonitoring
 from ...schemas.schemas import MessageResponse
 
 router = APIRouter(prefix="/settlement", tags=["Settlement"])
@@ -307,3 +308,153 @@ async def get_settlement_timeline_endpoint(
         "progress_percent": calculate_settlement_progress(settlement),
         "timeline": timeline
     }
+
+
+@router.get("/monitoring/metrics")
+async def get_settlement_metrics(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get settlement system health metrics (Admin only).
+
+    Returns comprehensive metrics about the settlement system:
+    - Counts by status (pending, in progress, settled, failed)
+    - Overdue settlements count
+    - Total values pending and settled
+    - Average settlement time
+    - Oldest pending settlement age
+
+    **Authorization:** Requires ADMIN role
+
+    **Response:**
+    ```json
+    {
+      "total_pending": 5,
+      "total_in_progress": 3,
+      "total_settled_today": 12,
+      "total_failed": 0,
+      "total_overdue": 1,
+      "avg_settlement_time_hours": 72.5,
+      "total_value_pending_eur": 45000.00,
+      "total_value_settled_today_eur": 128500.00,
+      "oldest_pending_days": 2
+    }
+    ```
+    """
+    # Verify admin role
+    if current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    metrics = await SettlementMonitoring.get_system_metrics(db)
+
+    return {
+        "total_pending": metrics.total_pending,
+        "total_in_progress": metrics.total_in_progress,
+        "total_settled_today": metrics.total_settled_today,
+        "total_failed": metrics.total_failed,
+        "total_overdue": metrics.total_overdue,
+        "avg_settlement_time_hours": metrics.avg_settlement_time_hours,
+        "total_value_pending_eur": float(metrics.total_value_pending_eur),
+        "total_value_settled_today_eur": float(metrics.total_value_settled_today_eur),
+        "oldest_pending_days": metrics.oldest_pending_days
+    }
+
+
+@router.get("/monitoring/alerts")
+async def get_settlement_alerts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get active settlement alerts (Admin only).
+
+    Returns settlements requiring attention:
+    - CRITICAL: Failed settlements
+    - ERROR: Critically overdue (3+ days past expected)
+    - WARNING: Overdue (1+ days) or stuck in status
+
+    Alerts are sorted by severity (CRITICAL > ERROR > WARNING).
+
+    **Authorization:** Requires ADMIN role
+
+    **Response:**
+    ```json
+    {
+      "alerts": [
+        {
+          "severity": "ERROR",
+          "settlement_id": "123e4567-e89b-12d3-a456-426614174000",
+          "batch_reference": "SET-2026-000001-CEA",
+          "alert_type": "CRITICALLY_OVERDUE",
+          "message": "Settlement 3 days overdue - urgent review required",
+          "entity_name": "Test Entity",
+          "days_overdue": 3,
+          "total_value_eur": 13500.00
+        }
+      ],
+      "count": 1,
+      "critical_count": 0,
+      "error_count": 1,
+      "warning_count": 0
+    }
+    ```
+    """
+    # Verify admin role
+    if current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    alerts = await SettlementMonitoring.detect_alerts(db)
+
+    return {
+        "alerts": [
+            {
+                "severity": alert.severity,
+                "settlement_id": alert.settlement_id,
+                "batch_reference": alert.batch_reference,
+                "alert_type": alert.alert_type,
+                "message": alert.message,
+                "entity_name": alert.entity_name,
+                "days_overdue": alert.days_overdue,
+                "total_value_eur": float(alert.total_value_eur) if alert.total_value_eur else None
+            }
+            for alert in alerts
+        ],
+        "count": len(alerts),
+        "critical_count": len([a for a in alerts if a.severity == "CRITICAL"]),
+        "error_count": len([a for a in alerts if a.severity == "ERROR"]),
+        "warning_count": len([a for a in alerts if a.severity == "WARNING"])
+    }
+
+
+@router.get("/monitoring/report")
+async def get_daily_report(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get daily settlement system report (Admin only).
+
+    Comprehensive report including:
+    - System metrics
+    - Active alerts
+    - Settlements completed today
+    - Performance summary
+
+    **Authorization:** Requires ADMIN role
+    """
+    # Verify admin role
+    if current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    report = await SettlementMonitoring.generate_daily_report(db)
+    return report
