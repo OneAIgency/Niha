@@ -176,6 +176,7 @@ class MarketMakerService:
             certificate_type=certificate_type,
             transaction_type=transaction_type,
             amount=amount,
+            balance_before=current_balance,
             balance_after=new_balance,
             notes=notes,
             created_by=created_by_id,
