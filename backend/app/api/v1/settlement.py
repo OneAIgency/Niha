@@ -172,8 +172,14 @@ async def get_settlement_details(
             detail="User must be associated with an entity"
         )
     
-    settlement, history = await get_settlement_timeline(db, settlement_batch_id)
-    
+    try:
+        settlement, history = await get_settlement_timeline(db, settlement_batch_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
         raise HTTPException(
@@ -281,8 +287,14 @@ async def get_settlement_timeline_endpoint(
             detail="User must be associated with an entity"
         )
     
-    settlement, history = await get_settlement_timeline(db, settlement_batch_id)
-    
+    try:
+        settlement, history = await get_settlement_timeline(db, settlement_batch_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
         raise HTTPException(

@@ -412,6 +412,9 @@ class SettlementService:
 
             return settlement, history
 
+        except ValueError:
+            # Re-raise ValueError for proper 404 handling in API layer
+            raise
         except Exception as e:
             raise handle_database_error(e, "get settlement timeline", logger)
 

@@ -11,7 +11,8 @@ from sqlalchemy import select
 from .config import settings
 
 # Security scheme for JWT
-security = HTTPBearer()
+# auto_error=False allows us to return 401 instead of 403 when credentials are missing
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -144,6 +145,10 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # Check if credentials are provided
+    if credentials is None:
+        raise credentials_exception
 
     token = credentials.credentials
     payload = verify_token(token)
