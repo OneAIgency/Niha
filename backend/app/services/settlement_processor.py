@@ -14,9 +14,11 @@ from ..core.database import AsyncSessionLocal
 from ..models.models import (
     SettlementBatch,
     SettlementStatus,
-    User
+    User,
+    Entity
 )
 from .settlement_service import SettlementService
+from .email_service import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -149,13 +151,44 @@ class SettlementProcessor:
 
                 if overdue:
                     logger.warning(f"Found {len(overdue)} overdue settlements")
+
+                    # Get admin users for alerts
+                    admin_result = await db.execute(
+                        select(User).where(User.role == "ADMIN")
+                    )
+                    admin_users = admin_result.scalars().all()
+
                     for settlement in overdue:
                         days_overdue = (now - settlement.expected_settlement_date).days
                         logger.warning(
                             f"Settlement {settlement.batch_reference} is {days_overdue} days overdue. "
                             f"Status: {settlement.status}"
                         )
-                        # TODO: Send admin alert email
+
+                        # Get entity information
+                        entity_result = await db.execute(
+                            select(Entity).where(Entity.id == settlement.entity_id)
+                        )
+                        entity = entity_result.scalar_one_or_none()
+                        entity_name = entity.legal_name if entity else "Unknown Entity"
+
+                        # Send admin alert emails
+                        for admin in admin_users:
+                            if admin.email:
+                                try:
+                                    await email_service.send_admin_overdue_settlement_alert(
+                                        to_email=admin.email,
+                                        batch_reference=settlement.batch_reference,
+                                        entity_name=entity_name,
+                                        certificate_type=settlement.asset_type.value,
+                                        quantity=float(settlement.quantity),
+                                        expected_date=settlement.expected_settlement_date.strftime("%Y-%m-%d"),
+                                        days_overdue=days_overdue,
+                                        current_status=settlement.status.value
+                                    )
+                                    logger.info(f"Overdue settlement alert sent to admin {admin.email}")
+                                except Exception as email_error:
+                                    logger.error(f"Failed to send overdue alert to {admin.email}: {email_error}")
 
             except Exception as e:
                 logger.error(f"Error checking overdue settlements: {e}", exc_info=True)

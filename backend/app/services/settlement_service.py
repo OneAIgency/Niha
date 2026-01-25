@@ -30,6 +30,7 @@ from ..models.models import (
     User
 )
 from ..core.exceptions import handle_database_error
+from .email_service import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,35 @@ class SettlementService:
             await db.refresh(settlement)
 
             logger.info(f"Created CEA settlement: {batch_reference} for entity {entity_id}")
+
+            # Send confirmation email
+            try:
+                # Get entity and user information for email
+                entity_result = await db.execute(
+                    select(Entity).where(Entity.id == entity_id)
+                )
+                entity = entity_result.scalar_one_or_none()
+
+                if entity and created_by:
+                    user_result = await db.execute(
+                        select(User).where(User.id == created_by)
+                    )
+                    user = user_result.scalar_one_or_none()
+
+                    if user and user.email:
+                        await email_service.send_settlement_created(
+                            to_email=user.email,
+                            first_name=user.first_name or entity.legal_name,
+                            batch_reference=batch_reference,
+                            certificate_type="CEA",
+                            quantity=float(quantity),
+                            expected_date=expected_date.strftime("%Y-%m-%d")
+                        )
+                        logger.info(f"Settlement confirmation email sent to {user.email}")
+            except Exception as email_error:
+                logger.error(f"Failed to send settlement confirmation email: {email_error}")
+                # Don't fail the settlement creation if email fails
+
             return settlement
 
         except Exception as e:
@@ -181,6 +211,70 @@ class SettlementService:
             await db.refresh(settlement)
 
             logger.info(f"Settlement {settlement.batch_reference}: {old_status} -> {new_status}")
+
+            # Send status update email
+            try:
+                # Get entity and user information
+                entity_result = await db.execute(
+                    select(Entity).where(Entity.id == settlement.entity_id)
+                )
+                entity = entity_result.scalar_one_or_none()
+
+                if entity:
+                    # Get primary user for this entity
+                    user_result = await db.execute(
+                        select(User).where(User.entity_id == entity.id).limit(1)
+                    )
+                    user = user_result.scalar_one_or_none()
+
+                    if user and user.email:
+                        # Send completion email for SETTLED status, update email for others
+                        if new_status == SettlementStatus.SETTLED:
+                            # Get new balance after settlement
+                            asset_type_enum = AssetType.CEA if settlement.asset_type == CertificateType.CEA else AssetType.EUA
+                            holding_result = await db.execute(
+                                select(EntityHolding).where(
+                                    and_(
+                                        EntityHolding.entity_id == settlement.entity_id,
+                                        EntityHolding.asset_type == asset_type_enum
+                                    )
+                                )
+                            )
+                            holding = holding_result.scalar_one_or_none()
+                            new_balance = float(holding.quantity) if holding else 0.0
+
+                            await email_service.send_settlement_completed(
+                                to_email=user.email,
+                                first_name=user.first_name or entity.legal_name,
+                                batch_reference=settlement.batch_reference,
+                                certificate_type=settlement.asset_type.value,
+                                quantity=float(settlement.quantity),
+                                new_balance=new_balance
+                            )
+                        elif new_status == SettlementStatus.FAILED:
+                            await email_service.send_settlement_failed(
+                                to_email=user.email,
+                                first_name=user.first_name or entity.legal_name,
+                                batch_reference=settlement.batch_reference,
+                                certificate_type=settlement.asset_type.value,
+                                quantity=float(settlement.quantity),
+                                reason=notes
+                            )
+                        else:
+                            await email_service.send_settlement_status_update(
+                                to_email=user.email,
+                                first_name=user.first_name or entity.legal_name,
+                                batch_reference=settlement.batch_reference,
+                                old_status=old_status.value,
+                                new_status=new_status.value,
+                                certificate_type=settlement.asset_type.value,
+                                quantity=float(settlement.quantity)
+                            )
+                        logger.info(f"Settlement status email sent to {user.email}")
+            except Exception as email_error:
+                logger.error(f"Failed to send settlement status email: {email_error}")
+                # Don't fail the status update if email fails
+
             return settlement
 
         except Exception as e:

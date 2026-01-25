@@ -344,6 +344,425 @@ class EmailService:
 
         return await self._send_email(to_email, subject, html_content)
 
+    async def send_settlement_created(
+        self,
+        to_email: str,
+        first_name: str,
+        batch_reference: str,
+        certificate_type: str,
+        quantity: float,
+        expected_date: str
+    ) -> bool:
+        """Send settlement created confirmation email"""
+        name = first_name or "there"
+        subject = f"Settlement Initiated - {batch_reference}"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
+                .status-badge {{ display: inline-block; background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }}
+                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #64748b; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .timeline {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .timeline h3 {{ color: #047857; margin: 0 0 12px 0; font-size: 15px; }}
+                .timeline p {{ color: #065f46; margin: 4px 0; font-size: 14px; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Settlement Created</h1>
+                <div class="status-badge">⏱️ PENDING</div>
+                <p style="color: #64748b; margin-bottom: 20px;">Hello {name}, your {certificate_type} purchase settlement has been initiated.</p>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Settlement ID</span>
+                        <span class="value">{batch_reference}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Certificate Type</span>
+                        <span class="value">{certificate_type}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Quantity</span>
+                        <span class="value">{quantity:,.2f} tCO2e</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Expected Delivery</span>
+                        <span class="value">{expected_date}</span>
+                    </div>
+                </div>
+                <div class="timeline">
+                    <h3>📅 Settlement Timeline (T+3)</h3>
+                    <p><strong>T+1:</strong> Transfer Initiated</p>
+                    <p><strong>T+2:</strong> In Transit</p>
+                    <p><strong>T+3:</strong> At Custody & Settled</p>
+                </div>
+                <p style="color: #64748b; font-size: 14px;">You will receive updates as your settlement progresses through each stage. Your {certificate_type} certificates will be available in your account on the expected delivery date.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
+                    <p>Hong Kong | Italy</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_settlement_status_update(
+        self,
+        to_email: str,
+        first_name: str,
+        batch_reference: str,
+        old_status: str,
+        new_status: str,
+        certificate_type: str,
+        quantity: float
+    ) -> bool:
+        """Send settlement status update email"""
+        name = first_name or "there"
+
+        # Status display configuration
+        status_config = {
+            "TRANSFER_INITIATED": {"emoji": "🚀", "color": "#3b82f6", "bg": "#dbeafe", "label": "Transfer Initiated"},
+            "IN_TRANSIT": {"emoji": "🔄", "color": "#8b5cf6", "bg": "#ede9fe", "label": "In Transit"},
+            "AT_CUSTODY": {"emoji": "🏦", "color": "#06b6d4", "bg": "#cffafe", "label": "At Custody"},
+            "SETTLED": {"emoji": "✅", "color": "#10b981", "bg": "#d1fae5", "label": "Settled"},
+            "FAILED": {"emoji": "❌", "color": "#ef4444", "bg": "#fee2e2", "label": "Failed"}
+        }
+
+        config = status_config.get(new_status, {"emoji": "⏱️", "color": "#f59e0b", "bg": "#fef3c7", "label": new_status})
+
+        subject = f"Settlement Update - {batch_reference} is now {config['label']}"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                .logo span {{ color: #10b981; }}
+                .status-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
+                h1 {{ color: #0f172a; font-size: 20px; text-align: center; margin-bottom: 12px; }}
+                .status-badge {{ display: inline-block; background: {config['bg']}; color: {config['color']}; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
+                .progress {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .progress-label {{ color: #64748b; font-size: 13px; margin-bottom: 8px; }}
+                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; }}
+                .label {{ color: #64748b; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <div class="status-icon">{config['emoji']}</div>
+                <h1>Settlement Status Updated</h1>
+                <div style="text-align: center;">
+                    <span class="status-badge">{config['label'].upper()}</span>
+                </div>
+                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, your settlement has progressed to the next stage.</p>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Settlement ID</span>
+                        <span class="value">{batch_reference}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Certificate</span>
+                        <span class="value">{certificate_type}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Quantity</span>
+                        <span class="value">{quantity:,.2f} tCO2e</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Previous Status</span>
+                        <span class="value">{old_status.replace('_', ' ').title()}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">New Status</span>
+                        <span class="value" style="color: {config['color']};">{config['label']}</span>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
+                    <p>Hong Kong | Italy</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_settlement_completed(
+        self,
+        to_email: str,
+        first_name: str,
+        batch_reference: str,
+        certificate_type: str,
+        quantity: float,
+        new_balance: float
+    ) -> bool:
+        """Send settlement completion email"""
+        name = first_name or "there"
+        subject = f"Settlement Complete - {quantity:,.2f} {certificate_type} Delivered"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                .logo span {{ color: #10b981; }}
+                .success-icon {{ font-size: 64px; text-align: center; margin: 20px 0; }}
+                h1 {{ color: #0f172a; font-size: 22px; text-align: center; margin-bottom: 12px; }}
+                .success-badge {{ display: inline-block; background: #d1fae5; color: #047857; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
+                .highlight {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; }}
+                .highlight .big-number {{ font-size: 36px; font-weight: 700; color: #047857; margin-bottom: 8px; }}
+                .highlight .label {{ color: #065f46; font-size: 14px; }}
+                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #64748b; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 200px; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <div class="success-icon">🎉</div>
+                <h1>Settlement Complete!</h1>
+                <div style="text-align: center;">
+                    <span class="success-badge">✅ SETTLED</span>
+                </div>
+                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, your certificates have been successfully delivered to your account.</p>
+                <div class="highlight">
+                    <div class="big-number">+{quantity:,.2f}</div>
+                    <div class="label">{certificate_type} certificates added to your account</div>
+                </div>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Settlement ID</span>
+                        <span class="value">{batch_reference}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Certificates Delivered</span>
+                        <span class="value">{quantity:,.2f} tCO2e</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">New {certificate_type} Balance</span>
+                        <span class="value">{new_balance:,.2f} tCO2e</span>
+                    </div>
+                </div>
+                <a href="http://localhost:5173/dashboard" class="button">View Dashboard</a>
+                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 24px;">Your certificates are now available for trading or swapping.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
+                    <p>Hong Kong | Italy</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_settlement_failed(
+        self,
+        to_email: str,
+        first_name: str,
+        batch_reference: str,
+        certificate_type: str,
+        quantity: float,
+        reason: Optional[str] = None
+    ) -> bool:
+        """Send settlement failure notification email"""
+        name = first_name or "there"
+        subject = f"Settlement Failed - {batch_reference}"
+        failure_reason = reason or "Technical issue during settlement processing"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                .logo span {{ color: #10b981; }}
+                .error-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
+                h1 {{ color: #0f172a; font-size: 20px; text-align: center; margin-bottom: 12px; }}
+                .error-badge {{ display: inline-block; background: #fee2e2; color: #991b1b; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
+                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #64748b; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .error-box {{ background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin: 20px 0; }}
+                .error-box p {{ color: #991b1b; margin: 0; font-size: 14px; }}
+                .support {{ background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .support h3 {{ color: #1e40af; margin: 0 0 8px 0; font-size: 15px; }}
+                .support p {{ color: #1e3a8a; margin: 0; font-size: 14px; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <div class="error-icon">⚠️</div>
+                <h1>Settlement Failed</h1>
+                <div style="text-align: center;">
+                    <span class="error-badge">❌ FAILED</span>
+                </div>
+                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, we encountered an issue processing your settlement.</p>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Settlement ID</span>
+                        <span class="value">{batch_reference}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Certificate Type</span>
+                        <span class="value">{certificate_type}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Quantity</span>
+                        <span class="value">{quantity:,.2f} tCO2e</span>
+                    </div>
+                </div>
+                <div class="error-box">
+                    <p><strong>Failure Reason:</strong> {failure_reason}</p>
+                </div>
+                <div class="support">
+                    <h3>🆘 What happens next?</h3>
+                    <p>Our support team has been notified and will contact you within 24 hours to resolve this issue. Your funds remain safe in your account.</p>
+                </div>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">If you have urgent questions, please contact support@nihaogroup.com</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
+                    <p>Hong Kong | Italy</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_admin_overdue_settlement_alert(
+        self,
+        to_email: str,
+        batch_reference: str,
+        entity_name: str,
+        certificate_type: str,
+        quantity: float,
+        expected_date: str,
+        days_overdue: int,
+        current_status: str
+    ) -> bool:
+        """Send admin alert for overdue settlement"""
+        subject = f"⚠️ ALERT: Settlement {batch_reference} is {days_overdue} days overdue"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                .logo span {{ color: #10b981; }}
+                .alert-header {{ background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 24px; }}
+                .alert-header h1 {{ color: #991b1b; font-size: 20px; margin: 0 0 8px 0; }}
+                .alert-header p {{ color: #dc2626; margin: 0; font-size: 14px; }}
+                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #64748b; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .overdue {{ color: #ef4444; font-weight: 700; font-size: 18px; }}
+                .actions {{ background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .actions h3 {{ color: #92400e; margin: 0 0 12px 0; font-size: 15px; }}
+                .actions ul {{ color: #78350f; margin: 0; padding-left: 20px; }}
+                .actions li {{ margin: 6px 0; }}
+                .button {{ display: block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 250px; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <div class="alert-header">
+                    <h1>⚠️ Overdue Settlement Alert</h1>
+                    <p>Immediate action required for settlement {batch_reference}</p>
+                </div>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Settlement ID</span>
+                        <span class="value">{batch_reference}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Entity</span>
+                        <span class="value">{entity_name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Certificate Type</span>
+                        <span class="value">{certificate_type}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Quantity</span>
+                        <span class="value">{quantity:,.2f} tCO2e</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Expected Date</span>
+                        <span class="value">{expected_date}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Current Status</span>
+                        <span class="value">{current_status.replace('_', ' ').title()}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Days Overdue</span>
+                        <span class="overdue">{days_overdue} DAYS</span>
+                    </div>
+                </div>
+                <div class="actions">
+                    <h3>📋 Required Actions:</h3>
+                    <ul>
+                        <li>Review settlement status with registry</li>
+                        <li>Contact counterparty if applicable</li>
+                        <li>Update client on delay</li>
+                        <li>Determine root cause and resolution timeline</li>
+                    </ul>
+                </div>
+                <a href="http://localhost:5173/backoffice/settlements" class="button">Review in Backoffice</a>
+                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">This is an automated alert from the Settlement Processor</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
+                    <p>System Administration</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._send_email(to_email, subject, html_content)
+
     async def _send_email(self, to: str, subject: str, html: str) -> bool:
         """Internal method to send email via Resend or log in dev mode"""
         if not self.enabled:
