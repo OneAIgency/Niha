@@ -21,15 +21,47 @@ router = APIRouter(prefix="/settlement", tags=["Settlement"])
 
 @router.get("/pending")
 async def get_my_pending_settlements(
-    settlement_type: Optional[SettlementType] = Query(None, description="Filter by settlement type"),
-    status_filter: Optional[SettlementStatus] = Query(None, description="Filter by status"),
+    settlement_type: Optional[SettlementType] = Query(None, description="Filter by settlement type (CEA_PURCHASE, SWAP_CEA_TO_EUA)"),
+    status_filter: Optional[SettlementStatus] = Query(None, description="Filter by status (PENDING, TRANSFER_INITIATED, IN_TRANSIT, AT_CUSTODY, SETTLED, FAILED)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get pending settlements for the current user's entity.
-    
-    Returns list of settlement batches with their current status and progress.
+
+    Returns list of settlement batches with their current status and progress percentage.
+    Settlements represent T+N external registry transfers for CEA purchases and swaps.
+
+    **Query Parameters:**
+    - `settlement_type` (optional): Filter by CEA_PURCHASE or SWAP_CEA_TO_EUA
+    - `status_filter` (optional): Filter by specific settlement status
+
+    **Response:**
+    ```json
+    {
+      "data": [
+        {
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "batch_reference": "SET-2026-000001-CEA",
+          "settlement_type": "CEA_PURCHASE",
+          "status": "IN_TRANSIT",
+          "asset_type": "CEA",
+          "quantity": 1000.0,
+          "price": 13.50,
+          "total_value_eur": 13500.0,
+          "expected_settlement_date": "2026-01-28T00:00:00",
+          "actual_settlement_date": null,
+          "progress_percent": 50,
+          "created_at": "2026-01-25T10:00:00",
+          "updated_at": "2026-01-26T14:30:00"
+        }
+      ],
+      "count": 1
+    }
+    ```
+
+    **Status Progression:**
+    - PENDING (0%) → TRANSFER_INITIATED (25%) → IN_TRANSIT (50%) → AT_CUSTODY (75%) → SETTLED (100%)
     """
     if not current_user.entity_id:
         return {"data": [], "count": 0}
@@ -74,8 +106,64 @@ async def get_settlement_details(
 ):
     """
     Get detailed information about a specific settlement batch.
-    
-    Includes full timeline and status history.
+
+    Includes full settlement details with complete status history timeline.
+    Each timeline entry shows status change, timestamp, notes, and user who made the change.
+
+    **Path Parameters:**
+    - `settlement_batch_id` (UUID): The unique ID of the settlement batch
+
+    **Authorization:**
+    - User must own the settlement (settlement.entity_id == current_user.entity_id)
+    - Returns 403 Forbidden if user doesn't own the settlement
+
+    **Response:**
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "batch_reference": "SET-2026-000001-CEA",
+      "settlement_type": "CEA_PURCHASE",
+      "status": "IN_TRANSIT",
+      "asset_type": "CEA",
+      "quantity": 1000.0,
+      "price": 13.50,
+      "total_value_eur": 13500.0,
+      "expected_settlement_date": "2026-01-28T00:00:00",
+      "actual_settlement_date": null,
+      "registry_reference": "REG-CN-2026-12345",
+      "counterparty_id": null,
+      "counterparty_type": null,
+      "notes": "Standard T+3 CEA purchase settlement",
+      "progress_percent": 50,
+      "timeline": [
+        {
+          "status": "PENDING",
+          "notes": "Settlement batch created - awaiting T+1",
+          "created_at": "2026-01-25T10:00:00",
+          "updated_by": "user-uuid"
+        },
+        {
+          "status": "TRANSFER_INITIATED",
+          "notes": "Automatic status update by settlement processor",
+          "created_at": "2026-01-26T10:00:00",
+          "updated_by": "system-uuid"
+        },
+        {
+          "status": "IN_TRANSIT",
+          "notes": "Automatic status update by settlement processor",
+          "created_at": "2026-01-27T10:00:00",
+          "updated_by": "system-uuid"
+        }
+      ],
+      "created_at": "2026-01-25T10:00:00",
+      "updated_at": "2026-01-27T10:00:00"
+    }
+    ```
+
+    **Timeline Entries:**
+    - Chronological list of all status changes
+    - Shows who made each change (user or automated system)
+    - Includes notes explaining the reason for each status change
     """
     if not current_user.entity_id:
         raise HTTPException(
@@ -133,8 +221,59 @@ async def get_settlement_timeline_endpoint(
 ):
     """
     Get settlement timeline with all status changes.
-    
-    Returns chronological list of all status updates.
+
+    Returns chronological list of all status updates for a specific settlement batch.
+    This is a lightweight endpoint that returns only timeline data without full settlement details.
+
+    **Path Parameters:**
+    - `settlement_batch_id` (UUID): The unique ID of the settlement batch
+
+    **Authorization:**
+    - User must own the settlement (settlement.entity_id == current_user.entity_id)
+    - Returns 403 Forbidden if user doesn't own the settlement
+
+    **Response:**
+    ```json
+    {
+      "settlement_batch_id": "123e4567-e89b-12d3-a456-426614174000",
+      "batch_reference": "SET-2026-000001-CEA",
+      "current_status": "IN_TRANSIT",
+      "expected_settlement_date": "2026-01-28T00:00:00",
+      "progress_percent": 50,
+      "timeline": [
+        {
+          "status": "PENDING",
+          "notes": "Settlement batch created - awaiting T+1",
+          "created_at": "2026-01-25T10:00:00",
+          "updated_by": "user-uuid-here"
+        },
+        {
+          "status": "TRANSFER_INITIATED",
+          "notes": "Automatic status update by settlement processor",
+          "created_at": "2026-01-26T10:00:00",
+          "updated_by": "system-uuid-here"
+        },
+        {
+          "status": "IN_TRANSIT",
+          "notes": "Automatic status update by settlement processor",
+          "created_at": "2026-01-27T10:00:00",
+          "updated_by": "system-uuid-here"
+        }
+      ]
+    }
+    ```
+
+    **Timeline Entry Fields:**
+    - `status`: The settlement status at this point in time
+    - `notes`: Explanation of the status change (automated or manual)
+    - `created_at`: ISO 8601 timestamp of when this status was set
+    - `updated_by`: UUID of user/system that triggered this status change
+
+    **Use Cases:**
+    - Display settlement progress in UI without loading full details
+    - Track audit trail of settlement status changes
+    - Monitor automated vs manual status updates
+    - Debug settlement progression issues
     """
     if not current_user.entity_id:
         raise HTTPException(
