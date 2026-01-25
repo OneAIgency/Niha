@@ -568,7 +568,7 @@ class AssetTransaction(Base):
 
     # Existing fields (for backward compatibility with Entity-based transactions)
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
-    asset_type = Column(String(10), nullable=True)  # EUR, CEA, EUA (for Entity transactions)
+    asset_type = Column(SQLEnum(AssetType), nullable=True)  # EUR, CEA, EUA (for Entity transactions)
     balance_before = Column(Numeric(18, 2), nullable=True)
     reference = Column(String(255), nullable=True)
 

@@ -165,10 +165,14 @@ class MarketMakerService:
         )
 
         # Create transaction
+        # Convert CertificateType to AssetType (same values: CEA/EUA)
+        from app.models.models import AssetType
+        asset_type_value = AssetType(certificate_type.value)
+
         transaction = AssetTransaction(
             ticket_id=ticket.ticket_id,
             market_maker_id=market_maker_id,
-            asset_type=certificate_type.value,  # Populate for backward compatibility
+            asset_type=asset_type_value,  # Populate for backward compatibility
             certificate_type=certificate_type,
             transaction_type=transaction_type,
             amount=amount,
