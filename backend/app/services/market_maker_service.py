@@ -168,6 +168,7 @@ class MarketMakerService:
         transaction = AssetTransaction(
             ticket_id=ticket.ticket_id,
             market_maker_id=market_maker_id,
+            asset_type=certificate_type.value,  # Populate for backward compatibility
             certificate_type=certificate_type,
             transaction_type=transaction_type,
             amount=amount,
