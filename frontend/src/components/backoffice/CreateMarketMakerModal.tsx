@@ -15,6 +15,7 @@ interface CreateMarketMakerModalProps {
 
 export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCount }: CreateMarketMakerModalProps) {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
   const [market, setMarket] = useState<MarketType>('CEA_CASH');
   const [mmType, setMmType] = useState<MarketMakerType>('CASH_BUYER');
@@ -27,6 +28,29 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
 
   // Get current prices for EUR calculation
   const { prices } = usePrices();
+
+  // Helper function to generate email from name
+  const generateEmailFromName = (name: string): string => {
+    if (!name.trim()) return '';
+
+    // Sanitize: lowercase, replace spaces and special characters with hyphens
+    const sanitized = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+      .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
+
+    return `${sanitized}@marketmaker.niha.internal`;
+  };
+
+  // Auto-generate email when name changes
+  useEffect(() => {
+    if (name.trim()) {
+      setEmail(generateEmailFromName(name));
+    } else {
+      setEmail('');
+    }
+  }, [name]);
 
   // Auto-populate name when modal opens
   // Fetch latest count to avoid race conditions
@@ -78,6 +102,18 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
       return;
     }
 
+    if (!email.trim()) {
+      setError('Please enter an email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     // Type-specific validation
     if (mmType === 'CASH_BUYER') {
       if (!eurBalance || parseFloat(eurBalance) <= 0 || isNaN(parseFloat(eurBalance))) {
@@ -116,6 +152,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
     try {
       await createMarketMaker({
         name: name.trim(),
+        email: email.trim(),
         description: description.trim() || undefined,
         mm_type: mmType,
         initial_eur_balance: mmType === 'CASH_BUYER' && eurBalance ? parseFloat(eurBalance) : undefined,
@@ -129,6 +166,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         onClose();
         // Reset form
         setName('');
+        setEmail('');
         setDescription('');
         setMarket('CEA_CASH');
         setMmType('CASH_BUYER');
@@ -188,6 +226,23 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 autoFocus
               />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="market-maker@marketmaker.niha.internal"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                Auto-generated from name. You can edit if needed.
+              </p>
             </div>
 
             {/* Description */}

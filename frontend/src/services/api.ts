@@ -378,6 +378,9 @@ export const swapsApi = {
     explanation: string;
     platform_fee_pct: number;
     effective_rate: number;
+    rate_change_24h?: number;
+    eua_change_24h?: number;
+    cea_change_24h?: number;
   }> => {
     const { data } = await api.get('/swaps/rate');
     return data;
@@ -401,6 +404,54 @@ export const swapsApi = {
     avg_requested_rate: number;
   }> => {
     const { data } = await api.get('/swaps/stats');
+    return data;
+  },
+
+  createSwapRequest: async (request: {
+    from_type: 'CEA' | 'EUA';
+    to_type: 'CEA' | 'EUA';
+    quantity: number;
+    desired_rate?: number;
+  }): Promise<SwapRequest> => {
+    const { data } = await api.post('/swaps', request);
+    return data;
+  },
+
+  executeSwap: async (swapId: string): Promise<{
+    success: boolean;
+    message: string;
+    swap_id: string;
+    swap_reference: string;
+    from_quantity: number;
+    to_quantity: number;
+    rate: number;
+    from_balance_after: number;
+    to_balance_after: number;
+  }> => {
+    const { data } = await api.post(`/swaps/${swapId}/execute`);
+    return data;
+  },
+
+  getMySwaps: async (status?: string): Promise<{ data: SwapRequest[] }> => {
+    const { data } = await api.get('/swaps/my', {
+      params: status ? { status } : undefined,
+    });
+    return data;
+  },
+
+  getSwapOffers: async (): Promise<{
+    offers: Array<{
+      market_maker_id: string;
+      market_maker_name: string;
+      direction: 'CEA_TO_EUA' | 'EUA_TO_CEA';
+      ratio: number;
+      eua_available?: number;
+      cea_available?: number;
+      rate: number;
+    }>;
+    count: number;
+  }> => {
+    const { data } = await api.get('/swaps/offers');
     return data;
   },
 };
@@ -467,6 +518,19 @@ export const usersApi = {
   }> => {
     const { data } = await api.get('/users/me/entity/assets');
     return data;
+  },
+
+  getMyHoldings: async (): Promise<{
+    eur: number;
+    cea: number;
+    eua: number;
+  }> => {
+    const { data } = await api.get('/users/me/entity/assets');
+    return {
+      eur: data.eur_balance || 0,
+      cea: data.cea_balance || 0,
+      eua: data.eua_balance || 0,
+    };
   },
 
   getFundingInstructions: async (): Promise<any> => {
@@ -1127,6 +1191,7 @@ export const getMarketMakers = async (params?: any): Promise<any[]> => {
 
 export const createMarketMaker = async (data: {
   name: string;
+  email: string;
   description?: string;
   mm_type?: 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
   initial_eur_balance?: number;
@@ -1134,10 +1199,11 @@ export const createMarketMaker = async (data: {
   eua_balance?: number;
 }): Promise<any> => {
   // Transform frontend format to backend expected format
-  // Backend expects: mm_type, initial_eur_balance, initial_balances: {CEA: number, EUA: number}
-  // Frontend sends: mm_type, initial_eur_balance, cea_balance, eua_balance
+  // Backend expects: name, email, mm_type, initial_eur_balance, initial_balances: {CEA: number, EUA: number}
+  // Frontend sends: name, email, mm_type, initial_eur_balance, cea_balance, eua_balance
   const payload: any = {
     name: data.name,
+    email: data.email,
     description: data.description,
     mm_type: data.mm_type || 'CEA_CASH_SELLER',
   };
@@ -1177,8 +1243,8 @@ export const getMarketMakerTransactions = async (id: string, params?: any): Prom
   const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
 
   // Transform backend response to match frontend expectations
-  // Backend returns: transaction_type as "DEPOSIT" or "WITHDRAWAL" (uppercase)
-  // Frontend expects: transaction_type as "deposit" or "withdrawal" (lowercase)
+  // Backend returns: transaction_type as "DEPOSIT", "WITHDRAWAL", "TRADE_DEBIT", etc. (uppercase)
+  // Frontend expects: lowercase with underscores (deposit, withdrawal, trade_debit, trade_credit, etc.)
   return data.map((transaction: any) => ({
     ...transaction,
     transaction_type: transaction.transaction_type?.toLowerCase() || 'deposit',
@@ -1205,15 +1271,23 @@ export const createTransaction = async (id: string, data: {
 export const getMarketMakerBalances = async (id: string): Promise<{
   cea_balance: number;
   eua_balance: number;
+  cea_available: number;
+  eua_available: number;
+  cea_locked: number;
+  eua_locked: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
 
   // Transform nested backend structure to flat frontend structure
-  // Backend returns: {CEA: {available, locked, total}, EUA: {...}}
-  // Frontend expects: {cea_balance, eua_balance}
+  // Backend returns: {CEA: {available, locked, total}, EUA: {available, locked, total}}
+  // Frontend expects: flat structure with total, available, and locked for each
   return {
     cea_balance: data.CEA?.total ?? 0,
     eua_balance: data.EUA?.total ?? 0,
+    cea_available: data.CEA?.available ?? 0,
+    eua_available: data.EUA?.available ?? 0,
+    cea_locked: data.CEA?.locked ?? 0,
+    eua_locked: data.EUA?.locked ?? 0,
   };
 };
 
