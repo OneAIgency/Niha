@@ -24,6 +24,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Test",
+        client_code="LP-001",
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("100000"),
         is_active=True,
@@ -35,6 +36,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     ah_mm = MarketMakerClient(
         user_id=ah_user.id,
         name="AH-Test",
+        client_code="AH-001",
         mm_type=MarketMakerType.CEA_CASH_SELLER,
         is_active=True,
         created_by=test_admin_user.id
@@ -266,6 +268,7 @@ async def test_preview_liquidity_creation_sufficient_assets(
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Preview",
+        client_code="LP-PREVIEW",
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
@@ -325,6 +328,7 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
     lp_mm = MarketMakerClient(
         user_id=test_admin_user.id,
         name="LP-Execute",
+        client_code="LP-EXECUTE",
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
@@ -389,10 +393,24 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
     """CASH_BUYER market makers should be selected for CEA-CASH liquidity"""
     from app.services.market_maker_service import MarketMakerService
 
+    # Create user for cash buyer
+    cash_buyer_user = User(
+        email="cash_buyer@test.com",
+        first_name="Cash",
+        last_name="Buyer",
+        password_hash="hashed_password_here",
+        role=UserRole.ADMIN,
+        is_active=True
+    )
+    db_session.add(cash_buyer_user)
+    await db_session.commit()
+    await db_session.refresh(cash_buyer_user)
+
     # Create CASH_BUYER MM
     cash_buyer = MarketMakerClient(
-        user_id=test_admin_user.id,
+        user_id=cash_buyer_user.id,
         name="Cash-Buyer-Test",
+        client_code="CASH-BUYER-001",
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("100000"),
         is_active=True,
@@ -410,10 +428,24 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         initial_balances={"CEA": Decimal("10000")}
     )
 
+    # Create user for swap maker
+    swap_maker_user = User(
+        email="swap_maker@test.com",
+        first_name="Swap",
+        last_name="Maker",
+        password_hash="hashed_password_here",
+        role=UserRole.ADMIN,
+        is_active=True
+    )
+    db_session.add(swap_maker_user)
+    await db_session.commit()
+    await db_session.refresh(swap_maker_user)
+
     # Create SWAP_MAKER MM (should NOT be selected)
     swap_maker = MarketMakerClient(
-        user_id=test_admin_user.id,
+        user_id=swap_maker_user.id,
         name="Swap-Maker-Test",
+        client_code="SWAP-001",
         mm_type=MarketMakerType.SWAP_MAKER,
         is_active=True,
         created_by=test_admin_user.id

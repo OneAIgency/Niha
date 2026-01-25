@@ -123,7 +123,14 @@ class SettlementService:
             )
             db.add(status_history)
             await db.commit()
-            await db.refresh(settlement)
+
+            # Refresh settlement with status_history relationship loaded
+            result = await db.execute(
+                select(SettlementBatch)
+                .options(selectinload(SettlementBatch.status_history))
+                .where(SettlementBatch.id == settlement.id)
+            )
+            settlement = result.scalar_one()
 
             logger.info(f"Created CEA settlement: {batch_reference} for entity {entity_id}")
 
@@ -208,7 +215,14 @@ class SettlementService:
                 await SettlementService.finalize_settlement(db, settlement, updated_by)
 
             await db.commit()
-            await db.refresh(settlement)
+
+            # Refresh settlement with status_history relationship loaded
+            result = await db.execute(
+                select(SettlementBatch)
+                .options(selectinload(SettlementBatch.status_history))
+                .where(SettlementBatch.id == settlement_id)
+            )
+            settlement = result.scalar_one()
 
             logger.info(f"Settlement {settlement.batch_reference}: {old_status} -> {new_status}")
 

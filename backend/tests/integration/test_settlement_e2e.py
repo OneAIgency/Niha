@@ -16,6 +16,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.models.models import (
     User, UserRole, Entity, Jurisdiction,
@@ -123,12 +124,19 @@ async def test_complete_cea_purchase_settlement_workflow(
     # Set expected date to yesterday to simulate time passing
     settlement.expected_settlement_date = datetime.utcnow() - timedelta(days=2)
     await db_session.commit()
+    db_session.expire_all()  # Clear session cache to ensure processor sees updated data
 
-    # Run settlement processor
-    await SettlementProcessor.process_pending_settlements()
+    # Run settlement processor with test database session
+    await SettlementProcessor.process_pending_settlements(db=db_session)
+    await db_session.commit()  # Ensure processor changes are committed
 
-    # Verify status advanced
-    await db_session.refresh(settlement)
+    # Verify status advanced - reload with status_history relationship
+    result = await db_session.execute(
+        select(SettlementBatch)
+        .options(selectinload(SettlementBatch.status_history))
+        .where(SettlementBatch.id == settlement.id)
+    )
+    settlement = result.scalar_one()
     assert settlement.status == SettlementStatus.TRANSFER_INITIATED
     assert SettlementService.calculate_settlement_progress(settlement) == 25
 
@@ -138,22 +146,43 @@ async def test_complete_cea_purchase_settlement_workflow(
     assert "Automatic status update" in settlement.status_history[1].notes
 
     # === STEP 4: Simulate T+2 - Auto-advancement to IN_TRANSIT ===
-    await SettlementProcessor.process_pending_settlements()
-    await db_session.refresh(settlement)
+    db_session.expire_all()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
+    await db_session.commit()
+    result = await db_session.execute(
+        select(SettlementBatch)
+        .options(selectinload(SettlementBatch.status_history))
+        .where(SettlementBatch.id == settlement.id)
+    )
+    settlement = result.scalar_one()
     assert settlement.status == SettlementStatus.IN_TRANSIT
     assert SettlementService.calculate_settlement_progress(settlement) == 50
     assert len(settlement.status_history) == 3
 
     # === STEP 5: Simulate approaching T+3 - AT_CUSTODY ===
-    await SettlementProcessor.process_pending_settlements()
-    await db_session.refresh(settlement)
+    db_session.expire_all()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
+    await db_session.commit()
+    result = await db_session.execute(
+        select(SettlementBatch)
+        .options(selectinload(SettlementBatch.status_history))
+        .where(SettlementBatch.id == settlement.id)
+    )
+    settlement = result.scalar_one()
     assert settlement.status == SettlementStatus.AT_CUSTODY
     assert SettlementService.calculate_settlement_progress(settlement) == 75
     assert len(settlement.status_history) == 4
 
     # === STEP 6: Simulate T+3 - Final settlement and delivery ===
-    await SettlementProcessor.process_pending_settlements()
-    await db_session.refresh(settlement)
+    db_session.expire_all()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
+    await db_session.commit()
+    result = await db_session.execute(
+        select(SettlementBatch)
+        .options(selectinload(SettlementBatch.status_history))
+        .where(SettlementBatch.id == settlement.id)
+    )
+    settlement = result.scalar_one()
     assert settlement.status == SettlementStatus.SETTLED
     assert SettlementService.calculate_settlement_progress(settlement) == 100
     assert len(settlement.status_history) == 5
@@ -227,7 +256,7 @@ async def test_multiple_concurrent_settlements(
     await db_session.commit()
 
     # Run processor
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
 
     # Verify only settlement_a advanced
     await db_session.refresh(settlement_a)
@@ -247,7 +276,7 @@ async def test_multiple_concurrent_settlements(
     in_transit = await SettlementService.get_pending_settlements(
         db=db_session,
         entity_id=buyer_entity.id,
-        status=SettlementStatus.TRANSFER_INITIATED
+        status_filter=SettlementStatus.TRANSFER_INITIATED
     )
     assert len(in_transit) == 1
     assert in_transit[0].id == settlement_a.id
@@ -294,8 +323,8 @@ async def test_settlement_prevents_premature_asset_delivery(
     # Progress to IN_TRANSIT
     settlement.expected_settlement_date = datetime.utcnow() - timedelta(days=1)
     await db_session.commit()
-    await SettlementProcessor.process_pending_settlements()
-    await SettlementProcessor.process_pending_settlements()  # Advance to IN_TRANSIT
+    await SettlementProcessor.process_pending_settlements(db=db_session)
+    await SettlementProcessor.process_pending_settlements(db=db_session)  # Advance to IN_TRANSIT
     await db_session.refresh(settlement)
 
     # Still IN_TRANSIT - no assets delivered yet
@@ -303,8 +332,8 @@ async def test_settlement_prevents_premature_asset_delivery(
     # Assets still not delivered
 
     # Only when SETTLED should assets be delivered
-    await SettlementProcessor.process_pending_settlements()  # AT_CUSTODY
-    await SettlementProcessor.process_pending_settlements()  # SETTLED
+    await SettlementProcessor.process_pending_settlements(db=db_session)  # AT_CUSTODY
+    await SettlementProcessor.process_pending_settlements(db=db_session)  # SETTLED
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.SETTLED
 
