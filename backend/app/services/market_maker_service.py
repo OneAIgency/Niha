@@ -47,18 +47,10 @@ class MarketMakerService:
         db.add(user)
         await db.flush()
 
-        # Generate client_code (MM-001, MM-002, etc.)
-        result = await db.execute(
-            select(func.count(MarketMakerClient.id))
-        )
-        count = result.scalar() or 0
-        client_code = f"MM-{count + 1:03d}"
-
         # Create MarketMakerClient
         mm_client = MarketMakerClient(
             user_id=user.id,
             name=name,
-            client_code=client_code,
             description=description,
             is_active=True,
             created_by=created_by_id,
