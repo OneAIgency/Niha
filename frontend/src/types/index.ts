@@ -533,3 +533,38 @@ export const MARKET_MAKER_TYPES: Record<MarketMakerType, MarketMakerTypeInfo> = 
     color: 'blue'
   }
 };
+
+// Settlement
+export type SettlementStatus =
+  | 'PENDING'
+  | 'TRANSFER_INITIATED'
+  | 'IN_TRANSIT'
+  | 'AT_CUSTODY'
+  | 'SETTLED'
+  | 'FAILED';
+
+export type SettlementType = 'CEA_PURCHASE' | 'SWAP_CEA_TO_EUA';
+
+export interface SettlementBatch {
+  id: string;
+  batch_reference: string;
+  settlement_type: SettlementType;
+  status: SettlementStatus;
+  asset_type: 'CEA' | 'EUA';
+  quantity: number;
+  price: number;
+  total_value_eur: number;
+  expected_settlement_date: string;
+  actual_settlement_date: string | null;
+  progress_percent?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SettlementStatusHistory {
+  id: string;
+  settlement_batch_id: string;
+  status: SettlementStatus;
+  notes?: string;
+  created_at: string;
+}

@@ -30,6 +30,7 @@ import type {
   DepositCreate,
   EntityBalance,
   MarketMakerType,
+  SettlementBatch,
 } from '../types';
 import { MARKET_MAKER_TYPES } from '../types';
 import type {
@@ -1366,6 +1367,13 @@ export const liquidityApi = {
 
   createLiquidity: async (request: LiquidityCreationRequest): Promise<LiquidityCreationResponse> => {
     const { data } = await api.post('/admin/liquidity/create', request);
+    return data;
+  },
+};
+
+export const settlementApi = {
+  getPendingSettlements: async (): Promise<{ data: SettlementBatch[]; count: number }> => {
+    const { data } = await api.get<{ data: SettlementBatch[]; count: number }>('/settlement/pending');
     return data;
   },
 };

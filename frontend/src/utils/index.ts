@@ -50,6 +50,18 @@ export function formatQuantity(value: number | undefined | null): string {
   }).format(value);
 }
 
+// Format date (locale date string)
+export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    ...options,
+  });
+}
+
 // Relative time format
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date();

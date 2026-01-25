@@ -1,4 +1,6 @@
-version: '3.8'
+# Nihao Carbon Platform - Docker Compose
+# Project name: niha_platform (stable; avoids stale container refs from legacy "niha").
+name: niha_platform
 
 services:
   # PostgreSQL Database
@@ -20,14 +22,13 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
+  # Redis Cache (no container_name to avoid stale-reference issues on rebuild)
   redis:
     image: redis:7-alpine
-    container_name: niha_redis
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_v2:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -75,4 +76,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
+  redis_data_v2:
