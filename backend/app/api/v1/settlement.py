@@ -205,7 +205,6 @@ async def get_settlement_details(
         "actual_settlement_date": settlement.actual_settlement_date.isoformat() if settlement.actual_settlement_date else None,
         "registry_reference": settlement.registry_reference,
         "counterparty_id": str(settlement.counterparty_id) if settlement.counterparty_id else None,
-        "counterparty_type": settlement.counterparty_type,
         "notes": settlement.notes,
         "progress_percent": progress,
         "timeline": timeline,
