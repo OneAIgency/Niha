@@ -58,4 +58,10 @@ pytest
 ## Environment
 
 Copy `.env.example` to `.env` and adjust values as needed for local
-development.
+development. Set `ENVIRONMENT=production` and `CORS_ORIGINS` for production;
+see [CORS](docs/configuration/CORS.md).
+
+## Documentation
+
+- [CHANGELOG](docs/CHANGELOG.md) – recent changes
+- [Admin Scraping API](docs/api/ADMIN_SCRAPING_API.md) – scraping sources (Settings)

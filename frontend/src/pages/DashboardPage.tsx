@@ -31,6 +31,7 @@ import {
   Tabs,
   ProgressBar,
   Skeleton,
+  Subheader,
   type Column,
   type Tab,
 } from '../components/common';
@@ -354,87 +355,73 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* Header Bar */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <LayoutDashboard className="w-5 h-5 text-emerald-500" />
+      {/* Subheader */}
+      <Subheader
+        icon={<LayoutDashboard className="w-5 h-5 text-emerald-500" />}
+        title="Portfolio Dashboard"
+        description={entityBalance?.entity_name || 'Real-time portfolio overview'}
+        iconBg="bg-emerald-500/20"
+      >
+        {prices && (
+          <>
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Wind className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Portfolio Dashboard</h1>
-                <p className="text-sm text-slate-400">
-                  {entityBalance?.entity_name || 'Real-time portfolio overview'}
-                </p>
+                <div className="text-xs text-slate-400">EUA Price</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold font-mono text-white">
+                    €{prices.eua.price.toFixed(2)}
+                  </span>
+                  <span className={`flex items-center gap-0.5 text-xs ${
+                    prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {prices.eua.change_24h >= 0 ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(2)}%
+                  </span>
+                </div>
               </div>
             </div>
-
-            {/* Market Prices */}
-            <div className="flex items-center gap-6 text-sm">
-              {prices && (
-                <>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Wind className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">EUA Price</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-white">
-                          €{prices.eua.price.toFixed(2)}
-                        </span>
-                        <span className={`flex items-center gap-0.5 text-xs ${
-                          prices.eua.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                        }`}>
-                          {prices.eua.change_24h >= 0 ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          {prices.eua.change_24h >= 0 ? '+' : ''}{prices.eua.change_24h.toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <Leaf className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-400">CEA Price</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-mono text-white">
-                          €{prices.cea.price.toFixed(2)}
-                        </span>
-                        <span className={`flex items-center gap-0.5 text-xs ${
-                          prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                        }`}>
-                          {prices.cea.change_24h >= 0 ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </motion.button>
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Leaf className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <div className="text-xs text-slate-400">CEA Price</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold font-mono text-white">
+                    €{prices.cea.price.toFixed(2)}
+                  </span>
+                  <span className={`flex items-center gap-0.5 text-xs ${
+                    prices.cea.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {prices.cea.change_24h >= 0 ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {prices.cea.change_24h >= 0 ? '+' : ''}{prices.cea.change_24h.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </motion.button>
+      </Subheader>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">

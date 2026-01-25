@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { BarChart3 } from 'lucide-react';
 import { AdminOrderBookSection } from '../components/backoffice/AdminOrderBookSection';
 import { PlaceMarketOrderSection } from '../components/backoffice/PlaceMarketOrderSection';
+import { Subheader } from '../components/common';
 import type { CertificateType } from '../types';
 import { cn } from '../utils';
 
@@ -16,22 +17,14 @@ export function MarketOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-navy-900 dark:text-white">
-              Market Orders Management
-            </h1>
-          </div>
-          <p className="text-navy-600 dark:text-navy-300">
-            Place orders on behalf of market makers with real-time order book view
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-950">
+      <Subheader
+        icon={<BarChart3 className="w-5 h-5 text-emerald-500" />}
+        title="Market Orders Management"
+        description="Place orders on behalf of market makers with real-time order book view"
+        iconBg="bg-emerald-500/20"
+      />
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Certificate Type Selector */}
         <div className="mb-6">

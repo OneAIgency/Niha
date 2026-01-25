@@ -21,3 +21,6 @@ export { PriceDisplay } from './PriceDisplay';
 export { DepthBar } from './DepthBar';
 export { PageHeader } from './PageHeader';
 export { ConfirmationModal } from './ConfirmationModal';
+export { Subheader } from './Subheader';
+export { CEAPriceDisplay } from './CEAPriceDisplay';
+export { EUAPriceDisplay } from './EUAPriceDisplay';

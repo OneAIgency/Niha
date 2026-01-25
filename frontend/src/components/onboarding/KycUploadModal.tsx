@@ -11,7 +11,6 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
-import { colors } from './OnboardingLayout';
 import { onboardingApi } from '../../services/api';
 import type { KYCDocument, KYCDocumentType } from '../../types';
 
@@ -89,21 +88,27 @@ const categories = [
     id: 'company',
     name: 'Company Documents',
     icon: Building2,
-    color: '#3b82f6',
+    bgClass: 'bg-blue-500/10',
+    borderClass: 'border-blue-500',
+    iconClass: 'text-blue-500',
   },
   {
     id: 'representative',
     name: 'Representative Documents',
     icon: User,
-    color: '#8b5cf6',
+    bgClass: 'bg-violet-500/10',
+    borderClass: 'border-violet-500',
+    iconClass: 'text-violet-500',
   },
   {
     id: 'optional',
     name: 'Optional Documents',
     icon: Leaf,
-    color: '#10b981',
+    bgClass: 'bg-emerald-500/10',
+    borderClass: 'border-emerald-500',
+    iconClass: 'text-emerald-500',
   },
-];
+] as const;
 
 interface KycUploadModalProps {
   isOpen: boolean;
@@ -160,9 +165,12 @@ export default function KycUploadModal({
     try {
       const doc = await onboardingApi.uploadDocument(type, file);
       setUploadedDocs(prev => [...prev.filter(d => d.document_type !== type), doc]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Upload failed:', err);
-      setError(err.response?.data?.detail || 'Upload failed');
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      setError(typeof msg === 'string' ? msg : 'Upload failed');
     } finally {
       setUploading(null);
     }
@@ -174,9 +182,12 @@ export default function KycUploadModal({
     try {
       await onboardingApi.deleteDocument(docId);
       setUploadedDocs(prev => prev.filter(d => d.id !== docId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Delete failed:', err);
-      setError(err.response?.data?.detail || 'Delete failed');
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      setError(typeof msg === 'string' ? msg : 'Delete failed');
     } finally {
       setUploading(null);
     }
@@ -188,9 +199,12 @@ export default function KycUploadModal({
     try {
       await onboardingApi.submit();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Submit failed:', err);
-      setError(err.response?.data?.detail || 'Submission failed');
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      setError(typeof msg === 'string' ? msg : 'Submission failed');
     } finally {
       setSubmitting(false);
     }
@@ -209,48 +223,43 @@ export default function KycUploadModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.95)' }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/95"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl flex flex-col"
-            style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl flex flex-col bg-navy-800 border border-navy-600"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 border-b" style={{ borderColor: colors.border }}>
+            <div className="p-6 border-b border-navy-600">
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-700 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-700 transition-colors"
               >
-                <X className="w-6 h-6" style={{ color: colors.textSecondary }} />
+                <X className="w-6 h-6 text-navy-400" />
               </button>
 
-              <h2 className="text-2xl font-bold mb-2" style={{ color: colors.textPrimary }}>
+              <h2 className="text-2xl font-bold mb-2 text-navy-50">
                 KYC Document Upload
               </h2>
-              <p style={{ color: colors.textSecondary }}>
+              <p className="text-navy-400">
                 Upload {requiredDocs.length} required documents to complete verification
               </p>
 
               {/* Progress Bar */}
               <div className="mt-4">
                 <div className="flex justify-between mb-2">
-                  <span style={{ color: colors.textSecondary }}>
+                  <span className="text-navy-400">
                     {uploadedRequiredCount} of {requiredDocs.length} required documents
                   </span>
-                  <span style={{ color: colors.primaryLight }}>{progress}%</span>
+                  <span className="text-teal-300">{progress}%</span>
                 </div>
-                <div className="h-3 rounded-full" style={{ backgroundColor: colors.bgCardHover }}>
+                <div className="h-3 rounded-full bg-navy-600">
                   <motion.div
-                    className="h-full rounded-full"
-                    style={{
-                      background: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.primaryLight} 100%)`
-                    }}
+                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-300"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.5 }}
@@ -260,9 +269,9 @@ export default function KycUploadModal({
 
               {/* Error message */}
               {error && (
-                <div className="mt-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: `${colors.danger}20` }}>
-                  <AlertCircle className="w-5 h-5" style={{ color: colors.danger }} />
-                  <span style={{ color: colors.danger }}>{error}</span>
+                <div className="mt-4 p-3 rounded-lg flex items-center gap-2 bg-red-500/10 text-red-500">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
             </div>
@@ -270,10 +279,7 @@ export default function KycUploadModal({
             {/* Content */}
             <div className="flex flex-1 overflow-hidden">
               {/* Category Sidebar */}
-              <div
-                className="w-56 flex-shrink-0 p-4 space-y-2 overflow-y-auto"
-                style={{ borderRight: `1px solid ${colors.border}` }}
-              >
+              <div className="w-56 flex-shrink-0 p-4 space-y-2 overflow-y-auto border-r border-navy-600">
                 {categories.map(cat => {
                   const Icon = cat.icon;
                   const catDocs = documentDefinitions.filter(d => d.category === cat.id);
@@ -286,32 +292,28 @@ export default function KycUploadModal({
                     <button
                       key={cat.id}
                       onClick={() => setActiveCategory(cat.id)}
-                      className="w-full p-3 rounded-xl text-left transition-all"
-                      style={{
-                        backgroundColor: isActive ? `${cat.color}20` : 'transparent',
-                        border: isActive ? `1px solid ${cat.color}` : `1px solid transparent`,
-                      }}
+                      className={`w-full p-3 rounded-xl text-left transition-all border ${
+                        isActive ? `${cat.bgClass} ${cat.borderClass}` : 'bg-transparent border-transparent'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${cat.color}20` }}
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${cat.bgClass}`}
                         >
-                          <Icon className="w-5 h-5" style={{ color: cat.color }} />
+                          <Icon className={`w-5 h-5 ${cat.iconClass}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
-                            className="font-medium text-sm"
-                            style={{ color: isActive ? colors.textPrimary : colors.textSecondary }}
+                            className={`font-medium text-sm ${isActive ? 'text-navy-50' : 'text-navy-400'}`}
                           >
                             {cat.name}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs" style={{ color: colors.textMuted }}>
+                            <span className="text-xs text-navy-500">
                               {catUploaded}/{catDocs.length}
                             </span>
                             {isComplete && (
-                              <CheckCircle className="w-3 h-3" style={{ color: colors.success }} />
+                              <CheckCircle className="w-3 h-3 text-emerald-500" />
                             )}
                           </div>
                         </div>
@@ -325,22 +327,21 @@ export default function KycUploadModal({
               <div className="flex-1 p-6 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.primary }} />
+                    <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
                   </div>
                 ) : activeCategoryData && (
                   <>
                     <div className="flex items-center gap-3 mb-6">
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: `${activeCategoryData.color}20` }}
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${activeCategoryData.bgClass}`}
                       >
-                        <activeCategoryData.icon className="w-6 h-6" style={{ color: activeCategoryData.color }} />
+                        <activeCategoryData.icon className={`w-6 h-6 ${activeCategoryData.iconClass}`} />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                        <h3 className="text-xl font-semibold text-navy-50">
                           {activeCategoryData.name}
                         </h3>
-                        <p className="text-sm" style={{ color: colors.textSecondary }}>
+                        <p className="text-sm text-navy-400">
                           {activeDocuments.filter(d => uploadedTypes.has(d.type)).length} of {activeDocuments.length} uploaded
                         </p>
                       </div>
@@ -354,7 +355,7 @@ export default function KycUploadModal({
                           uploadedDoc={getUploadedDoc(doc.type)}
                           onUpload={handleUpload}
                           onDelete={handleDelete}
-                          color={activeCategoryData.color}
+                          accentClasses={activeCategoryData}
                           isUploading={uploading === doc.type}
                         />
                       ))}
@@ -365,11 +366,8 @@ export default function KycUploadModal({
             </div>
 
             {/* Footer */}
-            <div
-              className="p-6 border-t flex items-center justify-between"
-              style={{ borderColor: colors.border }}
-            >
-              <div className="flex items-center gap-2" style={{ color: colors.textSecondary }}>
+            <div className="p-6 border-t border-navy-600 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-navy-400">
                 <AlertCircle className="w-5 h-5" />
                 <span className="text-sm">
                   {uploadedDocs.length}/{documentDefinitions.length} documents uploaded
@@ -378,14 +376,11 @@ export default function KycUploadModal({
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit || submitting}
-                className="px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2"
-                style={{
-                  background: canSubmit && !submitting
-                    ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-                    : colors.bgCardHover,
-                  opacity: canSubmit && !submitting ? 1 : 0.5,
-                  cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
-                }}
+                className={`px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2 ${
+                  canSubmit && !submitting
+                    ? 'bg-gradient-to-br from-teal-500 to-blue-600 cursor-pointer opacity-100'
+                    : 'bg-navy-600 cursor-not-allowed opacity-50'
+                }`}
               >
                 {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
                 {submitting ? 'Submitting...' : canSubmit ? 'Submit for Verification' : `Upload ${requiredDocs.length - uploadedRequiredCount} more`}
@@ -398,20 +393,21 @@ export default function KycUploadModal({
   );
 }
 
-// Document Upload Card Component
+type CategoryItem = (typeof categories)[number];
+
 function DocumentUploadCard({
   docDef,
   uploadedDoc,
   onUpload,
   onDelete,
-  color,
+  accentClasses,
   isUploading,
 }: {
   docDef: typeof documentDefinitions[0];
   uploadedDoc?: KYCDocument;
   onUpload: (type: KYCDocumentType, file: File) => void;
   onDelete: (id: string, type: KYCDocumentType) => void;
-  color: string;
+  accentClasses: CategoryItem;
   isUploading: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -437,24 +433,17 @@ function DocumentUploadCard({
     }
   };
 
-  const getStatusColor = () => {
-    if (!uploadedDoc) return color;
-    switch (uploadedDoc.status) {
-      case 'approved': return colors.success;
-      case 'rejected': return colors.danger;
-      default: return colors.accent; // pending status - amber/yellow
-    }
-  };
+  const statusClasses = !uploadedDoc
+    ? { border: accentClasses.borderClass, icon: accentClasses.iconClass, btn: `${accentClasses.bgClass} ${accentClasses.iconClass}` }
+    : uploadedDoc.status === 'approved'
+      ? { border: 'border-emerald-500', icon: 'text-emerald-500', btn: 'bg-emerald-500/10 text-emerald-500' }
+      : uploadedDoc.status === 'rejected'
+        ? { border: 'border-red-500', icon: 'text-red-500', btn: 'bg-red-500/10 text-red-500' }
+        : { border: 'border-amber-500', icon: 'text-amber-500', btn: 'bg-amber-500/10 text-amber-500' };
 
   return (
     <div
-      className={`p-4 rounded-xl border transition-all ${!uploadedDoc && !isUploading ? 'cursor-pointer hover:border-opacity-100' : ''}`}
-      style={{
-        backgroundColor: colors.bgCardHover,
-        borderColor: uploadedDoc ? getStatusColor() : color,
-        borderWidth: '2px',
-        borderStyle: uploadedDoc ? 'solid' : 'dashed',
-      }}
+      className={`p-4 rounded-xl border-2 transition-all bg-navy-700/50 ${uploadedDoc ? `border-solid ${statusClasses.border}` : `border-dashed ${accentClasses.borderClass}`} ${!uploadedDoc && !isUploading ? 'cursor-pointer hover:border-opacity-100' : ''}`}
       onClick={handleClick}
     >
       <input
@@ -467,32 +456,24 @@ function DocumentUploadCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 flex-1">
           {isUploading ? (
-            <Loader2 className="w-6 h-6 mt-0.5 flex-shrink-0 animate-spin" style={{ color }} />
+            <Loader2 className={`w-6 h-6 mt-0.5 flex-shrink-0 animate-spin ${accentClasses.iconClass}`} />
           ) : uploadedDoc ? (
-            <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: getStatusColor() }} />
+            <CheckCircle className={`w-6 h-6 mt-0.5 flex-shrink-0 ${statusClasses.icon}`} />
           ) : (
-            <Upload className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color }} />
+            <Upload className={`w-6 h-6 mt-0.5 flex-shrink-0 ${accentClasses.iconClass}`} />
           )}
           <div className="flex-1">
-            <div className="font-medium flex items-center gap-2" style={{ color: colors.textPrimary }}>
+            <div className="font-medium flex items-center gap-2 text-navy-50">
               {docDef.name}
               {docDef.required ? (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${colors.danger}20`, color: colors.danger }}>
-                  Required
-                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">Required</span>
               ) : (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: `${colors.success}20`, color: colors.success }}>
-                  Optional
-                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500">Optional</span>
               )}
             </div>
-            <div className="text-sm mt-1" style={{ color: colors.textMuted }}>
-              {docDef.description}
-            </div>
+            <div className="text-sm mt-1 text-navy-400">{docDef.description}</div>
             {uploadedDoc && (
-              <div className="text-xs mt-2" style={{ color: colors.textSecondary }}>
-                {uploadedDoc.file_name} - {uploadedDoc.status}
-              </div>
+              <div className="text-xs mt-2 text-navy-300">{uploadedDoc.file_name} - {uploadedDoc.status}</div>
             )}
           </div>
         </div>
@@ -500,18 +481,14 @@ function DocumentUploadCard({
           {uploadedDoc && (
             <button
               onClick={handleDeleteClick}
-              className="p-2 rounded-lg hover:bg-slate-600 transition-colors"
+              className="p-2 rounded-lg hover:bg-navy-600 transition-colors"
               disabled={isUploading}
             >
-              <Trash2 className="w-4 h-4" style={{ color: colors.danger }} />
+              <Trash2 className="w-4 h-4 text-red-500" />
             </button>
           )}
           <div
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{
-              backgroundColor: uploadedDoc ? `${getStatusColor()}20` : `${color}20`,
-              color: uploadedDoc ? getStatusColor() : color,
-            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${uploadedDoc ? statusClasses.btn : `${accentClasses.bgClass} ${accentClasses.iconClass}`}`}
           >
             {isUploading ? 'Uploading...' : uploadedDoc ? (
               uploadedDoc.status === 'approved' ? 'Approved' :

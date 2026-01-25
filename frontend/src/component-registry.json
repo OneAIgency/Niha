@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-22T14:07:04.757Z",
+  "generatedAt": "2026-01-25T17:22:04.894Z",
   "components": [
     {
       "name": "AddAssetModal",
@@ -626,6 +626,20 @@
       "description": ""
     },
     {
+      "name": "OrderBookLiquiditySummary",
+      "category": "cash-market",
+      "path": "src/components/cash-market/OrderBookLiquiditySummary.tsx",
+      "importPath": "components/cash-market/OrderBookLiquiditySummary",
+      "props": [
+        {
+          "name": "bidLiquidity",
+          "type": "{ volume: number; value: number;",
+          "optional": false
+        }
+      ],
+      "description": "Displays order book liquidity summary with optional depth chart."
+    },
+    {
       "name": "OrderBookRow",
       "category": "cash-market",
       "path": "src/components/cash-market/OrderBookRow.tsx",
@@ -921,6 +935,35 @@
       "description": ""
     },
     {
+      "name": "CEAPriceDisplay",
+      "category": "common",
+      "path": "src/components/common/CEAPriceDisplay.tsx",
+      "importPath": "components/common/CEAPriceDisplay",
+      "props": [
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "showLoading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "showLabel",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": "CEAPriceDisplay Component"
+    },
+    {
       "name": "Card",
       "category": "common",
       "path": "src/components/common/Card.tsx",
@@ -1082,6 +1125,35 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "EUAPriceDisplay",
+      "category": "common",
+      "path": "src/components/common/EUAPriceDisplay.tsx",
+      "importPath": "components/common/EUAPriceDisplay",
+      "props": [
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "showLoading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "size",
+          "type": "'sm' | 'md' | 'lg'",
+          "optional": true
+        },
+        {
+          "name": "showLabel",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": "EUAPriceDisplay Component"
     },
     {
       "name": "Input",
@@ -1351,6 +1423,50 @@
       "description": ""
     },
     {
+      "name": "Subheader",
+      "category": "common",
+      "path": "src/components/common/Subheader.tsx",
+      "importPath": "components/common/Subheader",
+      "props": [
+        {
+          "name": "icon",
+          "type": "ReactNode",
+          "optional": false
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "children",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "to",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "iconBg",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": "Subheader Component"
+    },
+    {
       "name": "Tabs",
       "category": "common",
       "path": "src/components/common/Tabs.tsx",
@@ -1462,6 +1578,77 @@
         {
           "name": "mono",
           "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "CeaScrapped",
+      "category": "dashboard",
+      "path": "src/components/dashboard/CeaScrapped.tsx",
+      "importPath": "components/dashboard/CeaScrapped",
+      "props": [
+        {
+          "name": "priceData",
+          "type": "PriceData | null",
+          "optional": false
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": "CeaScrapped Component"
+    },
+    {
+      "name": "EuaScrapped",
+      "category": "dashboard",
+      "path": "src/components/dashboard/EuaScrapped.tsx",
+      "importPath": "components/dashboard/EuaScrapped",
+      "props": [
+        {
+          "name": "priceData",
+          "type": "PriceData | null",
+          "optional": false
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": "EuaScrapped Component"
+    },
+    {
+      "name": "SettlementDetails",
+      "category": "dashboard",
+      "path": "src/components/dashboard/SettlementDetails.tsx",
+      "importPath": "components/dashboard/SettlementDetails",
+      "props": [
+        {
+          "name": "settlementId",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "SettlementTransactions",
+      "category": "dashboard",
+      "path": "src/components/dashboard/SettlementTransactions.tsx",
+      "importPath": "components/dashboard/SettlementTransactions",
+      "props": [
+        {
+          "name": "onSettlementClick",
+          "type": "(settlement: SettlementBatch) => void",
           "optional": true
         }
       ],
@@ -1627,6 +1814,7 @@
     "backoffice",
     "cash-market",
     "common",
+    "dashboard",
     "layout",
     "liquidity",
     "onboarding"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, AlertCircle, X } from 'lucide-react';
-import { Button, Card } from '../components/common';
+import { Plus, RefreshCw, AlertCircle, X, Bot } from 'lucide-react';
+import { Button, Card, Subheader } from '../components/common';
 import { MarketMakersList } from '../components/backoffice/MarketMakersList';
 import { CreateMarketMakerModal } from '../components/backoffice/CreateMarketMakerModal';
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
@@ -58,38 +58,30 @@ export function MarketMakersPage() {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">
-                Market Makers Management
-              </h1>
-              <p className="text-navy-600 dark:text-navy-300">
-                Create and manage AI-powered market makers
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={loadMarketMakers}
-                icon={<RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => setShowCreateModal(true)}
-                icon={<Plus className="w-4 h-4" />}
-              >
-                Create Market Maker
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-950">
+      <Subheader
+        icon={<Bot className="w-5 h-5 text-purple-500" />}
+        title="Market Makers Management"
+        description="Create and manage AI-powered market makers"
+        iconBg="bg-purple-500/20"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={loadMarketMakers}
+          icon={<RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />}
+        >
+          Refresh
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => setShowCreateModal(true)}
+          icon={<Plus className="w-4 h-4" />}
+        >
+          Create Market Maker
+        </Button>
+      </Subheader>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Error Display */}
         {error && (

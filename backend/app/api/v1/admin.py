@@ -15,7 +15,7 @@ from .backoffice import backoffice_ws_manager
 from ...core.security import get_admin_user, hash_password
 from ...models.models import (
     ContactRequest, ContactStatus, Entity, User, Trade, UserRole,
-    ActivityLog, UserSession, ScrapingSource, CertificateType,
+    ActivityLog, UserSession, ScrapingSource, ScrapeLibrary, CertificateType,
     Certificate, CertificateStatus, SwapRequest, SwapStatus,
     AuthenticationAttempt, Jurisdiction, KYCStatus
 )
@@ -27,7 +27,9 @@ from ...schemas.schemas import (
     AuthenticationAttemptResponse, UserSessionResponse
 )
 from ...services.email_service import email_service
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
@@ -1113,6 +1115,8 @@ async def get_activity_stats(
 
 
 # ==================== Scraping Sources ====================
+# CRUD + test/refresh for price-scraping sources (EUA/CEA). Consumed by Settings UI.
+# See docs/api/ADMIN_SCRAPING_API.md for request/response examples.
 
 @router.get("/scraping-sources")
 async def get_scraping_sources(
@@ -1133,7 +1137,7 @@ async def get_scraping_sources(
             "name": s.name,
             "url": s.url,
             "certificate_type": s.certificate_type.value,
-            "scrape_library": s.scrape_library.value if s.scrape_library else "httpx",
+            "scrape_library": s.scrape_library.value if s.scrape_library else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
             "scrape_interval_minutes": s.scrape_interval_minutes,
             "last_scrape_at": s.last_scrape_at.isoformat() if s.last_scrape_at else None,
@@ -1157,8 +1161,6 @@ async def create_scraping_source(
     Create a new scraping source.
     Admin only.
     """
-    from ...models.models import ScrapeLibrary
-
     source = ScrapingSource(
         name=source_data.name,
         url=source_data.url,
@@ -1178,11 +1180,15 @@ async def create_scraping_source(
         "name": source.name,
         "url": source.url,
         "certificate_type": source.certificate_type.value,
-        "scrape_library": source.scrape_library.value if source.scrape_library else "httpx",
+        "scrape_library": source.scrape_library.value if source.scrape_library else ScrapeLibrary.HTTPX.value,
         "is_active": source.is_active,
         "scrape_interval_minutes": source.scrape_interval_minutes,
+        "last_scrape_at": source.last_scrape_at.isoformat() if source.last_scrape_at else None,
+        "last_scrape_status": source.last_scrape_status.value if source.last_scrape_status else None,
+        "last_price": float(source.last_price) if source.last_price else None,
         "config": source.config,
-        "created_at": source.created_at.isoformat()
+        "created_at": source.created_at.isoformat(),
+        "updated_at": source.updated_at.isoformat()
     }
 
 
@@ -1243,7 +1249,6 @@ async def test_scraping_source(
     if not source:
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
-    # Try to scrape
     try:
         price = await price_scraper.scrape_source(source)
         return {
@@ -1252,9 +1257,13 @@ async def test_scraping_source(
             "price": price
         }
     except Exception as e:
+        logger.exception("Scraping source test failed: source_id=%s, source=%s", source_id, source.name)
+        msg = str(e)
+        if not msg or len(msg) > 200:
+            msg = "Scrape failed. Check URL, selectors, and network."
         return {
             "success": False,
-            "message": str(e),
+            "message": msg,
             "price": None
         }
 
@@ -1283,7 +1292,11 @@ async def refresh_scraping_source(
         await price_scraper.refresh_source(source, db)
         return MessageResponse(message="Prices refreshed successfully")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to refresh: {str(e)}")
+        logger.exception("Scraping source refresh failed: source_id=%s, source=%s", source_id, source.name)
+        msg = str(e)
+        if not msg or len(msg) > 200:
+            msg = "Failed to refresh. Check URL, selectors, and network."
+        raise HTTPException(status_code=500, detail=msg)
 
 
 @router.delete("/scraping-sources/{source_id}", response_model=MessageResponse)

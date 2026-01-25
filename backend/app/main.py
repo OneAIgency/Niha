@@ -55,13 +55,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS middleware - allow all origins for development
+# CORS: restrict origins in production, allow all in development
+_cors_origins = settings.cors_origins_list if settings.ENVIRONMENT == "production" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 

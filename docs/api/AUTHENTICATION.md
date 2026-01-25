@@ -250,12 +250,13 @@ Authorization: Bearer <access_token>
 
 ### Admin Endpoints
 
-All Market Maker management requires `ADMIN` role:
+All Market Maker and admin management requires `ADMIN` role:
 - `/admin/market-makers/*` - ADMIN only
 - `/admin/market-orders/*` - ADMIN only
 - `/admin/logging/*` - ADMIN only
+- `/admin/scraping-sources` - ADMIN only (price scraping; Settings UI)
 
-**See:** [MARKET_MAKERS_API.md](./MARKET_MAKERS_API.md) for complete admin API
+**See:** [MARKET_MAKERS_API.md](./MARKET_MAKERS_API.md), [ADMIN_SCRAPING_API.md](./ADMIN_SCRAPING_API.md)
 
 ---
 

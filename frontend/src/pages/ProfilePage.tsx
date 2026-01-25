@@ -15,7 +15,7 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
-import { Button, Card, Badge, Input } from '../components/common';
+import { Button, Card, Badge, Input, Subheader } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
 import { formatRelativeTime } from '../utils';
 import type { Entity } from '../types';
@@ -148,15 +148,14 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">My Profile</h1>
-          <p className="text-navy-600 dark:text-navy-300">
-            Manage your personal information and security settings
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-950">
+      <Subheader
+        icon={<User className="w-5 h-5 text-emerald-500" />}
+        title="My Profile"
+        description="Manage your personal information and security settings"
+        iconBg="bg-emerald-500/20"
+      />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <div className="space-y-6">
           {/* Personal Information Card */}

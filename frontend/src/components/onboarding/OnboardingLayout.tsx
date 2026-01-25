@@ -17,23 +17,23 @@ import {
 import { useAuthStore } from '@/stores/useStore';
 import KycUploadModal from './KycUploadModal';
 
-// Color palette
+/* Design-token references (see design-tokens.css --color-onboarding-*) */
 export const colors = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#5eead4',
-  secondary: '#1e40af',
-  secondaryLight: '#3b82f6',
-  accent: '#f59e0b',
-  danger: '#dc2626',
-  success: '#16a34a',
-  bgDark: '#0f172a',
-  bgCard: '#1e293b',
-  bgCardHover: '#334155',
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  border: '#334155',
+  primary: 'var(--color-onboarding-primary)',
+  primaryDark: 'var(--color-onboarding-primary-dark)',
+  primaryLight: 'var(--color-onboarding-primary-light)',
+  secondary: 'var(--color-onboarding-secondary)',
+  secondaryLight: 'var(--color-onboarding-secondary-light)',
+  accent: 'var(--color-onboarding-accent)',
+  danger: 'var(--color-onboarding-danger)',
+  success: 'var(--color-onboarding-success)',
+  bgDark: 'var(--color-onboarding-bg)',
+  bgCard: 'var(--color-onboarding-surface)',
+  bgCardHover: 'var(--color-onboarding-surface-hover)',
+  textPrimary: 'var(--color-onboarding-text)',
+  textSecondary: 'var(--color-onboarding-text-secondary)',
+  textMuted: 'var(--color-onboarding-text-muted)',
+  border: 'var(--color-onboarding-border)',
 };
 
 // Navigation items

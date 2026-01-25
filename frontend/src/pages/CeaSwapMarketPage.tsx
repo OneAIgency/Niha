@@ -14,6 +14,7 @@ import {
   Leaf
 } from 'lucide-react';
 import { swapsApi } from '../services/api';
+import { Subheader } from '../components/common';
 
 // Mock user balance - in production this would come from API
 const MOCK_USER_BALANCE = {
@@ -130,60 +131,48 @@ export function CeaSwapMarketPage() {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                <ArrowRightLeft className="w-5 h-5 text-violet-500" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">CEA → EUA Swap Market</h1>
-                <p className="text-sm text-slate-400">Exchange CEA for EU Allowances</p>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="flex items-center gap-6 text-sm">
-              <div>
-                <span className="text-slate-400 mr-2">Best Ratio</span>
-                <span className="font-bold font-mono text-white text-lg">
-                  1:{formatNumber(bestRatio, 1)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <span className="text-slate-400">24h</span>
-                <span className={`flex items-center font-semibold ${
-                  rateChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                }`}>
-                  {rateChange24h >= 0 ? (
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 mr-1" />
-                  )}
-                  {rateChange24h >= 0 ? '+' : ''}{rateChange24h.toFixed(2)}%
-                </span>
-              </div>
-
-              <div>
-                <span className="text-slate-400 mr-2">24h Swaps</span>
-                <span className="font-semibold text-slate-300 font-mono">12</span>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={fetchData}
-                className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </motion.button>
-            </div>
-          </div>
+      {/* Subheader */}
+      <Subheader
+        icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
+        title="CEA → EUA Swap Market"
+        description="Exchange CEA for EU Allowances"
+        iconBg="bg-violet-500/20"
+      >
+        <div>
+          <span className="text-slate-400 mr-2">Best Ratio</span>
+          <span className="font-bold font-mono text-white text-lg">
+            1:{formatNumber(bestRatio, 1)}
+          </span>
         </div>
-      </div>
+
+        <div className="flex items-center gap-1">
+          <span className="text-slate-400">24h</span>
+          <span className={`flex items-center font-semibold ${
+            rateChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+          }`}>
+            {rateChange24h >= 0 ? (
+              <TrendingUp className="w-4 h-4 mr-1" />
+            ) : (
+              <TrendingDown className="w-4 h-4 mr-1" />
+            )}
+            {rateChange24h >= 0 ? '+' : ''}{rateChange24h.toFixed(2)}%
+          </span>
+        </div>
+
+        <div>
+          <span className="text-slate-400 mr-2">24h Swaps</span>
+          <span className="font-semibold text-slate-300 font-mono">12</span>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={fetchData}
+          className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </motion.button>
+      </Subheader>
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto p-6">
