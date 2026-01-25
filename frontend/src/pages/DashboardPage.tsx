@@ -35,6 +35,7 @@ import {
   type Column,
   type Tab,
 } from '../components/common';
+import { PendingSettlements } from '../components/dashboard';
 import type { Order } from '../types';
 
 interface EntityBalance {
@@ -794,11 +795,21 @@ export function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Transaction History */}
+        {/* Pending Settlements */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="mb-6"
+        >
+          <PendingSettlements />
+        </motion.div>
+
+        {/* Transaction History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
           className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
