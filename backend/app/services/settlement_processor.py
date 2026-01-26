@@ -60,6 +60,8 @@ class SettlementProcessor:
                     if next_status:
                         system_user_id = await SettlementProcessor._get_system_user_id(db)
 
+                        old_status = settlement.status
+
                         await SettlementService.update_settlement_status(
                             db=db,
                             settlement_id=settlement.id,
@@ -68,8 +70,36 @@ class SettlementProcessor:
                             updated_by=system_user_id
                         )
 
-                        # TODO: Send email notification
-                        # await send_settlement_status_email(settlement, next_status)
+                        # Send email notification to entity users
+                        entity_result = await db.execute(
+                            select(Entity).where(Entity.id == settlement.entity_id)
+                        )
+                        entity = entity_result.scalar_one_or_none()
+                        if entity:
+                            user_result = await db.execute(
+                                select(User).where(User.entity_id == entity.id)
+                            )
+                            entity_users = user_result.scalars().all()
+
+                            for user in entity_users:
+                                if user.email:
+                                    try:
+                                        await email_service.send_settlement_status_update(
+                                            to_email=user.email,
+                                            first_name=user.first_name,
+                                            batch_reference=settlement.batch_reference,
+                                            old_status=old_status.value,
+                                            new_status=next_status.value,
+                                            certificate_type=settlement.asset_type.value,
+                                            quantity=float(settlement.quantity)
+                                        )
+                                        logger.info(
+                                            f"Settlement status email sent to {user.email} for {settlement.batch_reference}"
+                                        )
+                                    except Exception as email_error:
+                                        logger.error(
+                                            f"Failed to send settlement status email to {user.email}: {email_error}"
+                                        )
 
                         processed_count += 1
                         logger.info(
