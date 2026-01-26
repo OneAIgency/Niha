@@ -224,7 +224,6 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
       await backofficeApi.adminCancelOrder(cancelOrder.id);
       loadOrders();
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to cancel order:', err);
     } finally {
       setCancelling(false);

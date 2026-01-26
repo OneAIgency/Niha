@@ -9,6 +9,7 @@ import { getPostLoginRedirect } from './utils/redirect';
 const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
 const LoginPage = lazy(() => import('./pages').then(m => ({ default: m.LoginPage })));
 const CashMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketPage })));
+const CashMarketProPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketProPage })));
 const SwapPage = lazy(() => import('./pages').then(m => ({ default: m.SwapPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.DashboardPage })));
@@ -306,6 +307,15 @@ function App() {
             element={
               <FundedRoute>
                 <CashMarketPage />
+              </FundedRoute>
+            }
+          />
+          {/* Cash Market Pro - Professional Trading Interface */}
+          <Route
+            path="/cash-market-pro"
+            element={
+              <FundedRoute>
+                <CashMarketProPage />
               </FundedRoute>
             }
           />

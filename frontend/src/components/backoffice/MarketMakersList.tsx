@@ -53,7 +53,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       render: (_, row) => {
         const info = MARKET_MAKER_TYPES[row.mm_type];
         return (
-          <Badge variant={info.color as any}>
+          <Badge variant={info.color as 'default' | 'success' | 'warning' | 'danger' | 'info'}>
             {info.name}
           </Badge>
         );

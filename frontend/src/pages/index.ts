@@ -3,6 +3,7 @@ export { ContactPage } from './ContactPage';
 export { LoginPage } from './LoginPage';
 export { MarketplacePage } from './MarketplacePage';
 export { CashMarketPage } from './CashMarketPage';
+export { CashMarketProPage } from './CashMarketProPage';
 export { SwapPage } from './SwapPage';
 export { CeaSwapMarketPage } from './CeaSwapMarketPage';
 export { DashboardPage } from './DashboardPage';

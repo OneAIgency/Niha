@@ -184,3 +184,6 @@ export {
 
 // Export redirect utilities
 export { getPostLoginRedirect } from './redirect';
+
+// Export user utilities
+export { formatUserName, getUserInitials } from './userUtils';
