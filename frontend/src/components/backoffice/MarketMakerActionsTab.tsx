@@ -15,12 +15,12 @@ interface TicketLog {
   entity_type: string;
   entity_id?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: any;
-  response_data?: any;
+  request_payload?: Record<string, unknown>;
+  response_data?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
-  before_state?: any;
-  after_state?: any;
+  before_state?: Record<string, unknown>;
+  after_state?: Record<string, unknown>;
   related_ticket_ids: string[];
   tags: string[];
 }
@@ -42,8 +42,9 @@ export function MarketMakerActionsTab() {
       const { data } = await getMarketMakerActions({ limit, offset });
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch market maker actions');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to fetch market maker actions');
     } finally {
       setLoading(false);
     }
@@ -51,6 +52,7 @@ export function MarketMakerActionsTab() {
 
   useEffect(() => {
     fetchTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset]);
 
   // Auto-refresh every 10 seconds
@@ -59,6 +61,7 @@ export function MarketMakerActionsTab() {
       fetchTickets();
     }, 10000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset]);
 
   const handleRowClick = (ticket: TicketLog) => {

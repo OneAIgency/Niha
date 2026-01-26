@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, FormEvent, ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Loader2, Building2, User, Briefcase, CheckCircle, Upload, FileText } from 'lucide-react';
 import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
-import { isValidEmail } from '../utils';
+import { isValidEmail, sanitizeEmail, sanitizeString } from '../utils';
+import { logger } from '../utils/logger';
 
 // CO2 Molecule Animation Component - MORE VISIBLE
 function CO2Molecule() {
@@ -18,12 +19,12 @@ function CO2Molecule() {
       <svg viewBox="0 0 200 100" className="w-[500px] h-[250px]">
         <defs>
           <radialGradient id="carbonGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#334155" stopOpacity="1" />
-            <stop offset="100%" stopColor="#1e293b" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="rgb(51, 65, 85)" stopOpacity="1" />
+            <stop offset="100%" stopColor="rgb(30, 41, 59)" stopOpacity="0.6" />
           </radialGradient>
           <radialGradient id="oxygenGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#dc2626" stopOpacity="0.5" />
+            <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="rgb(220, 38, 38)" stopOpacity="0.5" />
           </radialGradient>
         </defs>
 
@@ -71,7 +72,7 @@ function CO2Molecule() {
           y1="50"
           x2="75"
           y2="50"
-          stroke="#64748b"
+          stroke="rgb(100, 116, 139)"
           strokeWidth="4"
           strokeOpacity="0.6"
           animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
@@ -82,7 +83,7 @@ function CO2Molecule() {
           y1="44"
           x2="75"
           y2="44"
-          stroke="#64748b"
+          stroke="rgb(100, 116, 139)"
           strokeWidth="4"
           strokeOpacity="0.6"
           animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
@@ -93,7 +94,7 @@ function CO2Molecule() {
           y1="50"
           x2="140"
           y2="50"
-          stroke="#64748b"
+          stroke="rgb(100, 116, 139)"
           strokeWidth="4"
           strokeOpacity="0.6"
           animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
@@ -104,7 +105,7 @@ function CO2Molecule() {
           y1="56"
           x2="140"
           y2="56"
-          stroke="#64748b"
+          stroke="rgb(100, 116, 139)"
           strokeWidth="4"
           strokeOpacity="0.6"
           animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
@@ -128,7 +129,7 @@ function GrowingTree() {
         {/* Tree trunk */}
         <motion.path
           d="M100 300 Q100 250 95 200 Q90 150 100 100"
-          stroke="#78350f"
+          stroke="rgb(120, 53, 15)"
           strokeWidth="12"
           fill="none"
           strokeLinecap="round"
@@ -140,7 +141,7 @@ function GrowingTree() {
         {/* Main branches */}
         <motion.path
           d="M100 180 Q130 160 150 140"
-          stroke="#78350f"
+          stroke="rgb(120, 53, 15)"
           strokeWidth="6"
           fill="none"
           strokeLinecap="round"
@@ -150,7 +151,7 @@ function GrowingTree() {
         />
         <motion.path
           d="M100 150 Q60 130 40 100"
-          stroke="#78350f"
+          stroke="rgb(120, 53, 15)"
           strokeWidth="6"
           fill="none"
           strokeLinecap="round"
@@ -160,7 +161,7 @@ function GrowingTree() {
         />
         <motion.path
           d="M100 120 Q140 100 160 70"
-          stroke="#78350f"
+          stroke="rgb(120, 53, 15)"
           strokeWidth="5"
           fill="none"
           strokeLinecap="round"
@@ -184,7 +185,7 @@ function GrowingTree() {
             cx={leaf.cx}
             cy={leaf.cy}
             r={leaf.r}
-            fill="#10b981"
+            fill="rgb(16, 185, 129)"
             fillOpacity="0.5"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 0.5 }}
@@ -313,6 +314,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [requestSent, setRequestSent] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
@@ -323,19 +325,36 @@ export function LoginPage() {
   const [ndaFile, setNdaFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setAuth, isAuthenticated, user } = useAuthStore();
+  const { setAuth, isAuthenticated, user, _hasHydrated } = useAuthStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Helper to determine where to redirect after login
-  const getPostLoginRedirect = (loggedInUser: { email: string }): string => {
-    // Send specific users to onboarding
-    if (loggedInUser.email === 'eu@eu.ro') {
-      return '/onboarding';
+  // NOTE: Redirect for authenticated users is now handled by AuthGuard in App.tsx
+  // This prevents redirect loops by having a single source of truth
+
+  // Memoize verifyToken to prevent recreation and ensure stable reference
+  // This helps prevent race conditions and unnecessary re-renders
+  const verifyToken = useCallback(async (token: string) => {
+    setVerifying(true);
+    try {
+      logger.debug('[LoginPage] Verifying magic link token');
+      const { access_token, user: loggedInUser } = await authApi.verifyMagicLink(token);
+      logger.debug('[LoginPage] Magic link verified, setting auth for user:', {
+        email: loggedInUser.email,
+        role: loggedInUser.role,
+        timestamp: new Date().toISOString()
+      });
+      setAuth(loggedInUser, access_token);
+      logger.debug('[LoginPage] Auth set, navigation will be handled by LoginRoute guard');
+      // Navigation will be handled by LoginRoute guard in App.tsx
+    } catch (err) {
+      logger.error('[LoginPage] Magic link verification failed:', err);
+      setError('Invalid or expired link. Please request a new one.');
+      setMode('enter');
+    } finally {
+      setVerifying(false);
     }
-    return '/dashboard';
-  };
+  }, [setAuth, setError, setMode]);
 
   // Check for magic link token in URL
   useEffect(() => {
@@ -343,34 +362,24 @@ export function LoginPage() {
     if (token) {
       verifyToken(token);
     }
-  }, [searchParams]);
+  }, [searchParams, verifyToken]);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate(getPostLoginRedirect(user));
-    }
-  }, [isAuthenticated, user, navigate]);
+  // Note: Navigation for already-authenticated users is now handled by LoginRoute guard in App.tsx
+  // This prevents refresh loops by having a single source of truth for redirects
 
-  const verifyToken = async (token: string) => {
-    setVerifying(true);
-    try {
-      const { access_token, user: loggedInUser } = await authApi.verifyMagicLink(token);
-      setAuth(loggedInUser, access_token);
-      navigate(getPostLoginRedirect(loggedInUser));
-    } catch {
-      setError('Invalid or expired link. Please request a new one.');
-      setMode('enter');
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
+
+    // PREVENT MULTIPLE SUBMISSIONS
+    if (isSubmittingRef.current || loading) {
+      return;
+    }
+
     setError('');
 
-    if (!email.trim() || !isValidEmail(email)) {
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail || !isValidEmail(sanitizedEmail)) {
       setError('Please enter a valid email');
       return;
     }
@@ -380,38 +389,51 @@ export function LoginPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
+
     try {
-      const { access_token, user: loggedInUser } = await authApi.loginWithPassword(email, password);
-      setAuth(loggedInUser, access_token);
-      navigate(getPostLoginRedirect(loggedInUser));
+      const response = await authApi.loginWithPassword(sanitizedEmail, password);
+      // Backend returns accessToken (camelCase), not access_token (snake_case)
+      const { accessToken, access_token, user: loggedInUser } = response as any;
+      const token = accessToken || access_token; // Support both formats
+      setAuth(loggedInUser, token);
+      // AuthGuard in App.tsx will detect the auth change and redirect automatically
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid credentials');
+      logger.error('[LoginPage] Login failed:', err);
+      setError(err.message || err.response?.data?.detail || 'Invalid credentials');
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
-  const handleNDA = async (e: React.FormEvent) => {
+  const handleNDA = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!entity.trim()) {
+    // Sanitize all inputs
+    const sanitizedEntity = sanitizeString(entity);
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedContactName = sanitizeString(contactName);
+    const sanitizedPosition = sanitizeString(position);
+
+    if (!sanitizedEntity.trim()) {
       setError('Entity name is required');
       return;
     }
 
-    if (!email.trim() || !isValidEmail(email)) {
+    if (!sanitizedEmail || !isValidEmail(sanitizedEmail)) {
       setError('Please enter a valid corporate email');
       return;
     }
 
-    if (!contactName.trim()) {
+    if (!sanitizedContactName.trim()) {
       setError('Your name is required');
       return;
     }
 
-    if (!position.trim()) {
+    if (!sanitizedPosition.trim()) {
       setError('Position is required');
       return;
     }
@@ -429,10 +451,10 @@ export function LoginPage() {
     setLoading(true);
     try {
       await contactApi.submitNDARequest({
-        entity_name: entity,
-        contact_email: email,
-        contact_name: contactName,
-        position: position,
+        entity_name: sanitizedEntity,
+        contact_email: sanitizedEmail,
+        contact_name: sanitizedContactName,
+        position: sanitizedPosition,
         nda_file: ndaFile,
       });
       setRequestSent(true);
@@ -443,7 +465,7 @@ export function LoginPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.name.toLowerCase().endsWith('.pdf')) {

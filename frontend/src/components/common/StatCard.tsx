@@ -51,7 +51,7 @@ export function StatCard({
 }: StatCardProps) {
   if (loading) {
     return (
-      <div className={cn(variant === 'default' ? 'card p-4' : 'bg-slate-900/50 rounded-xl p-5', className)}>
+      <div className={cn(variant === 'default' ? 'card p-4' : 'bg-navy-900/50 rounded-xl p-5', className)}>
         <div className="flex items-center gap-3 mb-3">
           <Skeleton variant="avatar" width={40} height={40} />
           <Skeleton variant="text" width="60%" />
@@ -64,13 +64,13 @@ export function StatCard({
 
   if (variant === 'minimal') {
     return (
-      <div className={cn('bg-slate-900/50 rounded-xl p-5', className)}>
+      <div className={cn('bg-navy-900/50 rounded-xl p-5', className)}>
         <div className="section-label mb-3">{title}</div>
         <div className={cn('text-2xl font-semibold font-mono', valueColorStyles[valueColor])}>{value}</div>
         {subtitle && (
           <div className={cn(
             'text-xs mt-2',
-            subtitleVariant === 'warning' ? 'text-amber-500/70' : 'text-slate-600'
+            subtitleVariant === 'warning' ? 'text-amber-500/70' : 'text-navy-600'
           )}>
             {subtitle}
           </div>

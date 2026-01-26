@@ -89,8 +89,9 @@ export function ApproveInviteModal({
         onSuccess();
         onClose();
       }, 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create user');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to create user');
     } finally {
       setLoading(false);
     }

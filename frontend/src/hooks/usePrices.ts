@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePricesStore } from '../stores/useStore';
 import { pricesApi } from '../services/api';
+import { logger } from '../utils/logger';
+import type { PriceHistory } from '../types';
 
 export function usePrices() {
   const { prices, loading, error, setPrices, setLoading, setError } = usePricesStore();
@@ -70,8 +72,19 @@ export function usePrices() {
     return () => {
       isMounted = false;
       clearInterval(interval);
+      // Properly cleanup WebSocket connection
       if (wsRef.current) {
-        wsRef.current.close();
+        try {
+          wsRef.current.onerror = null;
+          wsRef.current.onclose = null;
+          wsRef.current.onmessage = null;
+          if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+            wsRef.current.close();
+          }
+          wsRef.current = null;
+        } catch (error) {
+          logger.error('Error closing WebSocket', error);
+        }
       }
     };
   }, [setPrices, setLoading, setError]);
@@ -80,7 +93,7 @@ export function usePrices() {
 }
 
 export function usePriceHistory(hours: number = 24) {
-  const [history, setHistory] = useState<{ eua: any[]; cea: any[] } | null>(null);
+  const [history, setHistory] = useState<PriceHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,7 +102,7 @@ export function usePriceHistory(hours: number = 24) {
         const data = await pricesApi.getHistory(hours);
         setHistory(data);
       } catch (err) {
-        console.error('Price history error:', err);
+        logger.error('Price history error', err);
       } finally {
         setLoading(false);
       }

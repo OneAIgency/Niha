@@ -24,7 +24,7 @@ import { formatRelativeTime } from '../utils';
 import type { Entity } from '../types';
 
 export function ProfilePage() {
-  const { user, setAuth } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +118,6 @@ export function ProfilePage() {
         position: formData.position,
       });
       // Update auth store with new user data to keep UI in sync
-      const token = localStorage.getItem('token');
       if (token) {
         setAuth(updatedUser, token);
       }

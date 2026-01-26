@@ -139,14 +139,14 @@ export function CeaSwapMarketPage() {
         iconBg="bg-violet-500/20"
       >
         <div>
-          <span className="text-slate-400 mr-2">Best Ratio</span>
+          <span className="text-navy-600 dark:text-navy-400 mr-2">Best Ratio</span>
           <span className="font-bold font-mono text-white text-lg">
             1:{formatNumber(bestRatio, 1)}
           </span>
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-slate-400">24h</span>
+          <span className="text-navy-600 dark:text-navy-400">24h</span>
           <span className={`flex items-center font-semibold ${
             rateChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
           }`}>
@@ -160,15 +160,15 @@ export function CeaSwapMarketPage() {
         </div>
 
         <div>
-          <span className="text-slate-400 mr-2">24h Swaps</span>
-          <span className="font-semibold text-slate-300 font-mono">12</span>
+          <span className="text-navy-600 dark:text-navy-400 mr-2">24h Swaps</span>
+          <span className="font-semibold text-navy-300 dark:text-navy-300 font-mono">12</span>
         </div>
 
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={fetchData}
-          className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+          className="p-2 rounded-lg hover:bg-navy-100 dark:bg-navy-800 text-navy-600 dark:text-navy-400"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         </motion.button>
@@ -183,7 +183,7 @@ export function CeaSwapMarketPage() {
         ) : (
           <div className="space-y-6">
             {/* Swap Visualization */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-8">
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 p-8">
               <div className="flex items-center justify-center gap-8">
                 {/* CEA Side */}
                 <div className="text-center">
@@ -193,7 +193,7 @@ export function CeaSwapMarketPage() {
                   <div className="text-amber-400 font-bold font-mono text-2xl">
                     {formatNumber(ceaToSwap, 0)}
                   </div>
-                  <div className="text-slate-400 text-sm">CEA (You give)</div>
+                  <div className="text-navy-600 dark:text-navy-400 text-sm">CEA (You give)</div>
                 </div>
 
                 {/* Arrow */}
@@ -204,7 +204,7 @@ export function CeaSwapMarketPage() {
                   >
                     <ArrowRight className="w-12 h-12 text-violet-500" />
                   </motion.div>
-                  <div className="text-slate-500 text-sm mt-2">1 EUA = {bestRatio} CEA</div>
+                  <div className="text-navy-500 dark:text-navy-500 text-sm mt-2">1 EUA = {bestRatio} CEA</div>
                 </div>
 
                 {/* EUA Side */}
@@ -215,7 +215,7 @@ export function CeaSwapMarketPage() {
                   <div className="text-blue-400 font-bold font-mono text-2xl">
                     {formatNumber(netEua, 0)}
                   </div>
-                  <div className="text-slate-400 text-sm">EUA (You get)</div>
+                  <div className="text-navy-600 dark:text-navy-400 text-sm">EUA (You get)</div>
                 </div>
               </div>
             </div>
@@ -223,14 +223,14 @@ export function CeaSwapMarketPage() {
             <div className="grid grid-cols-12 gap-6">
               {/* Swap Offers */}
               <div className="col-span-12 lg:col-span-5">
-                <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-800">
+                <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                     <h2 className="font-semibold text-white">Available Swap Offers</h2>
-                    <p className="text-xs text-slate-500">AI Agent Providers</p>
+                    <p className="text-xs text-navy-500 dark:text-navy-500">AI Agent Providers</p>
                   </div>
 
                   <div className="p-4">
-                    <div className="text-xs text-slate-600 grid grid-cols-3 px-2 mb-2">
+                    <div className="text-xs text-navy-600 dark:text-navy-600 grid grid-cols-3 px-2 mb-2">
                       <span>Ratio</span>
                       <span className="text-center">EUA Available</span>
                       <span className="text-right">Depth</span>
@@ -254,14 +254,14 @@ export function CeaSwapMarketPage() {
                               className="absolute inset-y-0 right-0 bg-blue-500/10 rounded"
                               style={{ width: `${depthPercent}%` }}
                             />
-                            <span className={`relative font-mono ${isBest ? 'text-violet-400 font-bold' : 'text-slate-300'}`}>
+                            <span className={`relative font-mono ${isBest ? 'text-violet-400 font-bold' : 'text-navy-300 dark:text-navy-300'}`}>
                               1:{offer.ratio}
                               {isBest && <span className="ml-2 text-xs text-violet-400">BEST</span>}
                             </span>
-                            <span className="relative text-center text-slate-300 font-mono">
+                            <span className="relative text-center text-navy-300 dark:text-navy-300 font-mono">
                               {formatNumber(offer.euaAvailable, 0)}
                             </span>
-                            <span className="relative text-right text-slate-500">
+                            <span className="relative text-right text-navy-500 dark:text-navy-500">
                               {'█'.repeat(Math.ceil(depthPercent / 20))}
                             </span>
                           </div>
@@ -269,7 +269,7 @@ export function CeaSwapMarketPage() {
                       })}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-500">
+                    <div className="mt-4 pt-4 border-t border-navy-200 dark:border-navy-700 text-xs text-navy-500 dark:text-navy-500">
                       Lower ratio = better for you (less CEA per EUA)
                     </div>
                   </div>
@@ -278,16 +278,16 @@ export function CeaSwapMarketPage() {
 
               {/* Swap Panel */}
               <div className="col-span-12 lg:col-span-7">
-                <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-800">
+                <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                     <h2 className="font-semibold text-white">Your Swap</h2>
                   </div>
 
                   <div className="p-6 space-y-6">
                     {/* CEA Balance */}
-                    <div className="bg-slate-800/50 rounded-lg p-4">
+                    <div className="bg-navy-100 dark:bg-navy-800/50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-400">Your CEA Balance</span>
+                        <span className="text-navy-600 dark:text-navy-400">Your CEA Balance</span>
                         <Leaf className="w-4 h-4 text-amber-500" />
                       </div>
                       <div className="text-3xl font-bold text-amber-400 font-mono">
@@ -296,39 +296,39 @@ export function CeaSwapMarketPage() {
                     </div>
 
                     {/* Swap Preview */}
-                    <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
+                    <div className="bg-navy-100 dark:bg-navy-800/50 rounded-lg p-4 space-y-3">
                       <h3 className="font-medium text-white mb-3">Swap Preview</h3>
 
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">You give</span>
+                        <span className="text-navy-600 dark:text-navy-400">You give</span>
                         <span className="text-amber-400 font-mono font-bold">{formatNumber(ceaToSwap, 0)} CEA</span>
                       </div>
 
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Ratio (best available)</span>
+                        <span className="text-navy-600 dark:text-navy-400">Ratio (best available)</span>
                         <span className="text-white font-mono">1:{bestRatio}</span>
                       </div>
 
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">You receive</span>
+                        <span className="text-navy-600 dark:text-navy-400">You receive</span>
                         <span className="text-white font-mono">{formatNumber(estimatedEua, 0)} EUA</span>
                       </div>
 
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Platform Fee (0.5%)</span>
+                        <span className="text-navy-600 dark:text-navy-400">Platform Fee (0.5%)</span>
                         <span className="text-violet-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
                       </div>
 
-                      <div className="border-t border-slate-700 pt-3 mt-3">
+                      <div className="border-t border-navy-200 dark:border-navy-700 pt-3 mt-3">
                         <div className="flex justify-between">
-                          <span className="text-slate-300 font-medium">Net EUA</span>
+                          <span className="text-navy-300 dark:text-navy-300 font-medium">Net EUA</span>
                           <span className="text-xl font-bold text-blue-400 font-mono">
                             {formatNumber(netEua, 0)} EUA
                           </span>
                         </div>
                         <div className="flex justify-between text-sm mt-1">
-                          <span className="text-slate-500">Estimated Value</span>
-                          <span className="text-slate-400 font-mono">~{formatCurrency(euaValueEur)}</span>
+                          <span className="text-navy-500 dark:text-navy-500">Estimated Value</span>
+                          <span className="text-navy-600 dark:text-navy-400 font-mono">~{formatCurrency(euaValueEur)}</span>
                         </div>
                       </div>
                     </div>
@@ -342,7 +342,7 @@ export function CeaSwapMarketPage() {
                       className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
                         userBalance.cea > 0
                           ? 'bg-gradient-to-r from-amber-500 to-blue-500 hover:from-amber-400 hover:to-blue-400 text-white'
-                          : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                          : 'bg-navy-200 dark:bg-navy-700 text-navy-500 dark:text-navy-500 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-center justify-center gap-3">
@@ -355,7 +355,7 @@ export function CeaSwapMarketPage() {
                     </motion.button>
 
                     {/* Info Note */}
-                    <div className="flex items-start gap-3 text-xs text-slate-500">
+                    <div className="flex items-start gap-3 text-xs text-navy-500 dark:text-navy-500">
                       <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         Your CEA will be transferred immediately. EUA delivery: 10-14 business days
@@ -368,14 +368,14 @@ export function CeaSwapMarketPage() {
             </div>
 
             {/* Recent Swaps */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-800">
+            <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+              <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                 <h2 className="font-semibold text-white">Recent Swaps</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-slate-500 border-b border-slate-800">
+                    <tr className="text-navy-500 dark:text-navy-500 border-b border-navy-200 dark:border-navy-700">
                       <th className="text-left px-4 py-2 font-medium">Time</th>
                       <th className="text-right px-4 py-2 font-medium">CEA Given</th>
                       <th className="text-right px-4 py-2 font-medium">EUA Received</th>
@@ -390,15 +390,15 @@ export function CeaSwapMarketPage() {
                       { time: '12:45:10', cea: 1000000, eua: 88495, ratio: 11.3, status: 'pending' },
                       { time: '11:20:45', cea: 750000, eua: 66964, ratio: 11.2, status: 'complete' },
                     ].map((swap, idx) => (
-                      <tr key={idx} className="border-b border-slate-800/50">
-                        <td className="px-4 py-3 text-slate-400">{swap.time}</td>
+                      <tr key={idx} className="border-b border-navy-200 dark:border-navy-700/50">
+                        <td className="px-4 py-3 text-navy-600 dark:text-navy-400">{swap.time}</td>
                         <td className="px-4 py-3 text-right font-mono text-amber-400">
                           {formatNumber(swap.cea, 0)}
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-blue-400">
                           {formatNumber(swap.eua, 0)}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-300">
+                        <td className="px-4 py-3 text-right font-mono text-navy-300 dark:text-navy-300">
                           1:{swap.ratio}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -435,59 +435,59 @@ export function CeaSwapMarketPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl border border-slate-700 max-w-md w-full p-6"
+              className="bg-white dark:bg-navy-800 rounded-2xl border border-navy-200 dark:border-navy-700 max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Swap Preview</h3>
-                <button onClick={closeAllDialogs} className="text-slate-400 hover:text-white">
+                <button onClick={closeAllDialogs} className="text-navy-600 dark:text-navy-400 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <p className="text-slate-400 mb-4">You are about to swap CEA for EUA:</p>
+              <p className="text-navy-600 dark:text-navy-400 mb-4">You are about to swap CEA for EUA:</p>
 
               {/* Visual swap */}
-              <div className="bg-slate-800 rounded-lg p-6 mb-6">
+              <div className="bg-navy-100 dark:bg-navy-800 rounded-lg p-6 mb-6">
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center">
                     <div className="text-3xl mb-1">🌱</div>
                     <div className="text-amber-400 font-bold font-mono">{formatNumber(ceaToSwap, 0)}</div>
-                    <div className="text-xs text-slate-500">CEA</div>
+                    <div className="text-xs text-navy-500 dark:text-navy-500">CEA</div>
                   </div>
                   <ArrowRight className="w-8 h-8 text-violet-500" />
                   <div className="text-center">
                     <div className="text-3xl mb-1">🇪🇺</div>
                     <div className="text-blue-400 font-bold font-mono">{formatNumber(netEua, 0)}</div>
-                    <div className="text-xs text-slate-500">EUA</div>
+                    <div className="text-xs text-navy-500 dark:text-navy-500">EUA</div>
                   </div>
                 </div>
-                <div className="text-center text-sm text-slate-500 mt-4">
+                <div className="text-center text-sm text-navy-500 dark:text-navy-500 mt-4">
                   Ratio: 1 EUA = {bestRatio} CEA
                 </div>
               </div>
 
-              <div className="bg-slate-800 rounded-lg p-4 space-y-2 mb-6">
+              <div className="bg-navy-100 dark:bg-navy-800 rounded-lg p-4 space-y-2 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">You give</span>
+                  <span className="text-navy-600 dark:text-navy-400">You give</span>
                   <span className="text-amber-400 font-mono">{formatNumber(ceaToSwap, 0)} CEA</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">You receive</span>
+                  <span className="text-navy-600 dark:text-navy-400">You receive</span>
                   <span className="text-white font-mono">{formatNumber(estimatedEua, 0)} EUA</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Platform fee</span>
+                  <span className="text-navy-600 dark:text-navy-400">Platform fee</span>
                   <span className="text-violet-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
                 </div>
-                <div className="border-t border-slate-700 pt-2">
+                <div className="border-t border-navy-200 dark:border-navy-700 pt-2">
                   <div className="flex justify-between">
                     <span className="text-white font-medium">Net EUA</span>
                     <span className="text-blue-400 font-bold font-mono">{formatNumber(netEua, 0)}</span>
                   </div>
                   <div className="flex justify-between text-xs mt-1">
-                    <span className="text-slate-500">Value</span>
-                    <span className="text-slate-400">~{formatCurrency(euaValueEur)}</span>
+                    <span className="text-navy-500 dark:text-navy-500">Value</span>
+                    <span className="text-navy-600 dark:text-navy-400">~{formatCurrency(euaValueEur)}</span>
                   </div>
                 </div>
               </div>
@@ -509,7 +509,7 @@ export function CeaSwapMarketPage() {
               <div className="flex gap-3">
                 <button
                   onClick={closeAllDialogs}
-                  className="flex-1 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+                  className="flex-1 py-3 rounded-lg border border-navy-200 dark:border-navy-600 text-navy-300 dark:text-navy-300 hover:bg-navy-100 dark:bg-navy-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -537,25 +537,25 @@ export function CeaSwapMarketPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl border border-slate-700 max-w-md w-full p-6"
+              className="bg-white dark:bg-navy-800 rounded-2xl border border-navy-200 dark:border-navy-700 max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Confirm Swap</h3>
-                <button onClick={closeAllDialogs} className="text-slate-400 hover:text-white">
+                <button onClick={closeAllDialogs} className="text-navy-600 dark:text-navy-400 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <p className="text-slate-400 mb-4">Please confirm your swap:</p>
+              <p className="text-navy-600 dark:text-navy-400 mb-4">Please confirm your swap:</p>
 
               {/* Visual representation */}
-              <div className="bg-slate-800 rounded-lg p-6 mb-6">
+              <div className="bg-navy-100 dark:bg-navy-800 rounded-lg p-6 mb-6">
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center">
                     <div className="text-4xl mb-2">🌱</div>
                     <div className="text-amber-400 font-bold font-mono text-xl">{formatNumber(ceaToSwap, 0)}</div>
-                    <div className="text-slate-500 text-sm">CEA (China ETS)</div>
+                    <div className="text-navy-500 dark:text-navy-500 text-sm">CEA (China ETS)</div>
                   </div>
                   <div className="text-violet-500">
                     <ArrowRight className="w-10 h-10" />
@@ -563,7 +563,7 @@ export function CeaSwapMarketPage() {
                   <div className="text-center">
                     <div className="text-4xl mb-2">🇪🇺</div>
                     <div className="text-blue-400 font-bold font-mono text-xl">{formatNumber(netEua, 0)}</div>
-                    <div className="text-slate-500 text-sm">EUA (EU ETS)</div>
+                    <div className="text-navy-500 dark:text-navy-500 text-sm">EUA (EU ETS)</div>
                   </div>
                 </div>
               </div>
@@ -574,9 +574,9 @@ export function CeaSwapMarketPage() {
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-violet-500 focus:ring-violet-500"
+                  className="mt-1 w-4 h-4 rounded border-navy-200 dark:border-navy-600 bg-navy-100 dark:bg-navy-800 text-violet-500 focus:ring-violet-500"
                 />
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-navy-600 dark:text-navy-400">
                   I understand that my full CEA balance will be transferred, EUA delivery takes 10-14 business days,
                   this swap cannot be reversed once confirmed, and EUA will be used for EU ETS compliance.
                 </span>
@@ -588,7 +588,7 @@ export function CeaSwapMarketPage() {
                     setShowFinalDialog(false);
                     setShowPreviewDialog(true);
                   }}
-                  className="flex-1 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+                  className="flex-1 py-3 rounded-lg border border-navy-200 dark:border-navy-600 text-navy-300 dark:text-navy-300 hover:bg-navy-100 dark:bg-navy-800 transition-colors"
                 >
                   ← Back
                 </button>
@@ -598,7 +598,7 @@ export function CeaSwapMarketPage() {
                   className={`flex-1 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
                     termsAccepted && !isPlacingSwap
                       ? 'bg-emerald-500 text-white hover:bg-emerald-400'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      : 'bg-navy-200 dark:bg-navy-700 text-navy-500 dark:text-navy-500 cursor-not-allowed'
                   }`}
                 >
                   {isPlacingSwap ? (
@@ -626,7 +626,7 @@ export function CeaSwapMarketPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl border border-slate-700 max-w-md w-full p-6 text-center"
+              className="bg-white dark:bg-navy-800 rounded-2xl border border-navy-200 dark:border-navy-700 max-w-md w-full p-6 text-center"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
@@ -634,38 +634,38 @@ export function CeaSwapMarketPage() {
               </div>
 
               <h3 className="text-2xl font-bold text-white mb-2">Swap Initiated!</h3>
-              <p className="text-slate-400 mb-6">Your CEA → EUA swap has been initiated.</p>
+              <p className="text-navy-600 dark:text-navy-400 mb-6">Your CEA → EUA swap has been initiated.</p>
 
-              <div className="bg-slate-800 rounded-lg p-4 space-y-2 mb-6 text-left">
+              <div className="bg-navy-100 dark:bg-navy-800 rounded-lg p-4 space-y-2 mb-6 text-left">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Swap Reference</span>
+                  <span className="text-navy-600 dark:text-navy-400">Swap Reference</span>
                   <span className="text-white font-mono">#{swapReference}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">CEA Transferred</span>
+                  <span className="text-navy-600 dark:text-navy-400">CEA Transferred</span>
                   <span className="text-amber-400 font-mono">{formatNumber(ceaToSwap, 0)} tonnes</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">EUA to Receive</span>
+                  <span className="text-navy-600 dark:text-navy-400">EUA to Receive</span>
                   <span className="text-blue-400 font-mono">{formatNumber(netEua, 0)} tonnes</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Ratio</span>
+                  <span className="text-navy-600 dark:text-navy-400">Ratio</span>
                   <span className="text-white font-mono">1:{bestRatio}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Status</span>
+                  <span className="text-navy-600 dark:text-navy-400">Status</span>
                   <span className="text-amber-400 flex items-center gap-1">
                     <Clock className="w-3 h-3" /> Processing
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Expected Delivery</span>
+                  <span className="text-navy-600 dark:text-navy-400">Expected Delivery</span>
                   <span className="text-white">10-14 business days</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-slate-500 justify-center mb-6">
+              <div className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-500 justify-center mb-6">
                 <Shield className="w-4 h-4" />
                 <span>Confirmation email sent to your address</span>
               </div>
@@ -673,7 +673,7 @@ export function CeaSwapMarketPage() {
               <div className="flex gap-3">
                 <button
                   onClick={closeAllDialogs}
-                  className="flex-1 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+                  className="flex-1 py-3 rounded-lg border border-navy-200 dark:border-navy-600 text-navy-300 dark:text-navy-300 hover:bg-navy-100 dark:bg-navy-800 transition-colors"
                 >
                   View Swap
                 </button>

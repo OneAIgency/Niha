@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Mail, Building2, User, Users, CheckCircle, ArrowRight } from 'lucide-react';
 import { Button, Input, Card } from '../components/common';
 import { contactApi } from '../services/api';
-import { isValidEmail, isCorporateEmail } from '../utils';
+import { isValidEmail, isCorporateEmail, sanitizeEmail, sanitizeString, sanitizeFormData } from '../utils';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
@@ -42,7 +42,9 @@ export function ContactPage() {
 
     setLoading(true);
     try {
-      await contactApi.submitRequest(formData);
+      // Sanitize form data before submission
+      const sanitizedData = sanitizeFormData(formData);
+      await contactApi.submitRequest(sanitizedData);
       setSubmitted(true);
     } catch (err) {
       setErrors({ submit: 'Failed to submit request. Please try again.' });

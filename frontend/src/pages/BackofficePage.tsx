@@ -3,46 +3,41 @@ import { motion } from 'framer-motion';
 import {
   FileText,
   Users,
-  Clock,
   CheckCircle,
-  XCircle,
   MapPin,
   Activity,
   ArrowRightLeft,
   Search,
   X,
-  Download,
   RefreshCw,
   AlertCircle,
   Wifi,
   WifiOff,
-  Trash2,
-  UserPlus,
   Banknote,
-  DollarSign,
 } from 'lucide-react';
-import { Button, Card, Badge, ConfirmationModal } from '../components/common';
+import { Button, Card, Badge } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
-import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
 import { KYCReviewPanel } from '../components/backoffice/KYCReviewPanel';
+import {
+  ContactRequestsTab,
+  PendingDepositsTab,
+  DocumentViewerModal,
+} from '../components/backoffice';
 import { adminApi, backofficeApi } from '../services/api';
 import { cn, formatRelativeTime, formatCurrency, formatQuantity } from '../utils';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
-
-interface ContactRequest {
-  id: string;
-  entity_name: string;
-  contact_email: string;
-  contact_name?: string;
-  position: string;
-  reference?: string;
-  request_type: 'join' | 'nda';
-  nda_file_name?: string;
-  submitter_ip?: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-}
+import { logger } from '../utils/logger';
+import type {
+  ContactRequest,
+  PendingUserResponse,
+  PendingDepositResponse,
+  UserTradeResponse,
+  KYCUser,
+  KYCDocument,
+  PendingDeposit,
+  UserTrade,
+  DocumentViewerState,
+} from '../types/backoffice';
 
 interface IPLookupResult {
   ip: string;
@@ -59,36 +54,6 @@ interface IPLookupResult {
   as: string;
 }
 
-interface KYCUser {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  entity_name?: string;
-  documents_count: number;
-  created_at: string;
-}
-
-interface KYCDocument {
-  id: string;
-  user_id: string;
-  user_email?: string;
-  user_name?: string;
-  document_type: string;
-  file_name: string;
-  mime_type?: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-}
-
-interface DocumentViewerState {
-  id: string;
-  fileName: string;
-  type: string;
-  mimeType?: string;
-}
-
 interface UserSession {
   id: string;
   ip_address: string;
@@ -96,17 +61,6 @@ interface UserSession {
   started_at: string;
   ended_at?: string;
   is_active: boolean;
-}
-
-interface UserTrade {
-  id: string;
-  trade_type: string;
-  certificate_type: string;
-  quantity: number;
-  total_value: number;
-  status: string;
-  is_buyer: boolean;
-  created_at: string;
 }
 
 interface SelectedUserDetails {
@@ -122,20 +76,6 @@ interface SelectedUserDetails {
   trades: UserTrade[];
 }
 
-interface PendingDeposit {
-  id: string;
-  entity_id: string;
-  entity_name: string;
-  user_email: string;
-  reported_amount: number | null;
-  reported_currency: string | null;
-  wire_reference: string | null;
-  bank_reference: string | null;
-  status: string;
-  reported_at: string | null;
-  notes: string | null;
-  created_at: string;
-}
 
 type TabType = 'requests' | 'kyc' | 'deposits' | 'details';
 
@@ -186,18 +126,8 @@ export function BackofficePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Approve/Invite Modal state
-  const [approveModalRequest, setApproveModalRequest] = useState<ContactRequest | null>(null);
-
-  // Delete confirmation modal state
-  const [deleteConfirmRequest, setDeleteConfirmRequest] = useState<ContactRequest | null>(null);
-
   // Deposits state
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
-  const [confirmDepositModal, setConfirmDepositModal] = useState<PendingDeposit | null>(null);
-  const [confirmAmount, setConfirmAmount] = useState('');
-  const [confirmCurrency, setConfirmCurrency] = useState('EUR');
-  const [confirmNotes, setConfirmNotes] = useState('');
 
   useEffect(() => {
     // Contact requests are now loaded via realtime hook, only load other tabs
@@ -220,7 +150,7 @@ export function BackofficePage() {
           backofficeApi.getKYCDocuments()
         ]);
         // Map response to KYCUser[] format (backend returns documents_count and entity_name)
-        setKycUsers(users.map((u: any) => ({
+        setKycUsers(users.map((u: PendingUserResponse): KYCUser => ({
           id: u.id,
           email: u.email,
           first_name: u.first_name,
@@ -232,10 +162,24 @@ export function BackofficePage() {
         setKycDocuments(docs);
       } else if (activeTab === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
-        setPendingDeposits(deposits);
+        // Map Deposit[] to PendingDeposit[] format
+        setPendingDeposits(deposits.map((d: PendingDepositResponse): PendingDeposit => ({
+          id: d.id,
+          entity_id: d.entity_id,
+          entity_name: d.entity_name || '',
+          user_email: d.user_email || '',
+          reported_amount: d.reported_amount ?? null,
+          reported_currency: d.reported_currency ?? null,
+          wire_reference: d.wire_reference ?? null,
+          bank_reference: d.bank_reference ?? null,
+          status: d.status,
+          reported_at: d.reported_at ?? null,
+          notes: d.notes ?? null,
+          created_at: d.created_at,
+        })));
       }
     } catch (err) {
-      console.error('Failed to load data:', err);
+      logger.error('Failed to load data', err);
       setError('Failed to load data. Please try again.');
     } finally {
       setLoading(false);
@@ -252,12 +196,15 @@ export function BackofficePage() {
   };
 
   // Handle NDA download with authentication
-  const handleDownloadNDA = async (requestId: string, fileName: string) => {
+  const handleDownloadNDA = async (requestId: string) => {
     setActionLoading(`download-${requestId}`);
     try {
-      await adminApi.downloadNDA(requestId, fileName);
+      const request = contactRequests.find(r => r.id === requestId);
+      if (request?.nda_file_name) {
+        await adminApi.downloadNDA(requestId, request.nda_file_name);
+      }
     } catch (err) {
-      console.error('Failed to download NDA:', err);
+      logger.error('Failed to download NDA', err);
       setError('Failed to download NDA file');
     } finally {
       setActionLoading(null);
@@ -276,7 +223,7 @@ export function BackofficePage() {
       const data = await adminApi.lookupIP(ip);
       setIpLookupData(data);
     } catch (err) {
-      console.error('Failed to lookup IP:', err);
+      logger.error('Failed to lookup IP', err);
       setIpLookupData(null);
       setError('Failed to lookup IP address');
     } finally {
@@ -290,64 +237,39 @@ export function BackofficePage() {
       await adminApi.updateContactRequest(requestId, { status: 'rejected' });
       // WebSocket will broadcast the update and refresh the store automatically
     } catch (err) {
-      console.error('Failed to reject request:', err);
+      logger.error('Failed to reject request', err);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDeleteRequest = (request: ContactRequest) => {
-    setDeleteConfirmRequest(request);
-  };
-
-  const confirmDeleteRequest = async () => {
-    if (!deleteConfirmRequest) return;
-
-    setActionLoading(`delete-${deleteConfirmRequest.id}`);
-    try {
-      await adminApi.deleteContactRequest(deleteConfirmRequest.id);
-      // WebSocket will broadcast deletion and update the store automatically
-    } catch (err) {
-      console.error('Failed to delete request:', err);
-      setError('Failed to delete contact request');
-    } finally {
-      setActionLoading(null);
-      setDeleteConfirmRequest(null);
-    }
-  };
-
-  const handleApproveModalSuccess = () => {
-    // Refresh the list after successful user creation
+  const handleApproveRequest = async () => {
+    // This will be handled by ContactRequestsTab's ApproveInviteModal
+    // The modal is managed within ContactRequestsTab component
     refreshContactRequests();
   };
 
-  // Deposit handlers
-  const handleOpenConfirmDeposit = (deposit: PendingDeposit) => {
-    setConfirmDepositModal(deposit);
-    // Pre-fill with reported values if available
-    setConfirmAmount(deposit.reported_amount?.toString() || '');
-    setConfirmCurrency(deposit.reported_currency || 'EUR');
-    setConfirmNotes('');
+  const handleDeleteRequest = async (requestId: string) => {
+    setActionLoading(`delete-${requestId}`);
+    try {
+      await adminApi.deleteContactRequest(requestId);
+      // WebSocket will broadcast deletion and update the store automatically
+    } catch (err) {
+      logger.error('Failed to delete request', err);
+      setError('Failed to delete contact request');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleConfirmDeposit = async () => {
-    if (!confirmDepositModal) return;
-
-    const amount = parseFloat(confirmAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setError('Please enter a valid amount');
-      return;
-    }
-
-    setActionLoading(`confirm-${confirmDepositModal.id}`);
+  // Deposit handlers
+  const handleConfirmDeposit = async (depositId: string, amount: number, currency: string, notes?: string) => {
+    setActionLoading(`confirm-${depositId}`);
     try {
-      await backofficeApi.confirmDeposit(confirmDepositModal.id, amount, confirmCurrency, confirmNotes || undefined);
-      setPendingDeposits(prev => prev.filter(d => d.id !== confirmDepositModal.id));
-      setConfirmDepositModal(null);
-      setConfirmAmount('');
-      setConfirmNotes('');
+      await backofficeApi.confirmDeposit(depositId, amount, currency, notes);
+      setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
     } catch (err) {
-      console.error('Failed to confirm deposit:', err);
+      logger.error('Failed to confirm deposit', err);
       setError('Failed to confirm deposit');
     } finally {
       setActionLoading(null);
@@ -360,7 +282,7 @@ export function BackofficePage() {
       await backofficeApi.rejectDeposit(depositId);
       setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
     } catch (err) {
-      console.error('Failed to reject deposit:', err);
+      logger.error('Failed to reject deposit', err);
       setError('Failed to reject deposit');
     } finally {
       setActionLoading(null);
@@ -378,7 +300,7 @@ export function BackofficePage() {
       const url = URL.createObjectURL(blob);
       setDocumentContentUrl(url);
     } catch (err) {
-      console.error('Failed to load document:', err);
+      logger.error('Failed to load document', err);
       setDocumentError('Failed to load document preview');
     } finally {
       setDocumentLoading(false);
@@ -415,50 +337,6 @@ export function BackofficePage() {
     document.body.removeChild(link);
   };
 
-  const renderDocumentPreview = () => {
-    if (!documentContentUrl || !showDocumentViewer) return null;
-
-    const mimeType = showDocumentViewer.mimeType?.toLowerCase() || '';
-    const fileName = showDocumentViewer.fileName.toLowerCase();
-
-    // Image preview
-    if (mimeType.startsWith('image/') ||
-        /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fileName)) {
-      return (
-        <img
-          src={documentContentUrl}
-          alt={showDocumentViewer.fileName}
-          className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
-          onError={() => setDocumentError('Failed to display image')}
-        />
-      );
-    }
-
-    // PDF preview
-    if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
-      return (
-        <iframe
-          src={documentContentUrl}
-          title={showDocumentViewer.fileName}
-          className="w-full h-[60vh] rounded-lg border border-navy-200 dark:border-navy-600"
-        />
-      );
-    }
-
-    // Unsupported file type - show download prompt
-    return (
-      <div className="text-center">
-        <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-        <p className="text-navy-500 dark:text-navy-400 mb-4">
-          Preview not available for this file type
-        </p>
-        <Button variant="primary" onClick={handleDownloadDocument}>
-          <Download className="w-4 h-4 mr-2" />
-          Download File
-        </Button>
-      </div>
-    );
-  };
 
   const handleApproveKYC = async (userId: string) => {
     setActionLoading(userId);
@@ -466,7 +344,7 @@ export function BackofficePage() {
       await backofficeApi.approveUser(userId);
       setKycUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err) {
-      console.error('Failed to approve user:', err);
+      logger.error('Failed to approve user', err);
     } finally {
       setActionLoading(null);
     }
@@ -478,7 +356,7 @@ export function BackofficePage() {
       await backofficeApi.rejectUser(userId, 'KYC verification failed');
       setKycUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err) {
-      console.error('Failed to reject user:', err);
+      logger.error('Failed to reject user', err);
     } finally {
       setActionLoading(null);
     }
@@ -492,7 +370,7 @@ export function BackofficePage() {
         prev.map(d => d.id === docId ? { ...d, status } : d)
       );
     } catch (err) {
-      console.error('Failed to review document:', err);
+      logger.error('Failed to review document', err);
     } finally {
       setActionLoading(null);
     }
@@ -524,14 +402,23 @@ export function BackofficePage() {
             ...s,
             is_active: !s.ended_at
           })),
-          trades
+          trades: trades.map((t: UserTradeResponse): UserTrade => ({
+            id: t.id,
+            trade_type: t.trade_type || t.type || 'unknown',
+            certificate_type: (t.certificate_type || t.certificate || 'CEA') as string,
+            quantity: t.quantity || 0,
+            total_value: t.total_value || t.value || 0,
+            status: t.status || 'completed',
+            is_buyer: t.is_buyer !== undefined ? t.is_buyer : (t.side === 'buy' || t.trade_type === 'buy'),
+            created_at: t.created_at || t.timestamp || new Date().toISOString(),
+          }))
         });
       } else {
         setSelectedUser(null);
         setError('No user found with that email');
       }
     } catch (err) {
-      console.error('Failed to search user:', err);
+      logger.error('Failed to search user', err);
       setError('Failed to search user');
     } finally {
       setLoading(false);
@@ -622,138 +509,18 @@ export function BackofficePage() {
 
         {/* Tab Content */}
         {activeTab === 'requests' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Users className="w-5 h-5 text-navy-600 dark:text-navy-400" />
-                Contact Requests
-              </h2>
-
-              {loading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                      <div className="h-5 bg-navy-100 dark:bg-navy-600 rounded w-1/3 mb-3" />
-                      <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              ) : contactRequests.length > 0 ? (
-                <div className="space-y-4">
-                  {contactRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-navy-900 dark:text-white">
-                              {request.entity_name}
-                            </h3>
-                            <Badge variant={request.request_type === 'nda' ? 'warning' : 'info'}>
-                              {request.request_type?.toUpperCase() || 'JOIN'}
-                            </Badge>
-                            <Badge variant={request.status === 'new' ? 'info' : request.status === 'contacted' ? 'warning' : 'success'}>
-                              {request.status.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-navy-500 dark:text-navy-400">Contact:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_email}</span>
-                            </div>
-                            {request.contact_name && (
-                              <div>
-                                <span className="text-navy-500 dark:text-navy-400">Name:</span>
-                                <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_name}</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-navy-500 dark:text-navy-400">Position:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200">{request.position}</span>
-                            </div>
-                            {request.reference && (
-                              <div>
-                                <span className="text-navy-500 dark:text-navy-400">Reference:</span>
-                                <span className="ml-2 text-navy-700 dark:text-navy-200">{request.reference}</span>
-                              </div>
-                            )}
-                            {request.submitter_ip && (
-                              <div>
-                                <span className="text-navy-500 dark:text-navy-400">IP:</span>
-                                <button
-                                  onClick={() => handleIpLookup(request.submitter_ip!)}
-                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline font-mono text-xs"
-                                >
-                                  {request.submitter_ip}
-                                </button>
-                              </div>
-                            )}
-                            {request.nda_file_name && (
-                              <div className="col-span-2">
-                                <span className="text-navy-500 dark:text-navy-400">NDA File:</span>
-                                <button
-                                  onClick={() => handleDownloadNDA(request.id, request.nda_file_name!)}
-                                  disabled={actionLoading === `download-${request.id}`}
-                                  className="ml-2 text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center gap-1 disabled:opacity-50"
-                                >
-                                  <Download className={cn("w-3 h-3", actionLoading === `download-${request.id}` && "animate-spin")} />
-                                  {request.nda_file_name}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
-                            <Clock className="w-3 h-3 inline mr-1" />
-                            Submitted {formatRelativeTime(request.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteRequest(request)}
-                            loading={actionLoading === `delete-${request.id}`}
-                            className="text-navy-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRejectRequest(request.id)}
-                            loading={actionLoading === request.id}
-                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => setApproveModalRequest(request)}
-                            loading={actionLoading === request.id}
-                          >
-                            <UserPlus className="w-4 h-4" />
-                            Approve & Invite
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
-                  <p className="text-navy-500 dark:text-navy-400">No pending contact requests</p>
-                </div>
-              )}
-            </Card>
-          </motion.div>
+          <ContactRequestsTab
+            contactRequests={contactRequests}
+            loading={loading}
+            connectionStatus={connectionStatus}
+            onRefresh={handleRefresh}
+            onApprove={handleApproveRequest}
+            onReject={handleRejectRequest}
+            onDelete={handleDeleteRequest}
+            onDownloadNDA={handleDownloadNDA}
+            onIpLookup={handleIpLookup}
+            actionLoading={actionLoading}
+          />
         )}
 
         {activeTab === 'kyc' && (
@@ -846,101 +613,13 @@ export function BackofficePage() {
         )}
 
         {activeTab === 'deposits' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-navy-600 dark:text-navy-400" />
-                Pending Deposits
-              </h2>
-
-              {loading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                      <div className="h-5 bg-navy-100 dark:bg-navy-600 rounded w-1/3 mb-3" />
-                      <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              ) : pendingDeposits.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingDeposits.map((deposit) => (
-                    <div
-                      key={deposit.id}
-                      className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-navy-900 dark:text-white">
-                              {deposit.entity_name}
-                            </h3>
-                            <Badge variant="warning">PENDING</Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-navy-500 dark:text-navy-400">User:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.user_email}</span>
-                            </div>
-                            <div>
-                              <span className="text-navy-500 dark:text-navy-400">Reported Amount:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
-                                {deposit.reported_amount ? formatCurrency(deposit.reported_amount) : 'N/A'} {deposit.reported_currency || ''}
-                              </span>
-                            </div>
-                            {deposit.wire_reference && (
-                              <div>
-                                <span className="text-navy-500 dark:text-navy-400">Wire Ref:</span>
-                                <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.wire_reference}</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-navy-500 dark:text-navy-400">Bank Ref:</span>
-                              <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.bank_reference}</span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
-                            <Clock className="w-3 h-3 inline mr-1" />
-                            Reported {deposit.reported_at ? formatRelativeTime(deposit.reported_at) : formatRelativeTime(deposit.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRejectDeposit(deposit.id)}
-                            loading={actionLoading === `reject-${deposit.id}`}
-                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleOpenConfirmDeposit(deposit)}
-                            loading={actionLoading === `confirm-${deposit.id}`}
-                          >
-                            <DollarSign className="w-4 h-4" />
-                            Confirm
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
-                  <p className="text-navy-500 dark:text-navy-400">No pending deposits</p>
-                  <p className="text-xs text-navy-400 mt-1">All deposits have been processed</p>
-                </div>
-              )}
-            </Card>
-          </motion.div>
+          <PendingDepositsTab
+            pendingDeposits={pendingDeposits}
+            loading={loading}
+            onConfirm={handleConfirmDeposit}
+            onReject={handleRejectDeposit}
+            actionLoading={actionLoading}
+          />
         )}
 
         {activeTab === 'details' && (
@@ -1084,69 +763,15 @@ export function BackofficePage() {
         )}
 
         {/* Document Viewer Modal */}
-        {showDocumentViewer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden"
-            >
-              <div className="flex items-center justify-between p-4 border-b border-navy-100 dark:border-navy-700">
-                <div>
-                  <h2 className="font-semibold text-navy-900 dark:text-white">
-                    {showDocumentViewer.type.replace(/_/g, ' ')}
-                  </h2>
-                  <p className="text-sm text-navy-500 dark:text-navy-400">{showDocumentViewer.fileName}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDownloadDocument}
-                    disabled={!documentContentUrl}
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                  <button
-                    onClick={handleCloseDocumentViewer}
-                    className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
-                  >
-                    <X className="w-5 h-5 text-navy-500" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 min-h-[400px] max-h-[70vh] overflow-auto flex items-center justify-center bg-navy-50 dark:bg-navy-900">
-                {documentLoading ? (
-                  <div className="text-center">
-                    <RefreshCw className="w-8 h-8 text-navy-400 animate-spin mx-auto mb-4" />
-                    <p className="text-navy-500 dark:text-navy-400">Loading document...</p>
-                  </div>
-                ) : documentError ? (
-                  <div className="text-center">
-                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                    <p className="text-red-500 dark:text-red-400">{documentError}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4"
-                      onClick={() => loadDocumentContent(showDocumentViewer.id)}
-                    >
-                      Retry
-                    </Button>
-                  </div>
-                ) : documentContentUrl ? (
-                  renderDocumentPreview()
-                ) : (
-                  <div className="text-center">
-                    <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-                    <p className="text-navy-500 dark:text-navy-400">Document preview not available</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
+        <DocumentViewerModal
+          document={showDocumentViewer}
+          documentContentUrl={documentContentUrl}
+          documentError={documentError}
+          documentLoading={documentLoading}
+          onClose={handleCloseDocumentViewer}
+          onDownload={handleDownloadDocument}
+          onRetry={showDocumentViewer ? () => loadDocumentContent(showDocumentViewer.id) : undefined}
+        />
 
         {/* IP Lookup Modal */}
         {showIpModal && (
@@ -1228,181 +853,6 @@ export function BackofficePage() {
           </div>
         )}
 
-        {/* Approve & Invite Modal */}
-        {approveModalRequest && (
-          <ApproveInviteModal
-            contactRequest={{
-              id: approveModalRequest.id,
-              entity_name: approveModalRequest.entity_name,
-              contact_email: approveModalRequest.contact_email,
-              contact_name: approveModalRequest.contact_name,
-              position: approveModalRequest.position,
-              reference: approveModalRequest.reference,
-              request_type: approveModalRequest.request_type,
-              nda_file_name: approveModalRequest.nda_file_name,
-              submitter_ip: approveModalRequest.submitter_ip,
-              status: approveModalRequest.status as 'pending' | 'approved' | 'rejected' | 'enrolled',
-              notes: approveModalRequest.notes,
-              created_at: approveModalRequest.created_at,
-            }}
-            isOpen={!!approveModalRequest}
-            onClose={() => setApproveModalRequest(null)}
-            onSuccess={handleApproveModalSuccess}
-          />
-        )}
-
-        {/* Delete Contact Request Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={!!deleteConfirmRequest}
-          onClose={() => setDeleteConfirmRequest(null)}
-          onConfirm={confirmDeleteRequest}
-          title="Delete Contact Request"
-          message="This action cannot be undone. The contact request will be permanently deleted from the database."
-          confirmText="Delete Request"
-          cancelText="Cancel"
-          variant="danger"
-          requireConfirmation={deleteConfirmRequest?.entity_name}
-          details={deleteConfirmRequest ? [
-            { label: 'Company', value: deleteConfirmRequest.entity_name },
-            { label: 'Contact', value: deleteConfirmRequest.contact_email },
-            { label: 'Status', value: deleteConfirmRequest.status },
-            { label: 'Submitted', value: formatRelativeTime(deleteConfirmRequest.created_at) },
-          ] : []}
-          loading={actionLoading === `delete-${deleteConfirmRequest?.id}`}
-        />
-
-        {/* Deposit Confirmation Modal */}
-        {confirmDepositModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
-            >
-              <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
-                <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-navy-600 dark:text-navy-400" />
-                  Confirm Deposit
-                </h3>
-                <button
-                  onClick={() => {
-                    setConfirmDepositModal(null);
-                    setConfirmAmount('');
-                    setConfirmNotes('');
-                  }}
-                  className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-4 space-y-4">
-                {/* Entity/User Info */}
-                <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-                  <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
-                  <p className="font-semibold text-navy-900 dark:text-white">{confirmDepositModal.entity_name}</p>
-                  <p className="text-xs text-navy-400 mt-1">{confirmDepositModal.user_email}</p>
-                </div>
-
-                {/* Reported Amount (for reference) */}
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-700 dark:text-amber-400">Reported by User</p>
-                  <p className="font-semibold text-amber-900 dark:text-amber-200">
-                    {confirmDepositModal.reported_amount ? formatCurrency(confirmDepositModal.reported_amount) : 'N/A'} {confirmDepositModal.reported_currency || ''}
-                  </p>
-                  {confirmDepositModal.wire_reference && (
-                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-1 font-mono">
-                      Wire Ref: {confirmDepositModal.wire_reference}
-                    </p>
-                  )}
-                </div>
-
-                {/* Actual Amount Input */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
-                    Actual Amount Received *
-                  </label>
-                  <input
-                    type="number"
-                    value={confirmAmount}
-                    onChange={(e) => setConfirmAmount(e.target.value)}
-                    placeholder="Enter actual amount"
-                    min="0"
-                    step="0.01"
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500"
-                    required
-                  />
-                </div>
-
-                {/* Currency Select */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
-                    Currency *
-                  </label>
-                  <select
-                    value={confirmCurrency}
-                    onChange={(e) => setConfirmCurrency(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-navy-500"
-                  >
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="CNY">CNY</option>
-                    <option value="HKD">HKD</option>
-                  </select>
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
-                    Notes (optional)
-                  </label>
-                  <textarea
-                    value={confirmNotes}
-                    onChange={(e) => setConfirmNotes(e.target.value)}
-                    placeholder="Add any notes..."
-                    rows={2}
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
-                  />
-                </div>
-
-                {/* Info about what happens */}
-                <div className="p-3 bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800 rounded-lg text-sm">
-                  <p className="text-navy-700 dark:text-navy-300">
-                    Confirming this deposit will:
-                  </p>
-                  <ul className="text-navy-600 dark:text-navy-400 text-xs mt-1 list-disc list-inside">
-                    <li>Update the entity balance</li>
-                    <li>Upgrade the user to FUNDED status</li>
-                    <li>Grant Cash Market access</li>
-                  </ul>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="ghost"
-                    className="flex-1"
-                    onClick={() => {
-                      setConfirmDepositModal(null);
-                      setConfirmAmount('');
-                      setConfirmNotes('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1"
-                    onClick={handleConfirmDeposit}
-                    loading={actionLoading === `confirm-${confirmDepositModal.id}`}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Confirm Deposit
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
     </BackofficeLayout>
   );
 }

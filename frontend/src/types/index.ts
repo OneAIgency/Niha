@@ -32,6 +32,19 @@ export interface Prices {
   updated_at: string;
 }
 
+// Price History Types
+export interface PriceHistoryPoint {
+  timestamp: string;
+  price: number;
+  price_eur?: number;
+  change_24h: number;
+}
+
+export interface PriceHistory {
+  eua: PriceHistoryPoint[];
+  cea: PriceHistoryPoint[];
+}
+
 // Swap Types
 export interface SwapRequest {
   id: string;
@@ -436,6 +449,22 @@ export interface AssetTransaction {
   created_at: string;
 }
 
+// Market Maker Transaction (extends AssetTransaction with MM-specific fields)
+export interface MarketMakerTransaction extends AssetTransaction {
+  market_maker_id: string;
+  market_maker_name?: string;
+  certificate_type?: CertificateType;
+}
+
+// Market Maker Query Parameters
+export interface MarketMakerQueryParams {
+  mm_type?: MarketMakerType;
+  market?: MarketType;
+  is_active?: boolean;
+  page?: number;
+  per_page?: number;
+}
+
 export interface EntityAssets {
   entity_id: string;
   entity_name: string;
@@ -568,3 +597,16 @@ export interface SettlementStatusHistory {
   notes?: string;
   created_at: string;
 }
+
+// Re-export backoffice types for convenience
+export type {
+  ContactRequest,
+  PendingUserResponse,
+  PendingDepositResponse,
+  UserTradeResponse,
+  KYCUser,
+  KYCDocument,
+  PendingDeposit,
+  UserTrade,
+  DocumentViewerState,
+} from './backoffice';

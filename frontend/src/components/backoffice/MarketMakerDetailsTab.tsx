@@ -29,6 +29,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
   // Fetch latest balances on mount and when props change
   useEffect(() => {
     fetchBalances();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketMaker.id, marketMaker.eur_balance, marketMaker.cea_balance, marketMaker.eua_balance]);
 
   const fetchBalances = async () => {
@@ -81,8 +82,9 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
         setSuccess(false);
         onUpdateSuccess();
       }, 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to update market maker');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to update market maker');
     } finally {
       setLoading(false);
     }

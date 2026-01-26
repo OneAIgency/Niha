@@ -6,13 +6,12 @@ import {
   Activity,
   Bot,
   ShoppingCart,
-  ArrowRightLeft,
   Zap,
 } from 'lucide-react';
 import { Subheader, SubSubHeader } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/order-book' | '/backoffice/liquidity' | '/backoffice/logging' | '/users';
+type BackofficeRoute = '/backoffice' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/logging' | '/users';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -50,12 +49,6 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-emerald-500',
     description: 'Place orders for MM clients',
   },
-  '/backoffice/order-book': {
-    icon: ArrowRightLeft,
-    iconBg: 'bg-teal-500/20',
-    iconColor: 'text-teal-500',
-    description: 'View order book & place MM orders',
-  },
   '/backoffice/liquidity': {
     icon: Zap,
     iconBg: 'bg-amber-500/20',
@@ -79,7 +72,6 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
 const BACKOFFICE_NAV = [
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
   { to: '/backoffice/market-orders', label: 'Market Orders', icon: ShoppingCart },
-  { to: '/backoffice/order-book', label: 'Order Book', icon: ArrowRightLeft },
   { to: '/backoffice/liquidity', label: 'Liquidity', icon: Zap },
   { to: '/backoffice/logging', label: 'Audit Logging', icon: Activity },
   { to: '/users', label: 'Users', icon: Users },

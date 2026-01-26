@@ -140,8 +140,9 @@ export function MMOrderPlacementModal({
       setQuantity('');
       setBalances(null);
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to place order');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to place order');
     } finally {
       setLoading(false);
     }

@@ -42,7 +42,7 @@ export function ProgressBar({
   return (
     <div className={cn('w-full', className)} {...props}>
       {(showLabel || label) && (
-        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="flex items-center justify-between text-xs text-navy-500 mb-1">
           <span>{label || 'Progress'}</span>
           <span className="font-mono">{Math.round(percentage)}%</span>
         </div>

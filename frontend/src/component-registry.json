@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-26T01:39:56.645Z",
+  "generatedAt": "2026-01-26T05:59:30.879Z",
   "components": [
     {
       "name": "AddAssetModal",
@@ -117,6 +117,65 @@
       "description": ""
     },
     {
+      "name": "ContactRequestsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/ContactRequestsTab.tsx",
+      "importPath": "components/backoffice/ContactRequestsTab",
+      "props": [
+        {
+          "name": "contactRequests",
+          "type": "ContactRequest[]",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "connectionStatus",
+          "type": "'connected' | 'connecting' | 'disconnected' | 'error'",
+          "optional": false
+        },
+        {
+          "name": "onRefresh",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onApprove",
+          "type": "(requestId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "onReject",
+          "type": "(requestId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "onDelete",
+          "type": "(requestId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "onDownloadNDA",
+          "type": "(requestId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onIpLookup",
+          "type": "(ip: string) => void",
+          "optional": false
+        },
+        {
+          "name": "actionLoading",
+          "type": "string | null",
+          "optional": false
+        }
+      ],
+      "description": "Contact Requests Tab Component"
+    },
+    {
       "name": "CreateMarketMakerModal",
       "category": "backoffice",
       "path": "src/components/backoffice/CreateMarketMakerModal.tsx",
@@ -144,6 +203,50 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "DocumentViewerModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/DocumentViewerModal.tsx",
+      "importPath": "components/backoffice/DocumentViewerModal",
+      "props": [
+        {
+          "name": "document",
+          "type": "DocumentViewerState | null",
+          "optional": false
+        },
+        {
+          "name": "documentContentUrl",
+          "type": "string | null",
+          "optional": false
+        },
+        {
+          "name": "documentError",
+          "type": "string | null",
+          "optional": false
+        },
+        {
+          "name": "documentLoading",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onDownload",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onRetry",
+          "type": "() => void",
+          "optional": true
+        }
+      ],
+      "description": "Document Viewer Modal Component"
     },
     {
       "name": "EditAssetModal",
@@ -414,6 +517,40 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "PendingDepositsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/PendingDepositsTab.tsx",
+      "importPath": "components/backoffice/PendingDepositsTab",
+      "props": [
+        {
+          "name": "pendingDeposits",
+          "type": "PendingDeposit[]",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onConfirm",
+          "type": "(depositId: string, amount: number, currency: string, notes?: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onReject",
+          "type": "(depositId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "actionLoading",
+          "type": "string | null",
+          "optional": false
+        }
+      ],
+      "description": "Pending Deposits Tab Component"
     },
     {
       "name": "PlaceMarketOrderSection",

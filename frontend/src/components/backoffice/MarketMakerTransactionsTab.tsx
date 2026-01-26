@@ -36,6 +36,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketMakerId]);
 
   const loadData = async () => {
@@ -48,9 +49,10 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       ]);
       setBalances(balancesData);
       setTransactions(transactionsData);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load data:', err);
-      setError(err.response?.data?.detail || 'Failed to load transactions');
+      setError(error.response?.data?.detail || 'Failed to load transactions');
     } finally {
       setLoading(false);
     }

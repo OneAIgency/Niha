@@ -15,12 +15,12 @@ interface TicketLog {
   entity_type: string;
   entity_id?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: any;
-  response_data?: any;
+  request_payload?: Record<string, unknown>;
+  response_data?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
-  before_state?: any;
-  after_state?: any;
+  before_state?: Record<string, unknown>;
+  after_state?: Record<string, unknown>;
   related_ticket_ids: string[];
   tags: string[];
 }
@@ -45,7 +45,7 @@ export function AllTicketsTab() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = { limit, offset };
+      const params: Record<string, unknown> = { limit, offset };
       if (searchQuery) params.search = searchQuery;
       if (statusFilter) params.status = statusFilter;
       if (actionTypeFilter) params.action_type = [actionTypeFilter];
@@ -54,8 +54,9 @@ export function AllTicketsTab() {
       const { data } = await getTickets(params);
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch tickets');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to fetch tickets');
     } finally {
       setLoading(false);
     }
@@ -63,6 +64,7 @@ export function AllTicketsTab() {
 
   useEffect(() => {
     fetchTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, statusFilter, actionTypeFilter, entityTypeFilter, offset]);
 
   // Auto-refresh every 10 seconds
@@ -71,6 +73,7 @@ export function AllTicketsTab() {
       fetchTickets();
     }, 10000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, statusFilter, actionTypeFilter, entityTypeFilter, offset]);
 
   const handleRowClick = (ticket: TicketLog) => {

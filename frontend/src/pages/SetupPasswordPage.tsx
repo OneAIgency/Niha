@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Check, X, Loader2, XCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
+import { logger } from '../utils/logger';
 
 export function SetupPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -67,16 +68,25 @@ export function SetupPasswordPage() {
     setError('');
 
     try {
+      logger.debug('[SetupPasswordPage] Setting up password for token');
       const { access_token, user } = await authApi.setupPassword(
         token,
         password,
         confirmPassword
       );
 
-      // Store auth and redirect
+      logger.debug('[SetupPasswordPage] Password setup successful, setting auth for user:', {
+        email: user.email,
+        role: user.role,
+        timestamp: new Date().toISOString()
+      });
+
+      // Store auth - navigation will be handled by LoginRoute guard in App.tsx
       setAuth(user, access_token);
-      navigate('/onboarding');
+      logger.debug('[SetupPasswordPage] Auth set, navigation will be handled by LoginRoute guard');
+      // Note: Removed navigate('/onboarding') call - LoginRoute will redirect based on user role
     } catch (err: any) {
+      logger.error('[SetupPasswordPage] Password setup failed:', err);
       setError(err.response?.data?.detail || 'Failed to set password. Please try again.');
     } finally {
       setLoading(false);
@@ -88,7 +98,7 @@ export function SetupPasswordPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-500 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mx-auto mb-4" />
           <p className="text-navy-300">Validating invitation...</p>
         </div>
       </div>
@@ -115,7 +125,7 @@ export function SetupPasswordPage() {
           </p>
           <button
             onClick={() => navigate('/login')}
-            className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors"
+            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
           >
             Go to Login
           </button>
@@ -133,8 +143,8 @@ export function SetupPasswordPage() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-navy-900 dark:text-white">
             Welcome, {userInfo?.first_name}!
@@ -169,7 +179,7 @@ export function SetupPasswordPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a strong password"
-                className="w-full px-4 py-2.5 pr-10 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 pr-10 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -225,7 +235,7 @@ export function SetupPasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
             {confirmPassword && !passwordsMatch && (
               <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
@@ -252,7 +262,7 @@ export function SetupPasswordPage() {
           <button
             type="submit"
             disabled={!isValidPassword || loading}
-            className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

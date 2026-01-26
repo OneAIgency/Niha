@@ -53,9 +53,9 @@ export function EUAPriceDisplay({
     return (
       <div className={cn('flex items-center gap-2', className)}>
         {showLabel && (
-          <span className={cn(styles.label, 'text-slate-400 font-medium')}>EUA</span>
+          <span className={cn(styles.label, 'text-navy-400 font-medium')}>EUA</span>
         )}
-        <span className={cn(styles.price, 'text-slate-500')}>---</span>
+        <span className={cn(styles.price, 'text-navy-500')}>---</span>
       </div>
     );
   }
@@ -64,9 +64,9 @@ export function EUAPriceDisplay({
     return (
       <div className={cn('flex items-center gap-2', className)}>
         {showLabel && (
-          <span className={cn(styles.label, 'text-slate-400 font-medium')}>EUA</span>
+          <span className={cn(styles.label, 'text-navy-400 font-medium')}>EUA</span>
         )}
-        <span className={cn(styles.price, 'text-slate-500')}>N/A</span>
+        <span className={cn(styles.price, 'text-navy-500')}>N/A</span>
       </div>
     );
   }

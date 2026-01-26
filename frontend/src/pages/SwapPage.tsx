@@ -176,6 +176,7 @@ export function SwapPage() {
                           ? 'bg-blue-100 text-blue-700 border border-blue-200'
                           : 'bg-amber-100 text-amber-700 border border-amber-200'
                       )}
+                      aria-label={`Certificate type: ${calcFromType}`}
                     >
                       {calcFromType}
                     </button>
@@ -187,8 +188,9 @@ export function SwapPage() {
                   <button
                     onClick={toggleCalcType}
                     className="p-3 bg-navy-100 dark:bg-navy-700 rounded-full hover:bg-navy-200 dark:hover:bg-navy-600 transition-colors"
+                    aria-label="Swap certificate types"
                   >
-                    <ArrowRightLeft className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+                    <ArrowRightLeft className="w-5 h-5 text-navy-600 dark:text-navy-300" aria-hidden="true" />
                   </button>
                 </div>
 

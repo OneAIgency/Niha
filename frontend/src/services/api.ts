@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
   Prices,
+  PriceHistory,
   Certificate,
   SwapRequest,
   SwapCalculation,
@@ -29,49 +30,85 @@ import type {
   Deposit,
   DepositCreate,
   EntityBalance,
+  MarketMaker,
   MarketMakerType,
+  MarketMakerQueryParams,
+  MarketMakerTransaction,
   SettlementBatch,
+  Trade,
+  TransactionType,
 } from '../types';
+import type { FundingInstructions } from '../types/funding';
+import type { AdminDashboardStats } from '../types/admin';
 import { MARKET_MAKER_TYPES } from '../types';
 import type {
   LiquidityPreviewResponse,
   LiquidityCreationRequest,
   LiquidityCreationResponse,
 } from '../types/liquidity';
+import { logger } from '../utils/logger';
+import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
+import { TOKEN_KEY } from '../constants/auth';
+import { useAuthStore } from '../stores/useStore';
+
+// Flag to prevent multiple redirects during auth failures
+let isRedirectingToLogin = false;
+
+// Secure token storage utility
+// Note: For production, tokens should be stored in httpOnly cookies (requires backend changes)
+
+function getToken(): string | null {
+  try {
+    // Use sessionStorage instead of localStorage for better security
+    // Still vulnerable to XSS, but better than localStorage
+    // TODO: Migrate to httpOnly cookies for production
+    return sessionStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function removeToken(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch (error) {
+    logger.error('Failed to remove token', error);
+  }
+}
 
 // Dynamic API URL detection for LAN/remote access
 const getApiBaseUrl = (): string => {
   // If VITE_API_URL is explicitly set, use it
   if (import.meta.env.VITE_API_URL) {
-    console.log('[API] Using VITE_API_URL:', import.meta.env.VITE_API_URL);
+    logger.debug('Using VITE_API_URL', { url: import.meta.env.VITE_API_URL });
     return import.meta.env.VITE_API_URL;
   }
 
   const { protocol, hostname, port } = window.location;
-  console.log('[API] Detecting URL - protocol:', protocol, 'hostname:', hostname, 'port:', port);
+  logger.debug('Detecting API URL', { protocol, hostname, port });
 
   // If running on Vite dev server (port 5173), use relative URLs
   // Vite proxy handles forwarding /api requests to the backend
   if (port === '5173') {
-    console.log('[API] Using relative URLs (Vite dev server proxy)');
+    logger.debug('Using relative URLs (Vite dev server proxy)');
     return '';
   }
 
   // Guard against empty hostname
   if (!hostname) {
-    console.warn('[API] Empty hostname detected, falling back to relative URLs');
+    logger.warn('Empty hostname detected, falling back to relative URLs');
     return '';
   }
 
   // For production/other access, construct URL from current hostname
   // Assume backend runs on port 8000
   const apiUrl = `${protocol}//${hostname}:8000`;
-  console.log('[API] Constructed API URL:', apiUrl);
+  logger.debug('Constructed API URL', { url: apiUrl });
   return apiUrl;
 };
 
 const API_BASE = getApiBaseUrl();
-console.log('[API] Final API_BASE:', API_BASE);
+logger.debug('API base URL initialized', { base: API_BASE });
 
 const api = axios.create({
   baseURL: `${API_BASE}/api/v1`,
@@ -82,7 +119,8 @@ const api = axios.create({
 
 // Add auth token to requests and handle FormData
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -93,15 +131,51 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
+// Response interceptor: Transform response data and handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Transform response data from snake_case to camelCase (frontend expects camelCase)
+    if (response.data && typeof response.data === 'object') {
+      response.data = transformKeysToCamelCase(response.data);
+    }
+    return response;
+  },
   async (error) => {
+    // Standardize error response format
+    const standardizedError = {
+      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'An error occurred',
+      status: error.response?.status,
+      data: error.response?.data,
+      originalError: error,
+    };
+
     // 401 = invalid/expired token
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-      return Promise.reject(error);
+      // Check if we're on the login page - don't redirect if already there
+      if (window.location.pathname === '/login') {
+        logger.debug('[API] 401 on login page, not redirecting');
+        return Promise.reject(standardizedError);
+      }
+      
+      // Prevent multiple redirects and logout the user properly
+      if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        logger.warn('[API] 401 Unauthorized - logging out and redirecting to login');
+        
+        // Clear token from storage
+        removeToken();
+        
+        // Clear Zustand auth state - this is CRITICAL to prevent loops
+        // The store's logout() also removes token, but we do both for safety
+        useAuthStore.getState().logout();
+        
+        // Small delay to allow state to update before redirect
+        setTimeout(() => {
+          isRedirectingToLogin = false;
+          window.location.href = '/login';
+        }, 100);
+      }
+      return Promise.reject(standardizedError);
     }
 
     // 403 with "Not authenticated" = missing token (HTTPBearer)
@@ -119,13 +193,27 @@ api.interceptors.response.use(
         }
       }
 
-      if (detail === 'Not authenticated') {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+      if (detail === 'Not authenticated' && !isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        logger.warn('[API] 403 Not authenticated - logging out and redirecting to login');
+        removeToken();
+        useAuthStore.getState().logout();
+        setTimeout(() => {
+          isRedirectingToLogin = false;
+          window.location.href = '/login';
+        }, 100);
       }
     }
 
-    return Promise.reject(error);
+    // Log error for debugging
+    logger.error('API request failed', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: standardizedError.message,
+    });
+
+    return Promise.reject(standardizedError);
   }
 );
 
@@ -148,7 +236,7 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     await api.post('/auth/logout');
-    localStorage.removeItem('token');
+    removeToken();
   },
 
   // Validate invitation token
@@ -208,7 +296,7 @@ export const pricesApi = {
     return data;
   },
 
-  getHistory: async (hours: number = 24): Promise<{ eua: any[]; cea: any[] }> => {
+  getHistory: async (hours: number = 24): Promise<PriceHistory> => {
     const { data } = await api.get(`/prices/history?hours=${hours}`);
     return data;
   },
@@ -218,19 +306,19 @@ export const pricesApi = {
     const getWsUrl = (): string => {
       // If VITE_WS_URL is explicitly set, use it
       if (import.meta.env.VITE_WS_URL) {
-        console.log('[WS] Using VITE_WS_URL:', import.meta.env.VITE_WS_URL);
+        logger.debug('Using VITE_WS_URL for WebSocket', { url: import.meta.env.VITE_WS_URL });
         return `${import.meta.env.VITE_WS_URL}/api/v1/prices/ws`;
       }
 
       const { protocol, hostname, port } = window.location;
-      console.log('[WS] Detecting URL - protocol:', protocol, 'hostname:', hostname, 'port:', port);
+      logger.debug('Detecting WebSocket URL', { protocol, hostname, port });
 
       // If running on Vite dev server (port 5173), use relative WebSocket URL
       // Vite proxy handles forwarding /api requests (including WebSocket) to the backend
       if (port === '5173') {
         const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${hostname}:${port}/api/v1/prices/ws`;
-        console.log('[WS] Using Vite proxy WebSocket URL:', wsUrl);
+        logger.debug('Using Vite proxy WebSocket URL', { url: wsUrl });
         return wsUrl;
       }
 
@@ -238,7 +326,7 @@ export const pricesApi = {
       // Assume backend runs on port 8000
       const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${hostname}:8000/api/v1/prices/ws`;
-      console.log('[WS] Using direct WebSocket URL:', wsUrl);
+      logger.debug('Using direct WebSocket URL', { url: wsUrl });
       return wsUrl;
     };
 
@@ -246,8 +334,18 @@ export const pricesApi = {
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      onMessage(data);
+      try {
+        const data = JSON.parse(event.data);
+        // Transform data from snake_case to camelCase
+        const transformedData = transformKeysToCamelCase<Prices>(data);
+        onMessage(transformedData);
+      } catch (error) {
+        logger.error('Failed to parse WebSocket message', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      logger.error('WebSocket error', error);
     };
 
     return ws;
@@ -290,31 +388,33 @@ export const backofficeRealtimeApi = {
     };
 
     const wsUrl = getWsUrl();
-    console.log('[Backoffice WS] Connecting to:', wsUrl);
+    logger.debug('Connecting to backoffice WebSocket', { url: wsUrl });
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log('[Backoffice WS] Connected');
+      logger.debug('Backoffice WebSocket connected');
       onOpen?.();
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as BackofficeWebSocketMessage;
-        console.log('[Backoffice WS] Message:', data.type);
-        onMessage(data);
+        // Transform data from snake_case to camelCase
+        const transformedData = transformKeysToCamelCase<BackofficeWebSocketMessage>(data);
+        logger.debug('Backoffice WebSocket message received', { type: transformedData.type });
+        onMessage(transformedData);
       } catch (err) {
-        console.error('[Backoffice WS] Failed to parse message:', err);
+        logger.error('Failed to parse backoffice WebSocket message', err);
       }
     };
 
     ws.onclose = () => {
-      console.log('[Backoffice WS] Disconnected');
+      logger.debug('Backoffice WebSocket disconnected');
       onClose?.();
     };
 
     ws.onerror = (error) => {
-      console.error('[Backoffice WS] Error:', error);
+      logger.error('Backoffice WebSocket error', error);
       onError?.(error);
     };
 
@@ -500,7 +600,7 @@ export const usersApi = {
     return data;
   },
 
-  getMyDeposits: async (): Promise<any[]> => {
+  getMyDeposits: async (): Promise<Deposit[]> => {
     const { data } = await api.get('/users/me/deposits');
     return data;
   },
@@ -510,7 +610,7 @@ export const usersApi = {
     return data || null;
   },
 
-  getMyEntityBalance: async (): Promise<any> => {
+  getMyEntityBalance: async (): Promise<EntityBalance> => {
     const { data } = await api.get('/users/me/entity/balance');
     return data;
   },
@@ -539,7 +639,7 @@ export const usersApi = {
     };
   },
 
-  getFundingInstructions: async (): Promise<any> => {
+  getFundingInstructions: async (): Promise<FundingInstructions> => {
     const { data } = await api.get('/users/me/funding-instructions');
     return data;
   },
@@ -643,7 +743,7 @@ export const adminApi = {
     return data;
   },
 
-  getDashboard: async (): Promise<any> => {
+  getDashboard: async (): Promise<AdminDashboardStats> => {
     const { data } = await api.get('/admin/dashboard');
     return data;
   },
@@ -839,7 +939,7 @@ export const backofficeApi = {
     return data;
   },
 
-  getUserTrades: async (userId: string): Promise<any[]> => {
+  getUserTrades: async (userId: string): Promise<Trade[]> => {
     const { data } = await api.get(`/backoffice/users/${userId}/trades`);
     return data;
   },
@@ -895,7 +995,7 @@ export const backofficeApi = {
   },
 
   // Get all pending deposits
-  getPendingDeposits: async (): Promise<any[]> => {
+  getPendingDeposits: async (): Promise<Deposit[]> => {
     const { data } = await api.get('/backoffice/deposits', {
       params: { status: 'pending' },
     });
@@ -1175,15 +1275,26 @@ export const cashMarketApi = {
 };
 
 // Market Makers API
-export const getMarketMakers = async (params?: any): Promise<any[]> => {
+export const getMarketMakers = async (params?: MarketMakerQueryParams): Promise<MarketMaker[]> => {
   const { data } = await api.get('/admin/market-makers', { params });
 
   // Transform backend response to match frontend expectations
-  return data.map((mm: any) => ({
+  return data.map((mm: {
+    id: string;
+    name: string;
+    description?: string;
+    mm_type: MarketMakerType;
+    is_active: boolean;
+    eur_balance?: number;
+    current_balances?: { CEA?: { total: number }; EUA?: { total: number } };
+    total_orders?: number;
+    created_at: string;
+    ticket_id?: string;
+  }): MarketMaker => ({
     id: mm.id,
     name: mm.name,
     description: mm.description,
-    mm_type: mm.mm_type || 'CEA_CASH_SELLER',  // CEA_CASH_SELLER, CASH_BUYER, or SWAP_MAKER
+    mm_type: mm.mm_type || 'CEA_CASH_SELLER',
     market: MARKET_MAKER_TYPES[mm.mm_type as MarketMakerType]?.market || 'CEA_CASH',
     is_active: mm.is_active,
     eur_balance: mm.eur_balance ?? 0,
@@ -1195,19 +1306,28 @@ export const getMarketMakers = async (params?: any): Promise<any[]> => {
   }));
 };
 
-export const createMarketMaker = async (data: {
+export interface CreateMarketMakerRequest {
   name: string;
   email: string;
   description?: string;
-  mm_type?: 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+  mm_type?: MarketMakerType;
   initial_eur_balance?: number;
   cea_balance?: number;
   eua_balance?: number;
-}): Promise<any> => {
+}
+
+export const createMarketMaker = async (data: CreateMarketMakerRequest): Promise<MarketMaker> => {
   // Transform frontend format to backend expected format
   // Backend expects: name, email, mm_type, initial_eur_balance, initial_balances: {CEA: number, EUA: number}
   // Frontend sends: name, email, mm_type, initial_eur_balance, cea_balance, eua_balance
-  const payload: any = {
+  const payload: {
+    name: string;
+    email: string;
+    description?: string;
+    mm_type: MarketMakerType;
+    initial_eur_balance?: number;
+    initial_balances?: { CEA?: number; EUA?: number };
+  } = {
     name: data.name,
     email: data.email,
     description: data.description,
@@ -1235,7 +1355,7 @@ export const updateMarketMaker = async (id: string, data: {
   name?: string;
   description?: string;
   is_active?: boolean;
-}): Promise<any> => {
+}): Promise<MarketMaker> => {
   const { data: response } = await api.put(`/admin/market-makers/${id}`, data);
   return response;
 };
@@ -1245,25 +1365,48 @@ export const deleteMarketMaker = async (id: string): Promise<MessageResponse> =>
   return data;
 };
 
-export const getMarketMakerTransactions = async (id: string, params?: any): Promise<any[]> => {
+export interface MarketMakerTransactionQueryParams {
+  page?: number;
+  per_page?: number;
+  asset_type?: 'EUR' | 'CEA' | 'EUA';
+  transaction_type?: string;
+}
+
+export const getMarketMakerTransactions = async (
+  id: string,
+  params?: MarketMakerTransactionQueryParams
+): Promise<MarketMakerTransaction[]> => {
   const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
 
   // Transform backend response to match frontend expectations
   // Backend returns: transaction_type as "DEPOSIT", "WITHDRAWAL", "TRADE_DEBIT", etc. (uppercase)
   // Frontend expects: lowercase with underscores (deposit, withdrawal, trade_debit, trade_credit, etc.)
-  return data.map((transaction: any) => ({
+  return data.map((transaction: {
+    id: string;
+    entity_id: string;
+    asset_type: 'EUR' | 'CEA' | 'EUA';
+    transaction_type: string;
+    amount: number;
+    balance_before: number;
+    balance_after: number;
+    reference?: string;
+    notes?: string;
+    created_by: string;
+    created_at: string;
+  }): MarketMakerTransaction => ({
     ...transaction,
-    transaction_type: transaction.transaction_type?.toLowerCase() || 'deposit',
+    market_maker_id: id,
+    transaction_type: (transaction.transaction_type?.toLowerCase() || 'deposit') as TransactionType,
     amount: Math.abs(transaction.amount), // Store absolute value for display
   }));
 };
 
 export const createTransaction = async (id: string, data: {
-  certificate_type: 'CEA' | 'EUA';
+  certificate_type: CertificateType;
   transaction_type: 'deposit' | 'withdrawal';
   amount: number;
   notes?: string;
-}): Promise<any> => {
+}): Promise<MarketMakerTransaction> => {
   // Transform to backend format (uppercase transaction_type)
   const backendPayload = {
     ...data,

@@ -1,50 +1,119 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/layout';
-import {
-  ContactPage,
-  LoginPage,
-  CashMarketPage,
-  SwapPage,
-  CeaSwapMarketPage,
-  DashboardPage,
-  ProfilePage,
-  SettingsPage,
-  UsersPage,
-  BackofficePage,
-  FundingPage,
-  SetupPasswordPage,
-  Onboarding1Page,
-  LearnMorePage,
-  OnboardingIndexPage,
-  MarketOverviewPage,
-  AboutNihaoPage,
-  CeaHoldersPage,
-  EuaHoldersPage,
-  EuEntitiesPage,
-  StrategicAdvantagePage,
-  ComponentShowcasePage,
-  DesignSystemPage,
-  MarketMakersPage,
-  MarketOrdersPage,
-  LoggingPage,
-  BackofficeOrderBookPage,
-  CreateLiquidityPage,
-} from './pages';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
+import { getPostLoginRedirect } from './utils/redirect';
 
-// Protected Route wrapper - requires authentication
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+// Code splitting: Lazy load pages for better performance
+const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
+const LoginPage = lazy(() => import('./pages').then(m => ({ default: m.LoginPage })));
+const CashMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketPage })));
+const SwapPage = lazy(() => import('./pages').then(m => ({ default: m.SwapPage })));
+const CeaSwapMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CeaSwapMarketPage })));
+const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.DashboardPage })));
+const ProfilePage = lazy(() => import('./pages').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages').then(m => ({ default: m.SettingsPage })));
+const UsersPage = lazy(() => import('./pages').then(m => ({ default: m.UsersPage })));
+const BackofficePage = lazy(() => import('./pages').then(m => ({ default: m.BackofficePage })));
+const FundingPage = lazy(() => import('./pages').then(m => ({ default: m.FundingPage })));
+const SetupPasswordPage = lazy(() => import('./pages').then(m => ({ default: m.SetupPasswordPage })));
+const Onboarding1Page = lazy(() => import('./pages').then(m => ({ default: m.Onboarding1Page })));
+const LearnMorePage = lazy(() => import('./pages').then(m => ({ default: m.LearnMorePage })));
+const OnboardingIndexPage = lazy(() => import('./pages').then(m => ({ default: m.OnboardingIndexPage })));
+const MarketOverviewPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOverviewPage })));
+const AboutNihaoPage = lazy(() => import('./pages').then(m => ({ default: m.AboutNihaoPage })));
+const CeaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.CeaHoldersPage })));
+const EuaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.EuaHoldersPage })));
+const EuEntitiesPage = lazy(() => import('./pages').then(m => ({ default: m.EuEntitiesPage })));
+const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default: m.StrategicAdvantagePage })));
+const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
+const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
+const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
+const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
+const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
+const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-navy-50 dark:bg-navy-950">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+      <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
+    </div>
+  </div>
+);
+
+/**
+ * AuthGuard - Single source of truth for authentication redirects
+ * 
+ * CRITICAL: This component handles ALL auth-based redirects to prevent loops.
+ * Do NOT add redirect logic elsewhere (LoginPage, individual routes, etc.)
+ */
+function AuthGuard({ children, requireAuth, allowedRoles, redirectTo }: {
+  children: React.ReactNode;
+  requireAuth: boolean;
+  allowedRoles?: UserRole[];
+  redirectTo?: string;
+}) {
+  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const location = useLocation();
+
+  // CRITICAL: Wait for Zustand to rehydrate before making any decisions
+  // This prevents the flash/loop where auth state is temporarily undefined
+  if (!_hasHydrated) {
+    return <PageLoader />;
+  }
+
+  // Route requires authentication
+  if (requireAuth) {
+    if (!isAuthenticated || !user) {
+      // Not authenticated - redirect to login
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    // Check role-based access
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      // User doesn't have required role - redirect to their appropriate page
+      const userRedirect = getPostLoginRedirect(user);
+      return <Navigate to={redirectTo || userRedirect} replace />;
+    }
+
+    // Authenticated and authorized
+    return <>{children}</>;
+  }
+
+  // Route does NOT require auth (like /login)
+  // If user is already authenticated, redirect them away
+  if (isAuthenticated && user) {
+    const targetPath = getPostLoginRedirect(user);
+    // Don't redirect if already on target path (prevent loops)
+    if (location.pathname !== targetPath) {
+      return <Navigate to={targetPath} replace />;
+    }
   }
 
   return <>{children}</>;
 }
 
-// Role-based Route wrapper - requires specific roles
+// Convenience wrappers using AuthGuard
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard requireAuth={true}>
+      {children}
+    </AuthGuard>
+  );
+}
+
+function LoginRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard requireAuth={false}>
+      {children}
+    </AuthGuard>
+  );
+}
+
 function RoleProtectedRoute({
   children,
   allowedRoles,
@@ -54,25 +123,13 @@ function RoleProtectedRoute({
   allowedRoles: UserRole[];
   redirectTo?: string;
 }) {
-  const { isAuthenticated, user } = useAuthStore();
-
-  // Debug logging
-  console.log('RoleProtectedRoute check:', { isAuthenticated, userRole: user?.role, allowedRoles, redirectTo });
-
-  if (!isAuthenticated) {
-    console.log('Not authenticated, redirecting to login');
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!user || !allowedRoles.includes(user.role)) {
-    console.log('Role check failed:', { user, hasRole: user?.role, includes: user ? allowedRoles.includes(user.role) : false });
-    return <Navigate to={redirectTo} replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <AuthGuard requireAuth={true} allowedRoles={allowedRoles} redirectTo={redirectTo}>
+      {children}
+    </AuthGuard>
+  );
 }
 
-// Admin-only Route wrapper
 function AdminRoute({ children }: { children: React.ReactNode }) {
   return (
     <RoleProtectedRoute allowedRoles={['ADMIN']} redirectTo="/dashboard">
@@ -83,84 +140,52 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 // Onboarding Route - temporarily allowing all for testing
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  // Temporarily disabled for testing - uncomment below for production
-  // const { isAuthenticated, user } = useAuthStore();
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
-  // if (user?.role !== 'PENDING') {
-  //   return <Navigate to="/dashboard" replace />;
-  // }
   return <>{children}</>;
 }
 
-// APPROVED users Route - only funding access
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuthStore();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Only APPROVED users can access funding page
-  if (user?.role !== 'APPROVED') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <RoleProtectedRoute allowedRoles={['APPROVED']} redirectTo="/dashboard">
+      {children}
+    </RoleProtectedRoute>
+  );
 }
 
-// FUNDED users Route - cash market access only (no swap)
 function FundedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { user, _hasHydrated } = useAuthStore();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (!_hasHydrated) {
+    return <PageLoader />;
   }
 
-  // PENDING users go to onboarding
+  // Special redirects based on role
   if (user?.role === 'PENDING') {
     return <Navigate to="/onboarding" replace />;
   }
-
-  // APPROVED users go to funding
   if (user?.role === 'APPROVED') {
     return <Navigate to="/funding" replace />;
   }
 
-  // Only FUNDED and ADMIN can access
-  if (user?.role !== 'FUNDED' && user?.role !== 'ADMIN') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <RoleProtectedRoute allowedRoles={['FUNDED', 'ADMIN']} redirectTo="/dashboard">
+      {children}
+    </RoleProtectedRoute>
+  );
 }
 
-// Route for funded/approved users with dashboard access
 function DashboardRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuthStore();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Pending users go to onboarding
-  if (user?.role === 'PENDING') {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  // APPROVED users go to funding page
-  if (user?.role === 'APPROVED') {
-    return <Navigate to="/funding" replace />;
-  }
-
-  return <>{children}</>;
+  return (
+    <AuthGuard requireAuth={true}>
+      {children}
+    </AuthGuard>
+  );
 }
 
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -352,14 +377,6 @@ function App() {
             }
           />
           <Route
-            path="/backoffice/order-book"
-            element={
-              <AdminRoute>
-                <BackofficeOrderBookPage />
-              </AdminRoute>
-            }
-          />
-          <Route
             path="/backoffice/liquidity"
             element={
               <AdminRoute>
@@ -384,13 +401,28 @@ function App() {
 
 
         {/* Auth routes (no layout) */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/verify" element={<LoginPage />} />
+        <Route
+          path="/login"
+          element={
+            <LoginRoute>
+              <LoginPage />
+            </LoginRoute>
+          }
+        />
+        <Route
+          path="/auth/verify"
+          element={
+            <LoginRoute>
+              <LoginPage />
+            </LoginRoute>
+          }
+        />
         <Route path="/setup-password" element={<SetupPasswordPage />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

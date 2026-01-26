@@ -93,7 +93,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
 
   if (!chartData) {
     return (
-      <div className="h-64 flex items-center justify-center text-gray-400 dark:text-gray-500">
+      <div className="h-64 flex items-center justify-center text-navy-400 dark:text-navy-500">
         No depth data available
       </div>
     );
@@ -108,7 +108,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
   return (
     <div className="relative">
       {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+      <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs text-navy-400 dark:text-navy-500 tabular-nums">
         {chartData.yLabels.reverse().map((label, idx) => (
           <div key={idx} className="text-right pr-2">
             {formatNumber(label.qty)}
@@ -151,7 +151,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
             strokeWidth="0.3"
             strokeDasharray="2,2"
             vectorEffect="non-scaling-stroke"
-            className="text-gray-400 dark:text-gray-500"
+            className="text-navy-400 dark:text-navy-500"
           />
         </svg>
 
@@ -160,7 +160,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
           {chartData.xLabels.map((label, idx) => (
             <div
               key={idx}
-              className="absolute text-xs text-gray-400 dark:text-gray-500 tabular-nums"
+              className="absolute text-xs text-navy-400 dark:text-navy-500 tabular-nums"
               style={{
                 left: `${label.x}%`,
                 transform: 'translateX(-50%)',

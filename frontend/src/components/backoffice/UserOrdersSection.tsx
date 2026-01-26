@@ -74,8 +74,9 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
       });
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to update order');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to update order');
     } finally {
       setLoading(false);
     }
@@ -187,7 +188,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
   );
 }
 
-export function UserOrdersSection({ entityId, entityName: _entityName }: UserOrdersSectionProps) {
+export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,6 +199,7 @@ export function UserOrdersSection({ entityId, entityName: _entityName }: UserOrd
 
   useEffect(() => {
     loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId]);
 
   const loadOrders = async () => {
@@ -206,9 +208,10 @@ export function UserOrdersSection({ entityId, entityName: _entityName }: UserOrd
     try {
       const data = await backofficeApi.getEntityOrders(entityId);
       setOrders(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load orders:', err);
-      setError(err.response?.data?.detail || 'Failed to load orders');
+      setError(error.response?.data?.detail || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -220,7 +223,8 @@ export function UserOrdersSection({ entityId, entityName: _entityName }: UserOrd
     try {
       await backofficeApi.adminCancelOrder(cancelOrder.id);
       loadOrders();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to cancel order:', err);
     } finally {
       setCancelling(false);

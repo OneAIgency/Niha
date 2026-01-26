@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, Prices, MarketStats, ContactRequestResponse } from '../types';
+import { TOKEN_KEY } from '../constants/auth';
+import { logger } from '../utils/logger';
 
 // Auth Store
 interface AuthState {
@@ -11,23 +13,77 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
+export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
   persist(
     (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       setAuth: (user, token) => {
-        localStorage.setItem('token', token);
+        // Store token separately in sessionStorage for API interceptor
+        // (Zustand persist will also save it, but API reads from TOKEN_KEY directly)
+        try {
+          sessionStorage.setItem(TOKEN_KEY, token);
+        } catch (error) {
+          logger.error('[AuthStore] Failed to store token:', error);
+        }
+
         set({ user, token, isAuthenticated: true });
       },
       logout: () => {
-        localStorage.removeItem('token');
+        logger.debug('[AuthStore] logout called');
+        try {
+          sessionStorage.removeItem(TOKEN_KEY);
+          logger.debug('[AuthStore] Token removed from sessionStorage');
+        } catch (error) {
+          logger.error('[AuthStore] Failed to remove token', error);
+        }
         set({ user: null, token: null, isAuthenticated: false });
+        logger.debug('[AuthStore] Auth state cleared, isAuthenticated=false');
       },
     }),
     {
       name: 'auth-storage',
+      // Use sessionStorage instead of localStorage for security
+      // This ensures token and auth state are stored in the same place
+      storage: createJSONStorage(() => sessionStorage),
+      // Only persist essential state to prevent unnecessary re-renders
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      // Control rehydration to prevent navigation loops
+      onRehydrateStorage: () => {
+        logger.debug('[AuthStore] Starting rehydration...');
+        
+        // Clean up old localStorage data if exists (migration from old storage)
+        try {
+          if (localStorage.getItem('auth-storage')) {
+            localStorage.removeItem('auth-storage');
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        return (state) => {
+          // CRITICAL: Restore token to sessionStorage for API interceptor
+          // Zustand persist restores the state, but API reads token from TOKEN_KEY directly
+          if (state?.token) {
+            try {
+              sessionStorage.setItem(TOKEN_KEY, state.token);
+            } catch (error) {
+              logger.error('[AuthStore] Failed to restore token:', error);
+            }
+          }
+          
+          // Mark as hydrated after a microtask to ensure state is fully updated
+          setTimeout(() => {
+            useAuthStore.setState({ _hasHydrated: true });
+          }, 0);
+        };
+      },
     }
   )
 );

@@ -39,7 +39,7 @@ import {
 import { EuaScrapped, CeaScrapped } from '../components/dashboard';
 import { SettlementTransactions } from '../components/dashboard/SettlementTransactions';
 import { SettlementDetails } from '../components/dashboard/SettlementDetails';
-import type { Order, SettlementBatch } from '../types';
+import type { Order, SettlementBatch, SwapRequest } from '../types';
 
 interface EntityBalance {
   entity_id: string;
@@ -105,7 +105,7 @@ const transactionColumns: Column<Transaction>[] = [
         SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
       };
       return (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[value] || "#000000"}`}>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[value] || "text-slate-400 bg-slate-500/20"}`}>
           {value}
         </span>
       );
@@ -180,7 +180,7 @@ export function DashboardPage() {
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
   const [entityAssets, setEntityAssets] = useState<EntityAssets | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [swaps, setSwaps] = useState<any[]>([]);
+  const [swaps, setSwaps] = useState<SwapRequest[]>([]);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

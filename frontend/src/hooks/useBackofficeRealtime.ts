@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useBackofficeStore, KYCDocumentBackoffice } from '../stores/useStore';
 import { backofficeRealtimeApi, adminApi, backofficeApi, BackofficeWebSocketMessage } from '../services/api';
 import type { ContactRequestResponse } from '../types';
+import { logger } from '../utils/logger';
 
 const RECONNECT_DELAY = 3000; // 3 seconds
 const POLLING_INTERVAL = 30000; // 30 seconds fallback polling
@@ -36,7 +37,7 @@ export function useBackofficeRealtime() {
         setContactRequests(response.data);
       }
     } catch (err) {
-      console.error('[Backoffice] Failed to fetch contact requests:', err);
+      logger.error('Failed to fetch contact requests', err);
     }
   }, [setContactRequests]);
 
@@ -48,7 +49,7 @@ export function useBackofficeRealtime() {
         setKYCDocuments(documents);
       }
     } catch (err) {
-      console.error('[Backoffice] Failed to fetch KYC documents:', err);
+      logger.error('Failed to fetch KYC documents', err);
     }
   }, [setKYCDocuments]);
 
@@ -182,10 +183,19 @@ export function useBackofficeRealtime() {
     return () => {
       mountedRef.current = false;
 
-      // Clean up WebSocket
+      // Clean up WebSocket properly
       if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+        try {
+          wsRef.current.onerror = null;
+          wsRef.current.onclose = null;
+          wsRef.current.onmessage = null;
+          if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+            wsRef.current.close();
+          }
+          wsRef.current = null;
+        } catch (error) {
+          logger.error('Error closing backoffice WebSocket', error);
+        }
       }
 
       // Clear timeouts

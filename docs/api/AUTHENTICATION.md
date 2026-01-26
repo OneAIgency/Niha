@@ -7,6 +7,94 @@
 
 The platform uses JWT (JSON Web Token) based authentication with role-based access control. This document covers authentication endpoints and the newly added MARKET_MAKER role.
 
+## Frontend Authentication Flow
+
+The frontend implements an optimized authentication flow that prevents rapid page refreshes and unnecessary navigation:
+
+**Key Features:**
+- **Centralized Navigation**: Post-authentication navigation is handled by a single `useEffect` hook that watches authentication state changes
+- **Performance Optimizations**: Functions are memoized with `useCallback` to prevent race conditions and unnecessary re-renders
+- **Smart Navigation**: Navigation only occurs if the user is not already on the target page, preventing unnecessary redirects
+- **History Management**: Uses `replace: true` to prevent history pollution when redirecting authenticated users
+
+**Navigation Flow:**
+1. User submits login credentials or clicks magic link
+2. Authentication API call succeeds and updates auth store
+3. `useEffect` detects authentication state change
+4. System checks current pathname against target path
+5. Navigation occurs only if needed (prevents refresh loops)
+6. User is redirected to appropriate page based on role/email
+
+**Target Pages (Role-Based Redirects):**
+- **PENDING** users → `/onboarding`
+- **APPROVED** users → `/funding`
+- **FUNDED** users → `/dashboard`
+- **ADMIN** users → `/dashboard`
+- Specific users (e.g., `eu@eu.ro`) → `/onboarding` (special case)
+
+**Shared Redirect Utility:**
+The redirect logic is centralized in `frontend/src/utils/redirect.ts` via the `getPostLoginRedirect()` function. This ensures consistency between:
+- `LoginPage` - post-authentication redirect
+- `DashboardRoute` - route guard redirects
+- Any future components that need redirect logic
+
+**Usage:**
+```typescript
+import { getPostLoginRedirect } from '../utils/redirect';
+// Or from utils index:
+import { getPostLoginRedirect } from '../utils';
+
+const targetPath = getPostLoginRedirect(user);
+navigate(targetPath, { replace: true });
+```
+
+**Implementation Details:**
+- Function is pure (no side effects)
+- Returns string path based on user role and email
+- Used by both `LoginPage` and route guards (`DashboardRoute`)
+- Ensures consistency across the application
+
+### Token Storage
+
+The application uses **sessionStorage** for token storage with a centralized configuration:
+
+**Storage Details:**
+- **Location**: `sessionStorage` (not `localStorage`)
+- **Key**: `'auth_token'` (defined in `constants/auth.ts` as `TOKEN_KEY`)
+- **Security**: Better XSS protection than localStorage
+- **Persistence**: Token persists across page refreshes but cleared on browser close
+
+**Token Management:**
+- **Storage**: Token is stored via `setAuth(user, token)` in auth store
+- **Retrieval**: Token is retrieved via `getToken()` in API interceptor
+- **Removal**: Token is removed via `logout()` or `removeToken()` on auth errors
+- **Consistency**: All token operations use the shared `TOKEN_KEY` constant
+
+**Token Flow:**
+1. User authenticates successfully
+2. Token is stored in both Zustand store and `sessionStorage`
+3. API interceptor reads token from `sessionStorage` for all requests
+4. Token is included in `Authorization: Bearer <token>` header
+5. On logout or auth error, token is removed from both locations
+
+**Configuration:**
+```typescript
+// Token key constant (frontend/src/constants/auth.ts)
+export const TOKEN_KEY = 'auth_token';
+
+// Usage in API interceptor
+import { TOKEN_KEY } from '../constants/auth';
+const token = sessionStorage.getItem(TOKEN_KEY);
+```
+
+**Future Improvements:**
+- TODO: Migrate to httpOnly cookies for production (requires backend changes)
+- Current implementation is acceptable for development/testing
+
+**Related Documentation:**
+- [Token Storage Consistency Fix](../fixes/token-storage-consistency-fix.md) - Detailed fix documentation
+- [Token Constants](../../frontend/src/constants/auth.ts) - Token configuration
+
 ## User Roles
 
 | Role | Description | Access Level |

@@ -469,7 +469,7 @@ const UploadModal = ({
               </h3>
               <div className="grid gap-4">
                 {companyDocs.map(doc => (
-                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="#60a5fa" />
+                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} />
                 ))}
               </div>
             </div>
@@ -482,7 +482,7 @@ const UploadModal = ({
               </h3>
               <div className="grid gap-4">
                 {representativeDocs.map(doc => (
-                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} color="#8b5cf6" />
+                  <DocumentCard key={doc.id} doc={doc} onUpload={onUpload} />
                 ))}
               </div>
             </div>
@@ -510,11 +510,9 @@ const UploadModal = ({
 const DocumentCard = ({
   doc,
   onUpload,
-  color,
 }: {
   doc: DocumentType;
   onUpload: (id: string, file: File) => void;
-  color: string;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -585,11 +583,6 @@ const EntityCategoryCard = ({
   colorScheme: 'cea' | 'eua';
 }) => {
   const Icon = category.icon;
-  const gradients = {
-    cea: ['#dc2626', '#f97316'],
-    eua: ['#3b82f6', '#8b5cf6'],
-  };
-
   return (
     <motion.div
       className={`p-6 rounded-2xl cursor-pointer transition-all ${
@@ -601,10 +594,11 @@ const EntityCategoryCard = ({
       whileHover={{ y: -4, opacity: 1 }}
     >
       <div
-        className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-        style={{
-          background: `linear-gradient(135deg, ${gradients[colorScheme][0]} 0%, ${gradients[colorScheme][1]} 100%)`
-        }}
+        className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
+          colorScheme === 'cea'
+            ? 'bg-gradient-to-br from-red-600 to-orange-500'
+            : 'bg-gradient-to-br from-blue-500 to-violet-500'
+        }`}
       >
         <Icon className="w-7 h-7 text-white" />
       </div>
@@ -650,10 +644,11 @@ const EntityCategoryDetail = ({
     >
       <div className="flex items-center gap-4 pb-6 mb-6 border-b border-navy-700">
         <div
-          className="w-16 h-16 rounded-xl flex items-center justify-center"
-          style={{
-            background: `linear-gradient(135deg, ${gradients[colorScheme][0]} 0%, ${gradients[colorScheme][1]} 100%)`
-          }}
+          className={`w-16 h-16 rounded-xl flex items-center justify-center ${
+            colorScheme === 'cea'
+              ? 'bg-gradient-to-br from-red-600 to-orange-500'
+              : 'bg-gradient-to-br from-blue-500 to-violet-500'
+          }`}
         >
           <Icon className="w-8 h-8 text-white" />
         </div>
@@ -917,10 +912,7 @@ export default function OnboardingPage() {
         {/* Hero Section */}
         <section className="text-center py-16 relative">
           <div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(13, 148, 136, 0.2) 0%, transparent 70%)',
-            }}
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none bg-radial-gradient from-teal-500/20 to-transparent"
           />
           <h2 className="text-5xl font-extrabold mb-4 relative">
             Welcome to
@@ -1071,13 +1063,12 @@ export default function OnboardingPage() {
 
           {/* Market Comparison Table */}
           <div
-            className="rounded-2xl p-6 overflow-x-auto"
-            className="bg-navy-800 border border-navy-700"
+            className="rounded-2xl p-6 overflow-x-auto bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">Key Regulatory Differences</h4>
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                <tr className="bg-white/5">
                   <th className="text-left p-4 font-semibold rounded-tl-lg">Dimension</th>
                   <th className="text-left p-4 font-semibold">EU ETS</th>
                   <th className="text-left p-4 font-semibold rounded-tr-lg">China ETS</th>
@@ -1111,11 +1102,7 @@ export default function OnboardingPage() {
 
           {/* Key Insight Box */}
           <div
-            className="p-6 rounded-xl text-center mt-8"
-            style={{
-              background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-              border: "1px solid #8b5cf6",
-            }}
+            className="p-6 rounded-xl text-center mt-8 bg-gradient-to-br from-amber-500/10 to-red-600/10 border border-violet-500"
           >
             <strong className="text-amber-500">Key Opportunity:</strong>{' '}
             <span className="text-navy-200">
@@ -1129,8 +1116,7 @@ export default function OnboardingPage() {
         <section id="nihao" className="mb-20">
           <div className="flex items-center gap-4 mb-8">
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              className="bg-gradient-to-br from-teal-500 to-blue-700"
+              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-gradient-to-br from-teal-500 to-blue-700"
             >
               2
             </div>
@@ -1143,12 +1129,10 @@ export default function OnboardingPage() {
           {/* Company Overview */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div
-              className="rounded-2xl p-6"
-              className="bg-navy-800 border border-navy-700"
+              className="rounded-2xl p-6 bg-navy-800 border border-navy-700"
             >
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                className="bg-gradient-to-br from-teal-500 to-blue-700"
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br from-teal-500 to-blue-700"
               >
                 <Globe className="w-7 h-7 text-white" />
               </div>
@@ -1157,14 +1141,8 @@ export default function OnboardingPage() {
                 Strategic positioning at the intersection of European and Chinese carbon markets, leveraging Hong Kong's unique role as a gateway.
               </p>
             </div>
-            <div
-              className="rounded-2xl p-6"
-              className="bg-navy-800 border border-navy-700"
-            >
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ef4444 100%)` }}
-              >
+            <div className="rounded-2xl p-6 bg-navy-800 border border-navy-700">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br from-violet-500 to-red-500">
                 <Scale className="w-7 h-7 text-white" />
               </div>
               <h4 className="font-bold text-lg mb-2">Regulatory Compliance</h4>
@@ -1172,14 +1150,8 @@ export default function OnboardingPage() {
                 Full compliance with Hong Kong SFC oversight, AML/KYC standards comparable to EU, and FATCA/CRS requirements.
               </p>
             </div>
-            <div
-              className="rounded-2xl p-6"
-              className="bg-navy-800 border border-navy-700"
-            >
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` }}
-              >
+            <div className="rounded-2xl p-6 bg-navy-800 border border-navy-700">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br from-violet-500 to-pink-500">
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <h4 className="font-bold text-lg mb-2">Secure Infrastructure</h4>
@@ -1191,8 +1163,7 @@ export default function OnboardingPage() {
 
           {/* Service Offerings */}
           <div
-            className="rounded-2xl p-8 mb-8"
-            className="bg-navy-800 border border-navy-700"
+            className="rounded-2xl p-8 mb-8 bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">Our Services</h4>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1220,13 +1191,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Hong Kong Advantages */}
-          <div
-            className="rounded-2xl p-8"
-            className="border border-teal-500"
-            style={{
-              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`
-            }}
-          >
+          <div className="rounded-2xl p-8 border border-teal-500 bg-gradient-to-br from-teal-500/15 to-blue-700/15">
             <h4 className="text-xl font-semibold mb-6 text-teal-300">
               Why Hong Kong?
             </h4>
@@ -1249,10 +1214,7 @@ export default function OnboardingPage() {
         {/* SECTION 3: For CEA Holders */}
         <section id="cea-holders" className="mb-20">
           <div className="flex items-center gap-4 mb-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-gradient-to-br from-red-500 to-orange-500">
               3
             </div>
             <div>
@@ -1262,8 +1224,7 @@ export default function OnboardingPage() {
           </div>
 
           <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: "rgba(239, 68, 68, 0.13)", color: "#ef4444" }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium bg-red-500/13 text-red-500"
           >
             <span className="animate-pulse">👆</span>
             Select an entity category to view full details
@@ -1294,33 +1255,27 @@ export default function OnboardingPage() {
           </AnimatePresence>
 
           {/* CEA Advantages Summary */}
-          <div
-            className="p-6 rounded-xl mt-8"
-            style={{
-              background: `linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%)`,
-              border: "1px solid #ef4444",
-            }}
-          >
+          <div className="p-6 rounded-xl mt-8 bg-gradient-to-br from-red-600/10 to-orange-500/10 border border-red-500">
             <h5 className="font-semibold mb-4 text-red-500">
               Key Advantages for CEA Holders via Nihao
             </h5>
             <div className="grid md:grid-cols-4 gap-4">
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <DollarSign className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
                 <div className="text-xl font-bold text-emerald-500">8-15%</div>
                 <div className="text-xs text-navy-200">Price Premium</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <Shield className="w-8 h-8 mx-auto mb-2 text-teal-300" />
                 <div className="text-xl font-bold text-teal-300">High</div>
                 <div className="text-xs text-navy-200">Confidentiality</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <Scale className="w-8 h-8 mx-auto mb-2 text-amber-500" />
                 <div className="text-xl font-bold text-amber-500">Lower</div>
                 <div className="text-xs text-navy-200">Regulatory Scrutiny</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <Zap className="w-8 h-8 mx-auto mb-2 text-blue-400" />
                 <div className="text-xl font-bold text-blue-400">Custom</div>
                 <div className="text-xs text-navy-200">Transaction Structuring</div>
@@ -1332,10 +1287,7 @@ export default function OnboardingPage() {
         {/* SECTION 4: For EUA Holders */}
         <section id="eua-holders" className="mb-20">
           <div className="flex items-center gap-4 mb-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #60a5fa 0%, #8b5cf6 100%)` }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-gradient-to-br from-blue-400 to-violet-500">
               4
             </div>
             <div>
@@ -1345,8 +1297,7 @@ export default function OnboardingPage() {
           </div>
 
           <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: "rgba(96, 165, 250, 0.13)", color: "#60a5fa" }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium bg-blue-400/13 text-blue-400"
           >
             <span className="animate-pulse">👆</span>
             Select an entity category to view full details
@@ -1377,34 +1328,28 @@ export default function OnboardingPage() {
           </AnimatePresence>
 
           {/* EUA Swap Advantage Box */}
-          <div
-            className="p-6 rounded-xl mt-8"
-            style={{
-              background: `linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)`,
-              border: "1px solid #60a5fa",
-            }}
-          >
+          <div className="p-6 rounded-xl mt-8 bg-gradient-to-br from-blue-500/10 to-violet-500/10 border border-blue-400">
             <h5 className="font-semibold mb-4 text-blue-400">
               EUA-to-CEA Swap Value Breakdown
             </h5>
             <div className="grid md:grid-cols-5 gap-4">
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" className="text-emerald-500">8-18%</div>
-                <div className="text-xs" className="text-navy-200">Price Arbitrage</div>
+              <div className="text-center p-4 rounded-lg bg-black/20">
+                <div className="text-xl font-bold text-emerald-500">8-18%</div>
+                <div className="text-xs text-navy-200">Price Arbitrage</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" className="text-teal-300">1-8%</div>
-                <div className="text-xs" className="text-navy-200">Timing Optimization</div>
+              <div className="text-center p-4 rounded-lg bg-black/20">
+                <div className="text-xl font-bold text-teal-300">1-8%</div>
+                <div className="text-xs text-navy-200">Timing Optimization</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-amber-500">1-3%</div>
                 <div className="text-xs text-navy-200">Operational Efficiency</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-blue-400">1-2%</div>
                 <div className="text-xs text-navy-200">Currency Management</div>
               </div>
-              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-4 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-purple-400">1-4%</div>
                 <div className="text-xs text-navy-200">Strategic Positioning</div>
               </div>
@@ -1415,10 +1360,7 @@ export default function OnboardingPage() {
         {/* SECTION 5: For EU Entities */}
         <section id="eu-entities" className="mb-20">
           <div className="flex items-center gap-4 mb-8">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #10b981 0%, #10b981 100%)` }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-emerald-500">
               5
             </div>
             <div>
@@ -1453,8 +1395,7 @@ export default function OnboardingPage() {
 
           {/* KYC Documents Section */}
           <div
-            className="rounded-2xl p-8 mt-8"
-            className="bg-navy-800 border border-navy-700"
+            className="rounded-2xl p-8 mt-8 bg-navy-800 border border-navy-700"
           >
             <h4 className="text-xl font-semibold mb-6">KYC Documentation Requirements (23 Documents)</h4>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1475,38 +1416,32 @@ export default function OnboardingPage() {
           </div>
 
           {/* EU Entity Value Summary */}
-          <div
-            className="p-6 rounded-xl mt-8"
-            style={{
-              background: `linear-gradient(135deg, rgba(22, 163, 74, 0.15) 0%, rgba(13, 148, 136, 0.15) 100%)`,
-              border: "1px solid #10b981",
-            }}
-          >
+          <div className="p-6 rounded-xl mt-8 bg-gradient-to-br from-green-600/15 to-teal-500/15 border border-emerald-500">
             <h5 className="font-semibold mb-4 text-emerald-500">
               Total Value Advantages for EU Entities
             </h5>
             <div className="grid md:grid-cols-6 gap-4">
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" className="text-emerald-500">8-15%</div>
-                <div className="text-xs" className="text-navy-200">Price Advantage</div>
+              <div className="text-center p-3 rounded-lg bg-black/20">
+                <div className="text-xl font-bold text-emerald-500">8-15%</div>
+                <div className="text-xs text-navy-200">Price Advantage</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                <div className="text-xl font-bold" className="text-teal-300">EUR 45-340K</div>
-                <div className="text-xs" className="text-navy-200">Cost Reduction</div>
+              <div className="text-center p-3 rounded-lg bg-black/20">
+                <div className="text-xl font-bold text-teal-300">EUR 45-340K</div>
+                <div className="text-xs text-navy-200">Cost Reduction</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-3 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-amber-500">EUR 25-150K</div>
                 <div className="text-xs text-navy-200">Working Capital</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-3 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-blue-400">EUR 25-250K</div>
                 <div className="text-xs text-navy-200">Regulatory Savings</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-3 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-purple-400">1-3%</div>
                 <div className="text-xs text-navy-200">Operational</div>
               </div>
-              <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+              <div className="text-center p-3 rounded-lg bg-black/20">
                 <div className="text-xl font-bold text-emerald-500">15-25%</div>
                 <div className="text-xs text-navy-200">Total Benefit</div>
               </div>
@@ -1516,21 +1451,14 @@ export default function OnboardingPage() {
 
         {/* CTA Section */}
         <section className="text-center py-16">
-          <div
-            className="rounded-3xl p-12"
-            className="border border-teal-500"
-            style={{
-              background: `linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%)`
-            }}
-          >
+          <div className="rounded-3xl p-12 border border-teal-500 bg-gradient-to-br from-teal-500/20 to-blue-700/20">
             <h3 className="text-3xl font-bold mb-4">Ready to Get Started?</h3>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-navy-200">
               Complete your KYC documentation to access the Nihao marketplace and start benefiting from bilateral carbon trading opportunities.
             </p>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all"
-              className="bg-gradient-to-br from-teal-500 to-blue-700"
+              className="px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all bg-gradient-to-br from-teal-500 to-blue-700"
             >
               Complete Your KYC Documentation
             </button>
@@ -1540,8 +1468,7 @@ export default function OnboardingPage() {
 
       {/* Footer */}
       <footer
-        className="text-center py-12"
-        style={{ borderTop: "1px solid #475569" }}
+        className="text-center py-12 border-t border-navy-600"
       >
         <p className="font-semibold text-navy-200">
           Nihao Group Hong Kong | Carbon Market Intermediation | January 2026

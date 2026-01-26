@@ -15,12 +15,12 @@ interface TicketLog {
   entity_type: string;
   entity_id?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: any;
-  response_data?: any;
+  request_payload?: Record<string, unknown>;
+  response_data?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
-  before_state?: any;
-  after_state?: any;
+  before_state?: Record<string, unknown>;
+  after_state?: Record<string, unknown>;
   related_ticket_ids: string[];
   tags: string[];
 }
@@ -52,7 +52,7 @@ export function SearchTicketsTab() {
     setHasSearched(true);
 
     try {
-      const params: any = { limit: 100 };
+      const params: Record<string, unknown> = { limit: 100 };
       if (ticketId) params.search = ticketId;
       if (actionType) params.action_type = [actionType];
       if (entityType) params.entity_type = entityType;
@@ -67,8 +67,9 @@ export function SearchTicketsTab() {
       const { data } = await getTickets(params);
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to search tickets');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to search tickets');
     } finally {
       setLoading(false);
     }

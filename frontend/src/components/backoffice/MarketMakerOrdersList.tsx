@@ -52,6 +52,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
     // Auto-refresh every 5 seconds
     const interval = setInterval(loadOrders, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMM, selectedStatus, selectedCertType]);
 
   const loadMarketMakers = async () => {
@@ -67,7 +68,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
     setLoading(true);
     setError(null);
     try {
-      const params: any = {};
+      const params: Record<string, unknown> = {};
       if (selectedMM) params.market_maker_id = selectedMM;
       if (selectedStatus) params.status = selectedStatus;
       if (selectedCertType) params.certificate_type = selectedCertType;
@@ -84,9 +85,10 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       });
 
       setOrders(ordersWithMM);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load orders:', err);
-      setError(err.response?.data?.detail || 'Failed to load orders');
+      setError(error.response?.data?.detail || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -99,9 +101,10 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       await cancelMarketMakerOrder(cancelOrder.id);
       loadOrders();
       setCancelOrder(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to cancel order:', err);
-      setError(err.response?.data?.detail || 'Failed to cancel order');
+      setError(error.response?.data?.detail || 'Failed to cancel order');
     } finally {
       setCancelling(false);
     }

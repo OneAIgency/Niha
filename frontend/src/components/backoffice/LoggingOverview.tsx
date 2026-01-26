@@ -22,8 +22,9 @@ export function LoggingOverview() {
     try {
       const { data } = await getLoggingStats();
       setStats(data);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch logging statistics');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to fetch logging statistics');
     } finally {
       setLoading(false);
     }

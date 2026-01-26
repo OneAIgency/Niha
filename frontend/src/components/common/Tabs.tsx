@@ -42,7 +42,7 @@ export function Tabs({
 
   if (variant === 'toggle') {
     return (
-      <div className={cn('tab-toggle', fullWidth && 'w-full', className)}>
+      <div className={cn('tab-toggle', fullWidth && 'w-full', className)} role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -52,9 +52,12 @@ export function Tabs({
               'tab-toggle-item',
               sizeStyles[size],
               fullWidth && 'flex-1',
-              activeTab === tab.id ? 'bg-slate-800 text-white' : 'tab-toggle-item-inactive',
+              activeTab === tab.id ? 'bg-navy-800 text-white' : 'tab-toggle-item-inactive',
               tab.disabled && 'opacity-50 cursor-not-allowed'
             )}
+            aria-label={tab.label}
+            aria-selected={activeTab === tab.id}
+            role="tab"
           >
             {tab.icon && <span className="mr-2">{tab.icon}</span>}
             {tab.label}
@@ -71,7 +74,7 @@ export function Tabs({
 
   if (variant === 'pills') {
     return (
-      <div className={cn('tab-group', fullWidth && 'w-full', className)}>
+      <div className={cn('tab-group', fullWidth && 'w-full', className)} role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -85,6 +88,9 @@ export function Tabs({
               activeTab === tab.id ? 'tab-button-active' : 'tab-button-inactive',
               tab.disabled && 'opacity-50 cursor-not-allowed'
             )}
+            aria-label={tab.label}
+            aria-selected={activeTab === tab.id}
+            role="tab"
           >
             {tab.icon}
             {tab.label}
@@ -101,7 +107,7 @@ export function Tabs({
 
   if (variant === 'underline') {
     return (
-      <div className={cn('flex border-b border-navy-200 dark:border-navy-700', fullWidth && 'w-full', className)}>
+      <div className={cn('flex border-b border-navy-200 dark:border-navy-700', fullWidth && 'w-full', className)} role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -117,6 +123,9 @@ export function Tabs({
                 : 'text-navy-500 dark:text-navy-400 hover:text-navy-700 dark:hover:text-navy-300',
               tab.disabled && 'opacity-50 cursor-not-allowed'
             )}
+            aria-label={tab.label}
+            aria-selected={activeTab === tab.id}
+            role="tab"
           >
             {tab.icon}
             {tab.label}
@@ -133,7 +142,7 @@ export function Tabs({
 
   // Default variant
   return (
-    <div className={cn('flex gap-1', fullWidth && 'w-full', className)}>
+    <div className={cn('flex gap-1', fullWidth && 'w-full', className)} role="tablist">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -149,6 +158,9 @@ export function Tabs({
               : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800',
             tab.disabled && 'opacity-50 cursor-not-allowed'
           )}
+          aria-label={tab.label}
+          aria-selected={activeTab === tab.id}
+          role="tab"
         >
           {tab.icon}
           {tab.label}

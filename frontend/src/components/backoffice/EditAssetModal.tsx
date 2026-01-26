@@ -89,8 +89,9 @@ export function EditAssetModal({
       });
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to update balance');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to update balance');
     } finally {
       setLoading(false);
     }
@@ -127,27 +128,27 @@ export function EditAssetModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
                 <div className="flex items-center gap-3">
                   <div className={cn('p-2.5 rounded-xl', config.bgClass)}>
                     <Icon className={cn('w-5 h-5', config.textClass)} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-navy-900 dark:text-white">
                       Edit {config.label}
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-navy-500 dark:text-navy-400">
                       {entityName}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-navy-400 hover:text-navy-600 dark:hover:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -157,7 +158,7 @@ export function EditAssetModal({
               <div className="p-6 space-y-5">
                 {/* Current Balance */}
                 <div className={cn('p-4 rounded-xl', config.bgClass)}>
-                  <div className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 mb-1">
                     Current Balance
                   </div>
                   <div className={cn('text-2xl font-bold font-mono', config.textClass)}>
@@ -167,7 +168,7 @@ export function EditAssetModal({
 
                 {/* New Balance Input */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                     New Balance *
                   </label>
                   <input
@@ -178,8 +179,8 @@ export function EditAssetModal({
                     step={assetType === 'EUR' ? '0.01' : '1'}
                     min="0"
                     className={cn(
-                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-lg',
-                      'placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
+                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono text-lg',
+                      'placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
                       config.borderClass, config.ringClass
                     )}
                     autoFocus
@@ -188,15 +189,15 @@ export function EditAssetModal({
 
                 {/* Notes (optional) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Admin Notes <span className="text-slate-400">(optional)</span>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                    Admin Notes <span className="text-navy-400">(optional)</span>
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Reason for adjustment..."
                     rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                   />
                 </div>
 
@@ -209,19 +210,19 @@ export function EditAssetModal({
                       'p-4 rounded-xl border',
                       isIncrease && 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
                       isDecrease && 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-                      isUnchanged && 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                      isUnchanged && 'bg-navy-50 dark:bg-navy-800/50 border-navy-200 dark:border-navy-700'
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {isIncrease && <TrendingUp className="w-4 h-4 text-emerald-500" />}
                         {isDecrease && <TrendingDown className="w-4 h-4 text-red-500" />}
-                        {isUnchanged && <Minus className="w-4 h-4 text-slate-400" />}
+                        {isUnchanged && <Minus className="w-4 h-4 text-navy-400" />}
                         <span className={cn(
                           'text-sm font-medium',
                           isIncrease && 'text-emerald-600 dark:text-emerald-400',
                           isDecrease && 'text-red-600 dark:text-red-400',
-                          isUnchanged && 'text-slate-500'
+                          isUnchanged && 'text-navy-500'
                         )}>
                           {isIncrease && `+${config.format(delta)}`}
                           {isDecrease && config.format(delta)}

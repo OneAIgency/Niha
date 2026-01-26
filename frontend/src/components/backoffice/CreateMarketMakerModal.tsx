@@ -175,8 +175,9 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
         setEuaBalance('');
         setSuccess(false);
       }, 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create market maker');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to create market maker');
     } finally {
       setLoading(false);
     }

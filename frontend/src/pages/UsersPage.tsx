@@ -661,8 +661,9 @@ export function UsersPage() {
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+                  aria-label="Close modal"
                 >
-                  <X className="w-5 h-5 text-navy-500" />
+                  <X className="w-5 h-5 text-navy-500" aria-hidden="true" />
                 </button>
               </div>
               <div className="p-6 space-y-4">

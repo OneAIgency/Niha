@@ -36,6 +36,9 @@ redis_data/
 # Claude
 .claude/
 
+# Cursor
+.cursor/
+
 # Testing
 .coverage
 htmlcov/

@@ -12,12 +12,12 @@ interface TicketLog {
   entity_type: string;
   entity_id?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: any;
-  response_data?: any;
+  request_payload?: Record<string, unknown>;
+  response_data?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
-  before_state?: any;
-  after_state?: any;
+  before_state?: Record<string, unknown>;
+  after_state?: Record<string, unknown>;
   related_ticket_ids: string[];
   tags: string[];
 }

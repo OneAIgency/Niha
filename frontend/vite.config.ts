@@ -14,15 +14,29 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        // Use 'backend' service name for Docker networking
-        // For local development outside Docker, change to 'http://localhost:8000'
+        // Use Docker service name - frontend runs in Docker alongside backend
         target: 'http://backend:8000',
         changeOrigin: true,
-        // Enable WebSocket proxying for /api paths (e.g., /api/v1/prices/ws)
         ws: true,
-        // Rewrite WebSocket Origin header for proper handshake
         rewriteWsOrigin: true,
       },
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/dist/',
+      ],
     },
   },
 })

@@ -141,9 +141,10 @@ export function PlaceMarketOrderSection({
 
       // Clear success after 5 seconds
       setTimeout(() => setSuccess(null), 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to place order:', err);
-      setError(err.response?.data?.detail || 'Failed to place order');
+      setError(error.response?.data?.detail || 'Failed to place order');
     } finally {
       setLoading(false);
     }

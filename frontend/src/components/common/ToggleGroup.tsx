@@ -20,7 +20,7 @@ interface ToggleGroupProps {
 
 const colorSchemes = {
   default: {
-    active: 'bg-slate-800 text-white',
+    active: 'bg-navy-800 text-white',
     inactive: 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700',
   },
   eua: {

@@ -74,6 +74,7 @@ export function AddAssetModal({
     if (isOpen && entityId) {
       fetchAssets();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, entityId]);
 
   // Reset form when modal closes
@@ -124,8 +125,9 @@ export function AddAssetModal({
       });
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add asset');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to add asset');
     } finally {
       setLoading(false);
     }
@@ -170,23 +172,23 @@ export function AddAssetModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
                     <Plus className="w-5 h-5 text-emerald-500" />
                     Add Asset
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
                     {entityName}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg text-navy-400 hover:text-navy-600 dark:hover:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -194,7 +196,7 @@ export function AddAssetModal({
 
               {/* Asset Type Tabs */}
               <div className="p-6 pb-0">
-                <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <div className="flex gap-2 p-1 bg-navy-100 dark:bg-navy-800 rounded-xl">
                   {(['EUR', 'CEA', 'EUA'] as const).map((asset) => {
                     const cfg = ASSET_CONFIG[asset];
                     const Icon = cfg.icon;
@@ -206,8 +208,8 @@ export function AddAssetModal({
                         className={cn(
                           'flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all',
                           isSelected
-                            ? `bg-white dark:bg-slate-700 shadow-sm ${cfg.textClass}`
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                            ? `bg-white dark:bg-navy-700 shadow-sm ${cfg.textClass}`
+                            : 'text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
                         )}
                       >
                         <Icon className="w-4 h-4" />
@@ -222,7 +224,7 @@ export function AddAssetModal({
               <div className="p-6 space-y-4">
                 {/* Current Balance */}
                 <div className={cn('p-4 rounded-xl', config.bgClass)}>
-                  <div className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 mb-1">
                     Current {config.label} Balance
                   </div>
                   <div className={cn('text-2xl font-bold font-mono', config.textClass)}>
@@ -232,7 +234,7 @@ export function AddAssetModal({
 
                 {/* Amount Input */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                     Amount to Add *
                   </label>
                   <input
@@ -243,11 +245,11 @@ export function AddAssetModal({
                     step={selectedAsset === 'EUR' ? '0.01' : '1'}
                     min="0"
                     className={cn(
-                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-lg',
-                      'placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
+                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono text-lg',
+                      'placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
                       amount && parseFloat(amount) > 0
                         ? `${config.borderClass} focus:ring-${config.color}-500`
-                        : 'border-slate-200 dark:border-slate-700 focus:ring-slate-500'
+                        : 'border-navy-200 dark:border-navy-700 focus:ring-navy-500'
                     )}
                     autoFocus
                   />
@@ -255,8 +257,8 @@ export function AddAssetModal({
 
                 {/* Reference (optional) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Reference <span className="text-slate-400">(optional)</span>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                    Reference <span className="text-navy-400">(optional)</span>
                   </label>
                   <input
                     type="text"
@@ -264,21 +266,21 @@ export function AddAssetModal({
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="Wire reference, certificate ID..."
                     maxLength={100}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500"
                   />
                 </div>
 
                 {/* Notes (optional) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Admin Notes <span className="text-slate-400">(optional)</span>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                    Admin Notes <span className="text-navy-400">(optional)</span>
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Internal notes..."
                     rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                   />
                 </div>
 
@@ -287,10 +289,10 @@ export function AddAssetModal({
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700"
+                    className="p-4 bg-navy-50 dark:bg-navy-800/50 rounded-xl border border-navy-200 dark:border-navy-700"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="text-sm text-navy-500 dark:text-navy-400">
                         New Balance
                       </span>
                       <span className={cn('text-lg font-bold font-mono', config.textClass)}>

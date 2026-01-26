@@ -89,10 +89,11 @@ export function UserOrderEntryModal({
         });
 
         setPreview(previewData);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { detail?: string } } };
         console.error('Preview error:', error);
         setPreviewError(
-          error.response?.data?.detail || 'Failed to preview order. Please try again.'
+          err.response?.data?.detail || 'Failed to preview order. Please try again.'
         );
         setPreview(null);
       } finally {

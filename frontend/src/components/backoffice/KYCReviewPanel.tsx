@@ -161,7 +161,7 @@ export function KYCReviewPanel({
               onClick={() => setActiveCategory(cat.id)}
               className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeCategory === cat.id
-                  ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20'
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
                   : 'text-navy-500 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800'
               }`}
             >
@@ -175,7 +175,7 @@ export function KYCReviewPanel({
               {activeCategory === cat.id && (
                 <motion.div
                   layoutId="activeCategory"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-500"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
                 />
               )}
             </button>

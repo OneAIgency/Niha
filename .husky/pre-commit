@@ -1,1 +1,11 @@
-cd frontend && node scripts/check-design-system.js
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Get the repository root directory
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Run design system checks
+cd "$REPO_ROOT/frontend" && node scripts/check-design-system.js
+
+# Run ESLint to catch syntax errors and duplicate props
+cd "$REPO_ROOT/frontend" && npm run lint

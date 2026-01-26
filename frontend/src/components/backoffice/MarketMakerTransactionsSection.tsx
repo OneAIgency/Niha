@@ -43,6 +43,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marketMakerId]);
 
   const loadData = async () => {
@@ -55,9 +56,10 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
       ]);
       setBalances(balancesData);
       setTransactions(transactionsData);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load data:', err);
-      setError(err.response?.data?.detail || 'Failed to load transactions');
+      setError(error.response?.data?.detail || 'Failed to load transactions');
     } finally {
       setLoading(false);
     }
@@ -89,8 +91,9 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
 
       // Reload data
       loadData();
-    } catch (err: any) {
-      setSubmitError(err.response?.data?.detail || 'Failed to create transaction');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setSubmitError(error.response?.data?.detail || 'Failed to create transaction');
     } finally {
       setSubmitting(false);
     }

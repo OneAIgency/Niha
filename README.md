@@ -5,7 +5,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 ## Features
 
 ### Core Trading Platform
-- **User Authentication** - Secure JWT-based authentication
+- **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects
 - **User Profile Management** - View and manage personal information (admin-only editing)
 - **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
@@ -27,7 +27,7 @@ Comprehensive admin interface with compact navigation and page-specific action b
 - **Accessibility** - Full ARIA support, keyboard navigation, and screen reader compatibility
 
 #### Pages:
-- **Backoffice Dashboard** - Contact requests, KYC review, deposits, user details
+- **Backoffice Dashboard** - Contact requests, KYC review, deposits, user details (modular component architecture)
 - **Market Makers** - Manage AI-powered market maker clients
 - **Market Orders** - Place orders on behalf of market makers with CEA/EUA toggle, Place BID/ASK modals, and order book; price-click opens correct modal with prefilled price
 - **Order Book** - View order book and place MM orders (see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md))

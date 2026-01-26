@@ -5,15 +5,32 @@ module.exports = {
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
+    'plugin:react/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
   parser: '@typescript-eslint/parser',
-  plugins: ['react-refresh'],
+  parserOptions: {
+    ecmaFeatures: {
+      jsx: true,
+    },
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
+  plugins: ['react-refresh', 'react'],
   rules: {
     'react-refresh/only-export-components': [
       'warn',
       { allowConstantExport: true },
     ],
+    // Prevent duplicate JSX attributes (e.g., duplicate className)
+    'react/jsx-no-duplicate-props': 'error',
+    // React is in scope with new JSX transform, so we can disable this
+    'react/react-in-jsx-scope': 'off',
     // Design system color enforcement
     'no-restricted-syntax': [
       'error',

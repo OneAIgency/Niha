@@ -54,11 +54,25 @@ Each route has a `RouteConfig`: `icon`, `iconBg`, `iconColor`, `description`. Th
 
 ## Components
 
+### Layout Components
+
 - **`BackofficeLayout`** – `frontend/src/components/layout/BackofficeLayout.tsx`
 - **`SubSubHeader`** – `frontend/src/components/common/SubSubHeader.tsx`
 - **`Subheader`** – `frontend/src/components/common/Subheader.tsx`
 
+### Dashboard Components
+
+The Backoffice Dashboard (`/backoffice`) uses modular components for better maintainability:
+
+- **`ContactRequestsTab`** – Manages contact requests with real-time updates
+- **`PendingDepositsTab`** – Handles deposit confirmations and rejections
+- **`DocumentViewerModal`** – Displays document previews (images, PDFs)
+- **`KYCReviewPanel`** – KYC document review interface
+
+See [Backoffice Components Architecture](BACKOFFICE_COMPONENTS.md) for detailed component documentation.
+
 ## See Also
 
+- [Backoffice Components Architecture](BACKOFFICE_COMPONENTS.md) – Component structure and usage
 - [PlaceOrder component](../api/PLACE_ORDER_COMPONENT.md) – Used in Market Orders (and Order Book) for BID/ASK placement
 - [Market Makers guide](MARKET_MAKERS_GUIDE.md) – MM management and workflows

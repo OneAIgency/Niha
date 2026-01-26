@@ -72,8 +72,9 @@ export function TransactionForm({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create transaction');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to create transaction');
     } finally {
       setSubmitting(false);
     }
