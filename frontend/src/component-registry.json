@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-26T05:59:30.879Z",
+  "generatedAt": "2026-01-26T16:34:42.382Z",
   "components": [
     {
       "name": "AddAssetModal",
@@ -330,6 +330,35 @@
       "description": ""
     },
     {
+      "name": "IPLookupModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/IPLookupModal.tsx",
+      "importPath": "components/backoffice/IPLookupModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "ipLookupData",
+          "type": "IPLookupResult | null",
+          "optional": false
+        },
+        {
+          "name": "ipLookupLoading",
+          "type": "boolean",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
       "name": "KYCReviewPanel",
       "category": "backoffice",
       "path": "src/components/backoffice/KYCReviewPanel.tsx",
@@ -389,6 +418,65 @@
           "name": "actionLoading",
           "type": "string | null",
           "optional": true
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "KYCReviewTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/KYCReviewTab.tsx",
+      "importPath": "components/backoffice/KYCReviewTab",
+      "props": [
+        {
+          "name": "kycUsers",
+          "type": "KYCUser[]",
+          "optional": false
+        },
+        {
+          "name": "kycDocuments",
+          "type": "KYCDocument[]",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "actionLoading",
+          "type": "string | null",
+          "optional": false
+        },
+        {
+          "name": "onApproveKYC",
+          "type": "(userId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onRejectKYC",
+          "type": "(userId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onReviewDocument",
+          "type": "(docId: string, status: 'approved' | 'rejected', notes?: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onOpenDocumentViewer",
+          "type": "(doc: KYCDocument) => void",
+          "optional": false
+        },
+        {
+          "name": "getUserDocuments",
+          "type": "(userId: string) => KYCDocument[]",
+          "optional": false
+        },
+        {
+          "name": "setActionLoading",
+          "type": "(loading: string | null) => void",
+          "optional": false
         }
       ],
       "description": ""
@@ -666,6 +754,40 @@
         {
           "name": "currentBalances",
           "type": "{ cea_balance: number; eua_balance: number;",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "UserDetailsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/UserDetailsTab.tsx",
+      "importPath": "components/backoffice/UserDetailsTab",
+      "props": [
+        {
+          "name": "selectedUser",
+          "type": "SelectedUserDetails | null",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "searchQuery",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "onSearchQueryChange",
+          "type": "(query: string) => void",
+          "optional": false
+        },
+        {
+          "name": "onSearchUser",
+          "type": "() => void",
           "optional": false
         }
       ],
@@ -2040,6 +2162,157 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "CreateUserModal",
+      "category": "users",
+      "path": "src/components/users/CreateUserModal.tsx",
+      "importPath": "components/users/CreateUserModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "newUser",
+          "type": "{ email: string; first_name: string; last_name: string; position: string; password: string; role: UserRole;",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "EditUserModal",
+      "category": "users",
+      "path": "src/components/users/EditUserModal.tsx",
+      "importPath": "components/users/EditUserModal",
+      "props": [
+        {
+          "name": "user",
+          "type": "UserWithEntity | null",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "editForm",
+          "type": "{ first_name: string; last_name: string; position: string; role: UserRole; is_active: boolean;",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "PasswordResetModal",
+      "category": "users",
+      "path": "src/components/users/PasswordResetModal.tsx",
+      "importPath": "components/users/PasswordResetModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "userEmail",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "newPassword",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "setNewPassword",
+          "type": "(value: string) => void",
+          "optional": false
+        },
+        {
+          "name": "forceChange",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "setForceChange",
+          "type": "(value: boolean) => void",
+          "optional": false
+        },
+        {
+          "name": "onSubmit",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "resetting",
+          "type": "boolean",
+          "optional": false
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "UserDetailModal",
+      "category": "users",
+      "path": "src/components/users/UserDetailModal.tsx",
+      "importPath": "components/users/UserDetailModal",
+      "props": [
+        {
+          "name": "user",
+          "type": "AdminUserFull | null",
+          "optional": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "activeTab",
+          "type": "'info' | 'auth' | 'sessions' | 'deposits' | 'orders'",
+          "optional": false
+        },
+        {
+          "name": "setActiveTab",
+          "type": "(tab: 'info' | 'auth' | 'sessions' | 'deposits' | 'orders') => void",
+          "optional": false
+        },
+        {
+          "name": "onLoadDeposits",
+          "type": "(entityId: string) => void",
+          "optional": false
+        },
+        {
+          "name": "onShowPasswordReset",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onEditAsset",
+          "type": "(asset: { entityId: string; entityName: string; assetType: 'EUR' | 'CEA' | 'EUA'; currentBalance: number;",
+          "optional": false
+        }
+      ],
+      "description": ""
     }
   ],
   "categories": [
@@ -2049,6 +2322,7 @@
     "dashboard",
     "layout",
     "liquidity",
-    "onboarding"
+    "onboarding",
+    "users"
   ]
 }

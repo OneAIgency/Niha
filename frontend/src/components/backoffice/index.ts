@@ -13,3 +13,6 @@ export { DocumentViewerModal } from './DocumentViewerModal';
 export { MMOrderPlacementModal } from './MMOrderPlacementModal';
 export { PlaceOrder } from './PlaceOrder';
 export { AdminOrderBookSection } from './AdminOrderBookSection';
+export { KYCReviewTab } from './KYCReviewTab';
+export { UserDetailsTab } from './UserDetailsTab';
+export { IPLookupModal } from './IPLookupModal';
