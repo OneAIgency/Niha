@@ -41,7 +41,7 @@ Platformă completă pentru tranzacționarea certificatelor de carbon (EUA/CEA) 
 
 ## 🏗️ Implementation Phases
 
-### **PHASE 1: Backoffice Completion** (Sprints 5-8)
+### **PHASE 1: Backoffice Completion** (Sprints 5-7)
 Priority: Critical foundation for operations
 
 ### **PHASE 2: Client Journey** (Sprints 9-15)
@@ -62,7 +62,8 @@ Priority: Production readiness
 
 **Backend:**
 - [ ] POST `/api/v1/funding/deposits/announce` - Client announces wire transfer
-  - Request: { amount, currency, wire_reference, bank_details }
+  - Request: { amount, currency, wire_reference, bank_details: { iban, swift, bank_name, country } }
+  - Bank details provided ad-hoc (not pre-registered)
   - Creates deposit with status: PENDING
   - Returns deposit_id and wire instructions
 - [ ] GET `/api/v1/funding/deposits/my-deposits` - Client views their deposits
@@ -106,7 +107,8 @@ Priority: Production readiness
 
 **Backend:**
 - [ ] POST `/api/v1/funding/withdrawals/request` - Client requests withdrawal
-  - Request: { amount, currency, bank_account_id, reason }
+  - Request: { amount, currency, bank_details: { iban, swift, bank_name, account_holder }, reason }
+  - Bank details provided ad-hoc (not pre-registered)
   - Validates: sufficient balance, KYC approved
   - Creates withdrawal with status: PENDING
 - [ ] GET `/api/v1/funding/withdrawals/my-withdrawals` - List client withdrawals
@@ -125,9 +127,10 @@ Priority: Production readiness
 
 **Frontend:**
 - [ ] `WithdrawalRequestModal` - Client requests withdrawal
-  - Form: amount, currency, bank account selection
+  - Form: amount, currency, bank details (IBAN, SWIFT, bank name, account holder)
+  - IBAN validation
   - Validation: max = available balance
-  - Confirmation step
+  - Confirmation step with bank details summary
 - [ ] `MyWithdrawalsTab` - Client views withdrawal history
   - Status tracking with timeline
   - Cancellation option (if PENDING)
@@ -139,11 +142,10 @@ Priority: Production readiness
 
 **Database:**
 - [ ] Create `withdrawals` table
-  - Fields: id, user_id, entity_id, amount, currency, status, bank_account_id
+  - Fields: id, user_id, entity_id, amount, currency, status
+  - Bank details stored directly: bank_iban, bank_swift, bank_name, account_holder
   - Statuses: PENDING, APPROVED, PROCESSING, COMPLETED, REJECTED, CANCELLED
-  - Audit fields: approved_by, rejected_by, rejection_reason, completed_at
-- [ ] Create `bank_accounts` table (if not exists)
-  - Fields: user_id, account_name, iban, swift, bank_name, verified
+  - Audit fields: approved_by, rejected_by, rejection_reason, completed_at, wire_transfer_reference
 
 **Testing:**
 - [ ] Withdrawal request validation
@@ -155,60 +157,7 @@ Priority: Production readiness
 
 ---
 
-### Sprint 7: Bank Account Management
-**Goal:** Clients manage their bank accounts for deposits/withdrawals
-
-**Backend:**
-- [ ] POST `/api/v1/funding/bank-accounts` - Add bank account
-  - Request: { account_name, iban, swift, bank_name, country }
-  - Validation: IBAN format, required fields
-  - Status: PENDING_VERIFICATION
-- [ ] GET `/api/v1/funding/bank-accounts` - List client's bank accounts
-- [ ] PUT `/api/v1/funding/bank-accounts/{id}` - Update bank account
-  - Only if not verified yet
-- [ ] DELETE `/api/v1/funding/bank-accounts/{id}` - Remove bank account
-  - Only if no pending transactions
-- [ ] GET `/api/v1/admin/bank-accounts` - Admin views all accounts
-  - Filters: status, user, verification date
-- [ ] POST `/api/v1/admin/bank-accounts/{id}/verify` - Admin verifies
-  - Uploads verification document
-  - Status: PENDING_VERIFICATION → VERIFIED
-- [ ] POST `/api/v1/admin/bank-accounts/{id}/reject` - Admin rejects
-  - Status: PENDING_VERIFICATION → REJECTED
-  - Requires rejection reason
-
-**Frontend:**
-- [ ] `BankAccountsTab` - Client manages bank accounts
-  - List of saved accounts with status badges
-  - Add new account button
-  - Edit/Delete actions
-- [ ] `AddBankAccountModal` - Add/Edit bank account form
-  - Fields: IBAN, SWIFT, Bank Name, Country
-  - IBAN validation
-  - Preview wire instructions
-- [ ] `BankAccountsAdminTab` (Backoffice) - Admin verifies accounts
-  - Pending verification queue
-  - Verify/Reject actions
-  - Document viewer for proof
-
-**Database:**
-- [ ] Create `bank_accounts` table
-  - Fields: id, user_id, entity_id, account_name, iban, swift, bank_name, country
-  - status: PENDING_VERIFICATION, VERIFIED, REJECTED
-  - Audit: verified_by, verified_at, rejected_by, rejection_reason
-  - is_primary: boolean (default deposit/withdrawal account)
-
-**Testing:**
-- [ ] IBAN validation
-- [ ] Bank account CRUD operations
-- [ ] Verification workflow
-- [ ] Primary account selection
-
-**Estimated Time:** 6-8 hours
-
----
-
-### Sprint 8: Transaction History & Reporting
+### Sprint 7: Transaction History & Reporting
 **Goal:** Comprehensive transaction history and reporting for clients and admins
 
 **Backend:**
@@ -1011,14 +960,14 @@ for buy_order in buy_orders.order_by('price DESC, created_at ASC'):
 
 ## 🎯 Summary & Timeline
 
-### Total Estimated Time: **200-240 hours** (5-6 weeks at 40 hours/week)
+### Total Estimated Time: **194-232 hours** (~5-6 weeks at 40 hours/week)
 
 ### Phase Breakdown:
-- **Phase 1 (Backoffice Completion):** 32-40 hours (~1 week)
+- **Phase 1 (Backoffice Completion):** 26-32 hours (~4-5 days)
 - **Phase 2 (Client Journey):** 68-82 hours (~2 weeks)
 - **Phase 3 (Market Maker Integration):** 30-36 hours (~1 week)
 - **Phase 4 (Polish & Production):** 45-55 hours (~1.5 weeks)
-- **Buffer for unexpected issues:** ~20% = 40-48 hours
+- **Buffer for unexpected issues:** ~20% = 25-27 hours
 
 ---
 

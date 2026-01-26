@@ -326,11 +326,9 @@ export function LoginPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchParams] = useSearchParams();
-  const { setAuth, isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { setAuth } = useAuthStore();
+  // Note: isAuthenticated, user, and _hasHydrated are now handled by AuthGuard in App.tsx
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // NOTE: Redirect for authenticated users is now handled by AuthGuard in App.tsx
-  // This prevents redirect loops by having a single source of truth
 
   // Memoize verifyToken to prevent recreation and ensure stable reference
   // This helps prevent race conditions and unnecessary re-renders

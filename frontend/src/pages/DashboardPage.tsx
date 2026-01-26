@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   RefreshCw,
   TrendingUp,
-  TrendingDown,
   Wallet,
   Leaf,
   Wind,
@@ -45,7 +44,7 @@ interface EntityBalance {
   entity_id: string;
   entity_name: string;
   balance_amount: number;
-  balance_currency: string | null;
+  balance_currency?: string | null;
   total_deposited: number;
   deposit_count: number;
 }
@@ -190,13 +189,8 @@ export function DashboardPage() {
   const lastLocationRef = useRef<string>('');
   const isRefreshingBalanceRef = useRef<boolean>(false);
 
-  // Type definition for balance update event
-  interface BalanceUpdatedEvent extends CustomEvent {
-    detail: {
-      type: string;
-      source?: string;
-    };
-  }
+  // Note: Balance update events follow the pattern { detail: { type: string, source?: string } }
+  // Currently we just refresh on any balance update event
 
   // Derive portfolio from real data (prefer entityAssets over entityBalance for cash)
   const eurBalance = entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0;
@@ -355,9 +349,8 @@ export function DashboardPage() {
    * The event listener is properly cleaned up on component unmount to prevent memory leaks.
    */
   useEffect(() => {
-    const handleBalanceUpdate = (event: Event) => {
-      const customEvent = event as BalanceUpdatedEvent;
-      // Could use customEvent.detail.type or customEvent.detail.source for future filtering
+    const handleBalanceUpdate = (_event: Event) => {
+      // Note: _event could be cast to BalanceUpdatedEvent if we need detail.type or detail.source for filtering
       // Immediately refresh balance when trade is executed
       fetchBalance();
     };
@@ -993,7 +986,7 @@ export function DashboardPage() {
               rowKey="id"
               emptyMessage="No orders found. Place your first order in the Cash Market."
               className="border-none rounded-none"
-              getRowClassName={(row) => {
+              getRowClassName={(row: Transaction) => {
                 // Style swap transactions with violet accent to distinguish from regular BUY/SELL orders
                 // Matches the SWAP badge color scheme used elsewhere in the application
                 if (row.type === 'SWAP') {

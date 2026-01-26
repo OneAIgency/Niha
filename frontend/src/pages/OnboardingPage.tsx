@@ -4,7 +4,6 @@ import {
   CheckCircle,
   LogOut,
   Globe,
-  TrendingUp,
   Shield,
   Zap,
   DollarSign,

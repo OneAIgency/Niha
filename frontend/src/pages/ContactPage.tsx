@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Mail, Building2, User, Users, CheckCircle, ArrowRight } from 'lucide-react';
 import { Button, Input, Card } from '../components/common';
 import { contactApi } from '../services/api';
-import { isValidEmail, isCorporateEmail, sanitizeEmail, sanitizeString, sanitizeFormData } from '../utils';
+import { isValidEmail, isCorporateEmail, sanitizeFormData } from '../utils';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({

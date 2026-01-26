@@ -67,8 +67,9 @@ export function transformKeysToSnakeCase<T>(obj: unknown): T {
 
 /**
  * Type guard to check if value is a plain object
+ * Note: Exported for potential external use
  */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === 'object' &&
     value !== null &&

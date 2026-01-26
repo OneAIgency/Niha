@@ -23,8 +23,6 @@ import type {
 // =============================================================================
 
 const generateMockOrderBook = () => {
-  const basePrice = 81.50;
-
   const bids: OrderBookLevel[] = [
     { price: 81.450, quantity: 150, order_count: 3, cumulative_quantity: 150 },
     { price: 81.400, quantity: 280, order_count: 5, cumulative_quantity: 430 },
@@ -98,7 +96,7 @@ function ProfessionalOrderBook({
   asks,
   spread,
   bestBid,
-  bestAsk,
+  bestAsk: _bestAsk,
   onPriceClick,
 }: ProfessionalOrderBookProps) {
   const maxCumulative = useMemo(() => {
@@ -533,17 +531,6 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
   const historicalOrders = orders.filter(o => o.status === 'FILLED' || o.status === 'CANCELLED');
   const displayOrders = activeTab === 'open' ? openOrders : historicalOrders;
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  };
-
   const getStatusBadge = (status: Order['status']) => {
     const styles = {
       OPEN: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
@@ -646,7 +633,7 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
 
 export function CashMarketProPage() {
   const [orderBook, setOrderBook] = useState(generateMockOrderBook());
-  const [recentTrades, setRecentTrades] = useState(mockRecentTrades);
+  const [recentTrades] = useState(mockRecentTrades);
   const [myOrders, setMyOrders] = useState(mockMyOrders);
   const [selectedPrice, setSelectedPrice] = useState<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);

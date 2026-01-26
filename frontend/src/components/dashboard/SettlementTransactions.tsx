@@ -8,9 +8,8 @@ import {
   ShoppingCart,
   ChevronRight,
   Calendar,
-  TrendingUp,
 } from 'lucide-react';
-import { Card, ProgressBar } from '../common';
+import { Card } from '../common';
 import { settlementApi } from '../../services/api';
 import type { SettlementBatch, SettlementStatus } from '../../types';
 import { formatCurrency, formatQuantity, formatDate } from '../../utils';
@@ -203,12 +202,12 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                 <div className="mb-2">
                   <div className="flex items-center justify-between text-xs text-navy-600 dark:text-navy-400 mb-1">
                     <span>Progress</span>
-                    <span>{Math.round(settlement.progress_percent)}%</span>
+                    <span>{Math.round(settlement.progress_percent ?? 0)}%</span>
                   </div>
                   <div className="w-full bg-navy-200 dark:bg-navy-700 rounded-full h-1.5">
                     <div
                       className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${settlement.progress_percent}%` }}
+                      style={{ width: `${settlement.progress_percent ?? 0}%` }}
                     />
                   </div>
                 </div>

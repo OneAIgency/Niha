@@ -11,7 +11,6 @@ import {
   Search,
   RefreshCw,
   AlertCircle,
-  Filter,
   FileText,
   Edit,
 } from 'lucide-react';

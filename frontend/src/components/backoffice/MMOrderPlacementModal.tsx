@@ -8,7 +8,7 @@ import { formatCurrency, formatQuantity } from '../../utils';
 interface MarketMaker {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   is_active: boolean;
   cea_balance: number;
   eua_balance: number;

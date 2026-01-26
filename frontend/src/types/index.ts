@@ -284,6 +284,7 @@ export interface Order {
   filled_quantity: number;
   remaining_quantity: number;
   status: OrderStatus;
+  market?: MarketType;  // Which market this order is on (CEA_CASH or SWAP)
   created_at: string;
   updated_at?: string;
 }
@@ -515,6 +516,7 @@ export type MarketMakerType = 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
 export interface MarketMaker {
   id: string;
   name: string;
+  email?: string;  // Optional email field for MM contact
   description?: string;
   mm_type: MarketMakerType;
   market: MarketType;  // NEW: Which market this MM operates in
@@ -586,6 +588,9 @@ export interface SettlementBatch {
   expected_settlement_date: string;
   actual_settlement_date: string | null;
   progress_percent?: number;
+  registry_reference?: string;
+  notes?: string;
+  timeline?: SettlementStatusHistory[];
   created_at: string;
   updated_at: string;
 }
@@ -599,14 +604,16 @@ export interface SettlementStatusHistory {
 }
 
 // Re-export backoffice types for convenience
+// Note: ContactRequest and KYCDocument are defined locally above, so we only re-export the others
 export type {
-  ContactRequest,
   PendingUserResponse,
   PendingDepositResponse,
   UserTradeResponse,
   KYCUser,
-  KYCDocument,
   PendingDeposit,
   UserTrade,
   DocumentViewerState,
+  // Re-export these as aliases to avoid conflicts
+  ContactRequest as BackofficeContactRequest,
+  KYCDocument as BackofficeKYCDocument,
 } from './backoffice';

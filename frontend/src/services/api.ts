@@ -29,6 +29,7 @@ import type {
   AuthenticationAttempt,
   Deposit,
   DepositCreate,
+  Entity,
   EntityBalance,
   MarketMaker,
   MarketMakerType,
@@ -47,7 +48,7 @@ import type {
   LiquidityCreationResponse,
 } from '../types/liquidity';
 import { logger } from '../utils/logger';
-import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
+import { transformKeysToCamelCase } from '../utils/dataTransform';
 import { TOKEN_KEY } from '../constants/auth';
 import { useAuthStore } from '../stores/useStore';
 
@@ -1522,6 +1523,11 @@ export const liquidityApi = {
 export const settlementApi = {
   getPendingSettlements: async (): Promise<{ data: SettlementBatch[]; count: number }> => {
     const { data } = await api.get<{ data: SettlementBatch[]; count: number }>('/settlement/pending');
+    return data;
+  },
+
+  getSettlementDetails: async (settlementId: string): Promise<SettlementBatch> => {
+    const { data } = await api.get<SettlementBatch>(`/settlement/${settlementId}`);
     return data;
   },
 };

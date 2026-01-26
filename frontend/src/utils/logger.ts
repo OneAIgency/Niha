@@ -5,7 +5,8 @@
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogEntry {
+// LogEntry interface available for external use if needed
+export interface LogEntry {
   level: LogLevel;
   message: string;
   data?: unknown;
@@ -24,7 +25,7 @@ class Logger {
     return level === 'warn' || level === 'error';
   }
 
-  private formatMessage(level: LogLevel, message: string, data?: unknown): string {
+  private formatMessage(level: LogLevel, message: string): string {
     const timestamp = new Date().toISOString();
     return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
   }

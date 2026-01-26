@@ -1,18 +1,10 @@
 import {
-  TrendingUp,
   DollarSign,
-  Shield,
-  Scale,
   Globe,
-  Building2,
-  Database,
-  BarChart3,
   Target,
   CheckCircle,
   AlertTriangle,
   Users,
-  Factory,
-  Landmark,
   Cpu,
   Gavel,
 } from 'lucide-react';

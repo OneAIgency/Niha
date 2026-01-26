@@ -3,14 +3,7 @@
  * Tests for trading operations including order placement, order book, and balance management
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { server } from '../../test/mocks/server';
-import {
-  createMockOrder,
-  createMockOrderBook,
-  createMockBalances,
-} from '../../test/factories';
+import { describe, it, expect } from 'vitest';
 
 const API_BASE = '/api/v1';
 

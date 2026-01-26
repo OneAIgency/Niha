@@ -4,8 +4,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { server } from '../../test/mocks/server';
 
 const API_BASE = '/api/v1';
 

@@ -20,34 +20,43 @@ import { formatRelativeTime, formatCurrency } from '../utils';
 interface Deposit {
   id: string;
   entity_id: string;
-  reported_amount: number | null;
-  reported_currency: string | null;
-  amount: number | null;
-  currency: string | null;
-  wire_reference: string | null;
-  bank_reference: string | null;
+  entity_name?: string;
+  user_email?: string;
+  reported_amount?: number | null;
+  reported_currency?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  wire_reference?: string | null;
+  bank_reference?: string | null;
   status: string;
-  reported_at: string | null;
-  confirmed_at: string | null;
-  notes: string | null;
+  reported_at?: string | null;
+  confirmed_at?: string | null;
+  confirmed_by?: string;
+  notes?: string | null;
   created_at: string;
 }
 
 interface FundingInstructions {
   bank_name: string;
   account_name: string;
-  iban: string;
-  swift_bic: string;
-  reference_instructions: string;
-  supported_currencies: string[];
-  processing_time: string;
+  account_number?: string;
+  iban?: string;
+  swift_code?: string;
+  swift_bic?: string;
+  routing_number?: string;
+  currency?: string;
+  reference_format?: string;
+  reference_instructions?: string;
+  supported_currencies?: string[];
+  processing_time?: string;
+  notes?: string;
 }
 
 interface EntityBalance {
   entity_id: string;
   entity_name: string;
   balance_amount: number;
-  balance_currency: string | null;
+  balance_currency?: string | null;
   total_deposited: number;
   deposit_count: number;
 }
@@ -227,33 +236,37 @@ export function FundingPage() {
                     <p className="text-white font-medium">{instructions.account_name}</p>
                   </div>
 
-                  <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">IBAN</p>
-                      <p className="text-white font-mono">{instructions.iban}</p>
+                  {instructions.iban && (
+                    <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">IBAN</p>
+                        <p className="text-white font-mono">{instructions.iban}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(instructions.iban!, 'iban')}
+                      >
+                        {copied === 'iban' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(instructions.iban, 'iban')}
-                    >
-                      {copied === 'iban' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
+                  )}
 
-                  <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">SWIFT/BIC</p>
-                      <p className="text-white font-mono">{instructions.swift_bic}</p>
+                  {(instructions.swift_bic || instructions.swift_code) && (
+                    <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">SWIFT/BIC</p>
+                        <p className="text-white font-mono">{instructions.swift_bic || instructions.swift_code}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard((instructions.swift_bic || instructions.swift_code)!, 'swift')}
+                      >
+                        {copied === 'swift' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(instructions.swift_bic, 'swift')}
-                    >
-                      {copied === 'swift' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
+                  )}
 
                   <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                     <div className="flex gap-2">

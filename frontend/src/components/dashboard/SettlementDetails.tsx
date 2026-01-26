@@ -4,7 +4,6 @@ import {
   X,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Calendar,
   ArrowRight,
   Truck,
@@ -14,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Card, Button } from '../common';
 import { settlementApi } from '../../services/api';
-import type { SettlementBatch, SettlementStatusHistory, SettlementStatus } from '../../types';
+import type { SettlementBatch, SettlementStatus } from '../../types';
 import { formatCurrency, formatQuantity, formatDate } from '../../utils';
 
 interface SettlementDetailsProps {

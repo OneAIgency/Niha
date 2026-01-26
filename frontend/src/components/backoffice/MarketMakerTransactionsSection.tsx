@@ -55,7 +55,21 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
         getMarketMakerTransactions(marketMakerId),
       ]);
       setBalances(balancesData);
-      setTransactions(transactionsData);
+      // Map API response to local Transaction type, filtering out any without certificate_type
+      const mappedTransactions: Transaction[] = transactionsData
+        .filter((t): t is typeof t & { certificate_type: 'CEA' | 'EUA' } =>
+          t.certificate_type === 'CEA' || t.certificate_type === 'EUA'
+        )
+        .map(t => ({
+          id: t.id,
+          certificate_type: t.certificate_type,
+          transaction_type: t.transaction_type as 'deposit' | 'withdrawal',
+          amount: t.amount,
+          balance_after: t.balance_after,
+          notes: t.notes,
+          created_at: t.created_at,
+        }));
+      setTransactions(mappedTransactions);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load data:', err);

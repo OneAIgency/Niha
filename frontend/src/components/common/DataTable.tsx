@@ -12,7 +12,7 @@ export interface Column<T> {
   cellClassName?: string;
 }
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   variant?: 'default' | 'dark' | 'compact';
@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   rowKey?: keyof T | ((row: T, index: number) => string);
   stickyHeader?: boolean;
   className?: string;
+  getRowClassName?: (row: T, index: number) => string;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -36,6 +37,7 @@ export function DataTable<T extends Record<string, any>>({
   rowKey,
   stickyHeader = false,
   className,
+  getRowClassName,
 }: DataTableProps<T>) {
   const containerClass = variant === 'dark' ? 'table-container-dark' : 'table-container';
   const rowClass = variant === 'dark' ? 'table-row-dark' : 'table-row-hover';
@@ -151,7 +153,8 @@ export function DataTable<T extends Record<string, any>>({
               className={cn(
                 rowClass,
                 rowIndex === data.length - 1 && 'border-b-0',
-                onRowClick && 'cursor-pointer'
+                onRowClick && 'cursor-pointer',
+                getRowClassName?.(row, rowIndex)
               )}
               onClick={() => onRowClick?.(row, rowIndex)}
             >

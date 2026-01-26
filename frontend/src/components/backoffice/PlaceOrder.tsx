@@ -12,7 +12,7 @@ const SUCCESS_MESSAGE_TIMEOUT = 5000; // 5 seconds
 interface MarketMaker {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   is_active: boolean;
   cea_balance: number;
   eua_balance: number;

@@ -14,7 +14,7 @@ import { Card } from '../common';
 import { SettlementDetails } from './SettlementDetails';
 import { settlementApi } from '../../services/api';
 import type { SettlementBatch } from '../../types';
-import { formatCurrency, formatQuantity, formatDate } from '../../utils';
+import { formatCurrency, formatQuantity } from '../../utils';
 
 export function PendingSettlements() {
   const [settlements, setSettlements] = useState<SettlementBatch[]>([]);
