@@ -60,6 +60,7 @@ class SettlementProcessor:
                     if next_status:
                         system_user_id = await SettlementProcessor._get_system_user_id(db)
 
+                        old_status = settlement.status
                         await SettlementService.update_settlement_status(
                             db=db,
                             settlement_id=settlement.id,
@@ -68,8 +69,13 @@ class SettlementProcessor:
                             updated_by=system_user_id
                         )
 
-                        # TODO: Send email notification
-                        # await send_settlement_status_email(settlement, next_status)
+                        # Send email notification to users associated with the settlement's entity
+                        await SettlementProcessor._send_status_update_emails(
+                            db=db,
+                            settlement=settlement,
+                            old_status=old_status,
+                            new_status=next_status
+                        )
 
                         processed_count += 1
                         logger.info(
@@ -169,6 +175,47 @@ class SettlementProcessor:
         )
         admin = result.scalar_one_or_none()
         return admin.id if admin else None
+
+    @staticmethod
+    async def _send_status_update_emails(
+        db: AsyncSession,
+        settlement: SettlementBatch,
+        old_status: SettlementStatus,
+        new_status: SettlementStatus
+    ):
+        """Send email notifications to users associated with the settlement's entity"""
+        try:
+            # Get users associated with this entity
+            result = await db.execute(
+                select(User).where(User.entity_id == settlement.entity_id)
+            )
+            users = result.scalars().all()
+
+            if not users:
+                logger.debug(f"No users found for entity {settlement.entity_id}")
+                return
+
+            for user in users:
+                if user.email:
+                    try:
+                        await email_service.send_settlement_status_update(
+                            to_email=user.email,
+                            first_name=user.first_name or "",
+                            batch_reference=settlement.batch_reference,
+                            old_status=old_status.value,
+                            new_status=new_status.value,
+                            certificate_type=settlement.asset_type.value,
+                            quantity=float(settlement.quantity)
+                        )
+                        logger.info(
+                            f"Settlement status email sent to {user.email} for {settlement.batch_reference}"
+                        )
+                    except Exception as email_error:
+                        logger.error(
+                            f"Failed to send settlement status email to {user.email}: {email_error}"
+                        )
+        except Exception as e:
+            logger.error(f"Error sending settlement status emails: {e}", exc_info=True)
 
     @staticmethod
     async def check_overdue_settlements():
