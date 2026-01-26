@@ -135,7 +135,7 @@ export function CashMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-[11px]">
+    <div className="min-h-screen bg-navy-950 text-[11px]">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}

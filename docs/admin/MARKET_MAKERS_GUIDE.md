@@ -45,10 +45,15 @@ Market Makers (MMs) are admin-controlled clients that provide liquidity to the c
 
 1. Login to the platform with admin credentials
 2. Navigate to **Backoffice** from the main navigation
-3. You'll see three new features:
-   - **Market Makers** - Manage MM clients and assets
-   - **Market Orders** - Place orders on behalf of MMs
-   - **Audit Logging** - View comprehensive action history
+3. Use the compact navigation bar (Subheader) to access:
+   - **Market Makers** – Manage MM clients and assets
+   - **Market Orders** – Place orders on behalf of MMs
+   - **Order Book** – View order book and place MM orders
+   - **Liquidity** – Create liquidity
+   - **Audit Logging** – View comprehensive action history
+   - **Users** – User management
+
+See [Backoffice Layout & Navigation](BACKOFFICE_NAVIGATION.md) for routes and SubSubHeader usage.
 
 ### Quick Start Workflow
 

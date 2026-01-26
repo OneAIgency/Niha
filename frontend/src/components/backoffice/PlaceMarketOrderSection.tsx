@@ -10,6 +10,8 @@ import { MarketMakerOrdersList } from './MarketMakerOrdersList';
 interface PlaceMarketOrderSectionProps {
   certificateType: CertificateType;
   onOrderPlaced: () => void;
+  hideOrdersList?: boolean;
+  compact?: boolean;
 }
 
 interface MarketMaker {
@@ -19,11 +21,14 @@ interface MarketMaker {
   is_active: boolean;
   cea_balance: number;
   eua_balance: number;
+  mm_type?: string;
 }
 
 export function PlaceMarketOrderSection({
   certificateType,
   onOrderPlaced,
+  hideOrdersList = false,
+  compact = false,
 }: PlaceMarketOrderSectionProps) {
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
@@ -37,13 +42,17 @@ export function PlaceMarketOrderSection({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Load market makers
+  // Load market makers (only CEA cash sellers with available CEA balance)
   useEffect(() => {
     const loadMMs = async () => {
       setLoadingMMs(true);
       try {
         const data = await getMarketMakers({ is_active: true });
-        setMarketMakers(data);
+        // Filter only CEA cash sellers with CEA balance > 0
+        const ceaCashSellers = data.filter((mm: MarketMaker) => 
+          mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
+        );
+        setMarketMakers(ceaCashSellers);
       } catch (err) {
         console.error('Failed to load market makers:', err);
         setError('Failed to load market makers');
@@ -148,16 +157,18 @@ export function PlaceMarketOrderSection({
     : 0;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-4">
-          Place Sell Order
-        </h3>
+    <div className={compact ? '' : 'space-y-6'}>
+      <Card padding={compact ? 'none' : 'md'} className={compact ? 'border-0 shadow-none bg-transparent' : ''}>
+        {!compact && (
+          <h3 className={`${compact ? 'text-base mb-3' : 'text-lg mb-4'} font-semibold text-navy-900 dark:text-white`}>
+            Place Sell Order
+          </h3>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className={compact ? 'p-6 space-y-5' : 'space-y-4'}>
           {/* Market Maker Selection */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
               Market Maker *
             </label>
             {loadingMMs ? (
@@ -169,13 +180,13 @@ export function PlaceMarketOrderSection({
               <select
                 value={selectedMM}
                 onChange={(e) => setSelectedMM(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500`}
                 required
               >
                 <option value="">Select a market maker</option>
                 {marketMakers.map((mm) => (
                   <option key={mm.id} value={mm.id}>
-                    {mm.name}
+                    {mm.name} - {Number(mm.cea_balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} CEA available
                   </option>
                 ))}
               </select>
@@ -187,13 +198,13 @@ export function PlaceMarketOrderSection({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg"
+              className={`${compact ? 'p-2.5' : 'p-4'} bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm text-emerald-700 dark:text-emerald-300">
                   Available {certificateType} Balance
                 </span>
-                <span className="text-lg font-bold font-mono text-emerald-900 dark:text-emerald-100">
+                <span className={`${compact ? 'text-base' : 'text-lg'} font-bold font-mono text-emerald-900 dark:text-emerald-100`}>
                   {availableBalance.toLocaleString()}
                 </span>
               </div>
@@ -202,17 +213,17 @@ export function PlaceMarketOrderSection({
 
           {/* Certificate Type (Read-only) */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
               Certificate Type
             </label>
-            <div className="px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-700/50 text-navy-900 dark:text-white font-semibold">
+            <div className={`${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-700/50 text-navy-900 dark:text-white font-semibold`}>
               {certificateType}
             </div>
           </div>
 
           {/* Price */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
               Price (EUR) *
             </label>
             <input
@@ -222,15 +233,15 @@ export function PlaceMarketOrderSection({
               step="0.01"
               min="0.01"
               placeholder="0.00"
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
               required
             />
           </div>
 
           {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-              Quantity *
+            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
+              Quantity ({certificateType}) *
             </label>
             <input
               type="number"
@@ -239,7 +250,7 @@ export function PlaceMarketOrderSection({
               step="1"
               min="1"
               placeholder="0"
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
               required
             />
           </div>
@@ -249,10 +260,10 @@ export function PlaceMarketOrderSection({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400"
+              className={`${compact ? 'p-2' : 'p-3'} bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400`}
             >
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
+              <AlertCircle className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} flex-shrink-0`} />
+              <span className={`${compact ? 'text-xs' : 'text-sm'}`}>{error}</span>
             </motion.div>
           )}
 
@@ -261,10 +272,10 @@ export function PlaceMarketOrderSection({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+              className={`${compact ? 'p-2' : 'p-3'} bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-600 dark:text-emerald-400`}
             >
-              <CheckCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{success}</span>
+              <CheckCircle className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} flex-shrink-0`} />
+              <span className={`${compact ? 'text-xs' : 'text-sm'}`}>{success}</span>
             </motion.div>
           )}
 
@@ -283,7 +294,7 @@ export function PlaceMarketOrderSection({
       </Card>
 
       {/* Orders List */}
-      <MarketMakerOrdersList certificateType={certificateType} />
+      {!hideOrdersList && <MarketMakerOrdersList certificateType={certificateType} />}
     </div>
   );
 }

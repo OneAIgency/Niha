@@ -130,7 +130,7 @@ export function CeaSwapMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-navy-950">
       {/* Subheader */}
       <Subheader
         icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}

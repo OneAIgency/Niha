@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileText, Activity, Bot, AlertTriangle, Search } from 'lucide-react';
+import { BackofficeLayout } from '../components/layout';
 import { LoggingOverview } from '../components/backoffice/LoggingOverview';
 import { AllTicketsTab } from '../components/backoffice/AllTicketsTab';
 import { MarketMakerActionsTab } from '../components/backoffice/MarketMakerActionsTab';
@@ -26,20 +27,9 @@ export default function LoggingPage() {
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-50 via-blue-50 to-purple-50 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">
-            Audit Logging
-          </h1>
-          <p className="text-navy-600 dark:text-navy-400">
-            Comprehensive audit trail and action logging
-          </p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 mb-6 overflow-hidden">
+    <BackofficeLayout>
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 mb-6 overflow-hidden">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -70,15 +60,14 @@ export default function LoggingPage() {
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 p-6">
-          {activeTab === 'overview' && <LoggingOverview />}
-          {activeTab === 'all' && <AllTicketsTab />}
-          {activeTab === 'mm-actions' && <MarketMakerActionsTab />}
-          {activeTab === 'failed' && <FailedActionsTab />}
-          {activeTab === 'search' && <SearchTicketsTab />}
-        </div>
+      {/* Tab Content */}
+      <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 p-6">
+        {activeTab === 'overview' && <LoggingOverview />}
+        {activeTab === 'all' && <AllTicketsTab />}
+        {activeTab === 'mm-actions' && <MarketMakerActionsTab />}
+        {activeTab === 'failed' && <FailedActionsTab />}
+        {activeTab === 'search' && <SearchTicketsTab />}
       </div>
-    </div>
+    </BackofficeLayout>
   );
 }

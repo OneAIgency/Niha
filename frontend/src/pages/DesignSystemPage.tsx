@@ -119,7 +119,7 @@ export function DesignSystemPage() {
               </div>
 
               {/* Dark Mode Column */}
-              <div className="min-h-screen bg-slate-950 p-8">
+              <div className="min-h-screen bg-navy-950 p-8">
                 <div className="mb-8 flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3">
                   <Moon className="h-5 w-5 text-slate-400" />
                   <span className="text-sm font-semibold text-slate-200">

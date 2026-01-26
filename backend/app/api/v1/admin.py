@@ -1229,6 +1229,19 @@ async def update_scraping_source(
     return {"message": "Scraping source updated", "success": True}
 
 
+def _scraping_error_status(e: Exception) -> tuple[int, str]:
+    """Map scraping exceptions to (status_code, detail). Log full details server-side."""
+    msg = str(e).strip()
+    if not msg or len(msg) > 200:
+        msg = "Scraping failed. Check URL, selectors, and network."
+    lower = msg.lower()
+    if "timeout" in lower or "timed out" in lower:
+        return (504, msg)
+    if "connection" in lower or "connect" in lower or "connection refused" in lower:
+        return (502, msg)
+    return (500, msg)
+
+
 @router.post("/scraping-sources/{source_id}/test")
 async def test_scraping_source(
     source_id: str,
@@ -1258,12 +1271,10 @@ async def test_scraping_source(
         }
     except Exception as e:
         logger.exception("Scraping source test failed: source_id=%s, source=%s", source_id, source.name)
-        msg = str(e)
-        if not msg or len(msg) > 200:
-            msg = "Scrape failed. Check URL, selectors, and network."
+        status, detail = _scraping_error_status(e)
         return {
             "success": False,
-            "message": msg,
+            "message": detail,
             "price": None
         }
 
@@ -1293,10 +1304,8 @@ async def refresh_scraping_source(
         return MessageResponse(message="Prices refreshed successfully")
     except Exception as e:
         logger.exception("Scraping source refresh failed: source_id=%s, source=%s", source_id, source.name)
-        msg = str(e)
-        if not msg or len(msg) > 200:
-            msg = "Failed to refresh. Check URL, selectors, and network."
-        raise HTTPException(status_code=500, detail=msg)
+        status, detail = _scraping_error_status(e)
+        raise HTTPException(status_code=status, detail=detail)
 
 
 @router.delete("/scraping-sources/{source_id}", response_model=MessageResponse)

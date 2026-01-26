@@ -505,6 +505,11 @@ export const usersApi = {
     return data;
   },
 
+  getMyEntity: async (): Promise<Entity | null> => {
+    const { data } = await api.get('/users/me/entity');
+    return data || null;
+  },
+
   getMyEntityBalance: async (): Promise<any> => {
     const { data } = await api.get('/users/me/entity/balance');
     return data;

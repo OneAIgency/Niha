@@ -29,7 +29,8 @@ import {
   BarChart3,
   Pencil,
 } from 'lucide-react';
-import { Button, Card, Badge, Input, ConfirmationModal, Subheader } from '../components/common';
+import { Button, Card, Badge, Input, ConfirmationModal } from '../components/common';
+import { BackofficeLayout } from '../components/layout';
 import { AddAssetModal, EditAssetModal, UserOrdersSection } from '../components/backoffice';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi, backofficeApi } from '../services/api';
@@ -390,28 +391,24 @@ export function UsersPage() {
 
   if (loading && users.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
+      <BackofficeLayout>
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      </BackofficeLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      <Subheader
-        icon={<Users className="w-5 h-5 text-blue-500" />}
-        title="User Management"
-        description={`Manage users, roles, and permissions (${pagination.total} total users)`}
-        iconBg="bg-blue-500/20"
-      >
+    <BackofficeLayout
+      subSubHeader={
         <Button variant="primary" onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Create User
         </Button>
-      </Subheader>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Filters */}
+      }
+    >
+      {/* Filters */}
         <Card className="mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -1514,8 +1511,6 @@ export function UsersPage() {
             currentBalance={editingAsset.currentBalance}
           />
         )}
-
-      </div>
-    </div>
+    </BackofficeLayout>
   );
 }

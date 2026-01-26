@@ -355,7 +355,7 @@ export function DashboardPage() {
   const isLoading = loadingBalance || loadingOrders;
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-navy-950">
       {/* Subheader */}
       <Subheader
         icon={<LayoutDashboard className="w-5 h-5 text-emerald-500" />}

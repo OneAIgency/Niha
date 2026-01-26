@@ -172,7 +172,7 @@ export function FundingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-navy-950">
       <Subheader
         icon={<Banknote className="w-5 h-5 text-teal-400" />}
         title="Fund Your Account"

@@ -49,6 +49,13 @@ async def update_profile(
 ):
     """
     Update current user's profile information.
+    
+    Note: Frontend restricts this endpoint to admin users only.
+    All authenticated users can call this endpoint, but the UI only
+    shows edit controls for users with ADMIN role.
+    
+    Updates only the fields provided in the request body.
+    Email address cannot be changed via this endpoint.
     """
     # Get fresh user instance from this session
     result = await db.execute(select(User).where(User.id == current_user.id))
@@ -81,7 +88,15 @@ async def change_password(
 ):
     """
     Change current user's password.
-    Password must meet strength requirements.
+    
+    Password must meet strength requirements:
+    - Minimum 8 characters
+    - At least one uppercase letter (A-Z)
+    - At least one lowercase letter (a-z)
+    - At least one number (0-9)
+    - At least one special character: !@#$%^&*()_+-=[]{}|;:,.<>?
+    
+    If the user has an existing password, the current password must be verified.
     """
     # Get fresh user instance from this session
     result = await db.execute(select(User).where(User.id == current_user.id))
@@ -186,6 +201,15 @@ async def get_my_entity(
 ):
     """
     Get current user's associated entity information.
+    
+    Returns entity details if the user has an associated entity (entity_id is set).
+    Returns null if the user has no associated entity.
+    
+    Entity information includes:
+    - Entity name and legal name
+    - Jurisdiction (EU, CN, HK, OTHER)
+    - Verification status
+    - KYC status (pending, approved, rejected)
     """
     if not current_user.entity_id:
         return None

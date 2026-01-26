@@ -14,28 +14,25 @@ import {
   EyeOff,
   Check,
   AlertCircle,
+  X,
+  CheckCircle,
 } from 'lucide-react';
 import { Button, Card, Badge, Input, Subheader } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
+import { usersApi } from '../services/api';
 import { formatRelativeTime } from '../utils';
 import type { Entity } from '../types';
 
-// Mock entity data (will come from API)
-const mockEntity: Entity = {
-  id: '1',
-  name: 'Acme Carbon Trading Ltd',
-  legal_name: 'Acme Carbon Trading Limited',
-  jurisdiction: 'EU',
-  verified: true,
-  kyc_status: 'approved',
-};
-
 export function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, setAuth } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [entity] = useState<Entity | null>(mockEntity);
+  const [entity, setEntity] = useState<Entity | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Editable form state
   const [formData, setFormData] = useState({
@@ -58,6 +55,41 @@ export function ProfilePage() {
   });
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
+  /**
+   * Load profile and entity data on component mount.
+   * Fetches fresh data from API to ensure up-to-date information.
+   */
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Load fresh profile data from API
+        const profile = await usersApi.getProfile();
+        setFormData({
+          first_name: profile.first_name || '',
+          last_name: profile.last_name || '',
+          phone: profile.phone || '',
+          position: profile.position || '',
+        });
+
+        // Load entity data if user has an associated entity
+        const entityData = await usersApi.getMyEntity();
+        if (entityData) {
+          setEntity(entityData);
+        }
+      } catch (err: any) {
+        console.error('Failed to load profile data:', err);
+        setError(err.response?.data?.detail || 'Failed to load profile data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Update form data when user changes (from auth store)
   useEffect(() => {
     if (user) {
       setFormData({
@@ -69,42 +101,109 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  /**
+   * Save profile changes to the backend.
+   * Only accessible to admin users (enforced by UI conditional rendering).
+   * Updates the auth store with new user data on success.
+   */
   const handleSaveProfile = async () => {
     setIsSaving(true);
-    // TODO: Call API to update profile
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setIsEditing(false);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const updatedUser = await usersApi.updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        position: formData.position,
+      });
+      // Update auth store with new user data to keep UI in sync
+      const token = localStorage.getItem('token');
+      if (token) {
+        setAuth(updatedUser, token);
+      }
+      setSuccessMessage('Profile updated successfully');
+      setIsEditing(false);
+      // Auto-dismiss success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to update profile:', err);
+      setError(err.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  /**
+   * Validate password strength according to backend requirements.
+   * Must match backend validation exactly: !@#$%^&*()_+-=[]{}|;:,.<>?
+   * 
+   * @param password - Password to validate
+   * @returns Array of error messages (empty if valid)
+   */
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
     if (password.length < 8) errors.push('At least 8 characters');
     if (!/[A-Z]/.test(password)) errors.push('At least one uppercase letter');
     if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
     if (!/[0-9]/.test(password)) errors.push('At least one number');
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push('At least one special character');
+    // Special characters must match backend: !@#$%^&*()_+-=[]{}|;:,.<>?
+    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+      errors.push('At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
+    }
     return errors;
   };
 
+  /**
+   * Handle password change request.
+   * Validates password strength and match before submitting to API.
+   * Handles both validation errors (shown inline) and API errors (shown in error banner).
+   */
   const handleChangePassword = async () => {
+    setError(null);
+    setPasswordErrors([]);
+    setSuccessMessage(null);
+
+    // Validate password strength (frontend validation)
     const errors = validatePassword(passwordForm.new_password);
     if (errors.length > 0) {
       setPasswordErrors(errors);
       return;
     }
+
+    // Check password confirmation match
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setPasswordErrors(['Passwords do not match']);
       return;
     }
 
     setIsSaving(true);
-    // TODO: Call API to change password
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setShowPasswordForm(false);
-    setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
-    setPasswordErrors([]);
+    try {
+      await usersApi.changePassword(
+        passwordForm.current_password,
+        passwordForm.new_password
+      );
+      setSuccessMessage('Password changed successfully');
+      setShowPasswordForm(false);
+      // Clear form on success
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPasswordErrors([]);
+      // Auto-dismiss success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to change password:', err);
+      const errorMessage = err.response?.data?.detail || 'Failed to change password';
+      // Show current password errors inline with password fields
+      if (errorMessage.toLowerCase().includes('current password') || 
+          errorMessage.toLowerCase().includes('incorrect')) {
+        setPasswordErrors([errorMessage]);
+      } else {
+        // Show other errors in error banner
+        setError(errorMessage);
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getInitials = () => {
@@ -148,7 +247,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-navy-950">
       <Subheader
         icon={<User className="w-5 h-5 text-emerald-500" />}
         title="My Profile"
@@ -156,8 +255,52 @@ export function ProfilePage() {
         iconBg="bg-emerald-500/20"
       />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-500 hover:text-red-700 dark:hover:text-red-300"
+              aria-label="Dismiss error"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-        <div className="space-y-6">
+        {/* Success Display */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1">{successMessage}</span>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300"
+              aria-label="Dismiss success message"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <div className="p-6">
+                  <div className="h-6 bg-navy-200 dark:bg-navy-700 rounded w-1/3 mb-4" />
+                  <div className="space-y-3">
+                    <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
+                    <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-2/3" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-6">
           {/* Personal Information Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -169,36 +312,38 @@ export function ProfilePage() {
                   <User className="w-5 h-5 text-emerald-500" />
                   Personal Information
                 </h2>
-                {!isEditing ? (
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFormData({
-                          first_name: user?.first_name || '',
-                          last_name: user?.last_name || '',
-                          phone: user?.phone || '',
-                          position: user?.position || '',
-                        });
-                      }}
-                    >
-                      Cancel
+                {isAdmin && (
+                  !isEditing ? (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                      Edit Profile
                     </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSaveProfile}
-                      loading={isSaving}
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setFormData({
+                            first_name: user?.first_name || '',
+                            last_name: user?.last_name || '',
+                            phone: user?.phone || '',
+                            position: user?.position || '',
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleSaveProfile}
+                        loading={isSaving}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -439,7 +584,8 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, current: !showPasswords.current })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          aria-label={showPasswords.current ? 'Hide current password' : 'Show current password'}
                         >
                           {showPasswords.current ? (
                             <EyeOff className="w-4 h-4" />
@@ -464,7 +610,8 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, new: !showPasswords.new })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          aria-label={showPasswords.new ? 'Hide new password' : 'Show new password'}
                         >
                           {showPasswords.new ? (
                             <EyeOff className="w-4 h-4" />
@@ -489,7 +636,8 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          aria-label={showPasswords.confirm ? 'Hide confirm password' : 'Show confirm password'}
                         >
                           {showPasswords.confirm ? (
                             <EyeOff className="w-4 h-4" />
@@ -508,7 +656,9 @@ export function ProfilePage() {
                         <li>At least one uppercase letter</li>
                         <li>At least one lowercase letter</li>
                         <li>At least one number</li>
-                        <li>At least one special character (!@#$%^&*...)</li>
+                        <li>
+                          At least one special character (!@#$%^&amp;*()_+-=[]{}|;:,.&lt;&gt;?)
+                        </li>
                       </ul>
                     </div>
 
@@ -539,7 +689,8 @@ export function ProfilePage() {
               </div>
             </Card>
           </motion.div>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

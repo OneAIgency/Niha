@@ -72,7 +72,7 @@ export function SwapPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 relative">
+    <div className="min-h-screen bg-navy-950 relative">
       {/* Blur Overlay for Approved (unfunded) users */}
       <BlurOverlay
         show={isBlurred}

@@ -6,11 +6,34 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 
 ### Core Trading Platform
 - **User Authentication** - Secure JWT-based authentication
+- **User Profile Management** - View and manage personal information (admin-only editing)
+- **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
 - **Certificate Marketplace** - Browse and trade EUA and CEA certificates
 - **Real-time Price Feeds** - Live market data for carbon allowances
 - **Order Book** - Full order matching and execution
 - **Cash Market** - EUR balance management and transfers
+
+### Admin Backoffice (v1.0.0) ✨
+Comprehensive admin interface with compact navigation and page-specific action bars.
+
+#### Features:
+- **Compact Navigation** - Efficient button-based navigation in Subheader with unified access to all admin pages
+- **Route-Based Configuration** - Dynamic icons and descriptions per page
+- **SubSubHeader Component** - Flexible action bars: left-aligned (e.g. CEA/EUA toggle, filters), right-aligned (actions, refresh)
+- **Market Orders Management** - Place BID/ASK orders with unified `PlaceOrder` component and modal-based interface
+- **Context-Aware Order Placement** - Smart filtering and display based on order type (BID/ASK)
+- **Error Handling** - Comprehensive error states and user feedback
+- **Accessibility** - Full ARIA support, keyboard navigation, and screen reader compatibility
+
+#### Pages:
+- **Backoffice Dashboard** - Contact requests, KYC review, deposits, user details
+- **Market Makers** - Manage AI-powered market maker clients
+- **Market Orders** - Place orders on behalf of market makers with CEA/EUA toggle, Place BID/ASK modals, and order book; price-click opens correct modal with prefilled price
+- **Order Book** - View order book and place MM orders (see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md))
+- **Liquidity** - Create liquidity
+- **Audit Logging** - Comprehensive audit trail and action logging
+- **Users** - User management, roles, and permissions (accessible from backoffice navigation)
 
 ### Settlement System (v1.0.0) ✨
 Complete T+3 settlement system for external registry transfers with automated progression and monitoring.
@@ -229,6 +252,13 @@ docker-compose logs backend | grep "Settlement monitoring"
 - **ReDoc:** http://localhost:8000/redoc
 - **OpenAPI Spec:** http://localhost:8000/openapi.json
 
+### API Reference
+- [Authentication API](docs/api/AUTHENTICATION.md) - Login and token management
+- [Users API](docs/api/USERS_API.md) - Profile management and password changes
+- [Backoffice API](docs/api/BACKOFFICE_API.md) - Admin operations
+- [Settlement API](docs/api/SETTLEMENT_API.md) - T+3 settlement system
+- [Market Makers API](docs/api/MARKET_MAKERS_API.md) - Market maker management
+
 ### Authentication
 
 All API endpoints require JWT authentication:
@@ -292,6 +322,8 @@ See [AGENTS.md](AGENTS.md) for development guidelines and workflows.
 - **Restart Instructions:** [docs/RESTART_INSTRUCTIONS.md](docs/RESTART_INSTRUCTIONS.md)
 - **Development Guide:** [AGENTS.md](AGENTS.md)
 - **Design System:** [frontend/docs/DESIGN_SYSTEM.md](frontend/docs/DESIGN_SYSTEM.md)
+- **Backoffice Layout:** [docs/features/2026-01-26-backoffice-layout-refactor.md](docs/features/2026-01-26-backoffice-layout-refactor.md)
+- **API Documentation:** [docs/api/](docs/api/)
 
 ## Troubleshooting
 

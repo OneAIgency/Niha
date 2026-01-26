@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-25T17:22:04.894Z",
+  "generatedAt": "2026-01-26T01:39:56.645Z",
   "components": [
     {
       "name": "AddAssetModal",
@@ -46,6 +46,11 @@
           "name": "certificateType",
           "type": "CertificateType",
           "optional": false
+        },
+        {
+          "name": "onPriceClick",
+          "type": "(price: number, side: 'BUY' | 'SELL') => void",
+          "optional": true
         }
       ],
       "description": ""
@@ -425,9 +430,43 @@
           "name": "onOrderPlaced",
           "type": "() => void",
           "optional": false
+        },
+        {
+          "name": "hideOrdersList",
+          "type": "boolean",
+          "optional": true
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "optional": true
         }
       ],
       "description": ""
+    },
+    {
+      "name": "PlaceOrder",
+      "category": "backoffice",
+      "path": "src/components/backoffice/PlaceOrder.tsx",
+      "importPath": "components/backoffice/PlaceOrder",
+      "props": [
+        {
+          "name": "certificateType",
+          "type": "CertificateType",
+          "optional": false
+        },
+        {
+          "name": "side",
+          "type": "'BID' | 'ASK'",
+          "optional": false
+        },
+        {
+          "name": "onSubmit",
+          "type": "(order: { market_maker_id: string; certificate_type: 'CEA' | 'EUA'; side: 'BID' | 'ASK'; price: number; quantity: number;",
+          "optional": false
+        }
+      ],
+      "description": "Props for the PlaceOrder component"
     },
     {
       "name": "SearchTicketsTab",
@@ -1423,6 +1462,30 @@
       "description": ""
     },
     {
+      "name": "SubSubHeader",
+      "category": "common",
+      "path": "src/components/common/SubSubHeader.tsx",
+      "importPath": "components/common/SubSubHeader",
+      "props": [
+        {
+          "name": "left",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "children",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "className",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "description": "SubSubHeader Component"
+    },
+    {
       "name": "Subheader",
       "category": "common",
       "path": "src/components/common/Subheader.tsx",
@@ -1622,6 +1685,14 @@
       "description": "EuaScrapped Component"
     },
     {
+      "name": "PendingSettlements",
+      "category": "dashboard",
+      "path": "src/components/dashboard/PendingSettlements.tsx",
+      "importPath": "components/dashboard/PendingSettlements",
+      "props": [],
+      "description": ""
+    },
+    {
       "name": "SettlementDetails",
       "category": "dashboard",
       "path": "src/components/dashboard/SettlementDetails.tsx",
@@ -1653,6 +1724,30 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "BackofficeLayout",
+      "category": "layout",
+      "path": "src/components/layout/BackofficeLayout.tsx",
+      "importPath": "components/layout/BackofficeLayout",
+      "props": [
+        {
+          "name": "children",
+          "type": "ReactNode",
+          "optional": false
+        },
+        {
+          "name": "subSubHeaderLeft",
+          "type": "ReactNode",
+          "optional": true
+        },
+        {
+          "name": "subSubHeader",
+          "type": "ReactNode",
+          "optional": true
+        }
+      ],
+      "description": "Checks if a pathname matches a route, supporting both exact matches and nested routes."
     },
     {
       "name": "Footer",
