@@ -111,7 +111,7 @@
   }
 
   .page-container-dark {
-    @apply min-h-screen bg-slate-950;
+    @apply min-h-screen bg-navy-950;
   }
 
   .content-container {

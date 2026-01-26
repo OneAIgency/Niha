@@ -8,40 +8,33 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  DollarSign,
-  Activity,
-  TrendingUp,
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Button, Card, Badge } from '../components/common';
-import { formatCurrency } from '../utils';
+import { Button, Card, Badge, Subheader } from '../components/common';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary } from '../types';
 
-interface ActivityStats {
-  total_users: number;
-  users_by_role: {
-    admin: number;
-    funded: number;
-    approved: number;
-    pending: number;
-  };
-  active_sessions: number;
-  logins_today: number;
-  avg_session_duration: number;
-}
-
-interface MarketOverview {
-  top_20_cea_value_usd: number;
-  top_20_swap_value_usd: number;
+/**
+ * Extract a user-facing message from an API error (e.g. axios).
+ * Prefers response.data.detail (FastAPI), then message, then Error.message.
+ */
+function getApiErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const res = (err as { response?: { data?: { detail?: string | { msg?: string }[]; message?: string } } }).response;
+    const d = res?.data?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d) && d[0]?.msg) return String(d[0].msg);
+    const m = res?.data?.message;
+    if (typeof m === 'string') return m;
+  }
+  return (err as Error)?.message ?? 'Something went wrong.';
 }
 
 export function SettingsPage() {
   const [sources, setSources] = useState<ScrapingSource[]>([]);
-  const [activityStats, setActivityStats] = useState<ActivityStats | null>(null);
-  const [marketOverview, setMarketOverview] = useState<MarketOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [testingSource, setTestingSource] = useState<string | null>(null);
   const [refreshingSource, setRefreshingSource] = useState<string | null>(null);
   const [deletingSource, setDeletingSource] = useState<string | null>(null);
@@ -62,36 +55,12 @@ export function SettingsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [sourcesData, statsData] = await Promise.all([
-        adminApi.getScrapingSources(),
-        adminApi.getActivityStats(),
-      ]);
+      setError(null);
+      const sourcesData = await adminApi.getScrapingSources();
       setSources(sourcesData);
-      // Map the users_by_role from Record<UserRole, number> to expected format
-      const mappedStats: ActivityStats = {
-        total_users: statsData.total_users,
-        users_by_role: {
-          admin: (statsData.users_by_role as Record<string, number>)['ADMIN'] || 0,
-          funded: (statsData.users_by_role as Record<string, number>)['FUNDED'] || 0,
-          approved: (statsData.users_by_role as Record<string, number>)['APPROVED'] || 0,
-          pending: (statsData.users_by_role as Record<string, number>)['PENDING'] || 0,
-        },
-        active_sessions: statsData.active_sessions,
-        logins_today: statsData.logins_today,
-        avg_session_duration: statsData.avg_session_duration,
-      };
-      setActivityStats(mappedStats);
-
-      // Try to load market overview
-      try {
-        const marketData = await adminApi.getMarketOverview();
-        setMarketOverview(marketData);
-      } catch {
-        // Market overview endpoint may not exist yet
-        setMarketOverview({ top_20_cea_value_usd: 0, top_20_swap_value_usd: 0 });
-      }
-    } catch (error) {
-      console.error('Failed to load settings data:', error);
+    } catch (e) {
+      console.error('Failed to load settings data:', e);
+      setError(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -100,10 +69,15 @@ export function SettingsPage() {
   const handleTestSource = async (sourceId: string) => {
     setTestingSource(sourceId);
     setTestResult(null);
+    setError(null);
     try {
       const result = await adminApi.testScrapingSource(sourceId);
       setTestResult({ sourceId, price: result.price, success: result.success });
-    } catch (error) {
+      if (result.success) setError(null);
+      else setError(result.message || 'Test failed.');
+    } catch (e) {
+      console.error('Test source failed:', e);
+      setError(getApiErrorMessage(e));
       setTestResult({ sourceId, success: false });
     } finally {
       setTestingSource(null);
@@ -112,13 +86,14 @@ export function SettingsPage() {
 
   const handleRefreshSource = async (sourceId: string) => {
     setRefreshingSource(sourceId);
+    setError(null);
     try {
       await adminApi.refreshScrapingSource(sourceId);
-      // Reload sources to get updated data
       const sourcesData = await adminApi.getScrapingSources();
       setSources(sourcesData);
-    } catch (error) {
-      console.error('Failed to refresh source:', error);
+    } catch (e) {
+      console.error('Failed to refresh source:', e);
+      setError(getApiErrorMessage(e));
     } finally {
       setRefreshingSource(null);
     }
@@ -128,17 +103,20 @@ export function SettingsPage() {
     if (!confirm('Are you sure you want to delete this scraping source?')) return;
 
     setDeletingSource(sourceId);
+    setError(null);
     try {
       await adminApi.deleteScrapingSource(sourceId);
       setSources(sources.filter(s => s.id !== sourceId));
-    } catch (error) {
-      console.error('Failed to delete source:', error);
+    } catch (e) {
+      console.error('Failed to delete source:', e);
+      setError(getApiErrorMessage(e));
     } finally {
       setDeletingSource(null);
     }
   };
 
   const handleIntervalChange = async (sourceId: string, interval: number) => {
+    setError(null);
     try {
       await adminApi.updateScrapingSource(sourceId, { scrape_interval_minutes: interval });
       setSources(sources.map(s =>
@@ -146,12 +124,14 @@ export function SettingsPage() {
           ? { ...s, scrape_interval_minutes: interval }
           : s
       ));
-    } catch (error) {
-      console.error('Failed to update interval:', error);
+    } catch (e) {
+      console.error('Failed to update interval:', e);
+      setError(getApiErrorMessage(e));
     }
   };
 
   const handleLibraryChange = async (sourceId: string, library: ScrapeLibrary) => {
+    setError(null);
     try {
       await adminApi.updateScrapingSource(sourceId, { scrape_library: library });
       setSources(sources.map(s =>
@@ -159,19 +139,22 @@ export function SettingsPage() {
           ? { ...s, scrape_library: library }
           : s
       ));
-    } catch (error) {
-      console.error('Failed to update library:', error);
+    } catch (e) {
+      console.error('Failed to update library:', e);
+      setError(getApiErrorMessage(e));
     }
   };
 
   const handleAddSource = async () => {
+    setError(null);
     try {
       const created = await adminApi.createScrapingSource(newSource);
       setSources([...sources, created]);
       setShowAddModal(false);
       setNewSource({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5 });
-    } catch (error) {
-      console.error('Failed to create source:', error);
+    } catch (e) {
+      console.error('Failed to create source:', e);
+      setError(getApiErrorMessage(e));
     }
   };
 
@@ -208,15 +191,34 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">Platform Settings</h1>
-          <p className="text-navy-600 dark:text-navy-300">
-            Configure scraping sources, view market data, and monitor user activity
-          </p>
-        </div>
+    <div className="min-h-screen bg-navy-950">
+      <Subheader
+        icon={<Database className="w-5 h-5 text-blue-500" />}
+        title="Platform Settings"
+        description="Configure scraping sources, view market data, and monitor user activity"
+        iconBg="bg-blue-500/20"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {error && (
+          <div
+            className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 px-4 py-3 text-red-800 dark:text-red-200"
+            role="alert"
+          >
+            <span className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden />
+              {error}
+            </span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="rounded-lg p-1 hover:bg-red-200/50 dark:hover:bg-red-800/50 focus:ring-2 focus:ring-red-500"
+              aria-label="Dismiss error"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        )}
 
         <div className="space-y-8">
           {/* Scraping Sources */}
@@ -224,7 +226,10 @@ export function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Card>
+            <Card
+              data-testid="price-scraping-sources-card"
+              data-component="PriceScrapingSources"
+            >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
                   <Database className="w-5 h-5 text-blue-500" />
@@ -381,122 +386,6 @@ export function SettingsPage() {
             </Card>
           </motion.div>
 
-          {/* Market Overview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-emerald-500" />
-                Market Overview
-              </h2>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="p-6 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-navy-800 rounded-xl border border-amber-100 dark:border-amber-800">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-navy-500 dark:text-navy-400">Top 20 CEA Sell Orders</p>
-                      <p className="text-2xl font-bold text-navy-900 dark:text-white">
-                        {formatCurrency(marketOverview?.top_20_cea_value_usd || 0, 'USD')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-navy-800 rounded-xl border border-purple-100 dark:border-purple-800">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                      <RefreshCw className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-navy-500 dark:text-navy-400">Top 20 Swap Orders</p>
-                      <p className="text-2xl font-bold text-navy-900 dark:text-white">
-                        {formatCurrency(marketOverview?.top_20_swap_value_usd || 0, 'USD')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* User Activity Dashboard */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-purple-500" />
-                User Activity Dashboard
-              </h2>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <p className="text-sm text-navy-500 dark:text-navy-400">Total Users</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white">
-                    {activityStats?.total_users || 0}
-                  </p>
-                </div>
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <p className="text-sm text-navy-500 dark:text-navy-400">Active Sessions</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {activityStats?.active_sessions || 0}
-                  </p>
-                </div>
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <p className="text-sm text-navy-500 dark:text-navy-400">Logins Today</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white">
-                    {activityStats?.logins_today || 0}
-                  </p>
-                </div>
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <p className="text-sm text-navy-500 dark:text-navy-400">Avg. Session</p>
-                  <p className="text-2xl font-bold text-navy-900 dark:text-white">
-                    {Math.round((activityStats?.avg_session_duration || 0) / 60)}m
-                  </p>
-                </div>
-              </div>
-
-              {/* Users by Role */}
-              <div>
-                <h3 className="text-sm font-medium text-navy-500 dark:text-navy-400 mb-4">Users by Role</h3>
-                <div className="flex gap-4 flex-wrap">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full" />
-                    <span className="text-sm text-navy-600 dark:text-navy-300">
-                      Admin: {activityStats?.users_by_role?.admin || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-                    <span className="text-sm text-navy-600 dark:text-navy-300">
-                      Funded: {activityStats?.users_by_role?.funded || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                    <span className="text-sm text-navy-600 dark:text-navy-300">
-                      Approved: {activityStats?.users_by_role?.approved || 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                    <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                    <span className="text-sm text-navy-600 dark:text-navy-300">
-                      Pending: {activityStats?.users_by_role?.pending || 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
         </div>
       </div>
 

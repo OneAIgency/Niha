@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, RefreshCw, AlertCircle } from 'lucide-react';
-import { colors } from './OnboardingLayout';
 import { useOnboardingPrices } from '@/hooks/useOnboardingPrices';
 
 interface LivePriceDisplayProps {
@@ -37,8 +36,7 @@ export function LivePriceDisplay({
     lg: 'text-3xl',
   };
 
-  const colorStyle =
-    type === 'eua' ? { color: colors.secondaryLight } : { color: colors.danger };
+  const colorClass = type === 'eua' ? 'text-blue-400' : 'text-red-500';
 
   // Loading state
   if (isLoading && !price) {
@@ -48,11 +46,9 @@ export function LivePriceDisplay({
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
         >
-          <RefreshCw className="w-5 h-5" style={{ color: colors.textMuted }} />
+          <RefreshCw className="w-5 h-5 text-navy-400" />
         </motion.div>
-        <span className="text-sm" style={{ color: colors.textMuted }}>
-          Loading price...
-        </span>
+        <span className="text-sm text-navy-400">Loading price...</span>
       </div>
     );
   }
@@ -60,28 +56,19 @@ export function LivePriceDisplay({
   // Change indicator
   const ChangeIcon =
     changePercent > 0 ? TrendingUp : changePercent < 0 ? TrendingDown : Minus;
-  const changeColor =
-    changePercent > 0
-      ? colors.success
-      : changePercent < 0
-        ? colors.danger
-        : colors.textMuted;
+  const changeColorClass =
+    changePercent > 0 ? 'text-emerald-500' : changePercent < 0 ? 'text-red-500' : 'text-navy-400';
 
   return (
     <div className={className}>
-      <div className={`font-extrabold ${sizeClasses[size]}`} style={colorStyle}>
+      <div className={`font-extrabold ${sizeClasses[size]} ${colorClass}`}>
         {currency} {price.toFixed(0)}/t
       </div>
       {eurEquivalent && (
-        <div className="text-sm" style={{ color: colors.textSecondary }}>
-          (~EUR {eurEquivalent.toFixed(0)})
-        </div>
+        <div className="text-sm text-navy-400">(~EUR {eurEquivalent.toFixed(0)})</div>
       )}
       {showChange && changePercent !== 0 && (
-        <div
-          className="flex items-center justify-center gap-1 text-xs mt-1"
-          style={{ color: changeColor }}
-        >
+        <div className={`flex items-center justify-center gap-1 text-xs mt-1 ${changeColorClass}`}>
           <ChangeIcon className="w-3 h-3" />
           <span>
             {changePercent >= 0 ? '+' : ''}
@@ -90,10 +77,7 @@ export function LivePriceDisplay({
         </div>
       )}
       {isCached && (
-        <div
-          className="flex items-center justify-center gap-1 text-xs mt-1"
-          style={{ color: colors.accent }}
-        >
+        <div className="flex items-center justify-center gap-1 text-xs mt-1 text-amber-500">
           <AlertCircle className="w-3 h-3" />
           <span>Cached</span>
         </div>
@@ -120,96 +104,60 @@ export function LivePriceComparison({
 
   return (
     <div className={`grid md:grid-cols-3 gap-6 ${className}`}>
-      <div
-        className="p-4 rounded-xl text-center"
-        style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-      >
+      <div className="p-4 rounded-xl text-center bg-black/20">
         {isLoading && !euaPrice ? (
           <div className="flex items-center justify-center gap-2">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             >
-              <RefreshCw className="w-5 h-5" style={{ color: colors.textMuted }} />
+              <RefreshCw className="w-5 h-5 text-navy-400" />
             </motion.div>
           </div>
         ) : (
           <>
-            <div
-              className="text-3xl font-extrabold"
-              style={{ color: colors.secondaryLight }}
-            >
-              EUR {euaPrice.toFixed(0)}/t
-            </div>
+            <div className="text-3xl font-extrabold text-blue-400">EUR {euaPrice.toFixed(0)}/t</div>
             {isCached && (
-              <div
-                className="flex items-center justify-center gap-1 text-xs mt-1"
-                style={{ color: colors.accent }}
-              >
+              <div className="flex items-center justify-center gap-1 text-xs mt-1 text-amber-500">
                 <AlertCircle className="w-3 h-3" />
                 <span>Cached</span>
               </div>
             )}
           </>
         )}
-        {showLabels && (
-          <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-            EU EUA Current Price
-          </div>
-        )}
+        {showLabels && <div className="text-sm mt-1 text-navy-400">EU EUA Current Price</div>}
       </div>
 
-      <div
-        className="p-4 rounded-xl text-center"
-        style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-      >
+      <div className="p-4 rounded-xl text-center bg-black/20">
         {isLoading && !ceaPrice ? (
           <div className="flex items-center justify-center gap-2">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             >
-              <RefreshCw className="w-5 h-5" style={{ color: colors.textMuted }} />
+              <RefreshCw className="w-5 h-5 text-navy-400" />
             </motion.div>
           </div>
         ) : (
           <>
-            <div className="text-3xl font-extrabold" style={{ color: colors.danger }}>
-              CNY {ceaPrice.toFixed(0)}/t
-            </div>
-            <div className="text-sm" style={{ color: colors.textSecondary }}>
-              (~EUR {ceaPriceInEur.toFixed(0)})
-            </div>
+            <div className="text-3xl font-extrabold text-red-500">CNY {ceaPrice.toFixed(0)}/t</div>
+            <div className="text-sm text-navy-400">(~EUR {ceaPriceInEur.toFixed(0)})</div>
             {isCached && (
-              <div
-                className="flex items-center justify-center gap-1 text-xs mt-1"
-                style={{ color: colors.accent }}
-              >
+              <div className="flex items-center justify-center gap-1 text-xs mt-1 text-amber-500">
                 <AlertCircle className="w-3 h-3" />
                 <span>Cached</span>
               </div>
             )}
           </>
         )}
-        {showLabels && (
-          <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-            China CEA Current Price
-          </div>
-        )}
+        {showLabels && <div className="text-sm mt-1 text-navy-400">China CEA Current Price</div>}
       </div>
 
-      <div
-        className="p-4 rounded-xl text-center"
-        style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-      >
-        <div className="text-3xl font-extrabold" style={{ color: colors.success }}>
+      <div className="p-4 rounded-xl text-center bg-black/20">
+        <div className="text-3xl font-extrabold text-emerald-500">
           {isLoading ? '...' : `${ratioLow}-${ratioHigh}x`}
         </div>
-        {showLabels && (
-          <div className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-            Price Differential
-          </div>
-        )}
+        {showLabels && <div className="text-sm mt-1 text-navy-400">Price Differential</div>}
       </div>
     </div>
   );

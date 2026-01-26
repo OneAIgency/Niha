@@ -13,7 +13,7 @@ import {
   Banknote,
   Info,
 } from 'lucide-react';
-import { Button, Card, Badge } from '../components/common';
+import { Button, Card, Badge, Subheader } from '../components/common';
 import { usersApi } from '../services/api';
 import { formatRelativeTime, formatCurrency } from '../utils';
 
@@ -172,21 +172,14 @@ export function FundingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Banknote className="w-8 h-8 text-teal-400" />
-            Fund Your Account
-          </h1>
-          <p className="text-navy-400 mt-2">
-            Wire transfer funds to start trading on the Carbon Market
-          </p>
-        </motion.div>
+    <div className="min-h-screen bg-navy-950">
+      <Subheader
+        icon={<Banknote className="w-5 h-5 text-teal-400" />}
+        title="Fund Your Account"
+        description="Wire transfer funds to start trading on the Carbon Market"
+        iconBg="bg-teal-500/20"
+      />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         {/* Current Balance (if any) */}
         {balance && balance.balance_amount > 0 && (

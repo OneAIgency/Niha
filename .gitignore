@@ -44,3 +44,9 @@ backend/uploads/
 
 # Git worktrees directory
 .worktrees/
+
+# External directories
+lovable-export/
+nihao-prototype/
+grafana-lovable-sync/
+*.skill

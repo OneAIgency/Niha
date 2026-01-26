@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from app.models.models import (
     MarketMakerClient, User, UserRole, AssetTransaction,
-    TransactionType, CertificateType, TicketStatus, Order, OrderStatus,
+    TransactionType, CertificateType, TicketStatus, Order, OrderStatus, OrderSide,
     MarketMakerType
 )
 from app.core.security import hash_password
@@ -215,13 +215,14 @@ class MarketMakerService:
             )
             total = result.scalar() or Decimal("0")
 
-            # Locked in active orders
+            # Locked in active SELL orders (only sell orders lock certificates)
             result = await db.execute(
                 select(func.coalesce(func.sum(Order.quantity - Order.filled_quantity), 0))
                 .where(
                     and_(
                         Order.market_maker_id == market_maker_id,
                         Order.certificate_type == cert_type,
+                        Order.side == OrderSide.SELL,
                         Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
                     )
                 )

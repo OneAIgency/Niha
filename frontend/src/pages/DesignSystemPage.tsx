@@ -1221,7 +1221,7 @@ function ColorGroup({
         {title}
       </h3>
       <div className="space-y-3">
-        {"#000000"((color) => (
+        {colors.map((color) => (
           <div key={color.name} className="flex items-center gap-3">
             <div className={`relative h-12 w-12 overflow-hidden rounded-xl ${color.class} shadow-md`}>
               {color.icon && (

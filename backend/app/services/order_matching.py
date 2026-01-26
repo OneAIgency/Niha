@@ -19,6 +19,7 @@ from ..models.models import (
     OrderSide, OrderStatus, CertificateType, AssetType, TransactionType, MarketType
 )
 from ..services.currency_service import currency_service
+from ..services.settlement_service import SettlementService
 
 
 # Platform fee rate: 0.5%
@@ -518,24 +519,28 @@ async def execute_market_buy_order(
         notes=f"Market buy {preview.total_quantity:.2f} CEA @ avg {preview.weighted_avg_price:.4f} EUR/CEA"
     )
 
-    # Add CEA
-    new_cea_balance = await update_entity_balance(
+    # Create settlement batch for CEA delivery (T+3)
+    # CEA will be credited when settlement is finalized, not immediately
+    settlement = await SettlementService.create_cea_purchase_settlement(
         db=db,
         entity_id=entity_id,
-        asset_type=AssetType.CEA,
-        amount=preview.total_quantity,
-        transaction_type=TransactionType.TRADE_BUY,
-        created_by=user_id,
-        reference=str(buy_order.id),
-        notes=f"Market buy {preview.total_quantity:.2f} CEA"
+        order_id=buy_order.id,
+        trade_id=None,  # Multiple trades in this order
+        quantity=preview.total_quantity,
+        price=preview.weighted_avg_price,
+        seller_id=None,  # Multiple sellers possible
+        created_by=user_id
     )
+
+    # Get current CEA balance (won't change until settlement completes)
+    new_cea_balance = await get_entity_balance(db, entity_id, AssetType.CEA)
 
     await db.commit()
 
     return OrderExecutionResult(
         success=True,
         order_id=buy_order.id,
-        message=f"Successfully purchased {preview.total_quantity:.2f} CEA from {len(preview.fills)} sellers",
+        message=f"Successfully purchased {preview.total_quantity:.2f} CEA from {len(preview.fills)} sellers. Settlement {settlement.batch_reference} created - CEA will be delivered on {settlement.expected_settlement_date.strftime('%Y-%m-%d')} (T+3)",
         fills=preview.fills,
         total_quantity=preview.total_quantity,
         total_cost_gross=preview.total_cost_gross,

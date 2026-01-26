@@ -383,7 +383,7 @@ class ScrapingSourceResponse(BaseModel):
     name: str
     url: str
     certificate_type: str
-    scrape_library: Optional[str] = "httpx"
+    scrape_library: Optional[str] = "HTTPX"
     is_active: bool
     scrape_interval_minutes: int
     last_scrape_at: Optional[datetime]

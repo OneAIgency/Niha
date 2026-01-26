@@ -30,6 +30,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { Button, Card, Badge, Input, ConfirmationModal } from '../components/common';
+import { BackofficeLayout } from '../components/layout';
 import { AddAssetModal, EditAssetModal, UserOrdersSection } from '../components/backoffice';
 import { cn, formatRelativeTime } from '../utils';
 import { adminApi, backofficeApi } from '../services/api';
@@ -390,30 +391,24 @@ export function UsersPage() {
 
   if (loading && users.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
+      <BackofficeLayout>
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      </BackofficeLayout>
     );
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">User Management</h1>
-            <p className="text-navy-600 dark:text-navy-300">
-              Manage users, roles, and permissions ({pagination.total} total users)
-            </p>
-          </div>
-          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4" />
-            Create User
-          </Button>
-        </div>
-
-        {/* Filters */}
+    <BackofficeLayout
+      subSubHeader={
+        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4" />
+          Create User
+        </Button>
+      }
+    >
+      {/* Filters */}
         <Card className="mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -1516,8 +1511,6 @@ export function UsersPage() {
             currentBalance={editingAsset.currentBalance}
           />
         )}
-
-      </div>
-    </div>
+    </BackofficeLayout>
   );
 }

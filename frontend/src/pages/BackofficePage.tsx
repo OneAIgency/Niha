@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -21,10 +20,9 @@ import {
   UserPlus,
   Banknote,
   DollarSign,
-  Bot,
-  ShoppingCart,
 } from 'lucide-react';
 import { Button, Card, Badge, ConfirmationModal } from '../components/common';
+import { BackofficeLayout } from '../components/layout';
 import { ApproveInviteModal } from '../components/backoffice/ApproveInviteModal';
 import { KYCReviewPanel } from '../components/backoffice/KYCReviewPanel';
 import { adminApi, backofficeApi } from '../services/api';
@@ -552,95 +550,7 @@ export function BackofficePage() {
   ];
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">Backoffice</h1>
-          <p className="text-navy-600 dark:text-navy-300">
-            Review access requests, KYC documents, and user activity
-          </p>
-        </div>
-
-        {/* Quick Navigation to New Features */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Link
-            to="/backoffice/market-makers"
-            className="group bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/40 transition-colors">
-                <Bot className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
-                  Market Makers
-                </h3>
-                <p className="text-sm text-navy-600 dark:text-navy-400">
-                  Manage MM clients and assets
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            to="/backoffice/market-orders"
-            className="group bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/40 transition-colors">
-                <ShoppingCart className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
-                  Market Orders
-                </h3>
-                <p className="text-sm text-navy-600 dark:text-navy-400">
-                  Place orders for MM clients
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            to="/backoffice/order-book"
-            className="group bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border border-teal-200 dark:border-teal-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-teal-100 dark:bg-teal-900/30 group-hover:bg-teal-200 dark:group-hover:bg-teal-800/40 transition-colors">
-                <ArrowRightLeft className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
-                  Order Management
-                </h3>
-                <p className="text-sm text-navy-600 dark:text-navy-400">
-                  View order book & place MM orders
-                </p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            to="/backoffice/logging"
-            className="group bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6 hover:shadow-lg transition-all duration-200 hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/40 transition-colors">
-                <Activity className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-1">
-                  Audit Logging
-                </h3>
-                <p className="text-sm text-navy-600 dark:text-navy-400">
-                  View comprehensive audit trail
-                </p>
-              </div>
-            </div>
-          </Link>
-        </div>
-
+    <BackofficeLayout>
         {/* Error Display */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
@@ -661,7 +571,7 @@ export function BackofficePage() {
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap',
                 activeTab === tab.id
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-navy-600 text-white'
                   : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300 hover:bg-navy-200 dark:hover:bg-navy-600'
               )}
             >
@@ -672,7 +582,7 @@ export function BackofficePage() {
                   'px-2 py-0.5 rounded-full text-xs',
                   activeTab === tab.id
                     ? 'bg-white/20 text-white'
-                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-400'
                 )}>
                   {tab.count}
                 </span>
@@ -683,8 +593,8 @@ export function BackofficePage() {
           {activeTab === 'requests' && (
             <div className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium',
-              connectionStatus === 'connected' && 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-              connectionStatus === 'connecting' && 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+              connectionStatus === 'connected' && 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300',
+              connectionStatus === 'connecting' && 'bg-navy-100 dark:bg-navy-700 text-navy-500 dark:text-navy-400',
               connectionStatus === 'disconnected' && 'bg-navy-100 dark:bg-navy-700 text-navy-500 dark:text-navy-400',
               connectionStatus === 'error' && 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
             )}>
@@ -718,7 +628,7 @@ export function BackofficePage() {
           >
             <Card>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-500" />
+                <Users className="w-5 h-5 text-navy-600 dark:text-navy-400" />
                 Contact Requests
               </h2>
 
@@ -838,7 +748,7 @@ export function BackofficePage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
+                  <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
                   <p className="text-navy-500 dark:text-navy-400">No pending contact requests</p>
                 </div>
               )}
@@ -926,7 +836,7 @@ export function BackofficePage() {
             ) : (
               <Card>
                 <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
+                  <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
                   <p className="text-navy-500 dark:text-navy-400">No KYC reviews pending</p>
                   <p className="text-xs text-navy-400 mt-1">All users have completed their verification</p>
                 </div>
@@ -942,7 +852,7 @@ export function BackofficePage() {
           >
             <Card>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-emerald-500" />
+                <Banknote className="w-5 h-5 text-navy-600 dark:text-navy-400" />
                 Pending Deposits
               </h2>
 
@@ -1024,7 +934,7 @@ export function BackofficePage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-4" />
+                  <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
                   <p className="text-navy-500 dark:text-navy-400">No pending deposits</p>
                   <p className="text-xs text-navy-400 mt-1">All deposits have been processed</p>
                 </div>
@@ -1050,7 +960,7 @@ export function BackofficePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500"
                   />
                 </div>
                 <Button variant="primary" onClick={handleSearchUser} loading={loading}>
@@ -1069,7 +979,7 @@ export function BackofficePage() {
                     User Details
                   </h2>
                   <div className="flex items-center gap-4 p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-navy-500 to-navy-600 flex items-center justify-center text-white font-bold text-xl">
                       {(selectedUser.user.first_name?.[0] || selectedUser.user.email[0]).toUpperCase()}
                       {(selectedUser.user.last_name?.[0] || selectedUser.user.email[1]).toUpperCase()}
                     </div>
@@ -1108,7 +1018,7 @@ export function BackofficePage() {
                             <div>
                               <p className="font-mono text-sm text-navy-900 dark:text-white">{session.ip_address}</p>
                               {session.is_active && (
-                                <span className="text-xs text-emerald-500">Active</span>
+                                <span className="text-xs text-navy-600 dark:text-navy-400">Active</span>
                               )}
                             </div>
                           </div>
@@ -1149,7 +1059,7 @@ export function BackofficePage() {
                               </p>
                             </div>
                           </div>
-                          <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                          <span className="font-mono text-navy-600 dark:text-navy-400">
                             {formatCurrency(trade.total_value, 'USD')}
                           </span>
                         </div>
@@ -1371,7 +1281,7 @@ export function BackofficePage() {
             >
               <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
                 <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-emerald-500" />
+                  <DollarSign className="w-5 h-5 text-navy-600 dark:text-navy-400" />
                   Confirm Deposit
                 </h3>
                 <button
@@ -1418,7 +1328,7 @@ export function BackofficePage() {
                     placeholder="Enter actual amount"
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500"
                     required
                   />
                 </div>
@@ -1431,7 +1341,7 @@ export function BackofficePage() {
                   <select
                     value={confirmCurrency}
                     onChange={(e) => setConfirmCurrency(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-navy-500"
                   >
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>
@@ -1450,16 +1360,16 @@ export function BackofficePage() {
                     onChange={(e) => setConfirmNotes(e.target.value)}
                     placeholder="Add any notes..."
                     rows={2}
-                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                   />
                 </div>
 
                 {/* Info about what happens */}
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm">
-                  <p className="text-emerald-700 dark:text-emerald-400">
+                <div className="p-3 bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800 rounded-lg text-sm">
+                  <p className="text-navy-700 dark:text-navy-300">
                     Confirming this deposit will:
                   </p>
-                  <ul className="text-emerald-600 dark:text-emerald-500 text-xs mt-1 list-disc list-inside">
+                  <ul className="text-navy-600 dark:text-navy-400 text-xs mt-1 list-disc list-inside">
                     <li>Update the entity balance</li>
                     <li>Upgrade the user to FUNDED status</li>
                     <li>Grant Cash Market access</li>
@@ -1493,7 +1403,6 @@ export function BackofficePage() {
             </motion.div>
           </div>
         )}
-      </div>
-    </div>
+    </BackofficeLayout>
   );
 }

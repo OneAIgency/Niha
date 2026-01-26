@@ -2,15 +2,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+import asyncio
 
 from .core.config import settings
 from .core.database import init_db
 from .core.security import RedisManager
-from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market, market_maker, admin_market_orders, admin_logging, liquidity
+from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market, settlement, market_maker, admin_market_orders, admin_logging, liquidity
+from .services.settlement_processor import SettlementProcessor
+from .services.settlement_monitoring import SettlementMonitoring
+from .core.database import AsyncSessionLocal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Global task reference
+_background_tasks = []
 
 
 @asynccontextmanager
@@ -21,10 +28,56 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    # Start settlement processor background task
+    async def settlement_processor_loop():
+        """Run settlement processor every hour"""
+        while True:
+            try:
+                await SettlementProcessor.process_pending_settlements()
+                await SettlementProcessor.check_overdue_settlements()
+            except Exception as e:
+                logger.error(f"Settlement processor error: {e}", exc_info=True)
+
+            # Wait 1 hour
+            await asyncio.sleep(3600)
+
+    # Start settlement monitoring background task
+    async def settlement_monitoring_loop():
+        """Run settlement monitoring every hour"""
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    result = await SettlementMonitoring.run_monitoring_cycle(db)
+                    if result.get("success"):
+                        logger.info(
+                            f"Settlement monitoring cycle completed: "
+                            f"{result.get('alert_count', 0)} alerts detected"
+                        )
+                    else:
+                        logger.error(f"Settlement monitoring cycle failed: {result.get('error')}")
+            except Exception as e:
+                logger.error(f"Settlement monitoring error: {e}", exc_info=True)
+
+            # Wait 1 hour
+            await asyncio.sleep(3600)
+
+    # Start background tasks
+    processor_task = asyncio.create_task(settlement_processor_loop())
+    monitoring_task = asyncio.create_task(settlement_monitoring_loop())
+    _background_tasks.extend([processor_task, monitoring_task])
+    logger.info("Settlement processor and monitoring started (running every 1 hour)")
+
     yield
 
     # Shutdown
     logger.info("Shutting down...")
+
+    # Cancel background tasks
+    for task in _background_tasks:
+        task.cancel()
+    await asyncio.gather(*_background_tasks, return_exceptions=True)
+    logger.info("Background tasks cancelled")
+
     await RedisManager.close()
 
 
@@ -55,13 +108,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS middleware - allow all origins for development
+# CORS: restrict origins in production, allow all in development
+_cors_origins = settings.cors_origins_list if settings.ENVIRONMENT == "production" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -76,6 +130,7 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(backoffice.router, prefix="/api/v1")
 app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(cash_market.router, prefix="/api/v1")
+app.include_router(settlement.router, prefix="/api/v1")
 app.include_router(market_maker.router, prefix="/api/v1/admin")
 app.include_router(admin_market_orders.router, prefix="/api/v1/admin")
 app.include_router(admin_logging.router, prefix="/api/v1/admin")

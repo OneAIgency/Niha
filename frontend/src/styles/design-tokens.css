@@ -180,6 +180,25 @@
   --z-modal: 50;
   --z-popover: 60;
   --z-tooltip: 70;
+
+  /* ========================================
+     ONBOARDING DARK THEME (standalone)
+     ======================================== */
+  --color-onboarding-bg: #0f172a;
+  --color-onboarding-surface: #1e293b;
+  --color-onboarding-surface-hover: #334155;
+  --color-onboarding-text: #f8fafc;
+  --color-onboarding-text-secondary: #94a3b8;
+  --color-onboarding-text-muted: #64748b;
+  --color-onboarding-border: #334155;
+  --color-onboarding-primary: #0d9488;
+  --color-onboarding-primary-dark: #0f766e;
+  --color-onboarding-primary-light: #5eead4;
+  --color-onboarding-secondary: #1e40af;
+  --color-onboarding-secondary-light: #3b82f6;
+  --color-onboarding-accent: #f59e0b;
+  --color-onboarding-danger: #dc2626;
+  --color-onboarding-success: #16a34a;
 }
 
 /* ========================================

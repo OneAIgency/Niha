@@ -10,7 +10,7 @@ import {
   MessageSquare,
   ShoppingCart,
 } from 'lucide-react';
-import { Button, Card, Badge, Input } from '../components/common';
+import { Button, Card, Badge, Input, Subheader } from '../components/common';
 import { BlurOverlay } from '../components/common/BlurOverlay';
 import { marketplaceApi } from '../services/api';
 import { usePrices } from '../hooks/usePrices';
@@ -89,22 +89,20 @@ export function MarketplacePage() {
   };
 
   return (
-    <div className="min-h-screen py-8 relative">
+    <div className="min-h-screen bg-navy-950 relative">
       {/* Blur Overlay for Approved (unfunded) users */}
       <BlurOverlay
         show={isBlurred}
         title="Account Not Funded"
         message="Fund your account to access the CEA Marketplace and start trading. Contact our support team to complete your account setup."
       />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">CEA Marketplace</h1>
-          <p className="text-navy-600 dark:text-navy-300">
-            Browse and purchase China Emission Allowances from verified sellers
-          </p>
-        </div>
+        <Subheader
+          icon={<ShoppingCart className="w-5 h-5 text-amber-500" />}
+          title="CEA Marketplace"
+          description="Browse and purchase China Emission Allowances from verified sellers"
+          iconBg="bg-amber-500/20"
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

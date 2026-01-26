@@ -9,7 +9,7 @@ import {
   ChevronRight,
   Info,
 } from 'lucide-react';
-import { Button, Card, Badge, Input } from '../components/common';
+import { Button, Card, Badge, Input, Subheader } from '../components/common';
 import { BlurOverlay } from '../components/common/BlurOverlay';
 import { swapsApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
@@ -72,7 +72,7 @@ export function SwapPage() {
   };
 
   return (
-    <div className="min-h-screen py-8 relative">
+    <div className="min-h-screen bg-navy-950 relative">
       {/* Blur Overlay for Approved (unfunded) users */}
       <BlurOverlay
         show={isBlurred}
@@ -80,14 +80,13 @@ export function SwapPage() {
         message="Fund your account to access the Swap Center and exchange certificates. Contact our support team to complete your account setup."
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy-900 dark:text-white mb-2">Swap Center</h1>
-          <p className="text-navy-600 dark:text-navy-300">
-            Exchange EUA and CEA certificates at competitive OTC rates
-          </p>
-        </div>
+      <Subheader
+        icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
+        title="Swap Center"
+        description="Exchange EUA and CEA certificates at competitive OTC rates"
+        iconBg="bg-violet-500/20"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-4 mb-8">

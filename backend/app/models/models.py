@@ -659,3 +659,95 @@ class LiquidityOperation(Base):
 
     # Relationships
     creator = relationship("User", foreign_keys=[created_by])
+
+
+class SettlementStatus(str, enum.Enum):
+    """Settlement status progression for T+N external settlements"""
+    PENDING = "PENDING"                          # T+0: Order confirmed, awaiting T+1
+    TRANSFER_INITIATED = "TRANSFER_INITIATED"    # T+1: Transfer started to registry
+    IN_TRANSIT = "IN_TRANSIT"                    # T+2: In registry processing
+    AT_CUSTODY = "AT_CUSTODY"                    # T+3: Arrived at Nihao custody
+    SETTLED = "SETTLED"                          # Final settlement completed
+    FAILED = "FAILED"                            # Settlement failed, requires intervention
+
+
+class SettlementType(str, enum.Enum):
+    """Types of settlement operations"""
+    CEA_PURCHASE = "CEA_PURCHASE"              # CEA purchase from seller (T+3)
+    SWAP_CEA_TO_EUA = "SWAP_CEA_TO_EUA"       # Swap CEA→EUA (CEA T+2, EUA T+5)
+
+
+class SettlementBatch(Base):
+    """
+    Settlement batch tracking for external T+N settlements.
+
+    Manages the complete lifecycle of certificate transfers through
+    external registries with proper status tracking and audit trail.
+
+    Timeline:
+    - CEA Purchase: T+1 to T+3 business days
+    - Swap CEA→EUA: CEA T+1 to T+2, EUA T+1 to T+5
+    """
+    __tablename__ = "settlement_batches"
+
+    # Primary identification
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    batch_reference = Column(String(50), unique=True, nullable=False, index=True)
+    # Example: "SET-2026-001234-CEA", "SET-2026-001235-EUA"
+
+    # Ownership and linkage
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
+    trade_id = Column(UUID(as_uuid=True), ForeignKey("cash_market_trades.id"), nullable=True, index=True)
+    counterparty_id = Column(UUID(as_uuid=True), nullable=True)  # Seller or Market Maker ID
+
+    # Settlement details
+    settlement_type = Column(SQLEnum(SettlementType), nullable=False, index=True)
+    status = Column(SQLEnum(SettlementStatus), default=SettlementStatus.PENDING, nullable=False, index=True)
+    asset_type = Column(SQLEnum(CertificateType), nullable=False)  # CEA or EUA
+
+    # Financial details
+    quantity = Column(Numeric(18, 2), nullable=False)
+    price = Column(Numeric(18, 4), nullable=False)
+    total_value_eur = Column(Numeric(18, 2), nullable=False)
+
+    # Timeline tracking
+    expected_settlement_date = Column(DateTime, nullable=False, index=True)  # T+1, T+3, or T+5
+    actual_settlement_date = Column(DateTime, nullable=True)
+
+    # External registry tracking
+    registry_reference = Column(String(100), nullable=True)  # Reference from external registry
+
+    # Additional info
+    notes = Column(Text, nullable=True)
+
+    # Audit timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    entity = relationship("Entity", foreign_keys=[entity_id])
+    order = relationship("Order", foreign_keys=[order_id])
+    trade = relationship("CashMarketTrade", foreign_keys=[trade_id])
+    status_history = relationship("SettlementStatusHistory", back_populates="settlement_batch", cascade="all, delete-orphan")
+
+
+class SettlementStatusHistory(Base):
+    """
+    Audit trail for all settlement status changes.
+
+    Tracks every status transition with timestamp, notes, and responsible user.
+    Provides complete audit trail for regulatory compliance.
+    """
+    __tablename__ = "settlement_status_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    settlement_batch_id = Column(UUID(as_uuid=True), ForeignKey("settlement_batches.id"), nullable=False, index=True)
+    status = Column(SQLEnum(SettlementStatus), nullable=False)
+    notes = Column(Text, nullable=True)  # Reason for status change, admin comments
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # Admin who made the change
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # Relationships
+    settlement_batch = relationship("SettlementBatch", back_populates="status_history")
+    updater = relationship("User", foreign_keys=[updated_by])
