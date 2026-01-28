@@ -556,24 +556,54 @@ Highlighting the button for the current page uses the same logic as Subheader (a
 
 ### Cards
 
+**Card back (section/card wrapper):** Use the `.card_back` class or `<Card />` for page sections and card containers. Dark background, less rounded corners. Design parameters in the theme (`frontend/src/styles/design-tokens.css`):
+
+| Token | Light | Dark | Role |
+|-------|--------|------|------|
+| `--color-card-back-bg` | `#f1f5f9` (navy-100) | `#0f172a` (navy-900) | Background (a few steps above layout) |
+| `--color-card-back-border` | `#e2e8f0` (navy-200) | `#1e293b` (navy-800) | Border |
+| `--radius-card-back` | 0.75rem (12px) | 0.75rem | Corner radius (less rounded) |
+| `--shadow-lg` | — | — | Shadow |
+| `--space-6` | 1.5rem | 1.5rem | Padding |
+
+To change the card back look, edit these variables in `design-tokens.css` (in `:root` for light, in `.dark` for dark).
+
 #### Variants
 
-1. **Default** - White/navy background with border and shadow
+1. **Default** - Card back (dark surface, less rounded) — **use as standard for cards and sections**
 2. **Glass** - Glassmorphism effect with backdrop blur
-3. **Hover** - Elevation change on hover
+3. **Hover** - Same as default with elevation change on hover (`.card_back-hover`)
 4. **Stat** - Statistics display with icon
 
 #### Examples
 
 ```tsx
-// Default card
-<div className="rounded-2xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 p-6 shadow-lg transition-all hover:shadow-xl">
-  <h3 className="text-lg font-bold text-navy-900 dark:text-white">
-    Card Title
-  </h3>
-  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">
-    Card content goes here
-  </p>
+// Standard card/section wrapper (preferred): use .card_back class or <Card />
+<div className="card_back">
+  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
+  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+</div>
+
+// Or with the Card component
+<Card>
+  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
+  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+</Card>
+
+// Inline equivalent (only if you cannot use .card_back / <Card />) — prefer theme vars
+<div className="shadow-lg p-6" style={{ backgroundColor: 'var(--color-card-back-bg)', border: '1px solid var(--color-card-back-border)', borderRadius: 'var(--radius-card-back)' }}>
+  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
+  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+</div>
+
+// Compact list row (e.g. Contact Requests: Entitate, Nume, Data + actions). Class in index.css.
+<div className="card_contact_request_list">
+  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
+    <span><Typography variant="sectionLabel" color="muted">Entitate:</Typography> <Typography variant="bodySmall" color="primary">{entity}</Typography></span>
+    <span><Typography variant="sectionLabel" color="muted">Nume:</Typography> <Typography variant="bodySmall" color="primary">{name}</Typography></span>
+    <span><Typography variant="sectionLabel" color="muted">Data:</Typography> <Typography variant="bodySmall" color="primary">{date}</Typography></span>
+  </div>
+  <div className="flex items-center gap-1.5 shrink-0">{/* View, Approve, Reject, Delete */}</div>
 </div>
 
 // Glass card (glassmorphism)
@@ -907,15 +937,12 @@ Breakpoints:
 
 ### 4. Reusability
 
-✅ **DO**: Create reusable components
+✅ **DO**: Use the standard `.card_back` class or `<Card />` for section/card wrappers
 ```tsx
-function Card({ children, ...props }) {
-  return (
-    <div className="rounded-2xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 p-6 shadow-lg" {...props}>
-      {children}
-    </div>
-  );
-}
+// Prefer the shared component or utility class
+<Card>{children}</Card>
+// or
+<div className="card_back">{children}</div>
 ```
 
 ### 5. Semantic HTML

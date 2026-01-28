@@ -107,7 +107,9 @@ class ContactRequestResponse(BaseModel):
     reference: Optional[str]
     request_type: str
     nda_file_name: Optional[str]
+    submitter_ip: Optional[str] = None
     status: str
+    notes: Optional[str] = None
     created_at: datetime
 
     class Config:

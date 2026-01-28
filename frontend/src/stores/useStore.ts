@@ -229,10 +229,13 @@ export const useBackofficeStore = create<BackofficeState>((set) => ({
   setContactRequests: (requests) =>
     set({ contactRequests: requests, lastUpdated: new Date() }),
   addContactRequest: (request) =>
-    set((state) => ({
-      contactRequests: [request, ...state.contactRequests],
-      lastUpdated: new Date(),
-    })),
+    set((state) => {
+      const rest = state.contactRequests.filter((r) => r.id !== request.id);
+      return {
+        contactRequests: [request, ...rest],
+        lastUpdated: new Date(),
+      };
+    }),
   updateContactRequest: (request) =>
     set((state) => ({
       contactRequests: state.contactRequests.map((r) =>

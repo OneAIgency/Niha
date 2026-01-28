@@ -27,6 +27,11 @@
   --color-border-strong: #cbd5e1;        /* navy-300 - Emphasized borders */
   --color-border-muted: #f1f5f9;         /* navy-100 - Subtle dividers */
 
+  /* Card back: a few steps above layout (navy-50). Not too bright. */
+  --color-card-back-bg: #f1f5f9;        /* navy-100 – one step above layout */
+  --color-card-back-border: #e2e8f0;    /* navy-200 */
+  --radius-card-back: 0.75rem;           /* 12px – less rounded than 2xl */
+
   /* Brand Colors - Emerald (Primary) */
   --color-primary: #10b981;              /* emerald-500 - Primary brand */
   --color-primary-hover: #059669;        /* emerald-600 - Hover state */
@@ -240,6 +245,11 @@
   --color-border: #334155;               /* navy-700 */
   --color-border-strong: #475569;        /* navy-600 */
   --color-border-muted: #1e293b;         /* navy-800 */
+
+  /* Card back: a few steps above layout (navy-950). Not too bright. */
+  --color-card-back-bg: #0f172a;        /* navy-900 – one step above layout */
+  --color-card-back-border: #1e293b;   /* navy-800 */
+  --radius-card-back: 0.75rem;          /* 12px */
 
   /* Brand Colors - Emerald (adjusted for dark) */
   --color-primary: #34d399;              /* emerald-400 - Lighter for dark bg */

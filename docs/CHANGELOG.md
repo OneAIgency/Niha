@@ -2,6 +2,54 @@
 
 All notable changes to the Nihao Carbon Platform are documented in this file.
 
+## [2026-01-29] - NDA Form, Backoffice Notification, Badge, Modal (Plan 0006)
+
+### Features
+- **NDA form data + PDF in DB** – POST `/contact/nda-request` stores entity_name, contact_email, contact_name, position, nda_file_name, nda_file_data (binary), nda_file_mime_type, submitter_ip, request_type="nda", status=NEW. No mock/cache.
+- **Backoffice real-time list** – After create, backend broadcasts WebSocket `new_request`; `useBackofficeRealtime` calls `addContactRequest`; Contact Requests list updates without refresh.
+- **Badge** – SubSubHeader contact-requests count = `contactRequests.length`; `addContactRequest` deduplicates by id; `.subsubheader-nav-badge` used on requests tab.
+- **ContactRequestViewModal** – Shows all form fields: Entitate, Nume, Email, Position, Reference, Request type, Status, Data completării, IP (with Lookup), Notes, NDA document (name + download).
+
+### Improvements
+- **Backend: DB error handling** – Contact creation endpoints (`create_contact_request`, `create_nda_request`) wrap db add/commit/refresh in try/except with rollback and `handle_database_error`; module-level logger added in `contact.py`.
+- **Backend: ContactRequestResponse** – Schema now includes `submitter_ip` and `notes` so POST responses match GET/WebSocket shape; clients get full fields from POST.
+- **Frontend: API types** – `getContactRequests` returns `Promise<PaginatedResponse<ContactRequestResponse>>`; `updateContactRequest` accepts `ContactRequestUpdate` (`status?`, `notes?`); type added in `frontend/src/types/index.ts`.
+
+### Technical Details
+- **Files**: `backend/app/api/v1/contact.py`, `backend/app/schemas/schemas.py`, `frontend/src/services/api.ts`, `frontend/src/types/index.ts`.
+
+### Related Documentation
+- [Plan 0006](features/0006_PLAN.md) – NDA form, backoffice notification, badge, modal.
+- [Code Review 0006](features/0006_REVIEW.md) – Implementation review and fixes.
+
+---
+
+## [2026-01-28] - Card Back, Contact Request List & View Modal
+
+### Features
+- **Section/card wrapper (`card_back`)** – Standard wrapper for page sections and card containers. Theme-driven: `--color-card-back-bg`, `--color-card-back-border`, `--radius-card-back` in `design-tokens.css` (light/dark). Use `.card_back` class or `<Card />`. Less rounded corners; background a few steps above layout.
+- **Compact list row (`card_contact_request_list`)** – Compact row for lists (e.g. Contact Requests): Entitate, Nume, Data completării + actions. Class in `frontend/src/index.css`; Tailwind navy tokens only.
+- **Contact Requests UI** – Contact Requests tab: compact list rows; View (eye) icon opens **ContactRequestViewModal** with full form data, NDA PDF download link, and optional IP Lookup link. Actions: View → Approve & Invite, Reject, Delete (icon).
+- **ContactRequestViewModal** – New modal: all form fields, NDA document section with download link, optional `onIpLookup` for "Lookup" next to IP. Escape to close, focus trap (Tab/Shift+Tab), exit animation before close.
+
+### Improvements
+- **Accessibility** – View modal: Escape to close, focus on close button on open, focus trap; Reject button uses design-system pattern (secondary + `text-red-500`).
+- **onIpLookup** – Passed from ContactRequestsTab to ContactRequestViewModal; "Lookup" link next to IP in modal opens parent's IP lookup flow.
+
+### Documentation
+- **app_truth.md** §9 – Section/card wrapper (`.card_back`) and compact list row (`.card_contact_request_list`) added to UI/UX standards.
+- **DESIGN_SYSTEM.md** – Cards section already documents `card_back`; added compact list row example for `card_contact_request_list`.
+- **docs/admin/BACKOFFICE_COMPONENTS.md** – ContactRequestViewModal section; ContactRequestsTab updated (compact list, View modal, onIpLookup); Contact Requests flow diagram updated.
+- **README.md** – Onboarding page description updated: Contact Requests compact list, View modal, NDA link, IP lookup from modal.
+
+### Technical Details
+- **Files**: `frontend/src/index.css` (`.card_back`, `.card_contact_request_list`), `frontend/src/components/common/Card.tsx`, `frontend/src/styles/design-tokens.css`, `frontend/src/components/backoffice/ContactRequestsTab.tsx`, `frontend/src/components/backoffice/ContactRequestViewModal.tsx`, `frontend/docs/DESIGN_SYSTEM.md`, `app_truth.md`, `docs/admin/BACKOFFICE_COMPONENTS.md`, `README.md`, `docs/CHANGELOG.md`.
+
+### Related Documentation
+- [Code Review: Card Back & Contact Requests](features/2026_01_28_card_back_contact_requests_REVIEW.md).
+
+---
+
 ## [2026-01-28] - Backoffice UI Compliance & Onboarding Restructure (Plan 0005)
 
 ### Features

@@ -428,6 +428,93 @@ All endpoints use standardized error responses. See [API Error Handling](./ERROR
   }
   ```
 
+## Contact Requests (Admin)
+
+Contact requests (join and NDA submissions) are listed and managed from the Onboarding → Contact Requests tab. NDA form data and PDF are stored in the database; the list and count badge update in real time via WebSocket.
+
+### Get Contact Requests
+
+Paginated list with optional status filter.
+
+```http
+GET /admin/contact-requests
+```
+
+**Query Parameters:**
+- `status` (string, optional): Filter by status (e.g. `new`, `approved`, `rejected`)
+- `page` (integer, default 1): Page number
+- `per_page` (integer, default 20, max 100): Items per page
+
+**Response:** `200 OK`
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "entity_name": "Example Corp",
+      "contact_email": "user@example.com",
+      "contact_name": "John Doe",
+      "position": "Director",
+      "reference": null,
+      "request_type": "nda",
+      "nda_file_name": "signed_nda.pdf",
+      "submitter_ip": "192.168.1.1",
+      "status": "new",
+      "notes": null,
+      "created_at": "2026-01-29T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 1,
+    "total_pages": 1
+  }
+}
+```
+
+**Notes:**
+- Requires admin authentication.
+- `request_type` is `join` or `nda`. NDA requests include `nda_file_name`; PDF is available via GET `/admin/contact-requests/{request_id}/nda`.
+
+### Update Contact Request
+
+Update status or notes (e.g. reject, add internal notes).
+
+```http
+PUT /admin/contact-requests/{request_id}
+```
+
+**Path Parameters:**
+- `request_id` (string, required): UUID of the contact request
+
+**Request Body:**
+```json
+{
+  "status": "rejected",
+  "notes": "Optional internal notes"
+}
+```
+
+- `status` (string, optional): New status (e.g. `new`, `approved`, `rejected`)
+- `notes` (string, optional): Admin notes
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Contact request updated"
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Contact request not found
+
+### WebSocket `new_request` Payload
+
+When a new contact or NDA request is submitted, the backoffice WebSocket broadcasts `new_request` with the same shape as one item in GET `/admin/contact-requests` (id, entity_name, contact_email, contact_name, position, reference, request_type, nda_file_name, submitter_ip, status, notes, created_at). Frontend uses this to update the list and badge without refresh.
+
+---
+
 ## WebSocket Support
 
 The backoffice API supports real-time updates via WebSocket connection:

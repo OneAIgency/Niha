@@ -32,11 +32,12 @@ The Backoffice Dashboard (`BackofficePage`) has been refactored into modular, re
 **Purpose:** Displays and manages contact requests (join requests and NDA submissions) with real-time WebSocket updates.
 
 **Features:**
-- Real-time updates via WebSocket
-- Approval/rejection workflows
-- IP address lookup
-- NDA file downloads
-- Delete confirmation modals
+- Compact list rows (`.card_contact_request_list`): Entitate, Nume, Data completării + badge; View icon opens full-details modal
+- **ContactRequestViewModal**: all form fields, NDA PDF download link, optional IP Lookup; Escape to close, focus trap, exit animation
+- Approval/rejection workflows (Approve & Invite, Reject)
+- NDA file downloads (from list or from View modal)
+- IP address lookup (triggered from View modal when `onIpLookup` is passed)
+- Delete confirmation modal
 
 **Props:**
 ```typescript
@@ -69,6 +70,35 @@ interface ContactRequestsTabProps {
   actionLoading={actionLoading}
 />
 ```
+
+`onIpLookup` is used by the View modal: when the user opens a request's details, a "Lookup" link next to the IP field calls `onIpLookup(ip)` and opens the parent's IP lookup modal.
+
+#### `ContactRequestViewModal`
+
+**Location:** `frontend/src/components/backoffice/ContactRequestViewModal.tsx`
+
+**Purpose:** Shows all contact request form data in an overlay modal and provides a link to download the attached NDA PDF. Used when the user clicks the View (eye) icon on a contact request row.
+
+**Features:**
+- All form fields: Entitate, Nume, Email, Position, Reference, Request type, Status, Data completării, IP, Notes
+- NDA document section with download button (when `nda_file_name` is present)
+- Optional IP Lookup: when `onIpLookup` is passed and `submitter_ip` exists, a "Lookup" link opens the parent's IP lookup flow
+- Accessibility: Escape to close, focus moved to close button on open, Tab/Shift+Tab trapped inside modal
+- Exit animation before close
+
+**Props:**
+```typescript
+interface ContactRequestViewModalProps {
+  request: ContactRequest | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onDownloadNDA: (requestId: string) => Promise<void>;
+  onIpLookup?: (ip: string) => void;
+  downloadLoading?: boolean;
+}
+```
+
+**Usage:** Rendered by `ContactRequestsTab` when the user clicks View on a request. Parent passes `onDownloadNDA` and `onIpLookup` (e.g. from `BackofficeOnboardingPage`).
 
 #### `PendingDepositsTab`
 
@@ -226,13 +256,16 @@ Response format from `backofficeApi.getUserTrades()`
 ### Contact Requests Flow
 
 ```
-BackofficePage
+BackofficeOnboardingPage (or parent)
   ├─ useBackofficeRealtime() → WebSocket connection
   ├─ contactRequests state → mapped from WebSocket data
+  ├─ handleDownloadNDA, handleIpLookup, etc.
   └─ ContactRequestsTab
-      ├─ Displays requests
-      ├─ Handles approval/rejection
-      └─ Manages modals (ApproveInviteModal, ConfirmationModal)
+      ├─ Displays compact list rows (card_contact_request_list): Entitate, Nume, Data + actions
+      ├─ View icon → ContactRequestViewModal (full form data, NDA link, optional IP Lookup)
+      ├─ Approve & Invite → ApproveInviteModal
+      ├─ Reject / Delete → ConfirmationModal
+      └─ onIpLookup passed to ContactRequestViewModal for IP Lookup from modal
 ```
 
 ### Deposits Flow

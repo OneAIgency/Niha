@@ -72,7 +72,7 @@ export function LiveCanvas({ component, componentProps }: LiveCanvasProps) {
                 isDark ? 'dark' : ''
               }`}
             >
-              <div className="rounded-2xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 p-6 shadow-lg">
+              <div className="card_back">
                 <ComponentLoader
                   metadata={component}
                   props={componentProps}

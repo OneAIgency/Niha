@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 
 from fastapi import (
@@ -19,10 +20,12 @@ from ...schemas.schemas import (
     ContactRequestCreate,
     ContactRequestResponse,
 )
+from ...core.exceptions import handle_database_error
 from ...services.email_service import email_service
 from .backoffice import backoffice_ws_manager
 
 router = APIRouter(prefix="/contact", tags=["Contact"])
+logger = logging.getLogger(__name__)
 
 # Allowed file types and max size for NDA
 ALLOWED_NDA_EXTENSIONS = {".pdf"}
@@ -58,11 +61,15 @@ async def create_contact_request(
         status=ContactStatus.NEW,
     )
 
-    db.add(contact)
-    await db.commit()
-    await db.refresh(contact)
+    try:
+        db.add(contact)
+        await db.commit()
+        await db.refresh(contact)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating contact request", logger)
 
-    # Broadcast new contact request to backoffice
+    # Broadcast new contact request to backoffice (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
             "new_request",
@@ -74,7 +81,10 @@ async def create_contact_request(
                 "position": contact.position,
                 "reference": contact.reference,
                 "request_type": contact.request_type or "join",
+                "nda_file_name": contact.nda_file_name,
+                "submitter_ip": contact.submitter_ip,
                 "status": contact.status.value if contact.status else "new",
+                "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
                 else None,
@@ -137,11 +147,15 @@ async def create_nda_request(
         status=ContactStatus.NEW,
     )
 
-    db.add(contact)
-    await db.commit()
-    await db.refresh(contact)
+    try:
+        db.add(contact)
+        await db.commit()
+        await db.refresh(contact)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating NDA contact request", logger)
 
-    # Broadcast new NDA request to backoffice
+    # Broadcast new NDA request to backoffice (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
             "new_request",
@@ -151,10 +165,12 @@ async def create_nda_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
+                "reference": contact.reference,
                 "request_type": "nda",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "status": contact.status.value if contact.status else "new",
+                "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
                 else None,

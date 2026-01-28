@@ -1,10 +1,11 @@
 /**
  * Contact Requests Tab Component
- * 
- * Displays and manages contact requests (join requests and NDA submissions).
- * Supports real-time updates via WebSocket, approval/rejection workflows,
- * IP lookup, and NDA file downloads.
- * 
+ *
+ * Displays and manages contact requests (join requests and NDA submissions) in compact list rows
+ * (Entity, Name, Submitted + View / Approve & Invite / Reject / Delete). View opens
+ * ContactRequestViewModal with full form data and NDA PDF link; onIpLookup is passed to the modal
+ * for the IP Lookup link. Supports real-time WebSocket updates, approval/rejection, and NDA downloads.
+ *
  * @component
  * @example
  * ```tsx
@@ -25,11 +26,13 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Download, Trash2 } from 'lucide-react';
+import { Users, Eye, Trash2 } from 'lucide-react';
 import { Button, Card, Badge } from '../common';
+import { Typography } from '../common/Typography';
 import { ApproveInviteModal } from './ApproveInviteModal';
+import { ContactRequestViewModal } from './ContactRequestViewModal';
 import { ConfirmationModal } from '../common/ConfirmationModal';
-import { formatRelativeTime } from '../../utils';
+import { formatRelativeTime, formatDate } from '../../utils';
 import type { ContactRequest } from '../../types/backoffice';
 
 interface ContactRequestsTabProps {
@@ -61,6 +64,7 @@ export function ContactRequestsTab({
   void _connectionStatus;
   void _onRefresh;
   const [approveModalRequest, setApproveModalRequest] = useState<ContactRequest | null>(null);
+  const [viewModalRequest, setViewModalRequest] = useState<ContactRequest | null>(null);
   const [deleteConfirmRequest, setDeleteConfirmRequest] = useState<ContactRequest | null>(null);
 
   const handleApproveClick = (request: ContactRequest) => {
@@ -92,125 +96,89 @@ export function ContactRequestsTab({
         animate={{ opacity: 1, y: 0 }}
       >
         <Card>
-          <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-            <Users className="w-5 h-5 text-navy-600 dark:text-navy-400" />
-            Contact Requests
-          </h2>
-
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <div className="h-5 bg-navy-100 dark:bg-navy-600 rounded w-1/3 mb-3" />
-                  <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="card_contact_request_list animate-pulse">
+                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3" />
+                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-24" />
                 </div>
               ))}
             </div>
           ) : contactRequests.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {contactRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-navy-900 dark:text-white">
-                          {request.entity_name}
-                        </h3>
-                        <Badge variant={request.request_type === 'nda' ? 'warning' : 'info'}>
-                          {request.request_type?.toUpperCase() || 'JOIN'}
-                        </Badge>
-                        <Badge variant={request.status === 'new' ? 'info' : request.status === 'contacted' ? 'warning' : 'success'}>
-                          {request.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-navy-500 dark:text-navy-400">Contact:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_email}</span>
-                        </div>
-                        {request.contact_name && (
-                          <div>
-                            <span className="text-navy-500 dark:text-navy-400">Name:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{request.contact_name}</span>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-navy-500 dark:text-navy-400">Position:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200">{request.position}</span>
-                        </div>
-                        {request.reference && (
-                          <div>
-                            <span className="text-navy-500 dark:text-navy-400">Reference:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{request.reference}</span>
-                          </div>
-                        )}
-                        {request.submitter_ip && (
-                          <div>
-                            <span className="text-navy-500 dark:text-navy-400">IP:</span>
-                            <button
-                              onClick={() => onIpLookup(request.submitter_ip!)}
-                              className="ml-2 text-teal-600 dark:text-teal-400 hover:underline font-mono text-xs"
-                              aria-label={`Lookup IP address ${request.submitter_ip}`}
-                            >
-                              {request.submitter_ip}
-                            </button>
-                          </div>
-                        )}
-                        {request.nda_file_name && (
-                          <div className="col-span-2">
-                            <span className="text-navy-500 dark:text-navy-400">NDA File:</span>
-                            <button
-                              onClick={() => onDownloadNDA(request.id)}
-                              className="ml-2 text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
-                              aria-label={`Download NDA file ${request.nda_file_name}`}
-                            >
-                              <Download className="w-3 h-3" />
-                              {request.nda_file_name}
-                            </button>
-                          </div>
-                        )}
-                        <div className="col-span-2">
-                          <span className="text-navy-500 dark:text-navy-400">Submitted:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200">{formatRelativeTime(request.created_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {request.status === 'new' && (
-                        <>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleApproveClick(request)}
-                            loading={actionLoading === `approve-${request.id}`}
-                            aria-label={`Approve request from ${request.entity_name}`}
-                          >
-                            Approve & Invite
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onReject(request.id)}
-                            loading={actionLoading === `reject-${request.id}`}
-                            aria-label={`Reject request from ${request.entity_name}`}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(request)}
-                        loading={actionLoading === `delete-${request.id}`}
-                        aria-label={`Delete request from ${request.entity_name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                <div key={request.id} className="card_contact_request_list">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <Typography as="span" variant="sectionLabel" color="muted">
+                        Entity:
+                      </Typography>
+                      <Typography as="span" variant="bodySmall" color="primary" className="font-medium">
+                        {request.entity_name}
+                      </Typography>
+                    </span>
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <Typography as="span" variant="sectionLabel" color="muted">
+                        Name:
+                      </Typography>
+                      <Typography as="span" variant="bodySmall" color="primary">
+                        {request.contact_name || '—'}
+                      </Typography>
+                    </span>
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <Typography as="span" variant="sectionLabel" color="muted">
+                        Submitted:
+                      </Typography>
+                      <Typography as="span" variant="bodySmall" color="primary">
+                        {request.created_at ? formatDate(request.created_at) : '—'}
+                      </Typography>
+                    </span>
+                    <Badge variant={request.request_type === 'nda' ? 'warning' : 'info'} className="shrink-0 text-xs">
+                      {request.request_type?.toUpperCase() || 'JOIN'}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setViewModalRequest(request)}
+                      className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
+                      aria-label={`View details for ${request.entity_name}`}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {request.status === 'new' && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleApproveClick(request)}
+                          loading={actionLoading === `approve-${request.id}`}
+                          aria-label={`Approve request from ${request.entity_name}`}
+                        >
+                          Approve & Invite
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                          onClick={() => onReject(request.id)}
+                          loading={actionLoading === `reject-${request.id}`}
+                          aria-label={`Reject request from ${request.entity_name}`}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(request)}
+                      disabled={!!actionLoading}
+                      className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                      aria-label={`Delete request from ${request.entity_name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -246,6 +214,16 @@ export function ContactRequestsTab({
           onSuccess={handleApproveModalSuccess}
         />
       )}
+
+      {/* View contact request details modal */}
+      <ContactRequestViewModal
+        request={viewModalRequest}
+        isOpen={!!viewModalRequest}
+        onClose={() => setViewModalRequest(null)}
+        onDownloadNDA={onDownloadNDA}
+        onIpLookup={onIpLookup}
+        downloadLoading={actionLoading === `download-${viewModalRequest?.id}`}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

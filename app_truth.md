@@ -72,6 +72,7 @@ Configuration is managed via Pydantic Settings in `backend/app/core/config.py`.
 - **Default view**: Visiting `/backoffice` redirects to **Onboarding** → `/backoffice/onboarding/requests`. Onboarding subpages (Contact Requests, KYC Review, Deposits) are at `/backoffice/onboarding/requests`, `/backoffice/onboarding/kyc`, `/backoffice/onboarding/deposits`. Their nav lives in the **SubSubHeader** (left-aligned links; right side: refresh, connection status when on Contact Requests).
 - **Error boundary**: Backoffice routes are wrapped in `BackofficeErrorBoundary`, which catches render errors, displays the error message in UI, and logs via `logger.error` (with `componentStack`). Ensures a blank page is never shown on backoffice render failure.
 - **Navigation**: The main Header provides site-wide navigation (Dashboard, Backoffice, etc.). BackofficeLayout **Subheader** shows compact nav (icon-only buttons; page name on hover; active page shows icon + label) via `SubheaderNavButton`. **SubSubHeader** nav (e.g. Onboarding subpages) uses distinct button classes (`.subsubheader-nav-btn*`) and count badge (`.subsubheader-nav-badge`) from `frontend/src/styles/design-tokens.css`; see `frontend/docs/DESIGN_SYSTEM.md`.
+- **Contact/NDA requests**: POST `/contact/request` and POST `/contact/nda-request` return `ContactRequestResponse` (id, entity_name, contact_email, contact_name, position, reference, request_type, nda_file_name, submitter_ip, status, notes, created_at). WebSocket `new_request` payload matches this shape. All DB writes in `backend/app/api/v1/contact.py` use try/except, rollback, and `handle_database_error` from `app/core/exceptions`.
 
 ## 9. UI/UX & Design System (Interface Standards)
 All UI changes must follow the established interface standards. Reference these files when implementing or reviewing frontend code:
@@ -87,5 +88,7 @@ All UI changes must follow the established interface standards. Reference these 
 
 - **Colors**: Use Tailwind tokens `navy-*`, `emerald-*`, `amber-*` (CEA), `blue-*` (EUA), `red-*` (error/sell). Do not use `slate-*`, `gray-*`, or hard-coded hex/RGB.
 - **Components**: Prefer reusable components from `frontend/src/components/common/` (Button, Card, Input, PageHeader, Badge, etc.) and design-token utility classes.
+- **Section/card wrapper**: Use `.card_back` class or `<Card />` for page sections and card containers. Params in `design-tokens.css`: `--color-card-back-bg`, `--color-card-back-border`, `--radius-card-back`. See `frontend/docs/DESIGN_SYSTEM.md` § Cards.
+- **Compact list rows**: Use `.card_contact_request_list` for compact list rows (e.g. Contact Requests: Entitate, Nume, Data completării + actions). Defined in `frontend/src/index.css`; uses Tailwind navy tokens only.
 - **Theme**: Light/dark via class on root; tokens in `design-tokens.css` and Tailwind `dark:` variants.
 - **Backoffice nav levels**: Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; all in `design-tokens.css`.

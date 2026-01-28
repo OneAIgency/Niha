@@ -7,6 +7,8 @@ import type {
   SwapCalculation,
   MarketStats,
   ContactRequest,
+  ContactRequestResponse,
+  ContactRequestUpdate,
   MessageResponse,
   PaginatedResponse,
   User,
@@ -667,12 +669,12 @@ export const adminApi = {
     status?: string;
     page?: number;
     per_page?: number;
-  }): Promise<PaginatedResponse<any>> => {
+  }): Promise<PaginatedResponse<ContactRequestResponse>> => {
     const { data } = await api.get('/admin/contact-requests', { params });
     return data;
   },
 
-  updateContactRequest: async (id: string, update: any): Promise<MessageResponse> => {
+  updateContactRequest: async (id: string, update: ContactRequestUpdate): Promise<MessageResponse> => {
     const { data } = await api.put(`/admin/contact-requests/${id}`, update);
     return data;
   },

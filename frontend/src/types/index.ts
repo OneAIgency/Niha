@@ -202,6 +202,12 @@ export interface ContactRequestResponse {
   created_at: string;
 }
 
+// Contact Request update payload (admin API)
+export interface ContactRequestUpdate {
+  status?: string;
+  notes?: string;
+}
+
 // IP Lookup Result
 export interface IPLookupResult {
   ip: string;

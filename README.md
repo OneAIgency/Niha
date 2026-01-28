@@ -27,7 +27,7 @@ Comprehensive admin interface using the **same Layout** as the rest of the app (
 - **Accessibility** - ARIA labels, `aria-current`, keyboard navigation; see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md)
 
 #### Pages:
-- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content)
+- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: NDA form data and PDF stored in DB; list and badge update in real time via WebSocket. Compact list rows (Entitate, Nume, Data completării) with View modal (full form data + NDA PDF link), Approve & Invite, Reject, Delete; IP lookup available from View modal
 - **Market Makers** - Manage AI-powered market maker clients
 - **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
