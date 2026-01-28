@@ -2,6 +2,11 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../../utils';
 import { Loader2 } from 'lucide-react';
 
+/**
+ * Shared button component. Variants: primary | secondary | outline | ghost.
+ * For destructive actions (e.g. Reject), use variant="secondary" with
+ * className including text-red-500 (design system Error/Sell token).
+ */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';

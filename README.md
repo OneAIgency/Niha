@@ -15,25 +15,25 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 - **Cash Market** - EUR balance management and transfers
 
 ### Admin Backoffice (v1.0.0) ✨
-Comprehensive admin interface with compact navigation and page-specific action bars.
+Comprehensive admin interface using the **same Layout** as the rest of the app (one Header, one Footer). Default view is **Onboarding**; compact Subheader nav and optional SubSubHeader for page-specific actions.
 
 #### Features:
-- **Compact Navigation** - Efficient button-based navigation in Subheader with unified access to all admin pages
-- **Route-Based Configuration** - Dynamic icons and descriptions per page
-- **SubSubHeader Component** - Flexible action bars: left-aligned (e.g. CEA/EUA toggle, filters), right-aligned (actions, refresh)
+- **Single Header** - Backoffice shares the main site Header (brand, nav, user menu); no separate backoffice header
+- **Subheader Navigation** - Icon-only buttons (page name on hover); active page shows icon + label via `SubheaderNavButton`; design tokens in `design-tokens.css`
+- **SubSubHeader** - Optional bar under Subheader: left (e.g. Onboarding subpage links, filters), right (actions, refresh). Uses distinct button classes (`.subsubheader-nav-btn*`) and count badge (`.subsubheader-nav-badge`) for high-visibility pending counts
+- **Onboarding (default)** - Visiting `/backoffice` redirects to Onboarding → Contact Requests. Subpages: Contact Requests, KYC Review, Deposits; nav in SubSubHeader with standardized buttons and red count badges
 - **Market Orders Management** - Place BID/ASK orders with unified `PlaceOrder` component and modal-based interface
-- **Context-Aware Order Placement** - Smart filtering and display based on order type (BID/ASK)
-- **Error Handling** - Comprehensive error states and user feedback
-- **Accessibility** - Full ARIA support, keyboard navigation, and screen reader compatibility
+- **Error Handling** - Backoffice routes wrapped in `BackofficeErrorBoundary`; render errors shown in UI and logged (no blank page on crash)
+- **Accessibility** - ARIA labels, `aria-current`, keyboard navigation; see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md)
 
 #### Pages:
-- **Backoffice Dashboard** - Contact requests, KYC review, deposits, user details (modular component architecture)
+- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content)
 - **Market Makers** - Manage AI-powered market maker clients
-- **Market Orders** - Place orders on behalf of market makers with CEA/EUA toggle, Place BID/ASK modals, and order book; price-click opens correct modal with prefilled price
-- **Order Book** - View order book and place MM orders (see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md))
+- **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
-- **Audit Logging** - Comprehensive audit trail and action logging
-- **Users** - User management, roles, and permissions (accessible from backoffice navigation)
+- **Deposits** - AML/deposits management (separate from Onboarding Deposits tab)
+- **Audit Logging** - Audit trail and action logging
+- **Users** - User management (accessible from backoffice Subheader nav)
 
 ### Settlement System (v1.0.0) ✨
 Complete T+3 settlement system for external registry transfers with automated progression and monitoring.

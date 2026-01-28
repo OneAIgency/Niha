@@ -8,27 +8,34 @@ This script:
 3. Queries the order book to verify MM orders appear
 4. Checks order aggregation
 """
+
 import asyncio
-import sys
 import os
+import sys
+import uuid
 from decimal import Decimal
 from uuid import UUID
-import uuid
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '.'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
+from app.core.security import hash_password
 from app.models.models import (
-    MarketMakerClient, User, UserRole, Order, OrderSide, OrderStatus,
-    CertificateType, MarketMakerType
+    CertificateType,
+    MarketMakerClient,
+    MarketMakerType,
+    Order,
+    OrderSide,
+    OrderStatus,
+    User,
+    UserRole,
 )
 from app.services.market_maker_service import MarketMakerService
 from app.services.order_matching import get_real_orderbook
-from app.core.security import hash_password
 
 
 async def create_admin_user(session: AsyncSession) -> UUID:
@@ -58,7 +65,9 @@ async def create_admin_user(session: AsyncSession) -> UUID:
     return admin.id
 
 
-async def create_test_market_maker(session: AsyncSession, admin_id: UUID) -> MarketMakerClient:
+async def create_test_market_maker(
+    session: AsyncSession, admin_id: UUID
+) -> MarketMakerClient:
     """Create a CASH_BUYER market maker with EUR balance"""
     print("\n=== Creating Market Maker ===")
 
@@ -74,7 +83,7 @@ async def create_test_market_maker(session: AsyncSession, admin_id: UUID) -> Mar
 
     await session.flush()
 
-    print(f"✓ Created market maker:")
+    print("✓ Created market maker:")
     print(f"  ID: {mm.id}")
     print(f"  Name: {mm.name}")
     print(f"  Type: {mm.mm_type}")
@@ -84,14 +93,19 @@ async def create_test_market_maker(session: AsyncSession, admin_id: UUID) -> Mar
     return mm
 
 
-async def create_test_orders(session: AsyncSession, mm: MarketMakerClient) -> list[Order]:
+async def create_test_orders(
+    session: AsyncSession, mm: MarketMakerClient
+) -> list[Order]:
     """Create several BUY orders for the market maker"""
     print("\n=== Creating Market Maker Orders ===")
 
     orders = []
     test_orders_data = [
         {"price": Decimal("62.50"), "quantity": Decimal("100")},
-        {"price": Decimal("62.50"), "quantity": Decimal("50")},  # Same price, different order
+        {
+            "price": Decimal("62.50"),
+            "quantity": Decimal("50"),
+        },  # Same price, different order
         {"price": Decimal("62.00"), "quantity": Decimal("200")},
         {"price": Decimal("61.50"), "quantity": Decimal("150")},
     ]
@@ -108,7 +122,9 @@ async def create_test_orders(session: AsyncSession, mm: MarketMakerClient) -> li
         )
         session.add(order)
         orders.append(order)
-        print(f"✓ Created order #{i}: BUY {order_data['quantity']} CEA @ €{order_data['price']}")
+        print(
+            f"✓ Created order #{i}: BUY {order_data['quantity']} CEA @ €{order_data['price']}"
+        )
 
     await session.flush()
     print(f"\n✓ Total orders created: {len(orders)}")
@@ -123,7 +139,7 @@ async def verify_orderbook(session: AsyncSession, mm_id: UUID):
     # Get the order book
     orderbook = await get_real_orderbook(session, "CEA")
 
-    print(f"\nOrder Book Summary:")
+    print("\nOrder Book Summary:")
     print(f"  Certificate Type: {orderbook['certificate_type']}")
     print(f"  Best Bid: €{orderbook['best_bid']}")
     print(f"  Best Ask: €{orderbook['best_ask']}")
@@ -132,28 +148,29 @@ async def verify_orderbook(session: AsyncSession, mm_id: UUID):
     print(f"  Total Ask Levels: {len(orderbook['asks'])}")
 
     # Display bid levels
-    if orderbook['bids']:
-        print(f"\nBid Levels (Top 5):")
-        print(f"  {'Price':>10} | {'Quantity':>10} | {'Orders':>6} | {'Cumulative':>12}")
-        print(f"  {'-'*10}-+-{'-'*10}-+-{'-'*6}-+-{'-'*12}")
-        for bid in orderbook['bids'][:5]:
-            print(f"  €{bid['price']:>9.2f} | {bid['quantity']:>10.2f} | {bid['order_count']:>6} | {bid['cumulative_quantity']:>12.2f}")
+    if orderbook["bids"]:
+        print("\nBid Levels (Top 5):")
+        print(
+            f"  {'Price':>10} | {'Quantity':>10} | {'Orders':>6} | {'Cumulative':>12}"
+        )
+        print(f"  {'-' * 10}-+-{'-' * 10}-+-{'-' * 6}-+-{'-' * 12}")
+        for bid in orderbook["bids"][:5]:
+            print(
+                f"  €{bid['price']:>9.2f} | {bid['quantity']:>10.2f} | {bid['order_count']:>6} | {bid['cumulative_quantity']:>12.2f}"
+            )
 
     # Verify MM orders are included
-    result = await session.execute(
-        select(Order).where(Order.market_maker_id == mm_id)
-    )
+    result = await session.execute(select(Order).where(Order.market_maker_id == mm_id))
     mm_orders = result.scalars().all()
 
-    print(f"\n=== Verification Results ===")
+    print("\n=== Verification Results ===")
     print(f"✓ Market Maker has {len(mm_orders)} orders in database")
 
     # Check if orders are in the order book
     for order in mm_orders:
         # Find this price level in the order book
         price_found = any(
-            bid['price'] == float(order.price)
-            for bid in orderbook['bids']
+            bid["price"] == float(order.price) for bid in orderbook["bids"]
         )
         if price_found:
             print(f"✓ Order at €{order.price} appears in order book")
@@ -162,18 +179,17 @@ async def verify_orderbook(session: AsyncSession, mm_id: UUID):
 
     # Verify aggregation at price €62.50 (should have 2 orders)
     price_level = next(
-        (bid for bid in orderbook['bids'] if bid['price'] == 62.50),
-        None
+        (bid for bid in orderbook["bids"] if bid["price"] == 62.50), None
     )
     if price_level:
-        print(f"\n✓ Price level €62.50:")
+        print("\n✓ Price level €62.50:")
         print(f"  Quantity: {price_level['quantity']} (expected: 150.0)")
         print(f"  Order Count: {price_level['order_count']} (expected: 2)")
 
-        if price_level['order_count'] == 2:
-            print(f"  ✓ Orders correctly aggregated!")
+        if price_level["order_count"] == 2:
+            print("  ✓ Orders correctly aggregated!")
         else:
-            print(f"  ✗ Order count mismatch")
+            print("  ✗ Order count mismatch")
 
 
 async def main():
@@ -184,8 +200,8 @@ async def main():
 
     # Get database URL from environment
     db_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql+asyncpg://niha_user:niha_secure_pass_2024@localhost:5433/niha_carbon'
+        "DATABASE_URL",
+        "postgresql+asyncpg://niha_user:niha_secure_pass_2024@localhost:5433/niha_carbon",
     )
 
     # Create engine and session
@@ -201,7 +217,7 @@ async def main():
             mm = await create_test_market_maker(session, admin_id)
 
             # Step 3: Create orders
-            orders = await create_test_orders(session, mm)
+            await create_test_orders(session, mm)
 
             # Commit all changes
             await session.commit()
@@ -213,14 +229,15 @@ async def main():
             print("\n" + "=" * 60)
             print("Test completed successfully!")
             print("=" * 60)
-            print(f"\nYou can now check the order book at:")
-            print(f"  http://localhost:5174/cash-market")
+            print("\nYou can now check the order book at:")
+            print("  http://localhost:5174/cash-market")
             print(f"\nMarket Maker ID: {mm.id}")
             print(f"Market Maker Name: {mm.name}")
 
         except Exception as e:
             print(f"\n✗ Error: {e}")
             import traceback
+
             traceback.print_exc()
             await session.rollback()
             raise

@@ -1,17 +1,28 @@
 """Market Maker management service"""
+
+import logging
 import uuid
 from decimal import Decimal
 from typing import Dict, Optional
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from app.models.models import (
-    MarketMakerClient, User, UserRole, AssetTransaction,
-    TransactionType, CertificateType, TicketStatus, Order, OrderStatus, OrderSide,
-    MarketMakerType
-)
+
 from app.core.security import hash_password
+from app.models.models import (
+    AssetTransaction,
+    CertificateType,
+    MarketMakerClient,
+    MarketMakerType,
+    Order,
+    OrderSide,
+    OrderStatus,
+    TicketStatus,
+    TransactionType,
+    User,
+    UserRole,
+)
 from app.services.ticket_service import TicketService
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +59,7 @@ class MarketMakerService:
         await db.flush()
 
         # Generate client_code (MM-001, MM-002, etc.)
-        result = await db.execute(
-            select(func.count(MarketMakerClient.id))
-        )
+        result = await db.execute(select(func.count(MarketMakerClient.id)))
         count = result.scalar() or 0
         client_code = f"MM-{count + 1:03d}"
 
@@ -82,7 +91,9 @@ class MarketMakerService:
                 "email": email,
                 "description": description,
                 "mm_type": mm_type.value,
-                "initial_eur_balance": str(initial_eur_balance) if initial_eur_balance else None,
+                "initial_eur_balance": str(initial_eur_balance)
+                if initial_eur_balance
+                else None,
             },
             after_state={
                 "id": str(mm_client.id),
@@ -131,8 +142,7 @@ class MarketMakerService:
         """
         # Calculate new balance from transaction history
         result = await db.execute(
-            select(func.coalesce(func.sum(AssetTransaction.amount), 0))
-            .where(
+            select(func.coalesce(func.sum(AssetTransaction.amount), 0)).where(
                 and_(
                     AssetTransaction.market_maker_id == market_maker_id,
                     AssetTransaction.certificate_type == certificate_type,
@@ -167,6 +177,7 @@ class MarketMakerService:
         # Create transaction
         # Convert CertificateType to AssetType (same values: CEA/EUA)
         from app.models.models import AssetType
+
         asset_type_value = AssetType(certificate_type.value)
 
         transaction = AssetTransaction(
@@ -205,8 +216,7 @@ class MarketMakerService:
         for cert_type in CertificateType:
             # Total balance from transactions
             result = await db.execute(
-                select(func.coalesce(func.sum(AssetTransaction.amount), 0))
-                .where(
+                select(func.coalesce(func.sum(AssetTransaction.amount), 0)).where(
                     and_(
                         AssetTransaction.market_maker_id == market_maker_id,
                         AssetTransaction.certificate_type == cert_type,
@@ -217,13 +227,16 @@ class MarketMakerService:
 
             # Locked in active SELL orders (only sell orders lock certificates)
             result = await db.execute(
-                select(func.coalesce(func.sum(Order.quantity - Order.filled_quantity), 0))
-                .where(
+                select(
+                    func.coalesce(func.sum(Order.quantity - Order.filled_quantity), 0)
+                ).where(
                     and_(
                         Order.market_maker_id == market_maker_id,
                         Order.certificate_type == cert_type,
                         Order.side == OrderSide.SELL,
-                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        Order.status.in_(
+                            [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]
+                        ),
                     )
                 )
             )

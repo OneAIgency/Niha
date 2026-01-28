@@ -1,9 +1,43 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
 import { getPostLoginRedirect } from './utils/redirect';
+import { logger } from './utils/logger';
+
+/**
+ * Error boundary for backoffice routes. Surfaces render errors in UI instead of a blank page
+ * and logs them via logger.error (with componentStack) for debugging and monitoring.
+ */
+class BackofficeErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logger.error('[BackofficeErrorBoundary]', error, errorInfo.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      return (
+        <div className="min-h-screen bg-navy-950 flex items-center justify-center p-8">
+          <div className="max-w-xl w-full bg-navy-800 border border-navy-700 rounded-xl p-6 text-white">
+            <h1 className="text-xl font-bold text-red-400 mb-2">Backoffice error</h1>
+            <p className="text-navy-300 text-sm font-mono break-all">{this.state.error.message}</p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Code splitting: Lazy load pages for better performance
 const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
@@ -16,7 +50,6 @@ const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.Dashb
 const ProfilePage = lazy(() => import('./pages').then(m => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('./pages').then(m => ({ default: m.SettingsPage })));
 const UsersPage = lazy(() => import('./pages').then(m => ({ default: m.UsersPage })));
-const BackofficePage = lazy(() => import('./pages').then(m => ({ default: m.BackofficePage })));
 const FundingPage = lazy(() => import('./pages').then(m => ({ default: m.FundingPage })));
 const SetupPasswordPage = lazy(() => import('./pages').then(m => ({ default: m.SetupPasswordPage })));
 const Onboarding1Page = lazy(() => import('./pages').then(m => ({ default: m.Onboarding1Page })));
@@ -34,6 +67,8 @@ const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.Ma
 const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
 const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
+const BackofficeDepositsPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeDepositsPage })));
+const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -187,250 +222,299 @@ function App() {
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-        {/* Redirect root to login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Redirect root to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Onboarding - new multi-page onboarding hub */}
-        <Route
-          path="/onboarding"
-          element={
-            <OnboardingRoute>
-              <OnboardingIndexPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/market-overview"
-          element={
-            <OnboardingRoute>
-              <MarketOverviewPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/about-nihao"
-          element={
-            <OnboardingRoute>
-              <AboutNihaoPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/cea-holders"
-          element={
-            <OnboardingRoute>
-              <CeaHoldersPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/eua-holders"
-          element={
-            <OnboardingRoute>
-              <EuaHoldersPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/eu-entities"
-          element={
-            <OnboardingRoute>
-              <EuEntitiesPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route
-          path="/onboarding/strategic-advantage"
-          element={
-            <OnboardingRoute>
-              <StrategicAdvantagePage />
-            </OnboardingRoute>
-          }
-        />
-
-        {/* Onboarding1 - EUA-CEA swap analysis page (legacy) */}
-        <Route
-          path="/onboarding1"
-          element={
-            <OnboardingRoute>
-              <Onboarding1Page />
-            </OnboardingRoute>
-          }
-        />
-
-        {/* Learn More - standalone page for onboarding users */}
-        <Route
-          path="/learn-more"
-          element={
-            <OnboardingRoute>
-              <LearnMorePage />
-            </OnboardingRoute>
-          }
-        />
-
-        {/* Public routes with layout */}
-        <Route element={<Layout />}>
-          <Route path="/contact" element={<ContactPage />} />
-
-          {/* Protected - All authenticated users */}
+          {/* Onboarding - new multi-page onboarding hub */}
           <Route
-            path="/profile"
+            path="/onboarding"
             element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
+              <OnboardingRoute>
+                <OnboardingIndexPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/market-overview"
+            element={
+              <OnboardingRoute>
+                <MarketOverviewPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/about-nihao"
+            element={
+              <OnboardingRoute>
+                <AboutNihaoPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/cea-holders"
+            element={
+              <OnboardingRoute>
+                <CeaHoldersPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/eua-holders"
+            element={
+              <OnboardingRoute>
+                <EuaHoldersPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/eu-entities"
+            element={
+              <OnboardingRoute>
+                <EuEntitiesPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route
+            path="/onboarding/strategic-advantage"
+            element={
+              <OnboardingRoute>
+                <StrategicAdvantagePage />
+              </OnboardingRoute>
             }
           />
 
-          {/* APPROVED users - Funding page only */}
+          {/* Onboarding1 - EUA-CEA swap analysis page (legacy) */}
           <Route
-            path="/funding"
+            path="/onboarding1"
             element={
-              <ApprovedRoute>
-                <FundingPage />
-              </ApprovedRoute>
+              <OnboardingRoute>
+                <Onboarding1Page />
+              </OnboardingRoute>
             }
           />
 
-          {/* Protected - Funded, Admin (dashboard access) */}
+          {/* Learn More - standalone page for onboarding users */}
           <Route
-            path="/dashboard"
+            path="/learn-more"
             element={
-              <DashboardRoute>
-                <DashboardPage />
-              </DashboardRoute>
-            }
-          />
-          {/* FUNDED and ADMIN - Cash Market access */}
-          <Route
-            path="/cash-market"
-            element={
-              <FundedRoute>
-                <CashMarketPage />
-              </FundedRoute>
-            }
-          />
-          {/* Cash Market Pro - Professional Trading Interface */}
-          <Route
-            path="/cash-market-pro"
-            element={
-              <FundedRoute>
-                <CashMarketProPage />
-              </FundedRoute>
-            }
-          />
-          {/* ADMIN only - Swap Center access */}
-          <Route
-            path="/swap"
-            element={
-              <AdminRoute>
-                <CeaSwapMarketPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/swap-old"
-            element={
-              <AdminRoute>
-                <SwapPage />
-              </AdminRoute>
+              <OnboardingRoute>
+                <LearnMorePage />
+              </OnboardingRoute>
             }
           />
 
-          {/* Admin only routes */}
-          <Route
-            path="/settings"
-            element={
-              <AdminRoute>
-                <SettingsPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <AdminRoute>
-                <UsersPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/backoffice"
-            element={
-              <AdminRoute>
-                <BackofficePage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/backoffice/market-makers"
-            element={
-              <AdminRoute>
-                <MarketMakersPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/backoffice/market-orders"
-            element={
-              <AdminRoute>
-                <MarketOrdersPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/backoffice/logging"
-            element={
-              <AdminRoute>
-                <LoggingPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/backoffice/liquidity"
-            element={
-              <AdminRoute>
-                <CreateLiquidityPage />
-              </AdminRoute>
-            }
-          />
+          {/* Public routes with layout */}
+          <Route element={<Layout />}>
+            <Route path="/contact" element={<ContactPage />} />
 
-          {/* Component Showcase - Design System Reference */}
+            {/* Protected - All authenticated users */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* APPROVED users - Funding page only */}
+            <Route
+              path="/funding"
+              element={
+                <ApprovedRoute>
+                  <FundingPage />
+                </ApprovedRoute>
+              }
+            />
+
+            {/* Protected - Funded, Admin (dashboard access) */}
+            <Route
+              path="/dashboard"
+              element={
+                <DashboardRoute>
+                  <DashboardPage />
+                </DashboardRoute>
+              }
+            />
+            {/* FUNDED and ADMIN - Cash Market access */}
+            <Route
+              path="/cash-market"
+              element={
+                <FundedRoute>
+                  <CashMarketPage />
+                </FundedRoute>
+              }
+            />
+            {/* Cash Market Pro - Professional Trading Interface */}
+            <Route
+              path="/cash-market-pro"
+              element={
+                <FundedRoute>
+                  <CashMarketProPage />
+                </FundedRoute>
+              }
+            />
+            {/* ADMIN only - Swap Center access */}
+            <Route
+              path="/swap"
+              element={
+                <AdminRoute>
+                  <CeaSwapMarketPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/swap-old"
+              element={
+                <AdminRoute>
+                  <SwapPage />
+                </AdminRoute>
+              }
+            />
+
+            {/* Admin only routes */}
+            <Route
+              path="/settings"
+              element={
+                <AdminRoute>
+                  <SettingsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <AdminRoute>
+                  <UsersPage />
+                </AdminRoute>
+              }
+            />
+
+            {/* Component Showcase - Design System Reference */}
+            <Route
+              path="/components"
+              element={
+                <ProtectedRoute>
+                  <ComponentShowcasePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Design System - Comprehensive Token & Component Reference */}
+            <Route path="/design-system" element={<DesignSystemPage />} />
+
+            {/* Backoffice routes - same Layout (Header + Footer) as rest of site */}
+            <Route
+              path="/backoffice"
+              element={<Navigate to="/backoffice/onboarding" replace />}
+            />
+            <Route
+              path="/backoffice/onboarding"
+              element={<Navigate to="/backoffice/onboarding/requests" replace />}
+            />
+            <Route
+              path="/backoffice/onboarding/requests"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/onboarding/kyc"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/onboarding/deposits"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/market-makers"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <MarketMakersPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/market-orders"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <MarketOrdersPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/logging"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <LoggingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/liquidity"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <CreateLiquidityPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/deposits"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeDepositsPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+          </Route>
+
+          {/* Auth routes (no layout) */}
           <Route
-            path="/components"
+            path="/login"
             element={
-              <ProtectedRoute>
-                <ComponentShowcasePage />
-              </ProtectedRoute>
+              <LoginRoute>
+                <LoginPage />
+              </LoginRoute>
             }
           />
+          <Route
+            path="/auth/verify"
+            element={
+              <LoginRoute>
+                <LoginPage />
+              </LoginRoute>
+            }
+          />
+          <Route path="/setup-password" element={<SetupPasswordPage />} />
 
-          {/* Design System - Comprehensive Token & Component Reference */}
-          <Route path="/design-system" element={<DesignSystemPage />} />
-        </Route>
-
-
-        {/* Auth routes (no layout) */}
-        <Route
-          path="/login"
-          element={
-            <LoginRoute>
-              <LoginPage />
-            </LoginRoute>
-          }
-        />
-        <Route
-          path="/auth/verify"
-          element={
-            <LoginRoute>
-              <LoginPage />
-            </LoginRoute>
-          }
-        />
-        <Route path="/setup-password" element={<SetupPasswordPage />} />
-
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Catch-all redirect */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
     </Router>

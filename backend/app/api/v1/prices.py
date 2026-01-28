@@ -1,7 +1,7 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import List
 import asyncio
-import json
+from typing import List
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ...services.price_scraper import price_scraper
 

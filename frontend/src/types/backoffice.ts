@@ -7,7 +7,7 @@ import type { CertificateType } from './index';
 
 /**
  * Contact Request interface
- * Used across BackofficePage and ContactRequestsTab
+ * Used across BackofficeOnboardingPage and ContactRequestsTab
  */
 export interface ContactRequest {
   id: string;
@@ -81,7 +81,7 @@ export interface UserTradeResponse {
 
 /**
  * KYC User interface
- * Used in BackofficePage for KYC review
+ * Used in BackofficeOnboardingPage for KYC review
  */
 export interface KYCUser {
   id: string;
@@ -95,7 +95,7 @@ export interface KYCUser {
 
 /**
  * KYC Document interface
- * Used in BackofficePage for document review
+ * Used in BackofficeOnboardingPage for document review
  */
 export interface KYCDocument {
   id: string;
@@ -131,7 +131,7 @@ export interface PendingDeposit {
 
 /**
  * User Trade interface
- * Internal format used in BackofficePage for user details
+ * Internal format used in BackofficeOnboardingPage for user details
  */
 export interface UserTrade {
   id: string;

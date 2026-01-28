@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -64,10 +65,12 @@ class EmailService:
         certificate_type: str,
         quantity: float,
         price: float,
-        total: float
+        total: float,
     ) -> bool:
         """Send trade confirmation email"""
-        subject = f"Trade Confirmation - {trade_type.upper()} {quantity} {certificate_type}"
+        subject = (
+            f"Trade Confirmation - {trade_type.upper()} {quantity} {certificate_type}"
+        )
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -118,12 +121,7 @@ class EmailService:
         return await self._send_email(to_email, subject, html_content)
 
     async def send_swap_match_notification(
-        self,
-        to_email: str,
-        from_type: str,
-        to_type: str,
-        quantity: float,
-        rate: float
+        self, to_email: str, from_type: str, to_type: str, quantity: float, rate: float
     ) -> bool:
         """Send swap match notification"""
         subject = f"Swap Match Found - {from_type} to {to_type}"
@@ -172,7 +170,9 @@ class EmailService:
 
         return await self._send_email(to_email, subject, html_content)
 
-    async def send_invitation(self, to_email: str, first_name: str, invitation_token: str) -> bool:
+    async def send_invitation(
+        self, to_email: str, first_name: str, invitation_token: str
+    ) -> bool:
         """Send invitation email to new user with password setup link"""
         name = first_name or "there"
         setup_url = f"http://localhost:5173/setup-password?token={invitation_token}"
@@ -351,7 +351,7 @@ class EmailService:
         batch_reference: str,
         certificate_type: str,
         quantity: float,
-        expected_date: str
+        expected_date: str,
     ) -> bool:
         """Send settlement created confirmation email"""
         name = first_name or "there"
@@ -428,21 +428,49 @@ class EmailService:
         old_status: str,
         new_status: str,
         certificate_type: str,
-        quantity: float
+        quantity: float,
     ) -> bool:
         """Send settlement status update email"""
         name = first_name or "there"
 
         # Status display configuration
         status_config = {
-            "TRANSFER_INITIATED": {"emoji": "🚀", "color": "#3b82f6", "bg": "#dbeafe", "label": "Transfer Initiated"},
-            "IN_TRANSIT": {"emoji": "🔄", "color": "#8b5cf6", "bg": "#ede9fe", "label": "In Transit"},
-            "AT_CUSTODY": {"emoji": "🏦", "color": "#06b6d4", "bg": "#cffafe", "label": "At Custody"},
-            "SETTLED": {"emoji": "✅", "color": "#10b981", "bg": "#d1fae5", "label": "Settled"},
-            "FAILED": {"emoji": "❌", "color": "#ef4444", "bg": "#fee2e2", "label": "Failed"}
+            "TRANSFER_INITIATED": {
+                "emoji": "🚀",
+                "color": "#3b82f6",
+                "bg": "#dbeafe",
+                "label": "Transfer Initiated",
+            },
+            "IN_TRANSIT": {
+                "emoji": "🔄",
+                "color": "#8b5cf6",
+                "bg": "#ede9fe",
+                "label": "In Transit",
+            },
+            "AT_CUSTODY": {
+                "emoji": "🏦",
+                "color": "#06b6d4",
+                "bg": "#cffafe",
+                "label": "At Custody",
+            },
+            "SETTLED": {
+                "emoji": "✅",
+                "color": "#10b981",
+                "bg": "#d1fae5",
+                "label": "Settled",
+            },
+            "FAILED": {
+                "emoji": "❌",
+                "color": "#ef4444",
+                "bg": "#fee2e2",
+                "label": "Failed",
+            },
         }
 
-        config = status_config.get(new_status, {"emoji": "⏱️", "color": "#f59e0b", "bg": "#fef3c7", "label": new_status})
+        config = status_config.get(
+            new_status,
+            {"emoji": "⏱️", "color": "#f59e0b", "bg": "#fef3c7", "label": new_status},
+        )
 
         subject = f"Settlement Update - {batch_reference} is now {config['label']}"
         html_content = f"""
@@ -456,7 +484,7 @@ class EmailService:
                 .logo span {{ color: #10b981; }}
                 .status-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
                 h1 {{ color: #0f172a; font-size: 20px; text-align: center; margin-bottom: 12px; }}
-                .status-badge {{ display: inline-block; background: {config['bg']}; color: {config['color']}; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
+                .status-badge {{ display: inline-block; background: {config["bg"]}; color: {config["color"]}; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
                 .progress {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
                 .progress-label {{ color: #64748b; font-size: 13px; margin-bottom: 8px; }}
                 .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
@@ -469,10 +497,10 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="status-icon">{config['emoji']}</div>
+                <div class="status-icon">{config["emoji"]}</div>
                 <h1>Settlement Status Updated</h1>
                 <div style="text-align: center;">
-                    <span class="status-badge">{config['label'].upper()}</span>
+                    <span class="status-badge">{config["label"].upper()}</span>
                 </div>
                 <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, your settlement has progressed to the next stage.</p>
                 <div class="details">
@@ -490,11 +518,11 @@ class EmailService:
                     </div>
                     <div class="detail-row">
                         <span class="label">Previous Status</span>
-                        <span class="value">{old_status.replace('_', ' ').title()}</span>
+                        <span class="value">{old_status.replace("_", " ").title()}</span>
                     </div>
                     <div class="detail-row">
                         <span class="label">New Status</span>
-                        <span class="value" style="color: {config['color']};">{config['label']}</span>
+                        <span class="value" style="color: {config["color"]};">{config["label"]}</span>
                     </div>
                 </div>
                 <div class="footer">
@@ -515,7 +543,7 @@ class EmailService:
         batch_reference: str,
         certificate_type: str,
         quantity: float,
-        new_balance: float
+        new_balance: float,
     ) -> bool:
         """Send settlement completion email"""
         name = first_name or "there"
@@ -591,7 +619,7 @@ class EmailService:
         batch_reference: str,
         certificate_type: str,
         quantity: float,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
     ) -> bool:
         """Send settlement failure notification email"""
         name = first_name or "there"
@@ -674,10 +702,12 @@ class EmailService:
         quantity: float,
         expected_date: str,
         days_overdue: int,
-        current_status: str
+        current_status: str,
     ) -> bool:
         """Send admin alert for overdue settlement"""
-        subject = f"⚠️ ALERT: Settlement {batch_reference} is {days_overdue} days overdue"
+        subject = (
+            f"⚠️ ALERT: Settlement {batch_reference} is {days_overdue} days overdue"
+        )
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -734,7 +764,7 @@ class EmailService:
                     </div>
                     <div class="detail-row">
                         <span class="label">Current Status</span>
-                        <span class="value">{current_status.replace('_', ' ').title()}</span>
+                        <span class="value">{current_status.replace("_", " ").title()}</span>
                     </div>
                     <div class="detail-row">
                         <span class="label">Days Overdue</span>
@@ -772,13 +802,14 @@ class EmailService:
 
         try:
             import resend
+
             resend.api_key = self.api_key
 
             params = {
                 "from": self.from_email,
                 "to": [to],
                 "subject": subject,
-                "html": html
+                "html": html,
             }
 
             resend.Emails.send(params)

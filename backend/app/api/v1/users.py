@@ -1,40 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from datetime import datetime, timedelta
-from typing import Optional
-from decimal import Decimal
-from uuid import UUID
 import secrets
 import string
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import (
     get_current_user,
     hash_password,
+    validate_password_strength,
     verify_password,
-    validate_password_strength
 )
-from ...models.models import User, Entity, ActivityLog, UserSession, Deposit, DepositStatus, Currency, UserRole
+from ...models.models import (
+    ActivityLog,
+    Currency,
+    Deposit,
+    DepositStatus,
+    Entity,
+    User,
+    UserRole,
+    UserSession,
+)
 from ...schemas.schemas import (
-    UserResponse,
-    UserProfileUpdate,
-    PasswordChange,
-    MessageResponse,
     ActivityLogResponse,
-    UserSessionResponse,
+    MessageResponse,
+    PasswordChange,
     UserDepositReport,
-    DepositResponse,
-    Currency as SchemaCurrency
+    UserProfileUpdate,
+    UserResponse,
+    UserSessionResponse,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_profile(
-    current_user: User = Depends(get_current_user)
-):
+async def get_profile(current_user: User = Depends(get_current_user)):
     """
     Get current user's profile information.
     """
@@ -45,15 +49,15 @@ async def get_profile(
 async def update_profile(
     update: UserProfileUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update current user's profile information.
-    
+
     Note: Frontend restricts this endpoint to admin users only.
     All authenticated users can call this endpoint, but the UI only
     shows edit controls for users with ADMIN role.
-    
+
     Updates only the fields provided in the request body.
     Email address cannot be changed via this endpoint.
     """
@@ -84,18 +88,18 @@ async def update_profile(
 async def change_password(
     password_data: PasswordChange,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Change current user's password.
-    
+
     Password must meet strength requirements:
     - Minimum 8 characters
     - At least one uppercase letter (A-Z)
     - At least one lowercase letter (a-z)
     - At least one number (0-9)
     - At least one special character: !@#$%^&*()_+-=[]{}|;:,.<>?
-    
+
     If the user has an existing password, the current password must be verified.
     """
     # Get fresh user instance from this session
@@ -108,10 +112,7 @@ async def change_password(
     # Verify current password if user has one
     if user.password_hash:
         if not verify_password(password_data.current_password, user.password_hash):
-            raise HTTPException(
-                status_code=400,
-                detail="Current password is incorrect"
-            )
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
 
     # Validate new password strength
     is_valid, message = validate_password_strength(password_data.new_password)
@@ -132,14 +133,16 @@ async def get_my_activity(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get current user's activity log.
     """
     # Count total
-    count_query = select(func.count()).select_from(ActivityLog).where(
-        ActivityLog.user_id == current_user.id
+    count_query = (
+        select(func.count())
+        .select_from(ActivityLog)
+        .where(ActivityLog.user_id == current_user.id)
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar()
@@ -157,22 +160,19 @@ async def get_my_activity(
     activities = result.scalars().all()
 
     return {
-        "data": [
-            ActivityLogResponse.model_validate(a) for a in activities
-        ],
+        "data": [ActivityLogResponse.model_validate(a) for a in activities],
         "pagination": {
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page if total else 0
-        }
+            "total_pages": (total + per_page - 1) // per_page if total else 0,
+        },
     }
 
 
 @router.get("/me/sessions")
 async def get_my_sessions(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's session history.
@@ -196,15 +196,14 @@ async def get_my_sessions(
 
 @router.get("/me/entity")
 async def get_my_entity(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's associated entity information.
-    
+
     Returns entity details if the user has an associated entity (entity_id is set).
     Returns null if the user has no associated entity.
-    
+
     Entity information includes:
     - Entity name and legal name
     - Jurisdiction (EU, CN, HK, OTHER)
@@ -214,9 +213,7 @@ async def get_my_entity(
     if not current_user.entity_id:
         return None
 
-    result = await db.execute(
-        select(Entity).where(Entity.id == current_user.entity_id)
-    )
+    result = await db.execute(select(Entity).where(Entity.id == current_user.entity_id))
     entity = result.scalar_one_or_none()
 
     if not entity:
@@ -230,17 +227,18 @@ async def get_my_entity(
         "registration_number": entity.registration_number,
         "verified": entity.verified,
         "kyc_status": entity.kyc_status.value,
-        "created_at": entity.created_at.isoformat()
+        "created_at": entity.created_at.isoformat(),
     }
 
 
 # ==================== Deposit Reporting (APPROVED Users) ====================
 
+
 @router.post("/me/deposits/report", response_model=MessageResponse)
 async def report_deposit(
     deposit_data: UserDepositReport,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Report a wire transfer deposit (APPROVED users only).
@@ -250,13 +248,13 @@ async def report_deposit(
     if current_user.role != UserRole.APPROVED:
         raise HTTPException(
             status_code=403,
-            detail="Only APPROVED users can report deposits. Complete KYC verification first."
+            detail="Only APPROVED users can report deposits. Complete KYC verification first.",
         )
 
     if not current_user.entity_id:
         raise HTTPException(
             status_code=400,
-            detail="User must be associated with an entity to report deposits"
+            detail="User must be associated with an entity to report deposits",
         )
 
     # Generate bank reference
@@ -270,7 +268,7 @@ async def report_deposit(
         wire_reference=deposit_data.wire_reference,
         bank_reference=bank_ref,
         status=DepositStatus.PENDING,
-        reported_at=datetime.utcnow()
+        reported_at=datetime.utcnow(),
     )
 
     db.add(deposit)
@@ -283,8 +281,7 @@ async def report_deposit(
 
 @router.get("/me/deposits")
 async def get_my_deposits(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's entity deposits.
@@ -306,16 +303,20 @@ async def get_my_deposits(
             "id": str(d.id),
             "entity_id": str(d.entity_id),
             "reported_amount": float(d.reported_amount) if d.reported_amount else None,
-            "reported_currency": d.reported_currency.value if d.reported_currency else None,
+            "reported_currency": d.reported_currency.value
+            if d.reported_currency
+            else None,
             "amount": float(d.amount) if d.amount else None,
             "currency": d.currency.value if d.currency else None,
             "wire_reference": d.wire_reference,
             "bank_reference": d.bank_reference,
             "status": d.status.value,
             "reported_at": d.reported_at.isoformat() + "Z" if d.reported_at else None,
-            "confirmed_at": d.confirmed_at.isoformat() + "Z" if d.confirmed_at else None,
+            "confirmed_at": d.confirmed_at.isoformat() + "Z"
+            if d.confirmed_at
+            else None,
             "notes": d.notes,
-            "created_at": d.created_at.isoformat() + "Z"
+            "created_at": d.created_at.isoformat() + "Z",
         }
         for d in deposits
     ]
@@ -323,18 +324,17 @@ async def get_my_deposits(
 
 @router.get("/me/entity/balance")
 async def get_my_entity_balance(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's entity balance.
     """
     if not current_user.entity_id:
-        raise HTTPException(status_code=400, detail="User not associated with an entity")
+        raise HTTPException(
+            status_code=400, detail="User not associated with an entity"
+        )
 
-    result = await db.execute(
-        select(Entity).where(Entity.id == current_user.entity_id)
-    )
+    result = await db.execute(select(Entity).where(Entity.id == current_user.entity_id))
     entity = result.scalar_one_or_none()
 
     if not entity:
@@ -342,9 +342,10 @@ async def get_my_entity_balance(
 
     # Count confirmed deposits
     deposit_count_result = await db.execute(
-        select(func.count()).select_from(Deposit).where(
-            Deposit.entity_id == entity.id,
-            Deposit.status == DepositStatus.CONFIRMED
+        select(func.count())
+        .select_from(Deposit)
+        .where(
+            Deposit.entity_id == entity.id, Deposit.status == DepositStatus.CONFIRMED
         )
     )
     deposit_count = deposit_count_result.scalar()
@@ -353,28 +354,31 @@ async def get_my_entity_balance(
         "entity_id": str(entity.id),
         "entity_name": entity.name,
         "balance_amount": float(entity.balance_amount) if entity.balance_amount else 0,
-        "balance_currency": entity.balance_currency.value if entity.balance_currency else None,
-        "total_deposited": float(entity.total_deposited) if entity.total_deposited else 0,
-        "deposit_count": deposit_count
+        "balance_currency": entity.balance_currency.value
+        if entity.balance_currency
+        else None,
+        "total_deposited": float(entity.total_deposited)
+        if entity.total_deposited
+        else 0,
+        "deposit_count": deposit_count,
     }
 
 
 @router.get("/me/entity/assets")
 async def get_my_entity_assets(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's entity asset holdings (EUR, CEA, EUA).
     """
-    from ...models.models import EntityHolding, AssetType
+    from ...models.models import AssetType, EntityHolding
 
     if not current_user.entity_id:
-        raise HTTPException(status_code=400, detail="User not associated with an entity")
+        raise HTTPException(
+            status_code=400, detail="User not associated with an entity"
+        )
 
-    result = await db.execute(
-        select(Entity).where(Entity.id == current_user.entity_id)
-    )
+    result = await db.execute(select(Entity).where(Entity.id == current_user.entity_id))
     entity = result.scalar_one_or_none()
 
     if not entity:
@@ -413,9 +417,7 @@ async def get_my_entity_assets(
 
 
 @router.get("/me/funding-instructions")
-async def get_funding_instructions(
-    current_user: User = Depends(get_current_user)
-):
+async def get_funding_instructions(current_user: User = Depends(get_current_user)):
     """
     Get wire transfer instructions for funding.
     """
@@ -426,5 +428,5 @@ async def get_funding_instructions(
         "swift_bic": "NIHALU2X",
         "reference_instructions": "Please include your entity name and the reference number provided after reporting your deposit.",
         "supported_currencies": ["EUR", "USD", "CNY", "HKD"],
-        "processing_time": "1-3 business days after funds arrive"
+        "processing_time": "1-3 business days after funds arrive",
     }

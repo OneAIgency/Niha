@@ -2,6 +2,99 @@
 
 All notable changes to the Nihao Carbon Platform are documented in this file.
 
+## [2026-01-28] - Backoffice UI Compliance & Onboarding Restructure (Plan 0005)
+
+### Features
+- **Single Header** – Backoffice uses the same main site Layout (one Header, one Footer); no separate backoffice header.
+- **Subheader nav** – Icon-only buttons; page name on hover; active page shows icon + label via `SubheaderNavButton`. Standardized classes: `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` in `design-tokens.css`.
+- **Onboarding default** – Visiting `/backoffice` redirects to Onboarding → `/backoffice/onboarding/requests`. Contact Requests, KYC Review, and Deposits are subpages under Onboarding with route-based content.
+- **SubSubHeader nav** – Onboarding subpage links (Contact Requests, KYC, Deposits) in SubSubHeader with **distinct button design** (child-level): `.subsubheader-nav-btn*` (smaller, rounded-lg). **Count badge** (pending/new items): `.subsubheader-nav-badge` (red background, high visibility). All standardized in `design-tokens.css` and documented in DESIGN_SYSTEM.md.
+- **Current-page highlighting** – Subheader and SubSubHeader nav both highlight the active route using the same logic (route-based active state).
+
+### Removed
+- **BackofficePage** – Removed; content moved to `BackofficeOnboardingPage`. Unused lazy import and export removed; type comments in `types/backoffice.ts` updated to reference `BackofficeOnboardingPage`.
+
+### Technical Details
+- **Files**: `BackofficeLayout.tsx`, `BackofficeOnboardingPage.tsx`, `SubheaderNavButton.tsx`, `Subheader.tsx`, `SubSubHeader.tsx`, `design-tokens.css`, `DESIGN_SYSTEM.md`, `App.tsx`, `pages/index.ts`, `app_truth.md`, `docs/admin/BACKOFFICE_NAVIGATION.md`, `README.md`.
+- **Routes**: `/backoffice` → `/backoffice/onboarding` → `/backoffice/onboarding/requests`; `/backoffice/onboarding/requests`, `/kyc`, `/deposits` render `BackofficeOnboardingPage`.
+
+### Related Documentation
+- [Plan 0005](features/0005_backoffice_ui_compliance_PLAN.md) – Backoffice UI compliance plan.
+- [Code Review 0005](features/0005_REVIEW.md) – Full scope review and fixes.
+- [Backoffice navigation](admin/BACKOFFICE_NAVIGATION.md) – Routes and layout.
+
+---
+
+## [2026-01-28] - Backoffice Empty Page Fix
+
+### Bug Fixes
+- **Backoffice blank page** – Backoffice routes (`/backoffice`, `/backoffice/*`) now render outside the main site Layout so content is no longer hidden by layout/flex issues.
+- **Runtime crash** – `formatRelativeTime` no longer throws when given `null` or `undefined` (e.g. missing `created_at` from API); returns `'—'` instead.
+
+### Improvements
+- **Error boundary** – Backoffice routes wrapped in `BackofficeErrorBoundary`; render errors are shown in UI and logged via `logger.error` (with `componentStack`).
+- **Navigation** – "Back to site" link in BackofficeLayout Subheader links to `/dashboard`.
+
+### Technical Details
+- **Files modified**: `frontend/src/App.tsx` (BackofficeErrorBoundary with `componentDidCatch`, backoffice routes moved out of Layout), `frontend/src/utils/index.ts` (`formatRelativeTime` null/undefined guard), `frontend/src/components/layout/BackofficeLayout.tsx` ("Back to site" link).
+- **New file**: `frontend/src/utils/__tests__/formatRelativeTime.test.ts` (null/undefined and valid date tests).
+
+### Related Documentation
+- [Code Review: Backoffice Empty Page Fix](features/2026_01_28_backoffice_empty_page_fix_REVIEW.md).
+
+---
+
+## [2026-01-28] - Browser & Console Verification / Build Fixes (0004)
+
+### Bug Fixes
+- **Frontend build** – Resolved TypeScript build failures (unused imports, invalid Button variants, optional deposit fields).
+- **AMLDepositsTab** – Removed unused `TrendingUp` import; Reject button uses valid `variant="secondary"` with design-system token `text-red-500` (Error/Sell).
+- **UserDetailModal** – Deposit amount display: show "—" when `amount` is null/undefined instead of "€0.00" to avoid masking missing data.
+- **BackofficeAssetsPage** – Removed unused imports: `Wallet`, `TrendingUp`, `DollarSign`, `Badge`.
+- **BackofficeDepositsPage** – "Clear Funds" button uses `variant="primary"` (Button has no `success` variant).
+
+### Code Quality
+- **Button variants** – Only `primary | secondary | outline | ghost` are supported; destructive actions use `secondary` + `className` with `text-red-500` (see design system).
+- **Type safety** – `formatCurrency` callers pass `number`; for missing amount, UI shows "—" or N/A instead of `formatCurrency(0)`.
+- **Tests** – Added `frontend/src/utils/__tests__/formatCurrency.test.ts` (zero, positive/negative, EUR default, custom currency).
+
+### Technical Details
+- **Files modified**: `AMLDepositsTab.tsx`, `UserDetailModal.tsx`, `BackofficeAssetsPage.tsx`, `BackofficeDepositsPage.tsx`.
+- **New file**: `frontend/src/utils/__tests__/formatCurrency.test.ts`.
+- **Verification**: `npm run build` and `npm run test` pass.
+
+### Related Documentation
+- [Browser & Console Verification Report](features/0004_browser_console_verification_report.md) – Plan and identified errors.
+- [Code Review 0004](features/0004_REVIEW.md) – Review and post-review fixes.
+
+---
+
+## [2026-01-27] - Authentication Import Fix
+
+### Bug Fixes
+- **Critical Fix** - Fixed backend startup failure caused by incorrect import in `withdrawals.py`
+  - Replaced non-existent `require_admin` import with correct `get_admin_user` function
+  - Backend now starts successfully, authentication endpoints working
+  - All API endpoints functional after fix
+
+### Code Quality
+- **Naming Consistency** - Updated admin endpoints in `withdrawals.py` to use `admin_user` parameter name
+  - Matches naming convention used across all other API files
+  - Improved code consistency and maintainability
+  - 6 admin endpoints updated for consistency
+
+### Technical Details
+- **File Modified**: `backend/app/api/v1/withdrawals.py`
+- **Import Fix**: Changed from `require_admin` to `get_admin_user`
+- **Parameter Updates**: All admin endpoints now use `admin_user` instead of `current_user`
+- **Impact**: Resolved complete backend service outage
+
+### Related Documentation
+- [Authentication Import Fix](../docs/fixes/2026-01-27-authentication-import-fix.md) - Detailed fix documentation
+- [Code Review](../docs/features/2026-01-27-authentication-import-fix_REVIEW.md) - Code review notes
+
+---
+
 ## [2026-01-26] - Profile Page API Integration & Admin-Only Editing
 
 ### Features

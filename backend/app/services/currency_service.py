@@ -4,11 +4,13 @@ Currency Conversion Service
 Provides EUR exchange rates from external API with caching and fallbacks.
 This is the ONLY place in the codebase that handles currency conversion.
 """
-from decimal import Decimal, ROUND_HALF_UP
-from datetime import datetime, timedelta
-from typing import Optional, Dict
-import httpx
+
 import logging
+from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Dict, Optional
+
+import httpx
 
 from ..core.security import RedisManager
 
@@ -37,9 +39,9 @@ class CurrencyService:
 
     # Fallback rates if API unavailable (updated 2026-01-20)
     FALLBACK_RATES = {
-        "CNY": Decimal("7.85"),   # 1 EUR = 7.85 CNY
-        "USD": Decimal("1.08"),   # 1 EUR = 1.08 USD
-        "HKD": Decimal("8.45"),   # 1 EUR = 8.45 HKD
+        "CNY": Decimal("7.85"),  # 1 EUR = 7.85 CNY
+        "USD": Decimal("1.08"),  # 1 EUR = 1.08 USD
+        "HKD": Decimal("8.45"),  # 1 EUR = 8.45 HKD
     }
 
     CACHE_KEY = "currency:rates:eur"
@@ -89,10 +91,7 @@ class CurrencyService:
         raise ValueError(f"No exchange rate available for {from_currency}")
 
     async def convert(
-        self,
-        amount: Decimal,
-        from_currency: str,
-        to_currency: str = "EUR"
+        self, amount: Decimal, from_currency: str, to_currency: str = "EUR"
     ) -> Decimal:
         """
         Convert amount from one currency to EUR.
@@ -133,7 +132,9 @@ class CurrencyService:
                     for currency in ["CNY", "USD", "HKD"]:
                         if currency in rates:
                             # Invert: we want EUR per foreign currency
-                            eur_per_foreign = Decimal("1.0") / Decimal(str(rates[currency]))
+                            eur_per_foreign = Decimal("1.0") / Decimal(
+                                str(rates[currency])
+                            )
                             converted_rates[currency] = eur_per_foreign
 
                     # Cache the rates

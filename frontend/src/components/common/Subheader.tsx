@@ -51,11 +51,11 @@ export function Subheader({
 }: SubheaderProps) {
   const content = (
     <>
-      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', iconBg)}>
+      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', iconBg)}>
         {icon}
       </div>
       <div>
-        <h1 className="text-xl font-bold text-white">{title}</h1>
+        <h1 className="section-heading text-white">{title}</h1>
         <p className="text-sm text-navy-400">{description}</p>
       </div>
     </>

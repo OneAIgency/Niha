@@ -1,12 +1,17 @@
 """Unit tests for order matching service"""
-import pytest
+
 from decimal import Decimal
 from uuid import uuid4
-from datetime import datetime
+
+import pytest
 
 from app.models.models import (
-    Order, OrderSide, OrderStatus, CertificateType,
-    MarketMakerClient, Seller, Entity, User, UserRole, MarketMakerType
+    CertificateType,
+    MarketMakerType,
+    Order,
+    OrderSide,
+    OrderStatus,
+    Seller,
 )
 from app.services.order_matching import get_real_orderbook
 
@@ -15,7 +20,7 @@ from app.services.order_matching import get_real_orderbook
 async def test_get_real_orderbook_empty(db_session):
     """Test order book with no orders"""
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     assert orderbook["certificate_type"] == "CEA"
     assert orderbook["bids"] == []
     assert orderbook["asks"] == []
@@ -31,7 +36,7 @@ async def test_get_real_orderbook_market_maker_sell_orders(db_session, test_admi
     """Test that Market Maker SELL orders appear in order book"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM Seller",
@@ -42,10 +47,10 @@ async def test_get_real_orderbook_market_maker_sell_orders(db_session, test_admi
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create SELL order from Market Maker
     from app.services.order_service import determine_order_market
-    
+
     order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -53,15 +58,15 @@ async def test_get_real_orderbook_market_maker_sell_orders(db_session, test_admi
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify Market Maker order appears in asks
     assert len(orderbook["asks"]) == 1
     assert orderbook["asks"][0]["price"] == 12.50
@@ -75,7 +80,7 @@ async def test_get_real_orderbook_market_maker_buy_orders(db_session, test_admin
     """Test that Market Maker BUY orders appear in order book"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM Buyer",
@@ -86,10 +91,10 @@ async def test_get_real_orderbook_market_maker_buy_orders(db_session, test_admin
         initial_eur_balance=Decimal("50000"),
     )
     await db_session.commit()
-    
+
     # Create BUY order from Market Maker
     from app.services.order_service import determine_order_market
-    
+
     order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -97,15 +102,15 @@ async def test_get_real_orderbook_market_maker_buy_orders(db_session, test_admin
         side=OrderSide.BUY,
         price=Decimal("12.00"),
         quantity=Decimal("2000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify Market Maker order appears in bids
     assert len(orderbook["bids"]) == 1
     assert orderbook["bids"][0]["price"] == 12.00
@@ -119,7 +124,7 @@ async def test_get_real_orderbook_mixed_sources(db_session, test_admin_user):
     """Test order book with both Seller and Market Maker orders"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -129,7 +134,7 @@ async def test_get_real_orderbook_mixed_sources(db_session, test_admin_user):
         mm_type=MarketMakerType.CEA_CASH_SELLER,
         initial_balances={"CEA": Decimal("10000")},
     )
-    
+
     # Create Seller
     seller = Seller(
         name="Test Seller",
@@ -140,10 +145,10 @@ async def test_get_real_orderbook_mixed_sources(db_session, test_admin_user):
     )
     db_session.add(seller)
     await db_session.flush()
-    
+
     # Create SELL order from Market Maker
     from app.services.order_service import determine_order_market
-    
+
     mm_order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -151,11 +156,11 @@ async def test_get_real_orderbook_mixed_sources(db_session, test_admin_user):
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(mm_order)
-    
+
     # Create SELL order from Seller
     seller_order = Order(
         market="CEA_CASH",
@@ -164,15 +169,15 @@ async def test_get_real_orderbook_mixed_sources(db_session, test_admin_user):
         side=OrderSide.SELL,
         price=Decimal("12.75"),
         quantity=Decimal("500"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(seller_order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify both orders appear (sorted by price)
     assert len(orderbook["asks"]) == 2
     assert orderbook["asks"][0]["price"] == 12.50  # MM order (better price)
@@ -185,7 +190,7 @@ async def test_get_real_orderbook_price_aggregation(db_session, test_admin_user)
     """Test that orders at same price are aggregated correctly"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -196,10 +201,10 @@ async def test_get_real_orderbook_price_aggregation(db_session, test_admin_user)
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create multiple SELL orders at same price
     from app.services.order_service import determine_order_market
-    
+
     order1 = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -207,11 +212,11 @@ async def test_get_real_orderbook_price_aggregation(db_session, test_admin_user)
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order1)
-    
+
     order2 = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -219,15 +224,15 @@ async def test_get_real_orderbook_price_aggregation(db_session, test_admin_user)
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("500"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order2)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify orders are aggregated at same price level
     assert len(orderbook["asks"]) == 1
     assert orderbook["asks"][0]["price"] == 12.50
@@ -240,7 +245,7 @@ async def test_get_real_orderbook_excludes_filled_orders(db_session, test_admin_
     """Test that filled orders are excluded from order book"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -251,10 +256,10 @@ async def test_get_real_orderbook_excludes_filled_orders(db_session, test_admin_
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create FILLED order (should be excluded)
     from app.services.order_service import determine_order_market
-    
+
     filled_order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -266,7 +271,7 @@ async def test_get_real_orderbook_excludes_filled_orders(db_session, test_admin_
         status=OrderStatus.FILLED,
     )
     db_session.add(filled_order)
-    
+
     # Create OPEN order (should be included)
     open_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -275,15 +280,15 @@ async def test_get_real_orderbook_excludes_filled_orders(db_session, test_admin_
         side=OrderSide.SELL,
         price=Decimal("12.75"),
         quantity=Decimal("500"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(open_order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify only OPEN order appears
     assert len(orderbook["asks"]) == 1
     assert orderbook["asks"][0]["price"] == 12.75
@@ -291,11 +296,13 @@ async def test_get_real_orderbook_excludes_filled_orders(db_session, test_admin_
 
 
 @pytest.mark.asyncio
-async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(db_session, test_admin_user):
+async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(
+    db_session, test_admin_user
+):
     """Test that orders with zero remaining quantity are excluded"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -306,10 +313,10 @@ async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(db_se
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create order with zero remaining (should be excluded)
     from app.services.order_service import determine_order_market
-    
+
     zero_remaining_order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -321,7 +328,7 @@ async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(db_se
         status=OrderStatus.PARTIALLY_FILLED,  # Still PARTIALLY_FILLED but zero remaining
     )
     db_session.add(zero_remaining_order)
-    
+
     # Create order with remaining quantity (should be included)
     remaining_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -335,10 +342,10 @@ async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(db_se
     )
     db_session.add(remaining_order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify only order with remaining quantity appears
     assert len(orderbook["asks"]) == 1
     assert orderbook["asks"][0]["price"] == 12.75
@@ -350,7 +357,7 @@ async def test_get_real_orderbook_cumulative_quantities(db_session, test_admin_u
     """Test that cumulative quantities are calculated correctly"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -361,10 +368,10 @@ async def test_get_real_orderbook_cumulative_quantities(db_session, test_admin_u
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create multiple orders at different prices
     from app.services.order_service import determine_order_market
-    
+
     order1 = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -372,11 +379,11 @@ async def test_get_real_orderbook_cumulative_quantities(db_session, test_admin_u
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order1)
-    
+
     order2 = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -384,11 +391,11 @@ async def test_get_real_orderbook_cumulative_quantities(db_session, test_admin_u
         side=OrderSide.SELL,
         price=Decimal("12.75"),
         quantity=Decimal("500"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order2)
-    
+
     order3 = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -396,15 +403,15 @@ async def test_get_real_orderbook_cumulative_quantities(db_session, test_admin_u
         side=OrderSide.SELL,
         price=Decimal("13.00"),
         quantity=Decimal("200"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order3)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify cumulative quantities (asks sorted ascending by price)
     assert len(orderbook["asks"]) == 3
     assert orderbook["asks"][0]["price"] == 12.50
@@ -420,7 +427,7 @@ async def test_get_real_orderbook_eua_certificate_type(db_session, test_admin_us
     """Test order book for EUA certificate type"""
     # Create Market Maker
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM EUA",
@@ -431,10 +438,10 @@ async def test_get_real_orderbook_eua_certificate_type(db_session, test_admin_us
         initial_balances={"EUA": Decimal("1000")},
     )
     await db_session.commit()
-    
+
     # Create EUA SELL order
     from app.services.order_service import determine_order_market
-    
+
     order = Order(
         market=determine_order_market(market_maker=mm),
         market_maker_id=mm.id,
@@ -442,20 +449,22 @@ async def test_get_real_orderbook_eua_certificate_type(db_session, test_admin_us
         side=OrderSide.SELL,
         price=Decimal("80.00"),
         quantity=Decimal("100"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "EUA")
-    
+
     # Verify EUA order appears
     assert orderbook["certificate_type"] == "EUA"
     assert len(orderbook["asks"]) == 1
     assert orderbook["asks"][0]["price"] == 80.00
-    assert orderbook["last_price"] == 80.00 or orderbook["last_price"] == 81.0  # Default or actual
+    assert orderbook["last_price"] == (
+        80.00 or orderbook["last_price"] == 81.0  # Default or actual
+    )
 
 
 @pytest.mark.asyncio
@@ -463,7 +472,7 @@ async def test_get_real_orderbook_spread_calculation(db_session, test_admin_user
     """Test that spread is calculated correctly when both bids and asks exist"""
     # Create Market Makers
     from app.services.market_maker_service import MarketMakerService
-    
+
     mm_seller, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM Seller",
@@ -473,7 +482,7 @@ async def test_get_real_orderbook_spread_calculation(db_session, test_admin_user
         mm_type=MarketMakerType.CEA_CASH_SELLER,
         initial_balances={"CEA": Decimal("10000")},
     )
-    
+
     mm_buyer, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM Buyer",
@@ -484,10 +493,10 @@ async def test_get_real_orderbook_spread_calculation(db_session, test_admin_user
         initial_eur_balance=Decimal("50000"),
     )
     await db_session.commit()
-    
+
     # Create SELL order
     from app.services.order_service import determine_order_market
-    
+
     sell_order = Order(
         market=determine_order_market(market_maker=mm_seller),
         market_maker_id=mm_seller.id,
@@ -495,11 +504,11 @@ async def test_get_real_orderbook_spread_calculation(db_session, test_admin_user
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(sell_order)
-    
+
     # Create BUY order
     buy_order = Order(
         market=determine_order_market(market_maker=mm_buyer),
@@ -508,15 +517,15 @@ async def test_get_real_orderbook_spread_calculation(db_session, test_admin_user
         side=OrderSide.BUY,
         price=Decimal("12.00"),
         quantity=Decimal("2000"),
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
     )
     db_session.add(buy_order)
     await db_session.commit()
-    
+
     # Get order book
     orderbook = await get_real_orderbook(db_session, "CEA")
-    
+
     # Verify spread calculation
     assert orderbook["best_bid"] == 12.00
     assert orderbook["best_ask"] == 12.50

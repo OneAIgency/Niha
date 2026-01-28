@@ -1,11 +1,16 @@
 """Unit tests for Market Maker balance calculations"""
-import pytest
+
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+
 from app.models.models import (
-    Order, OrderSide, OrderStatus, CertificateType,
-    MarketMakerClient, MarketMakerType, TransactionType
+    CertificateType,
+    MarketMakerType,
+    Order,
+    OrderSide,
+    OrderStatus,
 )
 from app.services.market_maker_service import MarketMakerService
 
@@ -22,9 +27,9 @@ async def test_get_balances_no_transactions(db_session, test_admin_user):
         mm_type=MarketMakerType.CEA_CASH_SELLER,
     )
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     assert balances["CEA"]["total"] == Decimal("0")
     assert balances["CEA"]["locked"] == Decimal("0")
     assert balances["CEA"]["available"] == Decimal("0")
@@ -46,9 +51,9 @@ async def test_get_balances_with_deposits(db_session, test_admin_user):
         initial_balances={"CEA": Decimal("10000"), "EUA": Decimal("5000")},
     )
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     assert balances["CEA"]["total"] == Decimal("10000")
     assert balances["CEA"]["locked"] == Decimal("0")
     assert balances["CEA"]["available"] == Decimal("10000")
@@ -61,7 +66,7 @@ async def test_get_balances_with_deposits(db_session, test_admin_user):
 async def test_get_balances_locked_by_sell_orders(db_session, test_admin_user):
     """Test that only SELL orders lock certificates, not BUY orders"""
     from app.services.order_service import determine_order_market
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -72,7 +77,7 @@ async def test_get_balances_locked_by_sell_orders(db_session, test_admin_user):
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create a SELL order (should lock CEA)
     sell_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -85,7 +90,7 @@ async def test_get_balances_locked_by_sell_orders(db_session, test_admin_user):
         status=OrderStatus.OPEN,
     )
     db_session.add(sell_order)
-    
+
     # Create a BUY order (should NOT lock CEA)
     buy_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -99,9 +104,9 @@ async def test_get_balances_locked_by_sell_orders(db_session, test_admin_user):
     )
     db_session.add(buy_order)
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     # Total should be 10000 (from deposit)
     assert balances["CEA"]["total"] == Decimal("10000")
     # Locked should only include SELL order (2000), not BUY order (5000)
@@ -114,7 +119,7 @@ async def test_get_balances_locked_by_sell_orders(db_session, test_admin_user):
 async def test_get_balances_partially_filled_order(db_session, test_admin_user):
     """Test balance calculation with partially filled order"""
     from app.services.order_service import determine_order_market
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -125,7 +130,7 @@ async def test_get_balances_partially_filled_order(db_session, test_admin_user):
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create a partially filled SELL order
     # Original quantity: 3000, Filled: 1000, Remaining: 2000
     sell_order = Order(
@@ -140,9 +145,9 @@ async def test_get_balances_partially_filled_order(db_session, test_admin_user):
     )
     db_session.add(sell_order)
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     # Locked should be remaining quantity (3000 - 1000 = 2000)
     assert balances["CEA"]["locked"] == Decimal("2000")
     # Available should be total - locked = 10000 - 2000 = 8000
@@ -153,7 +158,7 @@ async def test_get_balances_partially_filled_order(db_session, test_admin_user):
 async def test_get_balances_multiple_sell_orders(db_session, test_admin_user):
     """Test balance calculation with multiple SELL orders"""
     from app.services.order_service import determine_order_market
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -164,7 +169,7 @@ async def test_get_balances_multiple_sell_orders(db_session, test_admin_user):
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create multiple SELL orders
     order1 = Order(
         market=determine_order_market(market_maker=mm),
@@ -189,9 +194,9 @@ async def test_get_balances_multiple_sell_orders(db_session, test_admin_user):
     db_session.add(order1)
     db_session.add(order2)
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     # Locked should be sum of remaining quantities:
     # order1: 2000 - 0 = 2000
     # order2: 3000 - 500 = 2500
@@ -205,7 +210,7 @@ async def test_get_balances_multiple_sell_orders(db_session, test_admin_user):
 async def test_get_balances_filled_order_not_locked(db_session, test_admin_user):
     """Test that FILLED orders don't lock balance"""
     from app.services.order_service import determine_order_market
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -216,7 +221,7 @@ async def test_get_balances_filled_order_not_locked(db_session, test_admin_user)
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Create a filled SELL order (should NOT lock)
     filled_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -229,7 +234,7 @@ async def test_get_balances_filled_order_not_locked(db_session, test_admin_user)
         status=OrderStatus.FILLED,
     )
     db_session.add(filled_order)
-    
+
     # Create a cancelled SELL order (should NOT lock)
     cancelled_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -243,9 +248,9 @@ async def test_get_balances_filled_order_not_locked(db_session, test_admin_user)
     )
     db_session.add(cancelled_order)
     await db_session.commit()
-    
+
     balances = await MarketMakerService.get_balances(db_session, mm.id)
-    
+
     # Neither FILLED nor CANCELLED orders should lock balance
     assert balances["CEA"]["locked"] == Decimal("0")
     assert balances["CEA"]["available"] == Decimal("10000")
@@ -264,7 +269,7 @@ async def test_validate_sufficient_balance_sufficient(db_session, test_admin_use
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Request 5000, available is 10000
     has_sufficient = await MarketMakerService.validate_sufficient_balance(
         db=db_session,
@@ -272,7 +277,7 @@ async def test_validate_sufficient_balance_sufficient(db_session, test_admin_use
         certificate_type=CertificateType.CEA,
         required_amount=Decimal("5000"),
     )
-    
+
     assert has_sufficient is True
 
 
@@ -289,7 +294,7 @@ async def test_validate_sufficient_balance_insufficient(db_session, test_admin_u
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Request 15000, available is 10000
     has_sufficient = await MarketMakerService.validate_sufficient_balance(
         db=db_session,
@@ -297,7 +302,7 @@ async def test_validate_sufficient_balance_insufficient(db_session, test_admin_u
         certificate_type=CertificateType.CEA,
         required_amount=Decimal("15000"),
     )
-    
+
     assert has_sufficient is False
 
 
@@ -305,7 +310,7 @@ async def test_validate_sufficient_balance_insufficient(db_session, test_admin_u
 async def test_validate_sufficient_balance_with_locked(db_session, test_admin_user):
     """Test balance validation considers locked balance"""
     from app.services.order_service import determine_order_market
-    
+
     mm, _ = await MarketMakerService.create_market_maker(
         db=db_session,
         name="Test MM",
@@ -316,7 +321,7 @@ async def test_validate_sufficient_balance_with_locked(db_session, test_admin_us
         initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
-    
+
     # Lock 6000 in a SELL order
     sell_order = Order(
         market=determine_order_market(market_maker=mm),
@@ -330,7 +335,7 @@ async def test_validate_sufficient_balance_with_locked(db_session, test_admin_us
     )
     db_session.add(sell_order)
     await db_session.commit()
-    
+
     # Request 5000, available is 10000 - 6000 = 4000
     has_sufficient = await MarketMakerService.validate_sufficient_balance(
         db=db_session,
@@ -338,9 +343,9 @@ async def test_validate_sufficient_balance_with_locked(db_session, test_admin_us
         certificate_type=CertificateType.CEA,
         required_amount=Decimal("5000"),
     )
-    
+
     assert has_sufficient is False  # Should fail because only 4000 available
-    
+
     # Request 3000, available is 4000
     has_sufficient = await MarketMakerService.validate_sufficient_balance(
         db=db_session,
@@ -348,5 +353,5 @@ async def test_validate_sufficient_balance_with_locked(db_session, test_admin_us
         certificate_type=CertificateType.CEA,
         required_amount=Decimal("3000"),
     )
-    
+
     assert has_sufficient is True  # Should pass because 4000 >= 3000

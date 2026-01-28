@@ -640,8 +640,11 @@ function DepositsTab({
                     )} />
                   </div>
                   <div>
+                    {/* Show "—" when amount is missing to avoid masking invalid data */}
                     <p className="font-semibold text-navy-900 dark:text-white">
-                      {formatCurrency(deposit.amount, deposit.currency)}
+                      {deposit.amount != null
+                        ? formatCurrency(deposit.amount, deposit.currency ?? 'EUR')
+                        : '—'}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
                       {deposit.wire_reference && (

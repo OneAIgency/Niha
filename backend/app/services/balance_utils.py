@@ -4,29 +4,26 @@ Balance Utilities
 Shared utilities for entity balance management.
 Moved from order_matching to avoid circular imports.
 """
-from decimal import Decimal
+
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.models import (
-    EntityHolding, AssetTransaction, AssetType, TransactionType
-)
+from ..models.models import AssetTransaction, AssetType, EntityHolding, TransactionType
 
-logger = __import__('logging').getLogger(__name__)
+logger = __import__("logging").getLogger(__name__)
 
 
 async def get_entity_balance(
-    db: AsyncSession,
-    entity_id: UUID,
-    asset_type: AssetType
+    db: AsyncSession, entity_id: UUID, asset_type: AssetType
 ) -> Decimal:
     """
     Get current entity balance for an asset type.
-    
+
     Returns:
         Current balance (0 if no holding exists)
     """
@@ -34,7 +31,7 @@ async def get_entity_balance(
         select(EntityHolding).where(
             and_(
                 EntityHolding.entity_id == entity_id,
-                EntityHolding.asset_type == asset_type
+                EntityHolding.asset_type == asset_type,
             )
         )
     )
@@ -50,7 +47,7 @@ async def update_entity_balance(
     transaction_type: TransactionType,
     created_by: UUID,
     reference: Optional[str] = None,
-    notes: Optional[str] = None
+    notes: Optional[str] = None,
 ) -> Decimal:
     """
     Update entity balance and create audit trail.
@@ -61,7 +58,7 @@ async def update_entity_balance(
         select(EntityHolding).where(
             and_(
                 EntityHolding.entity_id == entity_id,
-                EntityHolding.asset_type == asset_type
+                EntityHolding.asset_type == asset_type,
             )
         )
     )
@@ -76,9 +73,7 @@ async def update_entity_balance(
     else:
         # Create new holding
         holding = EntityHolding(
-            entity_id=entity_id,
-            asset_type=asset_type,
-            quantity=balance_after
+            entity_id=entity_id, asset_type=asset_type, quantity=balance_after
         )
         db.add(holding)
 
@@ -92,7 +87,7 @@ async def update_entity_balance(
         balance_after=balance_after,
         reference=reference,
         notes=notes,
-        created_by=created_by
+        created_by=created_by,
     )
     db.add(transaction)
 

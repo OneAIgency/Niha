@@ -1,19 +1,21 @@
 """Test configuration and fixtures"""
-import pytest
-import pytest_asyncio
+
 import asyncio
-from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
-from sqlalchemy import text
-
-from app.models.models import Base, User, UserRole
-from app.core.security import RedisManager
-
 
 # Test database URL (using PostgreSQL test database)
 # Use 'db' hostname when running inside Docker, 'localhost' when running locally
 import os
+from typing import AsyncGenerator
+
+import pytest
+import pytest_asyncio
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+
+from app.core.security import RedisManager
+from app.models.models import Base, User, UserRole
+
 TEST_DB_HOST = os.getenv("TEST_DB_HOST", "db")
 TEST_DB_PORT = os.getenv("TEST_DB_PORT", "5432")
 TEST_DATABASE_URL = f"postgresql+asyncpg://niha_user:niha_secure_pass_2024@{TEST_DB_HOST}:{TEST_DB_PORT}/niha_carbon_test"
@@ -39,11 +41,7 @@ async def cleanup_redis():
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Create a fresh database session for each test"""
     # Create engine
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        poolclass=NullPool,
-        echo=False
-    )
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False)
 
     # Create all tables (first time setup)
     async with engine.begin() as conn:
@@ -57,7 +55,9 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         if tables:
             table_names = [table[0] for table in tables]
             if table_names:
-                truncate_query = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE"
+                truncate_query = (
+                    f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE"
+                )
                 await conn.execute(text(truncate_query))
         else:
             # First run - create all tables
@@ -65,9 +65,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
     # Create session
     async_session = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+        engine, class_=AsyncSession, expire_on_commit=False
     )
 
     async with async_session() as session:
@@ -86,7 +84,7 @@ async def test_admin_user(db_session: AsyncSession) -> User:
         last_name="Admin",
         password_hash="hashed_password_here",
         role=UserRole.ADMIN,
-        is_active=True
+        is_active=True,
     )
     db_session.add(user)
     await db_session.commit()

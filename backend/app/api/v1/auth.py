@@ -1,26 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import (
-    generate_magic_link_token,
+    RedisManager,
     create_access_token,
-    verify_token,
-    verify_password,
+    generate_magic_link_token,
     hash_password,
-    RedisManager
+    verify_password,
+    verify_token,
 )
-from ...models.models import User, Entity, AuthenticationAttempt, AuthMethod
+from ...models.models import AuthenticationAttempt, AuthMethod, User
 from ...schemas.schemas import (
     MagicLinkRequest,
     MagicLinkVerify,
+    MessageResponse,
     PasswordLoginRequest,
     TokenResponse,
     UserResponse,
-    MessageResponse
 )
 from ...services.email_service import email_service
 
@@ -31,8 +32,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/magic-link", response_model=MessageResponse)
 async def request_magic_link(
-    request: MagicLinkRequest,
-    db: AsyncSession = Depends(get_db)
+    request: MagicLinkRequest, db: AsyncSession = Depends(get_db)
 ):
     """
     Request a magic link for passwordless authentication.
@@ -60,8 +60,7 @@ async def request_magic_link(
     await email_service.send_magic_link(email, token)
 
     return MessageResponse(
-        message="Magic link sent! Check your email to sign in.",
-        success=True
+        message="Magic link sent! Check your email to sign in.", success=True
     )
 
 
@@ -69,7 +68,7 @@ async def request_magic_link(
 async def verify_magic_link(
     verify_request: MagicLinkVerify,
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Verify magic link token and return JWT access token.
@@ -90,13 +89,13 @@ async def verify_magic_link(
             method=AuthMethod.MAGIC_LINK,
             ip_address=ip_address,
             user_agent=user_agent,
-            failure_reason="invalid_or_expired_token"
+            failure_reason="invalid_or_expired_token",
         )
         db.add(auth_attempt)
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired magic link"
+            detail="Invalid or expired magic link",
         )
 
     # Get user
@@ -111,13 +110,12 @@ async def verify_magic_link(
             method=AuthMethod.MAGIC_LINK,
             ip_address=ip_address,
             user_agent=user_agent,
-            failure_reason="user_not_found"
+            failure_reason="user_not_found",
         )
         db.add(auth_attempt)
         await db.commit()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Log successful magic link auth
@@ -127,7 +125,7 @@ async def verify_magic_link(
         success=True,
         method=AuthMethod.MAGIC_LINK,
         ip_address=ip_address,
-        user_agent=user_agent
+        user_agent=user_agent,
     )
     db.add(auth_attempt)
 
@@ -138,13 +136,10 @@ async def verify_magic_link(
     logger.info(f"Magic link auth: email={email}, success=True, ip={ip_address}")
 
     # Create access token
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
     return TokenResponse(
-        access_token=access_token,
-        user=UserResponse.model_validate(user)
+        access_token=access_token, user=UserResponse.model_validate(user)
     )
 
 
@@ -152,7 +147,7 @@ async def verify_magic_link(
 async def password_login(
     login_request: PasswordLoginRequest,
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Login with email and password.
@@ -172,35 +167,36 @@ async def password_login(
             method=AuthMethod.PASSWORD,
             ip_address=ip_address,
             user_agent=user_agent,
-            failure_reason=failure_reason
+            failure_reason=failure_reason,
         )
         db.add(auth_attempt)
         await db.commit()
-        logger.info(f"Auth attempt: email={email}, success={success}, ip={ip_address}, reason={failure_reason}")
+        logger.info(
+            f"Auth attempt: email={email}, success={success}, ip={ip_address}, reason={failure_reason}"
+        )
 
     # Find user
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
     if not user or not user.password_hash:
-        await log_auth_attempt(user.id if user else None, False, "user_not_found_or_no_password")
+        await log_auth_attempt(
+            user.id if user else None, False, "user_not_found_or_no_password"
+        )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
     if not verify_password(login_request.password, user.password_hash):
         await log_auth_attempt(user.id, False, "invalid_password")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
     if not user.is_active:
         await log_auth_attempt(user.id, False, "account_disabled")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account is disabled"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is disabled"
         )
 
     # Log successful authentication
@@ -211,13 +207,10 @@ async def password_login(
     await db.commit()
 
     # Create access token
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
     return TokenResponse(
-        access_token=access_token,
-        user=UserResponse.model_validate(user)
+        access_token=access_token, user=UserResponse.model_validate(user)
     )
 
 
@@ -226,24 +219,16 @@ async def logout():
     """
     Logout user. In a real app, this would invalidate the JWT.
     """
-    return MessageResponse(
-        message="Successfully logged out",
-        success=True
-    )
+    return MessageResponse(message="Successfully logged out", success=True)
 
 
 @router.get("/validate-invitation/{token}")
-async def validate_invitation_token(
-    token: str,
-    db: AsyncSession = Depends(get_db)
-):
+async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_db)):
     """
     Check if invitation token is valid.
     Returns user info if valid for the setup password page.
     """
-    result = await db.execute(
-        select(User).where(User.invitation_token == token)
-    )
+    result = await db.execute(select(User).where(User.invitation_token == token))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -256,16 +241,13 @@ async def validate_invitation_token(
         "valid": True,
         "email": user.email,
         "first_name": user.first_name,
-        "last_name": user.last_name
+        "last_name": user.last_name,
     }
 
 
 @router.post("/setup-password", response_model=TokenResponse)
 async def setup_password_from_invitation(
-    token: str,
-    password: str,
-    confirm_password: str,
-    db: AsyncSession = Depends(get_db)
+    token: str, password: str, confirm_password: str, db: AsyncSession = Depends(get_db)
 ):
     """
     Set password from invitation link.
@@ -282,20 +264,26 @@ async def setup_password_from_invitation(
 
     # Validate password strength
     if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-    if not re.search(r'[A-Z]', password):
-        raise HTTPException(status_code=400, detail="Password must contain at least 1 uppercase letter")
-    if not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]', password):
-        raise HTTPException(status_code=400, detail="Password must contain at least 1 special character")
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 8 characters"
+        )
+    if not re.search(r"[A-Z]", password):
+        raise HTTPException(
+            status_code=400, detail="Password must contain at least 1 uppercase letter"
+        )
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]", password):
+        raise HTTPException(
+            status_code=400, detail="Password must contain at least 1 special character"
+        )
 
     # Find user by invitation token
-    result = await db.execute(
-        select(User).where(User.invitation_token == token)
-    )
+    result = await db.execute(select(User).where(User.invitation_token == token))
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid or expired invitation link")
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired invitation link"
+        )
 
     # Check expiration
     if user.invitation_expires_at and user.invitation_expires_at < datetime.utcnow():
@@ -313,19 +301,16 @@ async def setup_password_from_invitation(
     await db.refresh(user)
 
     # Create access token
-    access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email}
-    )
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
     return TokenResponse(
-        access_token=access_token,
-        user=UserResponse.model_validate(user)
+        access_token=access_token, user=UserResponse.model_validate(user)
     )
 
 
 async def get_current_user(
     token: str = Depends(lambda: None),  # Would come from header
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """
     Dependency to get current authenticated user from JWT token.

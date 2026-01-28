@@ -1,14 +1,19 @@
 """Tests for settlement API endpoints"""
+
+from decimal import Decimal
+
 import pytest
 import pytest_asyncio
-from decimal import Decimal
-from datetime import datetime
 from httpx import AsyncClient
-from app.main import app
+
 from app.core.security import create_access_token
+from app.main import app
 from app.models.models import (
-    User, UserRole, Entity, Jurisdiction,
-    SettlementBatch, SettlementStatus, SettlementType, CertificateType
+    Entity,
+    Jurisdiction,
+    SettlementStatus,
+    User,
+    UserRole,
 )
 from app.services.settlement_service import SettlementService
 
@@ -16,10 +21,7 @@ from app.services.settlement_service import SettlementService
 @pytest_asyncio.fixture
 async def test_entity(db_session, test_admin_user):
     """Create a test entity"""
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -36,7 +38,7 @@ async def test_user_with_entity(db_session, test_entity):
         password_hash="hashed_password_here",
         role=UserRole.APPROVED,  # APPROVED role for regular entity user
         is_active=True,
-        entity_id=test_entity.id
+        entity_id=test_entity.id,
     )
     db_session.add(user)
     await db_session.commit()
@@ -47,8 +49,8 @@ async def test_user_with_entity(db_session, test_entity):
 @pytest_asyncio.fixture
 def override_get_current_user_and_db(test_user_with_entity, db_session):
     """Override get_current_user and get_db dependencies"""
-    from app.core.security import get_current_user
     from app.core.database import get_db
+    from app.core.security import get_current_user
 
     async def mock_get_current_user():
         return test_user_with_entity
@@ -74,7 +76,9 @@ def auth_headers(test_user_with_entity, override_get_current_user_and_db):
 
 
 @pytest.mark.asyncio
-async def test_get_pending_settlements_empty(db_session, test_user_with_entity, auth_headers):
+async def test_get_pending_settlements_empty(
+    db_session, test_user_with_entity, auth_headers
+):
     """Test GET /settlement/pending with no settlements"""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get("/api/v1/settlement/pending", headers=auth_headers)
@@ -93,7 +97,7 @@ async def test_get_pending_settlements_with_data(
 ):
     """Test GET /settlement/pending with settlements"""
     # Create settlements
-    settlement1 = await SettlementService.create_cea_purchase_settlement(
+    await SettlementService.create_cea_purchase_settlement(
         db=db_session,
         entity_id=test_entity.id,
         order_id=None,
@@ -101,7 +105,7 @@ async def test_get_pending_settlements_with_data(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     settlement2 = await SettlementService.create_cea_purchase_settlement(
@@ -112,7 +116,7 @@ async def test_get_pending_settlements_with_data(
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     # Mark one as settled (should not appear) - need to progress through states
@@ -121,28 +125,28 @@ async def test_get_pending_settlements_with_data(
         settlement_id=settlement2.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.AT_CUSTODY,
         notes="At custody",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.SETTLED,
         notes="Completed",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
 
     async with AsyncClient(app=app, base_url="http://test") as client:
@@ -175,7 +179,9 @@ async def test_get_pending_settlements_with_data(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Swap settlements not implemented in v1.0.0 - can't test type filtering")
+@pytest.mark.skip(
+    reason="Swap settlements not implemented in v1.0.0 - can't test type filtering"
+)
 async def test_get_pending_settlements_filter_by_type(
     db_session, test_user_with_entity, test_entity, auth_headers
 ):
@@ -189,7 +195,7 @@ async def test_get_pending_settlements_filter_by_type(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     await SettlementService.create_swap_cea_to_eua_settlement(
@@ -197,14 +203,14 @@ async def test_get_pending_settlements_filter_by_type(
         entity_id=test_entity.id,
         cea_quantity=Decimal("500"),
         eua_quantity=Decimal("500"),
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     # Filter for CEA_PURCHASE only
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
             "/api/v1/settlement/pending?settlement_type=CEA_PURCHASE",
-            headers=auth_headers
+            headers=auth_headers,
         )
 
     assert response.status_code == 200
@@ -219,7 +225,7 @@ async def test_get_pending_settlements_filter_by_status(
 ):
     """Test GET /settlement/pending with status filter"""
     # Create settlements
-    settlement1 = await SettlementService.create_cea_purchase_settlement(
+    await SettlementService.create_cea_purchase_settlement(
         db=db_session,
         entity_id=test_entity.id,
         order_id=None,
@@ -227,7 +233,7 @@ async def test_get_pending_settlements_filter_by_status(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     settlement2 = await SettlementService.create_cea_purchase_settlement(
@@ -238,7 +244,7 @@ async def test_get_pending_settlements_filter_by_status(
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     # Update one to IN_TRANSIT (must progress through states)
@@ -247,21 +253,20 @@ async def test_get_pending_settlements_filter_by_status(
         settlement_id=settlement2.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
 
     # Filter for IN_TRANSIT only
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            "/api/v1/settlement/pending?status_filter=IN_TRANSIT",
-            headers=auth_headers
+            "/api/v1/settlement/pending?status_filter=IN_TRANSIT", headers=auth_headers
         )
 
     assert response.status_code == 200
@@ -281,7 +286,7 @@ async def test_get_pending_settlements_no_entity(db_session, test_admin_user):
         password_hash="hashed_password_here",
         role=UserRole.APPROVED,  # APPROVED role for regular user
         is_active=True,
-        entity_id=None  # No entity
+        entity_id=None,  # No entity
     )
     db_session.add(user_no_entity)
     await db_session.commit()
@@ -325,7 +330,7 @@ async def test_get_settlement_details(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     # Progress through some statuses
@@ -334,13 +339,12 @@ async def test_get_settlement_details(
         settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
 
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            f"/api/v1/settlement/{settlement.id}",
-            headers=auth_headers
+            f"/api/v1/settlement/{settlement.id}", headers=auth_headers
         )
 
     assert response.status_code == 200
@@ -372,10 +376,7 @@ async def test_get_settlement_details_forbidden_other_entity(
 ):
     """Test GET /settlement/{id} returns 403 for settlement owned by different entity"""
     # Create different entity
-    other_entity = Entity(
-        name="Other Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    other_entity = Entity(name="Other Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(other_entity)
     await db_session.commit()
     await db_session.refresh(other_entity)
@@ -389,14 +390,13 @@ async def test_get_settlement_details_forbidden_other_entity(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Try to access with different user's credentials
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            f"/api/v1/settlement/{settlement.id}",
-            headers=auth_headers
+            f"/api/v1/settlement/{settlement.id}", headers=auth_headers
         )
 
     assert response.status_code == 403
@@ -412,8 +412,7 @@ async def test_get_settlement_details_not_found(db_session, auth_headers):
 
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            f"/api/v1/settlement/{fake_id}",
-            headers=auth_headers
+            f"/api/v1/settlement/{fake_id}", headers=auth_headers
         )
 
     assert response.status_code == 404
@@ -433,7 +432,7 @@ async def test_get_settlement_timeline(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_user_with_entity.id
+        created_by=test_user_with_entity.id,
     )
 
     # Progress through statuses
@@ -442,7 +441,7 @@ async def test_get_settlement_timeline(
         settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
 
     await SettlementService.update_settlement_status(
@@ -450,13 +449,12 @@ async def test_get_settlement_timeline(
         settlement_id=settlement.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit to registry",
-        updated_by=test_user_with_entity.id
+        updated_by=test_user_with_entity.id,
     )
 
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            f"/api/v1/settlement/{settlement.id}/timeline",
-            headers=auth_headers
+            f"/api/v1/settlement/{settlement.id}/timeline", headers=auth_headers
         )
 
     assert response.status_code == 200
@@ -490,10 +488,7 @@ async def test_get_settlement_timeline_forbidden_other_entity(
 ):
     """Test GET /settlement/{id}/timeline returns 403 for other entity's settlement"""
     # Create different entity
-    other_entity = Entity(
-        name="Other Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    other_entity = Entity(name="Other Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(other_entity)
     await db_session.commit()
     await db_session.refresh(other_entity)
@@ -507,14 +502,13 @@ async def test_get_settlement_timeline_forbidden_other_entity(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Try to access with different user's credentials
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
-            f"/api/v1/settlement/{settlement.id}/timeline",
-            headers=auth_headers
+            f"/api/v1/settlement/{settlement.id}/timeline", headers=auth_headers
         )
 
     assert response.status_code == 403

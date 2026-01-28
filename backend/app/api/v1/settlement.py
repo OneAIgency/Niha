@@ -3,29 +3,41 @@ Settlement API Router
 
 Endpoints for managing and viewing settlement batches.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from typing import Optional, List
+
+from typing import Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...models.models import User, SettlementBatch, SettlementStatusHistory, SettlementStatus, SettlementType
-from ...services.settlement_service import (
-    get_pending_settlements, get_settlement_timeline, calculate_settlement_progress
+from ...models.models import (
+    SettlementStatus,
+    SettlementType,
+    User,
 )
 from ...services.settlement_monitoring import SettlementMonitoring
-from ...schemas.schemas import MessageResponse
+from ...services.settlement_service import (
+    calculate_settlement_progress,
+    get_pending_settlements,
+    get_settlement_timeline,
+)
 
 router = APIRouter(prefix="/settlement", tags=["Settlement"])
 
 
 @router.get("/pending")
 async def get_my_pending_settlements(
-    settlement_type: Optional[SettlementType] = Query(None, description="Filter by settlement type (CEA_PURCHASE, SWAP_CEA_TO_EUA)"),
-    status_filter: Optional[SettlementStatus] = Query(None, description="Filter by status (PENDING, TRANSFER_INITIATED, IN_TRANSIT, AT_CUSTODY, SETTLED, FAILED)"),
+    settlement_type: Optional[SettlementType] = Query(
+        None, description="Filter by settlement type (CEA_PURCHASE, SWAP_CEA_TO_EUA)"
+    ),
+    status_filter: Optional[SettlementStatus] = Query(
+        None,
+        description="Filter by status (PENDING, TRANSFER_INITIATED, IN_TRANSIT, AT_CUSTODY, SETTLED, FAILED)",
+    ),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get pending settlements for the current user's entity.
@@ -66,44 +78,45 @@ async def get_my_pending_settlements(
     """
     if not current_user.entity_id:
         return {"data": [], "count": 0}
-    
+
     settlements = await get_pending_settlements(
         db=db,
         entity_id=current_user.entity_id,
         settlement_type=settlement_type,
-        status=status_filter
+        status=status_filter,
     )
-    
+
     settlement_data = []
     for settlement in settlements:
         progress = calculate_settlement_progress(settlement)
-        settlement_data.append({
-            "id": str(settlement.id),
-            "batch_reference": settlement.batch_reference,
-            "settlement_type": settlement.settlement_type.value,
-            "status": settlement.status.value,
-            "asset_type": settlement.asset_type.value,
-            "quantity": float(settlement.quantity),
-            "price": float(settlement.price),
-            "total_value_eur": float(settlement.total_value_eur),
-            "expected_settlement_date": settlement.expected_settlement_date.isoformat(),
-            "actual_settlement_date": settlement.actual_settlement_date.isoformat() if settlement.actual_settlement_date else None,
-            "progress_percent": progress,
-            "created_at": settlement.created_at.isoformat(),
-            "updated_at": settlement.updated_at.isoformat(),
-        })
-    
-    return {
-        "data": settlement_data,
-        "count": len(settlement_data)
-    }
+        settlement_data.append(
+            {
+                "id": str(settlement.id),
+                "batch_reference": settlement.batch_reference,
+                "settlement_type": settlement.settlement_type.value,
+                "status": settlement.status.value,
+                "asset_type": settlement.asset_type.value,
+                "quantity": float(settlement.quantity),
+                "price": float(settlement.price),
+                "total_value_eur": float(settlement.total_value_eur),
+                "expected_settlement_date": settlement.expected_settlement_date.isoformat(),
+                "actual_settlement_date": settlement.actual_settlement_date.isoformat()
+                if settlement.actual_settlement_date
+                else None,
+                "progress_percent": progress,
+                "created_at": settlement.created_at.isoformat(),
+                "updated_at": settlement.updated_at.isoformat(),
+            }
+        )
+
+    return {"data": settlement_data, "count": len(settlement_data)}
 
 
 @router.get("/{settlement_batch_id}")
 async def get_settlement_details(
     settlement_batch_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed information about a specific settlement batch.
@@ -169,35 +182,34 @@ async def get_settlement_details(
     if not current_user.entity_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User must be associated with an entity"
+            detail="User must be associated with an entity",
         )
-    
+
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view this settlement"
+            detail="Not authorized to view this settlement",
         )
-    
+
     progress = calculate_settlement_progress(settlement)
-    
+
     timeline = []
     for h in history:
-        timeline.append({
-            "status": h.status.value,
-            "notes": h.notes,
-            "created_at": h.created_at.isoformat(),
-            "updated_by": str(h.updated_by) if h.updated_by else None,
-        })
-    
+        timeline.append(
+            {
+                "status": h.status.value,
+                "notes": h.notes,
+                "created_at": h.created_at.isoformat(),
+                "updated_by": str(h.updated_by) if h.updated_by else None,
+            }
+        )
+
     return {
         "id": str(settlement.id),
         "batch_reference": settlement.batch_reference,
@@ -208,9 +220,13 @@ async def get_settlement_details(
         "price": float(settlement.price),
         "total_value_eur": float(settlement.total_value_eur),
         "expected_settlement_date": settlement.expected_settlement_date.isoformat(),
-        "actual_settlement_date": settlement.actual_settlement_date.isoformat() if settlement.actual_settlement_date else None,
+        "actual_settlement_date": settlement.actual_settlement_date.isoformat()
+        if settlement.actual_settlement_date
+        else None,
         "registry_reference": settlement.registry_reference,
-        "counterparty_id": str(settlement.counterparty_id) if settlement.counterparty_id else None,
+        "counterparty_id": str(settlement.counterparty_id)
+        if settlement.counterparty_id
+        else None,
         "notes": settlement.notes,
         "progress_percent": progress,
         "timeline": timeline,
@@ -223,7 +239,7 @@ async def get_settlement_details(
 async def get_settlement_timeline_endpoint(
     settlement_batch_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get settlement timeline with all status changes.
@@ -284,47 +300,45 @@ async def get_settlement_timeline_endpoint(
     if not current_user.entity_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User must be associated with an entity"
+            detail="User must be associated with an entity",
         )
-    
+
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view this settlement"
+            detail="Not authorized to view this settlement",
         )
-    
+
     timeline = []
     for h in history:
-        timeline.append({
-            "status": h.status.value,
-            "notes": h.notes,
-            "created_at": h.created_at.isoformat(),
-            "updated_by": str(h.updated_by) if h.updated_by else None,
-        })
-    
+        timeline.append(
+            {
+                "status": h.status.value,
+                "notes": h.notes,
+                "created_at": h.created_at.isoformat(),
+                "updated_by": str(h.updated_by) if h.updated_by else None,
+            }
+        )
+
     return {
         "settlement_batch_id": str(settlement_batch_id),
         "batch_reference": settlement.batch_reference,
         "current_status": settlement.status.value,
         "expected_settlement_date": settlement.expected_settlement_date.isoformat(),
         "progress_percent": calculate_settlement_progress(settlement),
-        "timeline": timeline
+        "timeline": timeline,
     }
 
 
 @router.get("/monitoring/metrics")
 async def get_settlement_metrics(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get settlement system health metrics (Admin only).
@@ -356,8 +370,7 @@ async def get_settlement_metrics(
     # Verify admin role
     if current_user.role != "ADMIN":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
 
     metrics = await SettlementMonitoring.get_system_metrics(db)
@@ -371,14 +384,13 @@ async def get_settlement_metrics(
         "avg_settlement_time_hours": metrics.avg_settlement_time_hours,
         "total_value_pending_eur": float(metrics.total_value_pending_eur),
         "total_value_settled_today_eur": float(metrics.total_value_settled_today_eur),
-        "oldest_pending_days": metrics.oldest_pending_days
+        "oldest_pending_days": metrics.oldest_pending_days,
     }
 
 
 @router.get("/monitoring/alerts")
 async def get_settlement_alerts(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get active settlement alerts (Admin only).
@@ -417,8 +429,7 @@ async def get_settlement_alerts(
     # Verify admin role
     if current_user.role != "ADMIN":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
 
     alerts = await SettlementMonitoring.detect_alerts(db)
@@ -433,21 +444,22 @@ async def get_settlement_alerts(
                 "message": alert.message,
                 "entity_name": alert.entity_name,
                 "days_overdue": alert.days_overdue,
-                "total_value_eur": float(alert.total_value_eur) if alert.total_value_eur else None
+                "total_value_eur": float(alert.total_value_eur)
+                if alert.total_value_eur
+                else None,
             }
             for alert in alerts
         ],
         "count": len(alerts),
         "critical_count": len([a for a in alerts if a.severity == "CRITICAL"]),
         "error_count": len([a for a in alerts if a.severity == "ERROR"]),
-        "warning_count": len([a for a in alerts if a.severity == "WARNING"])
+        "warning_count": len([a for a in alerts if a.severity == "WARNING"]),
     }
 
 
 @router.get("/monitoring/report")
 async def get_daily_report(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get daily settlement system report (Admin only).
@@ -463,8 +475,7 @@ async def get_daily_report(
     # Verify admin role
     if current_user.role != "ADMIN":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
 
     report = await SettlementMonitoring.generate_daily_report(db)

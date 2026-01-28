@@ -425,6 +425,41 @@ Special shadows for interactive elements and brand colors.
 </button>
 ```
 
+#### Destructive / Reject actions
+
+For reject, delete, or destructive actions use `variant="secondary"` with the error token so the button stays within the Button API (no `danger` variant). Use `text-red-500` for Error/Sell per design system:
+
+```tsx
+<Button
+  variant="secondary"
+  className="text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+  onClick={handleReject}
+>
+  Reject
+</Button>
+```
+
+#### Subheader nav buttons (subpage navigation)
+
+Used in backoffice and other subheader bars. States are defined in `design-tokens.css` and applied via utility classes:
+
+- **Base**: `.subheader-nav-btn` – layout, padding, typography, radius.
+- **Opened subpage (active)**: `.subheader-nav-btn-active` – current subpage; uses `--color-subheader-nav-active-bg` and `--color-subheader-nav-active-text`.
+- **Default (inactive)**: `.subheader-nav-btn-inactive` – other items; uses `--color-subheader-nav-inactive-text`; hover uses `--color-subheader-nav-inactive-hover-bg` and `--color-subheader-nav-inactive-hover-text`.
+
+Use the `SubheaderNavButton` component from `components/common`; it applies these classes based on `isActive`. Change the theme by editing the CSS variables in `design-tokens.css`.
+
+#### SubSubHeader nav buttons (child-level under Subheader)
+
+Used in the SubSubHeader bar (e.g. Onboarding: Contact Requests, KYC, Deposits). **Distinct from Subheader buttons**: smaller, lighter weight, different radius so they read as a subclass. States and count badge are in `design-tokens.css`:
+
+- **Base**: `.subsubheader-nav-btn` – smaller padding and font (`text-xs`), `rounded-lg` (0.5rem).
+- **Current subpage (active)**: `.subsubheader-nav-btn-active` – uses `--color-subsubheader-nav-active-bg` (navy-700), `--color-subsubheader-nav-active-text`.
+- **Default (inactive)**: `.subsubheader-nav-btn-inactive` – uses `--color-subsubheader-nav-inactive-text`; hover uses `--color-subsubheader-nav-inactive-hover-bg`, `--color-subsubheader-nav-inactive-hover-text`.
+- **Count badge (pending/new items)**: `.subsubheader-nav-badge` – high-visibility red pill; uses `--color-subsubheader-nav-badge-bg` (red-600), `--color-subsubheader-nav-badge-text` (white). Use for counts (e.g. contact requests, KYC queue).
+
+Highlighting the button for the current page uses the same logic as Subheader (apply active class when route matches). Customize via the CSS variables in `design-tokens.css`.
+
 ---
 
 ### Inputs

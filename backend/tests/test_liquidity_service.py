@@ -1,8 +1,18 @@
 """Tests for liquidity service"""
-import pytest
+
 from decimal import Decimal
+
+import pytest
+
+from app.models.models import (
+    CertificateType,
+    MarketMakerClient,
+    MarketMakerType,
+    User,
+    UserRole,
+)
 from app.services.liquidity_service import LiquidityService
-from app.models.models import MarketMakerClient, User, MarketMakerType, UserRole, CertificateType
+
 
 @pytest.mark.asyncio
 async def test_get_liquidity_providers(db_session, test_admin_user):
@@ -14,7 +24,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
         last_name="Holder",
         password_hash="hashed_password_here",
         role=UserRole.ADMIN,
-        is_active=True
+        is_active=True,
     )
     db_session.add(ah_user)
     await db_session.commit()
@@ -28,7 +38,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("100000"),
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(lp_mm)
 
@@ -39,7 +49,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
         client_code="AH-001",
         mm_type=MarketMakerType.CEA_CASH_SELLER,
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(ah_mm)
     await db_session.commit()
@@ -50,6 +60,7 @@ async def test_get_liquidity_providers(db_session, test_admin_user):
     assert len(result) == 1
     assert result[0].id == lp_mm.id
     assert result[0].eur_balance == Decimal("100000")
+
 
 @pytest.mark.asyncio
 async def test_get_asset_holders(db_session, test_admin_user):
@@ -63,7 +74,7 @@ async def test_get_asset_holders(db_session, test_admin_user):
         email="ah@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("5000")}
+        initial_balances={"CEA": Decimal("5000")},
     )
 
     # Test
@@ -73,11 +84,13 @@ async def test_get_asset_holders(db_session, test_admin_user):
     found = any(mm_data["mm"].id == ah_mm.id for mm_data in result)
     assert found
 
+
 @pytest.mark.asyncio
 async def test_get_asset_holders_empty(db_session, test_admin_user):
     """Test fetching asset holders when none exist"""
     result = await LiquidityService.get_asset_holders(db_session, CertificateType.CEA)
     assert len(result) == 0
+
 
 @pytest.mark.asyncio
 async def test_get_asset_holders_zero_balance(db_session, test_admin_user):
@@ -91,7 +104,7 @@ async def test_get_asset_holders_zero_balance(db_session, test_admin_user):
         email="ah_zero@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("0")}
+        initial_balances={"CEA": Decimal("0")},
     )
 
     # Test
@@ -100,6 +113,7 @@ async def test_get_asset_holders_zero_balance(db_session, test_admin_user):
     # MM with zero balance should not be in results
     found = any(mm_data["mm"].id == ah_mm.id for mm_data in result)
     assert not found
+
 
 @pytest.mark.asyncio
 async def test_get_asset_holders_inactive_excluded(db_session, test_admin_user):
@@ -113,7 +127,7 @@ async def test_get_asset_holders_inactive_excluded(db_session, test_admin_user):
         email="ah_inactive@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("1000")}
+        initial_balances={"CEA": Decimal("1000")},
     )
 
     # Deactivate the MM
@@ -127,6 +141,7 @@ async def test_get_asset_holders_inactive_excluded(db_session, test_admin_user):
     found = any(mm_data["mm"].id == ah_mm.id for mm_data in result)
     assert not found
 
+
 @pytest.mark.asyncio
 async def test_get_asset_holders_ordering(db_session, test_admin_user):
     """Test that results are ordered by available balance descending"""
@@ -139,7 +154,7 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
         email="ah_low@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("1000")}
+        initial_balances={"CEA": Decimal("1000")},
     )
 
     ah_mm2, _ = await MarketMakerService.create_market_maker(
@@ -148,7 +163,7 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
         email="ah_high@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("5000")}
+        initial_balances={"CEA": Decimal("5000")},
     )
 
     ah_mm3, _ = await MarketMakerService.create_market_maker(
@@ -157,7 +172,7 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
         email="ah_medium@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("3000")}
+        initial_balances={"CEA": Decimal("3000")},
     )
 
     # Test
@@ -178,6 +193,7 @@ async def test_get_asset_holders_ordering(db_session, test_admin_user):
     for i in range(len(result) - 1):
         assert result[i]["available"] >= result[i + 1]["available"]
 
+
 @pytest.mark.asyncio
 async def test_calculate_reference_price(db_session):
     """Test reference price calculation returns valid price
@@ -190,13 +206,13 @@ async def test_calculate_reference_price(db_session):
     orderbook if exists, or default price).
     """
     result = await LiquidityService.calculate_reference_price(
-        db_session,
-        CertificateType.CEA
+        db_session, CertificateType.CEA
     )
 
     # Should return a valid positive price
     assert result > Decimal("0")
     assert isinstance(result, Decimal)
+
 
 def test_generate_price_levels_buy():
     """Test BID price level generation"""
@@ -224,6 +240,7 @@ def test_generate_price_levels_buy():
     # Verify total equals 100%
     assert sum(pct for _, pct in levels) == Decimal("1.0")
 
+
 def test_generate_price_levels_sell():
     """Test ASK price level generation"""
     from app.models.models import OrderSide
@@ -247,6 +264,7 @@ def test_generate_price_levels_sell():
     assert levels[1][1] == Decimal("0.3")
     assert levels[2][1] == Decimal("0.2")
 
+
 def test_generate_price_levels_invalid_price():
     """Test validation of negative price"""
     from app.models.models import OrderSide
@@ -256,6 +274,7 @@ def test_generate_price_levels_invalid_price():
 
     with pytest.raises(ValueError, match="reference_price must be positive"):
         LiquidityService.generate_price_levels(Decimal("0.0"), OrderSide.BUY)
+
 
 @pytest.mark.asyncio
 async def test_preview_liquidity_creation_sufficient_assets(
@@ -272,7 +291,7 @@ async def test_preview_liquidity_creation_sufficient_assets(
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(lp_mm)
 
@@ -283,7 +302,7 @@ async def test_preview_liquidity_creation_sufficient_assets(
         email="ah-preview@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("10000")}
+        initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
 
@@ -292,13 +311,14 @@ async def test_preview_liquidity_creation_sufficient_assets(
         db=db_session,
         certificate_type=CertificateType.CEA,
         bid_amount_eur=Decimal("100000"),
-        ask_amount_eur=Decimal("50000")
+        ask_amount_eur=Decimal("50000"),
     )
 
     assert preview["can_execute"] is True
     assert len(preview["bid_plan"]["mms"]) >= 1
     assert len(preview["ask_plan"]["mms"]) >= 1
     assert preview["missing_assets"] is None
+
 
 @pytest.mark.asyncio
 async def test_preview_liquidity_creation_invalid_amounts(db_session, test_admin_user):
@@ -308,7 +328,7 @@ async def test_preview_liquidity_creation_invalid_amounts(db_session, test_admin
             db=db_session,
             certificate_type=CertificateType.CEA,
             bid_amount_eur=Decimal("-100"),
-            ask_amount_eur=Decimal("50000")
+            ask_amount_eur=Decimal("50000"),
         )
 
     with pytest.raises(ValueError, match="ask_amount_eur must be positive"):
@@ -316,8 +336,9 @@ async def test_preview_liquidity_creation_invalid_amounts(db_session, test_admin
             db=db_session,
             certificate_type=CertificateType.CEA,
             bid_amount_eur=Decimal("100000"),
-            ask_amount_eur=Decimal("0")
+            ask_amount_eur=Decimal("0"),
         )
+
 
 @pytest.mark.asyncio
 async def test_create_liquidity_execution(db_session, test_admin_user):
@@ -332,7 +353,7 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("200000"),
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(lp_mm)
 
@@ -342,7 +363,7 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
         email="ah-execute@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("10000")}
+        initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
 
@@ -352,18 +373,19 @@ async def test_create_liquidity_execution(db_session, test_admin_user):
         certificate_type=CertificateType.CEA,
         bid_amount_eur=Decimal("50000"),
         ask_amount_eur=Decimal("25000"),
-        created_by_id=test_admin_user.id
+        created_by_id=test_admin_user.id,
     )
 
     assert result.id is not None
     assert len(result.orders_created) == 6  # 3 bid + 3 ask
     assert result.actual_bid_liquidity_eur == Decimal("50000")
 
+
 @pytest.mark.asyncio
 async def test_create_liquidity_no_liquidity_providers(db_session, test_admin_user):
     """Test that liquidity creation fails with no liquidity providers"""
-    from app.services.market_maker_service import MarketMakerService
     from app.services.liquidity_service import InsufficientAssetsError
+    from app.services.market_maker_service import MarketMakerService
 
     # Create only asset holder (no liquidity provider)
     ah_mm, _ = await MarketMakerService.create_market_maker(
@@ -372,7 +394,7 @@ async def test_create_liquidity_no_liquidity_providers(db_session, test_admin_us
         email="ah-nolp@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("10000")}
+        initial_balances={"CEA": Decimal("10000")},
     )
     await db_session.commit()
 
@@ -385,8 +407,9 @@ async def test_create_liquidity_no_liquidity_providers(db_session, test_admin_us
             certificate_type=CertificateType.CEA,
             bid_amount_eur=Decimal("50000"),
             ask_amount_eur=Decimal("25000"),
-            created_by_id=test_admin_user.id
+            created_by_id=test_admin_user.id,
         )
+
 
 @pytest.mark.asyncio
 async def test_get_cash_buyers_only(db_session, test_admin_user):
@@ -400,7 +423,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         last_name="Buyer",
         password_hash="hashed_password_here",
         role=UserRole.ADMIN,
-        is_active=True
+        is_active=True,
     )
     db_session.add(cash_buyer_user)
     await db_session.commit()
@@ -414,7 +437,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         mm_type=MarketMakerType.CASH_BUYER,
         eur_balance=Decimal("100000"),
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(cash_buyer)
 
@@ -425,7 +448,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         email="cea-seller@test.com",
         description="Test",
         created_by_id=test_admin_user.id,
-        initial_balances={"CEA": Decimal("10000")}
+        initial_balances={"CEA": Decimal("10000")},
     )
 
     # Create user for swap maker
@@ -435,7 +458,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         last_name="Maker",
         password_hash="hashed_password_here",
         role=UserRole.ADMIN,
-        is_active=True
+        is_active=True,
     )
     db_session.add(swap_maker_user)
     await db_session.commit()
@@ -448,7 +471,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         client_code="SWAP-001",
         mm_type=MarketMakerType.SWAP_MAKER,
         is_active=True,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     db_session.add(swap_maker)
     await db_session.commit()
@@ -458,7 +481,7 @@ async def test_get_cash_buyers_only(db_session, test_admin_user):
         db=db_session,
         certificate_type=CertificateType.CEA,
         bid_amount_eur=Decimal("50000"),
-        ask_amount_eur=Decimal("25000")
+        ask_amount_eur=Decimal("25000"),
     )
 
     # Only CASH_BUYER should be in bid plan

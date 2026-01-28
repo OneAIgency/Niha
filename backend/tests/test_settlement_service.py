@@ -1,13 +1,19 @@
 """Tests for settlement service"""
-import pytest
+
+from datetime import datetime
 from decimal import Decimal
-from datetime import datetime, timedelta
-from uuid import uuid4
-from app.services.settlement_service import SettlementService
+
+import pytest
+
 from app.models.models import (
-    User, UserRole, Entity, Jurisdiction, CertificateType,
-    SettlementBatch, SettlementStatus, SettlementType
+    CertificateType,
+    Entity,
+    Jurisdiction,
+    SettlementBatch,
+    SettlementStatus,
+    SettlementType,
 )
+from app.services.settlement_service import SettlementService
 
 
 @pytest.mark.asyncio
@@ -48,19 +54,14 @@ async def test_calculate_business_days_t_plus_3(db_session):
 async def test_generate_batch_reference_unique(db_session, test_admin_user):
     """Test settlement batch reference generation is unique"""
     # Create entity for test settlements
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
 
     # Generate first reference and create settlement
     ref1 = await SettlementService.generate_batch_reference(
-        db_session,
-        SettlementType.CEA_PURCHASE,
-        CertificateType.CEA
+        db_session, SettlementType.CEA_PURCHASE, CertificateType.CEA
     )
 
     # Create a settlement with first reference to persist it
@@ -73,16 +74,14 @@ async def test_generate_batch_reference_unique(db_session, test_admin_user):
         quantity=Decimal("100"),
         price=Decimal("10.00"),
         total_value_eur=Decimal("1000.00"),
-        expected_settlement_date=datetime.utcnow()
+        expected_settlement_date=datetime.utcnow(),
     )
     db_session.add(settlement1)
     await db_session.commit()
 
     # Generate second reference (should be different now)
     ref2 = await SettlementService.generate_batch_reference(
-        db_session,
-        SettlementType.CEA_PURCHASE,
-        CertificateType.CEA
+        db_session, SettlementType.CEA_PURCHASE, CertificateType.CEA
     )
 
     assert ref1 != ref2
@@ -98,10 +97,7 @@ async def test_generate_batch_reference_unique(db_session, test_admin_user):
 async def test_create_cea_purchase_settlement(db_session, test_admin_user):
     """Test creating a CEA purchase settlement batch"""
     # Create entity
-    entity = Entity(
-        name="Test Buyer Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Buyer Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -115,7 +111,7 @@ async def test_create_cea_purchase_settlement(db_session, test_admin_user):
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Verify settlement
@@ -136,10 +132,12 @@ async def test_create_cea_purchase_settlement(db_session, test_admin_user):
     assert settlement.expected_settlement_date.date() == expected_settlement.date()
 
     # Verify history entry was created (refresh to load relationship)
-    await db_session.refresh(settlement, ['status_history'])
+    await db_session.refresh(settlement, ["status_history"])
     assert len(settlement.status_history) == 1
     assert settlement.status_history[0].status == SettlementStatus.PENDING
-    assert settlement.status_history[0].notes == "Settlement batch created - awaiting T+1"
+    assert settlement.status_history[0].notes == (
+        "Settlement batch created - awaiting T+1"
+    )
 
 
 @pytest.mark.asyncio
@@ -147,10 +145,7 @@ async def test_create_cea_purchase_settlement(db_session, test_admin_user):
 async def test_create_swap_cea_to_eua_settlement(db_session, test_admin_user):
     """Test creating a CEA to EUA swap settlement batch"""
     # Create entity
-    entity = Entity(
-        name="Test Swapper Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Swapper Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -161,7 +156,7 @@ async def test_create_swap_cea_to_eua_settlement(db_session, test_admin_user):
         entity_id=entity.id,
         cea_quantity=Decimal("500"),
         eua_quantity=Decimal("500"),
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Verify settlement
@@ -184,10 +179,7 @@ async def test_create_swap_cea_to_eua_settlement(db_session, test_admin_user):
 async def test_update_settlement_status(db_session, test_admin_user):
     """Test updating settlement status with history tracking"""
     # Create entity and settlement
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -200,7 +192,7 @@ async def test_update_settlement_status(db_session, test_admin_user):
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Update status to TRANSFER_INITIATED
@@ -209,14 +201,14 @@ async def test_update_settlement_status(db_session, test_admin_user):
         settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Manual update for testing",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     # Verify status change
     assert updated.status == SettlementStatus.TRANSFER_INITIATED
 
     # Refresh to load relationship
-    await db_session.refresh(updated, ['status_history'])
+    await db_session.refresh(updated, ["status_history"])
     assert len(updated.status_history) == 2  # Initial + new status
 
     # Verify history entry
@@ -230,10 +222,7 @@ async def test_update_settlement_status(db_session, test_admin_user):
 async def test_get_pending_settlements(db_session, test_admin_user):
     """Test retrieving pending settlements for an entity"""
     # Create entity
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -247,7 +236,7 @@ async def test_get_pending_settlements(db_session, test_admin_user):
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     settlement2 = await SettlementService.create_cea_purchase_settlement(
@@ -258,7 +247,7 @@ async def test_get_pending_settlements(db_session, test_admin_user):
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Mark one as SETTLED (should not appear in pending)
@@ -268,34 +257,33 @@ async def test_get_pending_settlements(db_session, test_admin_user):
         settlement_id=settlement2.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.AT_CUSTODY,
         notes="At custody",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
         new_status=SettlementStatus.SETTLED,
         notes="Completed",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     # Get pending settlements
     pending = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=entity.id
+        db=db_session, entity_id=entity.id
     )
 
     # Should only return settlement1 (PENDING)
@@ -305,14 +293,13 @@ async def test_get_pending_settlements(db_session, test_admin_user):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Swap settlements not yet implemented in v1.0.0 - test requires refactoring")
+@pytest.mark.skip(
+    reason="Swap settlements not yet implemented in v1.0.0 - test requires refactoring"
+)
 async def test_get_pending_settlements_with_filters(db_session, test_admin_user):
     """Test filtering pending settlements by type and status"""
     # Create entity
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -326,16 +313,16 @@ async def test_get_pending_settlements_with_filters(db_session, test_admin_user)
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Create swap settlement
-    swap_settlement = await SettlementService.create_swap_cea_to_eua_settlement(
+    await SettlementService.create_swap_cea_to_eua_settlement(
         db=db_session,
         entity_id=entity.id,
         cea_quantity=Decimal("500"),
         eua_quantity=Decimal("500"),
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Update CEA settlement to IN_TRANSIT
@@ -344,23 +331,19 @@ async def test_get_pending_settlements_with_filters(db_session, test_admin_user)
         settlement_id=cea_settlement.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     # Filter by CEA_PURCHASE type
     cea_only = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=entity.id,
-        settlement_type=SettlementType.CEA_PURCHASE
+        db=db_session, entity_id=entity.id, settlement_type=SettlementType.CEA_PURCHASE
     )
     assert len(cea_only) == 1
     assert cea_only[0].settlement_type == SettlementType.CEA_PURCHASE
 
     # Filter by PENDING status
     pending_only = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=entity.id,
-        status=SettlementStatus.PENDING
+        db=db_session, entity_id=entity.id, status=SettlementStatus.PENDING
     )
     assert len(pending_only) == 1
     assert pending_only[0].status == SettlementStatus.PENDING
@@ -370,10 +353,7 @@ async def test_get_pending_settlements_with_filters(db_session, test_admin_user)
 async def test_get_settlement_timeline(db_session, test_admin_user):
     """Test retrieving settlement with full status history timeline"""
     # Create entity
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -387,7 +367,7 @@ async def test_get_settlement_timeline(db_session, test_admin_user):
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Progress through statuses
@@ -396,7 +376,7 @@ async def test_get_settlement_timeline(db_session, test_admin_user):
         settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     await SettlementService.update_settlement_status(
@@ -404,13 +384,12 @@ async def test_get_settlement_timeline(db_session, test_admin_user):
         settlement_id=settlement.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit to registry",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     # Get timeline
     settlement_obj, history = await SettlementService.get_settlement_timeline(
-        db=db_session,
-        settlement_id=settlement.id
+        db=db_session, settlement_id=settlement.id
     )
 
     # Verify timeline
@@ -429,10 +408,7 @@ async def test_get_settlement_timeline(db_session, test_admin_user):
 async def test_calculate_settlement_progress(db_session, test_admin_user):
     """Test progress percentage calculation for different statuses"""
     # Create entity
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -446,40 +422,48 @@ async def test_calculate_settlement_progress(db_session, test_admin_user):
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Test progress at different statuses
     assert SettlementService.calculate_settlement_progress(settlement) == 0  # PENDING
 
     await SettlementService.update_settlement_status(
-        db=db_session, settlement_id=settlement.id,
+        db=db_session,
+        settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
-        notes="Test", updated_by=test_admin_user.id
+        notes="Test",
+        updated_by=test_admin_user.id,
     )
     await db_session.refresh(settlement)
     assert SettlementService.calculate_settlement_progress(settlement) == 25
 
     await SettlementService.update_settlement_status(
-        db=db_session, settlement_id=settlement.id,
+        db=db_session,
+        settlement_id=settlement.id,
         new_status=SettlementStatus.IN_TRANSIT,
-        notes="Test", updated_by=test_admin_user.id
+        notes="Test",
+        updated_by=test_admin_user.id,
     )
     await db_session.refresh(settlement)
     assert SettlementService.calculate_settlement_progress(settlement) == 50
 
     await SettlementService.update_settlement_status(
-        db=db_session, settlement_id=settlement.id,
+        db=db_session,
+        settlement_id=settlement.id,
         new_status=SettlementStatus.AT_CUSTODY,
-        notes="Test", updated_by=test_admin_user.id
+        notes="Test",
+        updated_by=test_admin_user.id,
     )
     await db_session.refresh(settlement)
     assert SettlementService.calculate_settlement_progress(settlement) == 75
 
     await SettlementService.update_settlement_status(
-        db=db_session, settlement_id=settlement.id,
+        db=db_session,
+        settlement_id=settlement.id,
         new_status=SettlementStatus.SETTLED,
-        notes="Test", updated_by=test_admin_user.id
+        notes="Test",
+        updated_by=test_admin_user.id,
     )
     await db_session.refresh(settlement)
     assert SettlementService.calculate_settlement_progress(settlement) == 100

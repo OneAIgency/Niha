@@ -1,33 +1,55 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, Response
-import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+import asyncio
+import logging
+import os
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
-import secrets
-import os
-import asyncio
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse, Response
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
-from .backoffice import backoffice_ws_manager
 from ...core.security import get_admin_user, hash_password
 from ...models.models import (
-    ContactRequest, ContactStatus, Entity, User, Trade, UserRole,
-    ActivityLog, UserSession, ScrapingSource, ScrapeLibrary, CertificateType,
-    Certificate, CertificateStatus, SwapRequest, SwapStatus,
-    AuthenticationAttempt, Jurisdiction, KYCStatus
+    ActivityLog,
+    AuthenticationAttempt,
+    Certificate,
+    CertificateStatus,
+    CertificateType,
+    ContactRequest,
+    ContactStatus,
+    Entity,
+    Jurisdiction,
+    KYCStatus,
+    ScrapeLibrary,
+    ScrapingSource,
+    SwapRequest,
+    SwapStatus,
+    User,
+    UserRole,
+    UserSession,
 )
 from ...schemas.schemas import (
-    ContactRequestUpdate, MessageResponse, UserResponse, UserCreate,
-    UserRoleUpdate, ActivityLogResponse, ActivityStatsResponse,
-    ScrapingSourceResponse, ScrapingSourceUpdate, ScrapingSourceCreate,
-    AdminUserFullResponse, AdminUserUpdate, AdminPasswordReset,
-    AuthenticationAttemptResponse, UserSessionResponse
+    ActivityStatsResponse,
+    AdminPasswordReset,
+    AdminUserFullResponse,
+    AdminUserUpdate,
+    AuthenticationAttemptResponse,
+    ContactRequestUpdate,
+    MessageResponse,
+    ScrapingSourceCreate,
+    ScrapingSourceUpdate,
+    UserCreate,
+    UserResponse,
+    UserRoleUpdate,
+    UserSessionResponse,
 )
 from ...services.email_service import email_service
-import logging
+from .backoffice import backoffice_ws_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -39,7 +61,7 @@ async def get_contact_requests(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all contact requests with optional status filter.
@@ -77,7 +99,9 @@ async def get_contact_requests(
                 "submitter_ip": r.submitter_ip,
                 "status": r.status.value if r.status else "new",
                 "notes": r.notes,
-                "created_at": (r.created_at.isoformat() + "Z") if r.created_at else None,
+                "created_at": (r.created_at.isoformat() + "Z")
+                if r.created_at
+                else None,
             }
             for r in requests
         ],
@@ -85,8 +109,8 @@ async def get_contact_requests(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page if total else 0
-        }
+            "total_pages": (total + per_page - 1) // per_page if total else 0,
+        },
     }
 
 
@@ -95,7 +119,7 @@ async def update_contact_request(
     request_id: str,
     update: ContactRequestUpdate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update a contact request status or notes.
@@ -121,20 +145,27 @@ async def update_contact_request(
     await db.refresh(contact)
 
     # Broadcast contact request update to backoffice
-    asyncio.create_task(backoffice_ws_manager.broadcast("request_updated", {
-        "id": str(contact.id),
-        "entity_name": contact.entity_name,
-        "contact_email": contact.contact_email,
-        "contact_name": contact.contact_name,
-        "position": contact.position,
-        "reference": contact.reference,
-        "request_type": contact.request_type or "join",
-        "nda_file_name": contact.nda_file_name,
-        "submitter_ip": contact.submitter_ip,
-        "status": contact.status.value if contact.status else "new",
-        "notes": contact.notes,
-        "created_at": (contact.created_at.isoformat() + "Z") if contact.created_at else None
-    }))
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast(
+            "request_updated",
+            {
+                "id": str(contact.id),
+                "entity_name": contact.entity_name,
+                "contact_email": contact.contact_email,
+                "contact_name": contact.contact_name,
+                "position": contact.position,
+                "reference": contact.reference,
+                "request_type": contact.request_type or "join",
+                "nda_file_name": contact.nda_file_name,
+                "submitter_ip": contact.submitter_ip,
+                "status": contact.status.value if contact.status else "new",
+                "notes": contact.notes,
+                "created_at": (contact.created_at.isoformat() + "Z")
+                if contact.created_at
+                else None,
+            },
+        )
+    )
 
     return {"message": "Contact request updated", "success": True}
 
@@ -143,7 +174,7 @@ async def update_contact_request(
 async def delete_contact_request(
     request_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a contact request permanently.
@@ -161,9 +192,9 @@ async def delete_contact_request(
     await db.commit()
 
     # Broadcast deletion to backoffice WebSocket
-    asyncio.create_task(backoffice_ws_manager.broadcast("request_deleted", {
-        "id": str(request_id)
-    }))
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_deleted", {"id": str(request_id)})
+    )
 
     return {"message": "Contact request deleted", "success": True}
 
@@ -175,10 +206,12 @@ async def create_user_from_contact_request(
     first_name: str = Query(..., description="First name"),
     last_name: str = Query(..., description="Last name"),
     mode: str = Query(..., description="Creation mode: 'manual' or 'invitation'"),
-    password: Optional[str] = Query(None, description="Password (required for manual mode)"),
+    password: Optional[str] = Query(
+        None, description="Password (required for manual mode)"
+    ),
     position: Optional[str] = Query(None, description="Position/title"),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new user from an approved contact request.
@@ -198,17 +231,17 @@ async def create_user_from_contact_request(
         raise HTTPException(status_code=404, detail="Contact request not found")
 
     # Check email uniqueness
-    existing = await db.execute(
-        select(User).where(User.email == email.lower())
-    )
+    existing = await db.execute(select(User).where(User.email == email.lower()))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="User with this email already exists")
+        raise HTTPException(
+            status_code=400, detail="User with this email already exists"
+        )
 
     # Create entity from contact request
     entity = Entity(
         name=contact_request.entity_name,
         jurisdiction=Jurisdiction.OTHER,
-        kyc_status=KYCStatus.PENDING
+        kyc_status=KYCStatus.PENDING,
     )
     db.add(entity)
     await db.flush()
@@ -216,7 +249,10 @@ async def create_user_from_contact_request(
     if mode == "manual":
         # Manual creation with password
         if not password or len(password) < 8:
-            raise HTTPException(status_code=400, detail="Password required and must be at least 8 characters")
+            raise HTTPException(
+                status_code=400,
+                detail="Password required and must be at least 8 characters",
+            )
 
         user = User(
             email=email.lower(),
@@ -229,7 +265,7 @@ async def create_user_from_contact_request(
             must_change_password=False,
             is_active=True,
             creation_method="manual",
-            created_by=admin_user.id
+            created_by=admin_user.id,
         )
     else:
         # Send invitation
@@ -247,7 +283,7 @@ async def create_user_from_contact_request(
             must_change_password=True,
             is_active=False,  # Activate when password is set
             creation_method="invitation",
-            created_by=admin_user.id
+            created_by=admin_user.id,
         )
 
     db.add(user)
@@ -262,26 +298,30 @@ async def create_user_from_contact_request(
     if mode == "invitation":
         try:
             await email_service.send_invitation(
-                user.email,
-                user.first_name,
-                user.invitation_token
+                user.email, user.first_name, user.invitation_token
             )
-        except Exception as e:
+        except Exception:
             # Log but don't fail - user is created
             pass
 
     # Broadcast updates
-    asyncio.create_task(backoffice_ws_manager.broadcast("request_updated", {
-        "id": str(contact_request.id),
-        "status": "enrolled"
-    }))
-    asyncio.create_task(backoffice_ws_manager.broadcast("user_created", {
-        "id": str(user.id),
-        "email": user.email,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "role": user.role.value
-    }))
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast(
+            "request_updated", {"id": str(contact_request.id), "status": "enrolled"}
+        )
+    )
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast(
+            "user_created",
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role.value,
+            },
+        )
+    )
 
     return {
         "message": f"User created successfully via {mode}",
@@ -293,8 +333,8 @@ async def create_user_from_contact_request(
             "last_name": user.last_name,
             "role": user.role.value,
             "entity_id": str(entity.id),
-            "creation_method": mode
-        }
+            "creation_method": mode,
+        },
     }
 
 
@@ -302,7 +342,7 @@ async def create_user_from_contact_request(
 async def download_nda_file(
     request_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Download NDA file for a contact request.
@@ -324,7 +364,7 @@ async def download_nda_file(
             media_type=contact.nda_file_mime_type or "application/pdf",
             headers={
                 "Content-Disposition": f'attachment; filename="{contact.nda_file_name}"'
-            }
+            },
         )
 
     # Fallback to filesystem for legacy records
@@ -333,7 +373,7 @@ async def download_nda_file(
             return FileResponse(
                 path=contact.nda_file_path,
                 filename=contact.nda_file_name,
-                media_type="application/pdf"
+                media_type="application/pdf",
             )
 
     raise HTTPException(status_code=404, detail="No NDA file attached to this request")
@@ -350,7 +390,7 @@ async def ip_whois_lookup(
     Admin only.
     """
     # Validate IP address format (basic check)
-    if not ip_address or ip_address in ['None', 'null', '']:
+    if not ip_address or ip_address in ["None", "null", ""]:
         raise HTTPException(status_code=400, detail="Invalid IP address")
 
     try:
@@ -359,14 +399,13 @@ async def ip_whois_lookup(
                 f"http://ip-api.com/json/{ip_address}",
                 params={
                     "fields": "status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
-                }
+                },
             )
             data = response.json()
 
         if data.get("status") == "fail":
             raise HTTPException(
-                status_code=400,
-                detail=data.get("message", "IP lookup failed")
+                status_code=400, detail=data.get("message", "IP lookup failed")
             )
 
         return {
@@ -396,14 +435,13 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):
     """
     # Contact requests by status
     new_contacts = await db.execute(
-        select(func.count()).select_from(ContactRequest)
+        select(func.count())
+        .select_from(ContactRequest)
         .where(ContactRequest.status == ContactStatus.NEW)
     )
     new_count = new_contacts.scalar()
 
-    total_contacts = await db.execute(
-        select(func.count()).select_from(ContactRequest)
-    )
+    total_contacts = await db.execute(select(func.count()).select_from(ContactRequest))
     total_count = total_contacts.scalar()
 
     # Entities count
@@ -415,13 +453,10 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):
     users_count = users_result.scalar()
 
     return {
-        "contact_requests": {
-            "new": new_count,
-            "total": total_count
-        },
+        "contact_requests": {"new": new_count, "total": total_count},
         "entities": entities_count,
         "users": users_count,
-        "recent_activity": []  # Would include recent trades, logins, etc.
+        "recent_activity": [],  # Would include recent trades, logins, etc.
     }
 
 
@@ -430,7 +465,7 @@ async def get_entities(
     kyc_status: Optional[str] = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all registered entities with optional KYC filter.
@@ -467,7 +502,7 @@ async def update_entity_kyc(
     entity_id: str,
     kyc_status: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update entity KYC status.
@@ -475,9 +510,7 @@ async def update_entity_kyc(
     """
     from ...models.models import KYCStatus
 
-    result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = result.scalar_one_or_none()
 
     if not entity:
@@ -496,6 +529,7 @@ async def update_entity_kyc(
 
 # ==================== User Management ====================
 
+
 @router.get("/users")
 async def get_users(
     role: Optional[str] = None,
@@ -503,7 +537,7 @@ async def get_users(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all users with optional filters.
@@ -517,9 +551,9 @@ async def get_users(
     if search:
         search_term = f"%{search}%"
         query = query.where(
-            (User.email.ilike(search_term)) |
-            (User.first_name.ilike(search_term)) |
-            (User.last_name.ilike(search_term))
+            (User.email.ilike(search_term))
+            | (User.first_name.ilike(search_term))
+            | (User.last_name.ilike(search_term))
         )
 
     # Count total
@@ -528,9 +562,9 @@ async def get_users(
         count_query = count_query.where(User.role == UserRole(role))
     if search:
         count_query = count_query.where(
-            (User.email.ilike(search_term)) |
-            (User.first_name.ilike(search_term)) |
-            (User.last_name.ilike(search_term))
+            (User.email.ilike(search_term))
+            | (User.first_name.ilike(search_term))
+            | (User.last_name.ilike(search_term))
         )
     total_result = await db.execute(count_query)
     total = total_result.scalar()
@@ -554,11 +588,15 @@ async def get_users(
             entity = entity_result.scalar_one_or_none()
             if entity:
                 entity_name = entity.name
-                kyc_approved_at = entity.kyc_approved_at.isoformat() if entity.kyc_approved_at else None
+                kyc_approved_at = (
+                    entity.kyc_approved_at.isoformat()
+                    if entity.kyc_approved_at
+                    else None
+                )
 
         user_data = UserResponse.model_validate(user).model_dump()
-        user_data['entity_name'] = entity_name
-        user_data['kyc_approved_at'] = kyc_approved_at
+        user_data["entity_name"] = entity_name
+        user_data["kyc_approved_at"] = kyc_approved_at
         user_list.append(user_data)
 
     return {
@@ -567,8 +605,8 @@ async def get_users(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page if total else 0
-        }
+            "total_pages": (total + per_page - 1) // per_page if total else 0,
+        },
     }
 
 
@@ -576,7 +614,7 @@ async def get_users(
 async def create_user(
     user_data: UserCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new user with password or send invitation email.
@@ -590,8 +628,7 @@ async def create_user(
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
-            status_code=400,
-            detail="User with this email already exists"
+            status_code=400, detail="User with this email already exists"
         )
 
     # Create user with or without password
@@ -606,7 +643,7 @@ async def create_user(
             entity_id=user_data.entity_id,
             position=user_data.position,
             must_change_password=False,  # Password already set by admin
-            is_active=True
+            is_active=True,
         )
     else:
         # Generate invitation token for email invite
@@ -620,7 +657,7 @@ async def create_user(
             position=user_data.position,
             invitation_token=invitation_token,
             invitation_sent_at=datetime.utcnow(),
-            must_change_password=True
+            must_change_password=True,
         )
 
     db.add(user)
@@ -631,9 +668,7 @@ async def create_user(
     if not user_data.password:
         try:
             await email_service.send_invitation(
-                user.email,
-                user.first_name,
-                user.invitation_token
+                user.email, user.first_name, user.invitation_token
             )
         except Exception:
             pass  # Don't fail if email fails
@@ -645,15 +680,13 @@ async def create_user(
 async def get_user(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get user details by ID.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -670,7 +703,7 @@ async def get_user(
             entity_name = entity.name
 
     user_data = UserResponse.model_validate(user).model_dump()
-    user_data['entity_name'] = entity_name
+    user_data["entity_name"] = entity_name
 
     return user_data
 
@@ -680,25 +713,20 @@ async def change_user_role(
     user_id: str,
     role_update: UserRoleUpdate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Change a user's role.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user.id == admin_user.id:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot change your own role"
-        )
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
 
     old_role = user.role.value
     user.role = role_update.role
@@ -713,15 +741,13 @@ async def change_user_role(
 async def deactivate_user(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Deactivate a user account.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -729,8 +755,7 @@ async def deactivate_user(
 
     if user.id == admin_user.id:
         raise HTTPException(
-            status_code=400,
-            detail="Cannot deactivate your own account"
+            status_code=400, detail="Cannot deactivate your own account"
         )
 
     user.is_active = False
@@ -743,15 +768,13 @@ async def deactivate_user(
 async def get_user_full_details(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get comprehensive user details including auth history and stats.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -834,7 +857,9 @@ async def get_user_full_details(
         last_login_ip=last_login_ip,
         failed_login_count_24h=failed_login_count_24h,
         sessions=[UserSessionResponse.model_validate(s) for s in sessions],
-        auth_history=[AuthenticationAttemptResponse.model_validate(a) for a in auth_attempts]
+        auth_history=[
+            AuthenticationAttemptResponse.model_validate(a) for a in auth_attempts
+        ],
     )
 
 
@@ -843,15 +868,13 @@ async def update_user_full(
     user_id: str,
     update: AdminUserUpdate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update any user field.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -864,8 +887,7 @@ async def update_user_full(
         )
         if existing.scalar_one_or_none():
             raise HTTPException(
-                status_code=400,
-                detail="Email already in use by another user"
+                status_code=400, detail="Email already in use by another user"
             )
         user.email = update.email.lower()
 
@@ -883,7 +905,9 @@ async def update_user_full(
         user.role = update.role
     if update.is_active is not None:
         if user.id == admin_user.id and not update.is_active:
-            raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+            raise HTTPException(
+                status_code=400, detail="Cannot deactivate your own account"
+            )
         user.is_active = update.is_active
     if update.entity_id is not None:
         # Verify entity exists
@@ -905,15 +929,13 @@ async def admin_reset_password(
     user_id: str,
     reset: AdminPasswordReset,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Reset a user's password.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -935,15 +957,13 @@ async def get_user_auth_history(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get authentication history for a specific user.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -981,7 +1001,7 @@ async def get_user_auth_history(
                 "ip_address": a.ip_address,
                 "user_agent": a.user_agent,
                 "failure_reason": a.failure_reason,
-                "created_at": a.created_at.isoformat()
+                "created_at": a.created_at.isoformat(),
             }
             for a in auth_attempts
         ],
@@ -989,12 +1009,13 @@ async def get_user_auth_history(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page if total else 0
-        }
+            "total_pages": (total + per_page - 1) // per_page if total else 0,
+        },
     }
 
 
 # ==================== Activity Logs ====================
+
 
 @router.get("/activity-logs")
 async def get_activity_logs(
@@ -1003,7 +1024,7 @@ async def get_activity_logs(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get activity logs with optional filters.
@@ -1035,9 +1056,7 @@ async def get_activity_logs(
     # Get user info for each log
     logs_with_user = []
     for log in logs:
-        user_result = await db.execute(
-            select(User).where(User.id == log.user_id)
-        )
+        user_result = await db.execute(select(User).where(User.id == log.user_id))
         user = user_result.scalar_one_or_none()
 
         log_data = {
@@ -1047,7 +1066,7 @@ async def get_activity_logs(
             "action": log.action,
             "details": log.details,
             "ip_address": log.ip_address,
-            "created_at": log.created_at.isoformat()
+            "created_at": log.created_at.isoformat(),
         }
         logs_with_user.append(log_data)
 
@@ -1057,15 +1076,14 @@ async def get_activity_logs(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page if total else 0
-        }
+            "total_pages": (total + per_page - 1) // per_page if total else 0,
+        },
     }
 
 
 @router.get("/activity-logs/stats", response_model=ActivityStatsResponse)
 async def get_activity_stats(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get activity statistics.
@@ -1085,14 +1103,17 @@ async def get_activity_stats(
 
     # Active sessions
     active_sessions_result = await db.execute(
-        select(func.count()).select_from(UserSession).where(UserSession.is_active == True)
+        select(func.count())
+        .select_from(UserSession)
+        .where(UserSession.is_active == True)
     )
     active_sessions = active_sessions_result.scalar()
 
     # Logins today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     logins_today_result = await db.execute(
-        select(func.count()).select_from(ActivityLog)
+        select(func.count())
+        .select_from(ActivityLog)
         .where(ActivityLog.action == "login")
         .where(ActivityLog.created_at >= today_start)
     )
@@ -1100,8 +1121,9 @@ async def get_activity_stats(
 
     # Average session duration (from completed sessions)
     avg_duration_result = await db.execute(
-        select(func.avg(UserSession.duration_seconds))
-        .where(UserSession.duration_seconds.isnot(None))
+        select(func.avg(UserSession.duration_seconds)).where(
+            UserSession.duration_seconds.isnot(None)
+        )
     )
     avg_duration = avg_duration_result.scalar() or 0
 
@@ -1110,7 +1132,7 @@ async def get_activity_stats(
         users_by_role=users_by_role,
         active_sessions=active_sessions,
         logins_today=logins_today,
-        avg_session_duration=float(avg_duration)
+        avg_session_duration=float(avg_duration),
     )
 
 
@@ -1118,10 +1140,10 @@ async def get_activity_stats(
 # CRUD + test/refresh for price-scraping sources (EUA/CEA). Consumed by Settings UI.
 # See docs/api/ADMIN_SCRAPING_API.md for request/response examples.
 
+
 @router.get("/scraping-sources")
 async def get_scraping_sources(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get all scraping source configurations.
@@ -1137,15 +1159,21 @@ async def get_scraping_sources(
             "name": s.name,
             "url": s.url,
             "certificate_type": s.certificate_type.value,
-            "scrape_library": s.scrape_library.value if s.scrape_library else ScrapeLibrary.HTTPX.value,
+            "scrape_library": s.scrape_library.value
+            if s.scrape_library
+            else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
             "scrape_interval_minutes": s.scrape_interval_minutes,
-            "last_scrape_at": s.last_scrape_at.isoformat() if s.last_scrape_at else None,
-            "last_scrape_status": s.last_scrape_status.value if s.last_scrape_status else None,
+            "last_scrape_at": s.last_scrape_at.isoformat()
+            if s.last_scrape_at
+            else None,
+            "last_scrape_status": s.last_scrape_status.value
+            if s.last_scrape_status
+            else None,
             "last_price": float(s.last_price) if s.last_price else None,
             "config": s.config,
             "created_at": s.created_at.isoformat(),
-            "updated_at": s.updated_at.isoformat()
+            "updated_at": s.updated_at.isoformat(),
         }
         for s in sources
     ]
@@ -1155,7 +1183,7 @@ async def get_scraping_sources(
 async def create_scraping_source(
     source_data: ScrapingSourceCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new scraping source.
@@ -1168,7 +1196,7 @@ async def create_scraping_source(
         scrape_library=source_data.scrape_library,
         scrape_interval_minutes=source_data.scrape_interval_minutes,
         config=source_data.config,
-        is_active=True
+        is_active=True,
     )
 
     db.add(source)
@@ -1180,15 +1208,21 @@ async def create_scraping_source(
         "name": source.name,
         "url": source.url,
         "certificate_type": source.certificate_type.value,
-        "scrape_library": source.scrape_library.value if source.scrape_library else ScrapeLibrary.HTTPX.value,
+        "scrape_library": source.scrape_library.value
+        if source.scrape_library
+        else ScrapeLibrary.HTTPX.value,
         "is_active": source.is_active,
         "scrape_interval_minutes": source.scrape_interval_minutes,
-        "last_scrape_at": source.last_scrape_at.isoformat() if source.last_scrape_at else None,
-        "last_scrape_status": source.last_scrape_status.value if source.last_scrape_status else None,
+        "last_scrape_at": source.last_scrape_at.isoformat()
+        if source.last_scrape_at
+        else None,
+        "last_scrape_status": source.last_scrape_status.value
+        if source.last_scrape_status
+        else None,
         "last_price": float(source.last_price) if source.last_price else None,
         "config": source.config,
         "created_at": source.created_at.isoformat(),
-        "updated_at": source.updated_at.isoformat()
+        "updated_at": source.updated_at.isoformat(),
     }
 
 
@@ -1197,7 +1231,7 @@ async def update_scraping_source(
     source_id: str,
     update: ScrapingSourceUpdate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update a scraping source configuration.
@@ -1246,7 +1280,7 @@ def _scraping_error_status(e: Exception) -> tuple[int, str]:
 async def test_scraping_source(
     source_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Test a scraping source by running a single scrape.
@@ -1264,26 +1298,22 @@ async def test_scraping_source(
 
     try:
         price = await price_scraper.scrape_source(source)
-        return {
-            "success": True,
-            "message": "Scrape successful",
-            "price": price
-        }
+        return {"success": True, "message": "Scrape successful", "price": price}
     except Exception as e:
-        logger.exception("Scraping source test failed: source_id=%s, source=%s", source_id, source.name)
+        logger.exception(
+            "Scraping source test failed: source_id=%s, source=%s",
+            source_id,
+            source.name,
+        )
         status, detail = _scraping_error_status(e)
-        return {
-            "success": False,
-            "message": detail,
-            "price": None
-        }
+        return {"success": False, "message": detail, "price": None}
 
 
 @router.post("/scraping-sources/{source_id}/refresh", response_model=MessageResponse)
 async def refresh_scraping_source(
     source_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Force refresh prices from a scraping source.
@@ -1303,7 +1333,11 @@ async def refresh_scraping_source(
         await price_scraper.refresh_source(source, db)
         return MessageResponse(message="Prices refreshed successfully")
     except Exception as e:
-        logger.exception("Scraping source refresh failed: source_id=%s, source=%s", source_id, source.name)
+        logger.exception(
+            "Scraping source refresh failed: source_id=%s, source=%s",
+            source_id,
+            source.name,
+        )
         status, detail = _scraping_error_status(e)
         raise HTTPException(status_code=status, detail=detail)
 
@@ -1312,7 +1346,7 @@ async def refresh_scraping_source(
 async def delete_scraping_source(
     source_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a scraping source.
@@ -1329,15 +1363,17 @@ async def delete_scraping_source(
     await db.delete(source)
     await db.commit()
 
-    return MessageResponse(message=f"Scraping source '{source.name}' deleted successfully")
+    return MessageResponse(
+        message=f"Scraping source '{source.name}' deleted successfully"
+    )
 
 
 # ==================== Market Overview ====================
 
+
 @router.get("/market-overview")
 async def get_market_overview(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get market overview statistics.
@@ -1357,8 +1393,7 @@ async def get_market_overview(
 
     # Calculate total CEA value (convert to USD - CEA is in CNY, roughly 0.14 USD/CNY)
     cea_value_cny = sum(
-        float(c.quantity) * float(c.unit_price)
-        for c in cea_certificates
+        float(c.quantity) * float(c.unit_price) for c in cea_certificates
     )
     cea_value_usd = cea_value_cny * 0.14  # Approximate CNY to USD conversion
 
@@ -1385,5 +1420,5 @@ async def get_market_overview(
 
     return {
         "top_20_cea_value_usd": round(cea_value_usd, 2),
-        "top_20_swap_value_usd": round(swap_value_usd, 2)
+        "top_20_swap_value_usd": round(swap_value_usd, 2),
     }

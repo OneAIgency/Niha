@@ -4,32 +4,31 @@ Settlement Service - Business Logic for T+N External Settlements
 Handles creation, tracking, and finalization of settlement batches
 for CEA purchases and CEA→EUA swaps through external registries.
 """
+
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-from uuid import UUID
 from decimal import Decimal
+from typing import List, Optional
+from uuid import UUID
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ..core.exceptions import handle_database_error
 from ..models.models import (
-    SettlementBatch,
-    SettlementStatusHistory,
-    SettlementStatus,
-    SettlementType,
-    CertificateType,
-    Entity,
-    Order,
-    CashMarketTrade,
-    EntityHolding,
     AssetTransaction,
     AssetType,
+    CertificateType,
+    Entity,
+    EntityHolding,
+    SettlementBatch,
+    SettlementStatus,
+    SettlementStatusHistory,
+    SettlementType,
     TransactionType,
-    User
+    User,
 )
-from ..core.exceptions import handle_database_error
 from .email_service import email_service
 
 logger = logging.getLogger(__name__)
@@ -56,20 +55,17 @@ class SettlementService:
 
     @staticmethod
     async def generate_batch_reference(
-        db: AsyncSession,
-        settlement_type: SettlementType,
-        asset_type: CertificateType
+        db: AsyncSession, settlement_type: SettlementType, asset_type: CertificateType
     ) -> str:
         """Generate unique settlement batch reference: SET-YYYY-NNNNNN-TYPE"""
         year = datetime.utcnow().year
         asset_suffix = asset_type.value
 
         result = await db.execute(
-            select(SettlementBatch)
-            .where(
+            select(SettlementBatch).where(
                 and_(
                     SettlementBatch.batch_reference.like(f"SET-{year}-%"),
-                    SettlementBatch.asset_type == asset_type
+                    SettlementBatch.asset_type == asset_type,
                 )
             )
         )
@@ -86,7 +82,7 @@ class SettlementService:
         quantity: Decimal,
         price: Decimal,
         seller_id: Optional[UUID],
-        created_by: Optional[UUID]
+        created_by: Optional[UUID],
     ) -> SettlementBatch:
         """Create settlement batch for CEA purchase (T+3)"""
         try:
@@ -109,7 +105,7 @@ class SettlementService:
                 quantity=quantity,
                 price=price,
                 total_value_eur=total_value_eur,
-                expected_settlement_date=expected_date
+                expected_settlement_date=expected_date,
             )
 
             db.add(settlement)
@@ -119,7 +115,7 @@ class SettlementService:
                 settlement_batch_id=settlement.id,
                 status=SettlementStatus.PENDING,
                 notes="Settlement batch created - awaiting T+1",
-                updated_by=created_by
+                updated_by=created_by,
             )
             db.add(status_history)
             await db.commit()
@@ -132,7 +128,9 @@ class SettlementService:
             )
             settlement = result.scalar_one()
 
-            logger.info(f"Created CEA settlement: {batch_reference} for entity {entity_id}")
+            logger.info(
+                f"Created CEA settlement: {batch_reference} for entity {entity_id}"
+            )
 
             # Send confirmation email
             try:
@@ -155,11 +153,15 @@ class SettlementService:
                             batch_reference=batch_reference,
                             certificate_type="CEA",
                             quantity=float(quantity),
-                            expected_date=expected_date.strftime("%Y-%m-%d")
+                            expected_date=expected_date.strftime("%Y-%m-%d"),
                         )
-                        logger.info(f"Settlement confirmation email sent to {user.email}")
+                        logger.info(
+                            f"Settlement confirmation email sent to {user.email}"
+                        )
             except Exception as email_error:
-                logger.error(f"Failed to send settlement confirmation email: {email_error}")
+                logger.error(
+                    f"Failed to send settlement confirmation email: {email_error}"
+                )
                 # Don't fail the settlement creation if email fails
 
             return settlement
@@ -174,7 +176,7 @@ class SettlementService:
         settlement_id: UUID,
         new_status: SettlementStatus,
         notes: Optional[str],
-        updated_by: Optional[UUID]
+        updated_by: Optional[UUID],
     ) -> SettlementBatch:
         """Update settlement status with validation"""
         try:
@@ -189,12 +191,24 @@ class SettlementService:
 
             # Validate transitions
             valid_transitions = {
-                SettlementStatus.PENDING: [SettlementStatus.TRANSFER_INITIATED, SettlementStatus.FAILED],
-                SettlementStatus.TRANSFER_INITIATED: [SettlementStatus.IN_TRANSIT, SettlementStatus.FAILED],
-                SettlementStatus.IN_TRANSIT: [SettlementStatus.AT_CUSTODY, SettlementStatus.FAILED],
-                SettlementStatus.AT_CUSTODY: [SettlementStatus.SETTLED, SettlementStatus.FAILED],
+                SettlementStatus.PENDING: [
+                    SettlementStatus.TRANSFER_INITIATED,
+                    SettlementStatus.FAILED,
+                ],
+                SettlementStatus.TRANSFER_INITIATED: [
+                    SettlementStatus.IN_TRANSIT,
+                    SettlementStatus.FAILED,
+                ],
+                SettlementStatus.IN_TRANSIT: [
+                    SettlementStatus.AT_CUSTODY,
+                    SettlementStatus.FAILED,
+                ],
+                SettlementStatus.AT_CUSTODY: [
+                    SettlementStatus.SETTLED,
+                    SettlementStatus.FAILED,
+                ],
                 SettlementStatus.SETTLED: [],
-                SettlementStatus.FAILED: [SettlementStatus.PENDING]
+                SettlementStatus.FAILED: [SettlementStatus.PENDING],
             }
 
             if new_status not in valid_transitions.get(old_status, []):
@@ -207,7 +221,7 @@ class SettlementService:
                 settlement_batch_id=settlement_id,
                 status=new_status,
                 notes=notes or f"Status changed from {old_status} to {new_status}",
-                updated_by=updated_by
+                updated_by=updated_by,
             )
             db.add(history)
 
@@ -224,7 +238,9 @@ class SettlementService:
             )
             settlement = result.scalar_one()
 
-            logger.info(f"Settlement {settlement.batch_reference}: {old_status} -> {new_status}")
+            logger.info(
+                f"Settlement {settlement.batch_reference}: {old_status} -> {new_status}"
+            )
 
             # Send status update email
             try:
@@ -245,12 +261,16 @@ class SettlementService:
                         # Send completion email for SETTLED status, update email for others
                         if new_status == SettlementStatus.SETTLED:
                             # Get new balance after settlement
-                            asset_type_enum = AssetType.CEA if settlement.asset_type == CertificateType.CEA else AssetType.EUA
+                            asset_type_enum = (
+                                AssetType.CEA
+                                if settlement.asset_type == CertificateType.CEA
+                                else AssetType.EUA
+                            )
                             holding_result = await db.execute(
                                 select(EntityHolding).where(
                                     and_(
                                         EntityHolding.entity_id == settlement.entity_id,
-                                        EntityHolding.asset_type == asset_type_enum
+                                        EntityHolding.asset_type == asset_type_enum,
                                     )
                                 )
                             )
@@ -263,7 +283,7 @@ class SettlementService:
                                 batch_reference=settlement.batch_reference,
                                 certificate_type=settlement.asset_type.value,
                                 quantity=float(settlement.quantity),
-                                new_balance=new_balance
+                                new_balance=new_balance,
                             )
                         elif new_status == SettlementStatus.FAILED:
                             await email_service.send_settlement_failed(
@@ -272,7 +292,7 @@ class SettlementService:
                                 batch_reference=settlement.batch_reference,
                                 certificate_type=settlement.asset_type.value,
                                 quantity=float(settlement.quantity),
-                                reason=notes
+                                reason=notes,
                             )
                         else:
                             await email_service.send_settlement_status_update(
@@ -282,7 +302,7 @@ class SettlementService:
                                 old_status=old_status.value,
                                 new_status=new_status.value,
                                 certificate_type=settlement.asset_type.value,
-                                quantity=float(settlement.quantity)
+                                quantity=float(settlement.quantity),
                             )
                         logger.info(f"Settlement status email sent to {user.email}")
             except Exception as email_error:
@@ -297,21 +317,23 @@ class SettlementService:
 
     @staticmethod
     async def finalize_settlement(
-        db: AsyncSession,
-        settlement: SettlementBatch,
-        finalized_by: Optional[UUID]
+        db: AsyncSession, settlement: SettlementBatch, finalized_by: Optional[UUID]
     ):
         """Finalize settlement - update EntityHolding"""
         try:
             settlement.actual_settlement_date = datetime.utcnow()
 
-            asset_type_enum = AssetType.CEA if settlement.asset_type == CertificateType.CEA else AssetType.EUA
+            asset_type_enum = (
+                AssetType.CEA
+                if settlement.asset_type == CertificateType.CEA
+                else AssetType.EUA
+            )
 
             result = await db.execute(
                 select(EntityHolding).where(
                     and_(
                         EntityHolding.entity_id == settlement.entity_id,
-                        EntityHolding.asset_type == asset_type_enum
+                        EntityHolding.asset_type == asset_type_enum,
                     )
                 )
             )
@@ -322,7 +344,7 @@ class SettlementService:
                 holding = EntityHolding(
                     entity_id=settlement.entity_id,
                     asset_type=asset_type_enum,
-                    quantity=Decimal("0")
+                    quantity=Decimal("0"),
                 )
                 db.add(holding)
                 await db.flush()
@@ -341,7 +363,7 @@ class SettlementService:
                 balance_after=holding.quantity,
                 reference=f"Settlement {settlement.batch_reference}",
                 notes=f"Settlement finalized: {settlement.settlement_type.value}",
-                created_by=finalized_by
+                created_by=finalized_by,
             )
             db.add(transaction)
 
@@ -355,13 +377,13 @@ class SettlementService:
         db: AsyncSession,
         entity_id: Optional[UUID] = None,
         settlement_type: Optional[SettlementType] = None,
-        status_filter: Optional[SettlementStatus] = None
+        status_filter: Optional[SettlementStatus] = None,
     ) -> List[SettlementBatch]:
         """Get pending settlements with filters"""
         try:
             query = select(SettlementBatch).options(
                 selectinload(SettlementBatch.entity),
-                selectinload(SettlementBatch.status_history)
+                selectinload(SettlementBatch.status_history),
             )
 
             filters = []
@@ -373,7 +395,9 @@ class SettlementService:
                 filters.append(SettlementBatch.status == status_filter)
             else:
                 filters.append(
-                    SettlementBatch.status.notin_([SettlementStatus.SETTLED, SettlementStatus.FAILED])
+                    SettlementBatch.status.notin_(
+                        [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                    )
                 )
 
             if filters:
@@ -395,14 +419,13 @@ class SettlementService:
             SettlementStatus.IN_TRANSIT: 50,
             SettlementStatus.AT_CUSTODY: 75,
             SettlementStatus.SETTLED: 100,
-            SettlementStatus.FAILED: 0
+            SettlementStatus.FAILED: 0,
         }
         return status_weights.get(settlement.status, 0)
 
     @staticmethod
     async def get_settlement_timeline(
-        db: AsyncSession,
-        settlement_id: UUID
+        db: AsyncSession, settlement_id: UUID
     ) -> tuple[SettlementBatch, List[SettlementStatusHistory]]:
         """Get settlement with full status history"""
         try:
@@ -438,20 +461,19 @@ async def get_pending_settlements(
     db: AsyncSession,
     entity_id: Optional[UUID] = None,
     settlement_type: Optional[SettlementType] = None,
-    status: Optional[SettlementStatus] = None
+    status: Optional[SettlementStatus] = None,
 ) -> List[SettlementBatch]:
     """Wrapper for SettlementService.get_pending_settlements()"""
     return await SettlementService.get_pending_settlements(
         db=db,
         entity_id=entity_id,
         settlement_type=settlement_type,
-        status_filter=status
+        status_filter=status,
     )
 
 
 async def get_settlement_timeline(
-    db: AsyncSession,
-    settlement_id: UUID
+    db: AsyncSession, settlement_id: UUID
 ) -> tuple[SettlementBatch, List[SettlementStatusHistory]]:
     """Wrapper for SettlementService.get_settlement_timeline()"""
     return await SettlementService.get_settlement_timeline(db, settlement_id)

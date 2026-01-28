@@ -7,15 +7,14 @@ Create Date: 2026-01-21
 Changes MarketMakerType enum from certificate-based (ASSET_HOLDER, LIQUIDITY_PROVIDER)
 to market-based (CEA_CASH_SELLER, CASH_BUYER, SWAP_MAKER).
 """
+
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
-revision: str = 'a8f9d5c2e1b4'
-down_revision: Union[str, None] = 'f873b8199176'
+revision: str = "a8f9d5c2e1b4"
+down_revision: Union[str, None] = "f873b8199176"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

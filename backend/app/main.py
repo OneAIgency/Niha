@@ -1,16 +1,36 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import logging
-import asyncio
 
+from .api.v1 import (
+    admin,
+    admin_logging,
+    admin_market_orders,
+    assets,
+    auth,
+    backoffice,
+    cash_market,
+    contact,
+    deposits,
+    liquidity,
+    market_maker,
+    marketplace,
+    onboarding,
+    prices,
+    settlement,
+    swaps,
+    users,
+    withdrawals,
+)
 from .core.config import settings
-from .core.database import init_db
+from .core.database import AsyncSessionLocal, init_db
 from .core.security import RedisManager
-from .api.v1 import auth, contact, prices, marketplace, swaps, admin, users, backoffice, onboarding, cash_market, settlement, market_maker, admin_market_orders, admin_logging, liquidity
-from .services.settlement_processor import SettlementProcessor
+from .services import deposit_service
 from .services.settlement_monitoring import SettlementMonitoring
-from .core.database import AsyncSessionLocal
+from .services.settlement_processor import SettlementProcessor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,9 +74,43 @@ async def lifespan(app: FastAPI):
                             f"{result.get('alert_count', 0)} alerts detected"
                         )
                     else:
-                        logger.error(f"Settlement monitoring cycle failed: {result.get('error')}")
+                        logger.error(
+                            f"Settlement monitoring cycle failed: {result.get('error')}"
+                        )
             except Exception as e:
                 logger.error(f"Settlement monitoring error: {e}", exc_info=True)
+
+            # Wait 1 hour
+            await asyncio.sleep(3600)
+
+    # Deposit hold expiration processor
+    async def deposit_hold_processor_loop():
+        """Process expired deposit holds every hour"""
+        # Get system admin ID for audit trail (first admin user)
+        from sqlalchemy import select
+
+        from .models.models import User, UserRole
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get a system admin for audit trail
+                    result = await db.execute(
+                        select(User).where(User.role == UserRole.ADMIN).limit(1)
+                    )
+                    admin = result.scalar_one_or_none()
+
+                    if admin:
+                        cleared = await deposit_service.process_expired_holds(
+                            db=db, system_admin_id=admin.id
+                        )
+                        await db.commit()
+                        if cleared > 0:
+                            logger.info(
+                                f"Auto-cleared {cleared} deposit(s) with expired holds"
+                            )
+            except Exception as e:
+                logger.error(f"Deposit hold processor error: {e}", exc_info=True)
 
             # Wait 1 hour
             await asyncio.sleep(3600)
@@ -64,8 +118,11 @@ async def lifespan(app: FastAPI):
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())
     monitoring_task = asyncio.create_task(settlement_monitoring_loop())
-    _background_tasks.extend([processor_task, monitoring_task])
-    logger.info("Settlement processor and monitoring started (running every 1 hour)")
+    deposit_task = asyncio.create_task(deposit_hold_processor_loop())
+    _background_tasks.extend([processor_task, monitoring_task, deposit_task])
+    logger.info(
+        "Settlement processor, monitoring and deposit hold processor started (running every 1 hour)"
+    )
 
     yield
 
@@ -109,7 +166,9 @@ app = FastAPI(
 )
 
 # CORS: restrict origins in production, allow all in development
-_cors_origins = settings.cors_origins_list if settings.ENVIRONMENT == "production" else ["*"]
+_cors_origins = (
+    settings.cors_origins_list if settings.ENVIRONMENT == "production" else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -135,6 +194,9 @@ app.include_router(market_maker.router, prefix="/api/v1/admin")
 app.include_router(admin_market_orders.router, prefix="/api/v1/admin")
 app.include_router(admin_logging.router, prefix="/api/v1/admin")
 app.include_router(liquidity.router, prefix="/api/v1/admin")
+app.include_router(deposits.router, prefix="/api/v1")
+app.include_router(assets.router, prefix="/api/v1")
+app.include_router(withdrawals.router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -153,14 +215,11 @@ async def root():
             "users": "/api/v1/users/me",
             "onboarding": "/api/v1/onboarding/status",
             "backoffice": "/api/v1/backoffice/pending-users",
-        }
+        },
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "environment": settings.ENVIRONMENT
-    }
+    return {"status": "healthy", "environment": settings.ENVIRONMENT}

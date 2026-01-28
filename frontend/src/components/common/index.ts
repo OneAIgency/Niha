@@ -23,5 +23,6 @@ export { PageHeader } from './PageHeader';
 export { ConfirmationModal } from './ConfirmationModal';
 export { Subheader } from './Subheader';
 export { SubSubHeader } from './SubSubHeader';
+export { SubheaderNavButton } from './SubheaderNavButton';
 export { CEAPriceDisplay } from './CEAPriceDisplay';
 export { EUAPriceDisplay } from './EUAPriceDisplay';

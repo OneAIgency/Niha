@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Query
-from typing import Optional, List
 from enum import Enum
+from typing import Optional
 
-from ...services.simulation import simulation_engine
+from fastapi import APIRouter, Query
+
 from ...services.price_scraper import price_scraper
+from ...services.simulation import simulation_engine
 
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
@@ -26,7 +27,7 @@ async def get_cea_marketplace(
     max_price: Optional[float] = None,
     vintage_year: Optional[int] = None,
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100)
+    per_page: int = Query(20, ge=1, le=100),
 ):
     """
     Get CEA marketplace listings with filtering and sorting.
@@ -71,8 +72,8 @@ async def get_cea_marketplace(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page
-        }
+            "total_pages": (total + per_page - 1) // per_page,
+        },
     }
 
 
@@ -82,7 +83,7 @@ async def get_eua_marketplace(
     min_quantity: Optional[float] = None,
     max_quantity: Optional[float] = None,
     page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100)
+    per_page: int = Query(20, ge=1, le=100),
 ):
     """
     Get EUA marketplace listings.
@@ -117,8 +118,8 @@ async def get_eua_marketplace(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page
-        }
+            "total_pages": (total + per_page - 1) // per_page,
+        },
     }
 
 
@@ -130,10 +131,7 @@ async def get_marketplace_stats():
     stats = simulation_engine.get_market_stats()
     prices = await price_scraper.get_current_prices()
 
-    return {
-        **stats,
-        "current_prices": prices
-    }
+    return {**stats, "current_prices": prices}
 
 
 @router.get("/listing/{anonymous_code}")
@@ -148,8 +146,7 @@ async def get_listing_details(anonymous_code: str):
     all_sellers = cea_sellers + eua_sellers
 
     listing = next(
-        (s for s in all_sellers if s["anonymous_code"] == anonymous_code),
-        None
+        (s for s in all_sellers if s["anonymous_code"] == anonymous_code), None
     )
 
     if not listing:

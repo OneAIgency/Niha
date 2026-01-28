@@ -1,7 +1,9 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import select
 import logging
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import declarative_base
+
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -47,7 +49,8 @@ async def init_db():
 async def create_seed_users():
     """Create default admin and test users if they don't exist"""
     import os
-    from ..models.models import User, UserRole, Entity, Jurisdiction, KYCStatus
+
+    from ..models.models import Entity, Jurisdiction, KYCStatus, User, UserRole
     from .security import hash_password
 
     # Get passwords from environment variables with fallback to defaults for development
@@ -57,9 +60,13 @@ async def create_seed_users():
     # Warn if using default passwords in non-development environments
     if not settings.DEBUG:
         if not os.environ.get("SEED_ADMIN_PASSWORD"):
-            logger.warning("Using default admin password in non-DEBUG mode. Set SEED_ADMIN_PASSWORD env var.")
+            logger.warning(
+                "Using default admin password in non-DEBUG mode. Set SEED_ADMIN_PASSWORD env var."
+            )
         if not os.environ.get("SEED_TEST_PASSWORD"):
-            logger.warning("Using default test password in non-DEBUG mode. Set SEED_TEST_PASSWORD env var.")
+            logger.warning(
+                "Using default test password in non-DEBUG mode. Set SEED_TEST_PASSWORD env var."
+            )
 
     # Create seed entities first
     seed_entities = [
@@ -144,7 +151,9 @@ async def create_seed_users():
                     entity_id=entity_id,
                 )
                 db.add(user)
-                logger.info(f"Created seed user: {user_data['email']} (entity: {entity_name})")
+                logger.info(
+                    f"Created seed user: {user_data['email']} (entity: {entity_name})"
+                )
             else:
                 # Update existing user's entity_id if not set
                 if not existing_user.entity_id and entity_id:

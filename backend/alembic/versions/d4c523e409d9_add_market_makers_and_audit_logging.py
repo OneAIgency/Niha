@@ -1,18 +1,20 @@
 """add market makers and audit logging
 
 Revision ID: d4c523e409d9
-Revises: 
+Revises:
 Create Date: 2026-01-19 17:16:58.604202
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
-revision: str = 'd4c523e409d9'
+revision: str = "d4c523e409d9"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,395 +27,1151 @@ def upgrade() -> None:
     # This must happen before dropping the tables themselves
 
     # Drop FK and columns from orders that reference ai_clients
-    op.drop_constraint('orders_ai_client_id_fkey', 'orders', type_='foreignkey')
-    op.drop_column('orders', 'ai_client_id')
+    op.drop_constraint("orders_ai_client_id_fkey", "orders", type_="foreignkey")
+    op.drop_column("orders", "ai_client_id")
 
     # Drop FK and columns from cash_market_trades that reference ai_clients
-    op.drop_constraint('cash_market_trades_ai_client_id_fkey', 'cash_market_trades', type_='foreignkey')
-    op.drop_column('cash_market_trades', 'ai_client_id')
+    op.drop_constraint(
+        "cash_market_trades_ai_client_id_fkey", "cash_market_trades", type_="foreignkey"
+    )
+    op.drop_column("cash_market_trades", "ai_client_id")
 
     # Now we can safely drop the tables
-    op.drop_index('idx_agent_action_logs_created_at', table_name='agent_action_logs')
-    op.drop_index('idx_agent_action_logs_market_maker', table_name='agent_action_logs')
-    op.drop_index('ix_agent_action_logs_created_at', table_name='agent_action_logs')
-    op.drop_index('ix_agent_action_logs_market_maker_id', table_name='agent_action_logs')
-    op.drop_table('agent_action_logs')
-    op.drop_table('agent_config')
-    op.drop_index('ix_ai_clients_client_id', table_name='ai_clients')
-    op.drop_table('ai_clients')
-    op.drop_index('ix_refresh_tokens_token_hash', table_name='refresh_tokens')
-    op.drop_table('refresh_tokens')
-    op.add_column('asset_transactions', sa.Column('ticket_id', sa.String(length=30), nullable=True))
-    op.add_column('asset_transactions', sa.Column('market_maker_id', sa.UUID(), nullable=True))
-    op.add_column('asset_transactions', sa.Column('certificate_type', sa.Enum('EUA', 'CEA', name='certificatetype'), nullable=True))
-    op.alter_column('asset_transactions', 'entity_id',
-               existing_type=sa.UUID(),
-               nullable=True)
-    op.alter_column('asset_transactions', 'asset_type',
-               existing_type=postgresql.ENUM('EUR', 'CEA', 'EUA', name='assettype'),
-               type_=sa.String(length=10),
-               nullable=True)
-    op.alter_column('asset_transactions', 'balance_before',
-               existing_type=sa.NUMERIC(precision=18, scale=2),
-               nullable=True)
-    op.alter_column('asset_transactions', 'reference',
-               existing_type=sa.VARCHAR(length=100),
-               type_=sa.String(length=255),
-               existing_nullable=True)
-    op.alter_column('asset_transactions', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
-    op.create_index(op.f('ix_asset_transactions_created_at'), 'asset_transactions', ['created_at'], unique=False)
-    op.create_index(op.f('ix_asset_transactions_market_maker_id'), 'asset_transactions', ['market_maker_id'], unique=False)
-    op.create_index(op.f('ix_asset_transactions_ticket_id'), 'asset_transactions', ['ticket_id'], unique=False)
-    op.create_foreign_key(None, 'asset_transactions', 'market_maker_clients', ['market_maker_id'], ['id'])
-    op.execute('DROP INDEX IF EXISTS idx_cash_market_trades_buyer_entity_id')
-    op.execute('DROP INDEX IF EXISTS idx_cash_market_trades_buyer_user_id')
-    op.execute('DROP INDEX IF EXISTS idx_cash_market_trades_ticket_id')
-    op.create_index(op.f('ix_cash_market_trades_market_maker_id'), 'cash_market_trades', ['market_maker_id'], unique=False)
-    op.create_index(op.f('ix_cash_market_trades_ticket_id'), 'cash_market_trades', ['ticket_id'], unique=False)
-    op.drop_constraint('cash_market_trades_seller_user_id_fkey', 'cash_market_trades', type_='foreignkey')
+    op.drop_index("idx_agent_action_logs_created_at", table_name="agent_action_logs")
+    op.drop_index("idx_agent_action_logs_market_maker", table_name="agent_action_logs")
+    op.drop_index("ix_agent_action_logs_created_at", table_name="agent_action_logs")
+    op.drop_index(
+        "ix_agent_action_logs_market_maker_id", table_name="agent_action_logs"
+    )
+    op.drop_table("agent_action_logs")
+    op.drop_table("agent_config")
+    op.drop_index("ix_ai_clients_client_id", table_name="ai_clients")
+    op.drop_table("ai_clients")
+    op.drop_index("ix_refresh_tokens_token_hash", table_name="refresh_tokens")
+    op.drop_table("refresh_tokens")
+    op.add_column(
+        "asset_transactions",
+        sa.Column("ticket_id", sa.String(length=30), nullable=True),
+    )
+    op.add_column(
+        "asset_transactions", sa.Column("market_maker_id", sa.UUID(), nullable=True)
+    )
+    op.add_column(
+        "asset_transactions",
+        sa.Column(
+            "certificate_type",
+            sa.Enum("EUA", "CEA", name="certificatetype"),
+            nullable=True,
+        ),
+    )
+    op.alter_column(
+        "asset_transactions", "entity_id", existing_type=sa.UUID(), nullable=True
+    )
+    op.alter_column(
+        "asset_transactions",
+        "asset_type",
+        existing_type=postgresql.ENUM("EUR", "CEA", "EUA", name="assettype"),
+        type_=sa.String(length=10),
+        nullable=True,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "balance_before",
+        existing_type=sa.NUMERIC(precision=18, scale=2),
+        nullable=True,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "reference",
+        existing_type=sa.VARCHAR(length=100),
+        type_=sa.String(length=255),
+        existing_nullable=True,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "created_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=False,
+    )
+    op.create_index(
+        op.f("ix_asset_transactions_created_at"),
+        "asset_transactions",
+        ["created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_asset_transactions_market_maker_id"),
+        "asset_transactions",
+        ["market_maker_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_asset_transactions_ticket_id"),
+        "asset_transactions",
+        ["ticket_id"],
+        unique=False,
+    )
+    op.create_foreign_key(
+        None, "asset_transactions", "market_maker_clients", ["market_maker_id"], ["id"]
+    )
+    op.execute("DROP INDEX IF EXISTS idx_cash_market_trades_buyer_entity_id")
+    op.execute("DROP INDEX IF EXISTS idx_cash_market_trades_buyer_user_id")
+    op.execute("DROP INDEX IF EXISTS idx_cash_market_trades_ticket_id")
+    op.create_index(
+        op.f("ix_cash_market_trades_market_maker_id"),
+        "cash_market_trades",
+        ["market_maker_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_cash_market_trades_ticket_id"),
+        "cash_market_trades",
+        ["ticket_id"],
+        unique=False,
+    )
+    op.drop_constraint(
+        "cash_market_trades_seller_user_id_fkey",
+        "cash_market_trades",
+        type_="foreignkey",
+    )
     # Note: cash_market_trades_ai_client_id_fkey and ai_client_id column already dropped above
-    op.drop_constraint('cash_market_trades_seller_entity_id_fkey', 'cash_market_trades', type_='foreignkey')
-    op.drop_constraint('cash_market_trades_buyer_user_id_fkey', 'cash_market_trades', type_='foreignkey')
-    op.drop_constraint('cash_market_trades_buyer_entity_id_fkey', 'cash_market_trades', type_='foreignkey')
-    op.drop_constraint('cash_market_trades_seller_id_fkey', 'cash_market_trades', type_='foreignkey')
-    op.drop_column('cash_market_trades', 'buyer_entity_id')
-    op.drop_column('cash_market_trades', 'price_eur')
-    op.drop_column('cash_market_trades', 'seller_id')
-    op.drop_column('cash_market_trades', 'seller_entity_id')
+    op.drop_constraint(
+        "cash_market_trades_seller_entity_id_fkey",
+        "cash_market_trades",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "cash_market_trades_buyer_user_id_fkey",
+        "cash_market_trades",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "cash_market_trades_buyer_entity_id_fkey",
+        "cash_market_trades",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "cash_market_trades_seller_id_fkey", "cash_market_trades", type_="foreignkey"
+    )
+    op.drop_column("cash_market_trades", "buyer_entity_id")
+    op.drop_column("cash_market_trades", "price_eur")
+    op.drop_column("cash_market_trades", "seller_id")
+    op.drop_column("cash_market_trades", "seller_entity_id")
     # op.drop_column('cash_market_trades', 'ai_client_id')  # Already dropped above
-    op.drop_column('cash_market_trades', 'platform_fee')
-    op.drop_column('cash_market_trades', 'total_cost')
-    op.drop_column('cash_market_trades', 'swap_commission')
-    op.drop_column('cash_market_trades', 'gross_cost')
-    op.drop_column('cash_market_trades', 'buyer_user_id')
-    op.drop_column('cash_market_trades', 'seller_user_id')
-    op.add_column('market_maker_clients', sa.Column('user_id', sa.UUID(), nullable=False))
-    op.add_column('market_maker_clients', sa.Column('description', sa.Text(), nullable=True))
-    op.add_column('market_maker_clients', sa.Column('is_active', sa.Boolean(), nullable=False))
-    op.add_column('market_maker_clients', sa.Column('created_by', sa.UUID(), nullable=False))
-    op.alter_column('market_maker_clients', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
-    op.alter_column('market_maker_clients', 'updated_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
-    op.execute('DROP INDEX IF EXISTS idx_market_maker_clients_code')
-    op.execute('DROP INDEX IF EXISTS ix_market_maker_clients_client_code')
-    op.create_index(op.f('ix_market_maker_clients_created_by'), 'market_maker_clients', ['created_by'], unique=False)
-    op.create_index(op.f('ix_market_maker_clients_user_id'), 'market_maker_clients', ['user_id'], unique=True)
-    op.create_foreign_key(None, 'market_maker_clients', 'users', ['created_by'], ['id'])
-    op.create_foreign_key(None, 'market_maker_clients', 'users', ['user_id'], ['id'])
-    op.drop_column('market_maker_clients', 'eua_balance')
-    op.drop_column('market_maker_clients', 'cea_balance')
-    op.drop_column('market_maker_clients', 'min_spread_pct')
-    op.drop_column('market_maker_clients', 'max_order_size')
-    op.drop_column('market_maker_clients', 'client_code')
-    op.drop_column('market_maker_clients', 'eur_balance')
-    op.drop_column('market_maker_clients', 'daily_volume_limit')
-    op.drop_column('market_maker_clients', 'notes')
-    op.drop_column('market_maker_clients', 'daily_volume_used')
-    op.drop_column('market_maker_clients', 'max_spread_pct')
-    op.drop_column('market_maker_clients', 'status')
-    op.drop_column('market_maker_clients', 'min_order_size')
-    op.drop_column('market_maker_clients', 'market_maker_type')
-    op.drop_column('market_maker_clients', 'total_orders')
-    op.drop_column('market_maker_clients', 'total_volume_traded')
+    op.drop_column("cash_market_trades", "platform_fee")
+    op.drop_column("cash_market_trades", "total_cost")
+    op.drop_column("cash_market_trades", "swap_commission")
+    op.drop_column("cash_market_trades", "gross_cost")
+    op.drop_column("cash_market_trades", "buyer_user_id")
+    op.drop_column("cash_market_trades", "seller_user_id")
+    op.add_column(
+        "market_maker_clients", sa.Column("user_id", sa.UUID(), nullable=False)
+    )
+    op.add_column(
+        "market_maker_clients", sa.Column("description", sa.Text(), nullable=True)
+    )
+    op.add_column(
+        "market_maker_clients", sa.Column("is_active", sa.Boolean(), nullable=False)
+    )
+    op.add_column(
+        "market_maker_clients", sa.Column("created_by", sa.UUID(), nullable=False)
+    )
+    op.alter_column(
+        "market_maker_clients",
+        "created_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=False,
+    )
+    op.alter_column(
+        "market_maker_clients",
+        "updated_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=False,
+    )
+    op.execute("DROP INDEX IF EXISTS idx_market_maker_clients_code")
+    op.execute("DROP INDEX IF EXISTS ix_market_maker_clients_client_code")
+    op.create_index(
+        op.f("ix_market_maker_clients_created_by"),
+        "market_maker_clients",
+        ["created_by"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_market_maker_clients_user_id"),
+        "market_maker_clients",
+        ["user_id"],
+        unique=True,
+    )
+    op.create_foreign_key(None, "market_maker_clients", "users", ["created_by"], ["id"])
+    op.create_foreign_key(None, "market_maker_clients", "users", ["user_id"], ["id"])
+    op.drop_column("market_maker_clients", "eua_balance")
+    op.drop_column("market_maker_clients", "cea_balance")
+    op.drop_column("market_maker_clients", "min_spread_pct")
+    op.drop_column("market_maker_clients", "max_order_size")
+    op.drop_column("market_maker_clients", "client_code")
+    op.drop_column("market_maker_clients", "eur_balance")
+    op.drop_column("market_maker_clients", "daily_volume_limit")
+    op.drop_column("market_maker_clients", "notes")
+    op.drop_column("market_maker_clients", "daily_volume_used")
+    op.drop_column("market_maker_clients", "max_spread_pct")
+    op.drop_column("market_maker_clients", "status")
+    op.drop_column("market_maker_clients", "min_order_size")
+    op.drop_column("market_maker_clients", "market_maker_type")
+    op.drop_column("market_maker_clients", "total_orders")
+    op.drop_column("market_maker_clients", "total_volume_traded")
     # Note: idx_orders_ai_client_id was already dropped when we dropped the ai_client_id column
     # op.drop_index('idx_orders_ai_client_id', table_name='orders')
-    op.execute('DROP INDEX IF EXISTS idx_orders_market_maker')
-    op.execute('DROP INDEX IF EXISTS idx_orders_seller_id')
-    op.execute('DROP INDEX IF EXISTS idx_orders_ticket_id')
-    op.execute('DROP INDEX IF EXISTS idx_orders_user_id')
-    op.create_index(op.f('ix_orders_market_maker_id'), 'orders', ['market_maker_id'], unique=False)
-    op.create_index(op.f('ix_orders_seller_id'), 'orders', ['seller_id'], unique=False)
-    op.create_index(op.f('ix_orders_ticket_id'), 'orders', ['ticket_id'], unique=False)
+    op.execute("DROP INDEX IF EXISTS idx_orders_market_maker")
+    op.execute("DROP INDEX IF EXISTS idx_orders_seller_id")
+    op.execute("DROP INDEX IF EXISTS idx_orders_ticket_id")
+    op.execute("DROP INDEX IF EXISTS idx_orders_user_id")
+    op.create_index(
+        op.f("ix_orders_market_maker_id"), "orders", ["market_maker_id"], unique=False
+    )
+    op.create_index(op.f("ix_orders_seller_id"), "orders", ["seller_id"], unique=False)
+    op.create_index(op.f("ix_orders_ticket_id"), "orders", ["ticket_id"], unique=False)
     # Note: orders_ai_client_id_fkey and ai_client_id column already dropped above
-    op.drop_constraint('orders_user_id_fkey', 'orders', type_='foreignkey')
-    op.drop_column('orders', 'order_type')
-    op.drop_column('orders', 'user_id')
+    op.drop_constraint("orders_user_id_fkey", "orders", type_="foreignkey")
+    op.drop_column("orders", "order_type")
+    op.drop_column("orders", "user_id")
     # op.drop_column('orders', 'ai_client_id')  # Already dropped above
-    op.drop_column('orders', 'all_or_none')
-    op.execute('DROP INDEX IF EXISTS idx_sellers_client_code')
-    op.add_column('ticket_logs', sa.Column('timestamp', sa.DateTime(), nullable=False))
-    op.add_column('ticket_logs', sa.Column('action_type', sa.String(length=100), nullable=False))
-    op.add_column('ticket_logs', sa.Column('entity_type', sa.String(length=50), nullable=False))
-    op.add_column('ticket_logs', sa.Column('status', sa.Enum('SUCCESS', 'FAILED', name='ticketstatus'), nullable=False))
-    op.add_column('ticket_logs', sa.Column('request_payload', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column('ticket_logs', sa.Column('response_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column('ticket_logs', sa.Column('user_agent', sa.String(length=500), nullable=True))
-    op.add_column('ticket_logs', sa.Column('session_id', sa.UUID(), nullable=True))
-    op.add_column('ticket_logs', sa.Column('before_state', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column('ticket_logs', sa.Column('after_state', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column('ticket_logs', sa.Column('related_ticket_ids', postgresql.ARRAY(sa.String(length=30)), nullable=True))
-    op.add_column('ticket_logs', sa.Column('tags', postgresql.ARRAY(sa.String(length=50)), nullable=True))
-    op.drop_index('ix_ticket_logs_created_at', table_name='ticket_logs')
-    op.drop_index('ix_ticket_logs_event_type', table_name='ticket_logs')
-    op.drop_index('ix_ticket_logs_order_id', table_name='ticket_logs')
-    op.drop_index('ix_ticket_logs_trade_id', table_name='ticket_logs')
-    op.create_index(op.f('ix_ticket_logs_action_type'), 'ticket_logs', ['action_type'], unique=False)
-    op.create_index(op.f('ix_ticket_logs_entity_type'), 'ticket_logs', ['entity_type'], unique=False)
-    op.create_index(op.f('ix_ticket_logs_market_maker_id'), 'ticket_logs', ['market_maker_id'], unique=False)
-    op.create_index(op.f('ix_ticket_logs_status'), 'ticket_logs', ['status'], unique=False)
-    op.create_index(op.f('ix_ticket_logs_tags'), 'ticket_logs', ['tags'], unique=False)
-    op.create_index(op.f('ix_ticket_logs_timestamp'), 'ticket_logs', ['timestamp'], unique=False)
-    op.drop_constraint('ticket_logs_trade_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_counterparty_user_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_counterparty_entity_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_seller_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_deposit_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_order_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.drop_constraint('ticket_logs_entity_id_fkey', 'ticket_logs', type_='foreignkey')
-    op.create_foreign_key(None, 'ticket_logs', 'user_sessions', ['session_id'], ['id'])
-    op.drop_column('ticket_logs', 'amount')
-    op.drop_column('ticket_logs', 'certificate_type')
-    op.drop_column('ticket_logs', 'details')
-    op.drop_column('ticket_logs', 'counterparty_entity_id')
-    op.drop_column('ticket_logs', 'side')
-    op.drop_column('ticket_logs', 'currency')
-    op.drop_column('ticket_logs', 'volume')
-    op.drop_column('ticket_logs', 'created_at')
-    op.drop_column('ticket_logs', 'trade_id')
-    op.drop_column('ticket_logs', 'price_eur')
-    op.drop_column('ticket_logs', 'order_type')
-    op.drop_column('ticket_logs', 'total_cost')
-    op.drop_column('ticket_logs', 'price')
-    op.drop_column('ticket_logs', 'deposit_id')
-    op.drop_column('ticket_logs', 'swap_commission')
-    op.drop_column('ticket_logs', 'counterparty_user_id')
-    op.drop_column('ticket_logs', 'seller_id')
-    op.drop_column('ticket_logs', 'notes')
-    op.drop_column('ticket_logs', 'platform_fee')
-    op.drop_column('ticket_logs', 'order_id')
-    op.drop_column('ticket_logs', 'event_type')
+    op.drop_column("orders", "all_or_none")
+    op.execute("DROP INDEX IF EXISTS idx_sellers_client_code")
+    op.add_column("ticket_logs", sa.Column("timestamp", sa.DateTime(), nullable=False))
+    op.add_column(
+        "ticket_logs", sa.Column("action_type", sa.String(length=100), nullable=False)
+    )
+    op.add_column(
+        "ticket_logs", sa.Column("entity_type", sa.String(length=50), nullable=False)
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "status", sa.Enum("SUCCESS", "FAILED", name="ticketstatus"), nullable=False
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "request_payload", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "response_data", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs", sa.Column("user_agent", sa.String(length=500), nullable=True)
+    )
+    op.add_column("ticket_logs", sa.Column("session_id", sa.UUID(), nullable=True))
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "before_state", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "after_state", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "related_ticket_ids", postgresql.ARRAY(sa.String(length=30)), nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column("tags", postgresql.ARRAY(sa.String(length=50)), nullable=True),
+    )
+    op.drop_index("ix_ticket_logs_created_at", table_name="ticket_logs")
+    op.drop_index("ix_ticket_logs_event_type", table_name="ticket_logs")
+    op.drop_index("ix_ticket_logs_order_id", table_name="ticket_logs")
+    op.drop_index("ix_ticket_logs_trade_id", table_name="ticket_logs")
+    op.create_index(
+        op.f("ix_ticket_logs_action_type"), "ticket_logs", ["action_type"], unique=False
+    )
+    op.create_index(
+        op.f("ix_ticket_logs_entity_type"), "ticket_logs", ["entity_type"], unique=False
+    )
+    op.create_index(
+        op.f("ix_ticket_logs_market_maker_id"),
+        "ticket_logs",
+        ["market_maker_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_ticket_logs_status"), "ticket_logs", ["status"], unique=False
+    )
+    op.create_index(op.f("ix_ticket_logs_tags"), "ticket_logs", ["tags"], unique=False)
+    op.create_index(
+        op.f("ix_ticket_logs_timestamp"), "ticket_logs", ["timestamp"], unique=False
+    )
+    op.drop_constraint("ticket_logs_trade_id_fkey", "ticket_logs", type_="foreignkey")
+    op.drop_constraint(
+        "ticket_logs_counterparty_user_id_fkey", "ticket_logs", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "ticket_logs_counterparty_entity_id_fkey", "ticket_logs", type_="foreignkey"
+    )
+    op.drop_constraint("ticket_logs_seller_id_fkey", "ticket_logs", type_="foreignkey")
+    op.drop_constraint("ticket_logs_deposit_id_fkey", "ticket_logs", type_="foreignkey")
+    op.drop_constraint("ticket_logs_order_id_fkey", "ticket_logs", type_="foreignkey")
+    op.drop_constraint("ticket_logs_entity_id_fkey", "ticket_logs", type_="foreignkey")
+    op.create_foreign_key(None, "ticket_logs", "user_sessions", ["session_id"], ["id"])
+    op.drop_column("ticket_logs", "amount")
+    op.drop_column("ticket_logs", "certificate_type")
+    op.drop_column("ticket_logs", "details")
+    op.drop_column("ticket_logs", "counterparty_entity_id")
+    op.drop_column("ticket_logs", "side")
+    op.drop_column("ticket_logs", "currency")
+    op.drop_column("ticket_logs", "volume")
+    op.drop_column("ticket_logs", "created_at")
+    op.drop_column("ticket_logs", "trade_id")
+    op.drop_column("ticket_logs", "price_eur")
+    op.drop_column("ticket_logs", "order_type")
+    op.drop_column("ticket_logs", "total_cost")
+    op.drop_column("ticket_logs", "price")
+    op.drop_column("ticket_logs", "deposit_id")
+    op.drop_column("ticket_logs", "swap_commission")
+    op.drop_column("ticket_logs", "counterparty_user_id")
+    op.drop_column("ticket_logs", "seller_id")
+    op.drop_column("ticket_logs", "notes")
+    op.drop_column("ticket_logs", "platform_fee")
+    op.drop_column("ticket_logs", "order_id")
+    op.drop_column("ticket_logs", "event_type")
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.add_column('ticket_logs', sa.Column('event_type', postgresql.ENUM('DEPOSIT', 'DEPOSIT_CONFIRMED', 'LIMIT_ORDER_PLACED', 'LIMIT_ORDER_MODIFIED', 'LIMIT_ORDER_CANCELLED', 'MARKET_ORDER_EXECUTED', 'TRADE_EXECUTED', 'WITHDRAWAL', 'AI_ORDER_PLACED', 'AI_ORDER_CANCELLED', 'AI_LIQUIDITY_ADJUSTED', name='ticketeventtype'), autoincrement=False, nullable=False))
-    op.add_column('ticket_logs', sa.Column('order_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('platform_fee', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('notes', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('seller_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('counterparty_user_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('swap_commission', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('deposit_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('price', sa.NUMERIC(precision=18, scale=4), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('total_cost', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('order_type', postgresql.ENUM('MARKET', 'LIMIT', name='ordertype'), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('price_eur', sa.NUMERIC(precision=18, scale=4), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('trade_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('volume', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('currency', postgresql.ENUM('EUR', 'USD', 'CNY', 'HKD', name='currency'), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('side', postgresql.ENUM('BUY', 'SELL', name='orderside'), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('counterparty_entity_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('details', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('certificate_type', postgresql.ENUM('EUA', 'CEA', name='certificatetype'), autoincrement=False, nullable=True))
-    op.add_column('ticket_logs', sa.Column('amount', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.drop_constraint(None, 'ticket_logs', type_='foreignkey')
-    op.create_foreign_key('ticket_logs_entity_id_fkey', 'ticket_logs', 'entities', ['entity_id'], ['id'])
-    op.create_foreign_key('ticket_logs_order_id_fkey', 'ticket_logs', 'orders', ['order_id'], ['id'])
-    op.create_foreign_key('ticket_logs_deposit_id_fkey', 'ticket_logs', 'deposits', ['deposit_id'], ['id'])
-    op.create_foreign_key('ticket_logs_seller_id_fkey', 'ticket_logs', 'sellers', ['seller_id'], ['id'])
-    op.create_foreign_key('ticket_logs_counterparty_entity_id_fkey', 'ticket_logs', 'entities', ['counterparty_entity_id'], ['id'])
-    op.create_foreign_key('ticket_logs_counterparty_user_id_fkey', 'ticket_logs', 'users', ['counterparty_user_id'], ['id'])
-    op.create_foreign_key('ticket_logs_trade_id_fkey', 'ticket_logs', 'cash_market_trades', ['trade_id'], ['id'])
-    op.drop_index(op.f('ix_ticket_logs_timestamp'), table_name='ticket_logs')
-    op.drop_index(op.f('ix_ticket_logs_tags'), table_name='ticket_logs')
-    op.drop_index(op.f('ix_ticket_logs_status'), table_name='ticket_logs')
-    op.drop_index(op.f('ix_ticket_logs_market_maker_id'), table_name='ticket_logs')
-    op.drop_index(op.f('ix_ticket_logs_entity_type'), table_name='ticket_logs')
-    op.drop_index(op.f('ix_ticket_logs_action_type'), table_name='ticket_logs')
-    op.create_index('ix_ticket_logs_trade_id', 'ticket_logs', ['trade_id'], unique=False)
-    op.create_index('ix_ticket_logs_order_id', 'ticket_logs', ['order_id'], unique=False)
-    op.create_index('ix_ticket_logs_event_type', 'ticket_logs', ['event_type'], unique=False)
-    op.create_index('ix_ticket_logs_created_at', 'ticket_logs', ['created_at'], unique=False)
-    op.drop_column('ticket_logs', 'tags')
-    op.drop_column('ticket_logs', 'related_ticket_ids')
-    op.drop_column('ticket_logs', 'after_state')
-    op.drop_column('ticket_logs', 'before_state')
-    op.drop_column('ticket_logs', 'session_id')
-    op.drop_column('ticket_logs', 'user_agent')
-    op.drop_column('ticket_logs', 'response_data')
-    op.drop_column('ticket_logs', 'request_payload')
-    op.drop_column('ticket_logs', 'status')
-    op.drop_column('ticket_logs', 'entity_type')
-    op.drop_column('ticket_logs', 'action_type')
-    op.drop_column('ticket_logs', 'timestamp')
-    op.create_index('idx_sellers_client_code', 'sellers', ['client_code'], unique=False)
-    op.add_column('orders', sa.Column('all_or_none', sa.BOOLEAN(), server_default=sa.text('true'), autoincrement=False, nullable=True))
-    op.add_column('orders', sa.Column('ai_client_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('orders', sa.Column('user_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('orders', sa.Column('order_type', postgresql.ENUM('MARKET', 'LIMIT', name='ordertype'), server_default=sa.text("'LIMIT'::ordertype"), autoincrement=False, nullable=True))
-    op.create_foreign_key('orders_user_id_fkey', 'orders', 'users', ['user_id'], ['id'])
-    op.create_foreign_key('orders_ai_client_id_fkey', 'orders', 'ai_clients', ['ai_client_id'], ['id'])
-    op.drop_index(op.f('ix_orders_ticket_id'), table_name='orders')
-    op.drop_index(op.f('ix_orders_seller_id'), table_name='orders')
-    op.drop_index(op.f('ix_orders_market_maker_id'), table_name='orders')
-    op.create_index('idx_orders_user_id', 'orders', ['user_id'], unique=False)
-    op.create_index('idx_orders_ticket_id', 'orders', ['ticket_id'], unique=False)
-    op.create_index('idx_orders_seller_id', 'orders', ['seller_id'], unique=False)
-    op.create_index('idx_orders_market_maker', 'orders', ['market_maker_id'], unique=False)
-    op.create_index('idx_orders_ai_client_id', 'orders', ['ai_client_id'], unique=False)
-    op.add_column('market_maker_clients', sa.Column('total_volume_traded', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('total_orders', sa.INTEGER(), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('market_maker_type', postgresql.ENUM('BUYER', 'SELLER', 'BOTH', name='marketmakertype'), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('min_order_size', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('status', postgresql.ENUM('ACTIVE', 'PAUSED', 'DISABLED', name='marketmakerstatus'), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('max_spread_pct', sa.NUMERIC(precision=5, scale=4), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('daily_volume_used', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('notes', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('daily_volume_limit', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('eur_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('client_code', sa.VARCHAR(length=20), autoincrement=False, nullable=False))
-    op.add_column('market_maker_clients', sa.Column('max_order_size', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('min_spread_pct', sa.NUMERIC(precision=5, scale=4), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('cea_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('market_maker_clients', sa.Column('eua_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.drop_constraint(None, 'market_maker_clients', type_='foreignkey')
-    op.drop_constraint(None, 'market_maker_clients', type_='foreignkey')
-    op.drop_index(op.f('ix_market_maker_clients_user_id'), table_name='market_maker_clients')
-    op.drop_index(op.f('ix_market_maker_clients_created_by'), table_name='market_maker_clients')
-    op.create_index('ix_market_maker_clients_client_code', 'market_maker_clients', ['client_code'], unique=True)
-    op.create_index('idx_market_maker_clients_code', 'market_maker_clients', ['client_code'], unique=False)
-    op.alter_column('market_maker_clients', 'updated_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=True)
-    op.alter_column('market_maker_clients', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=True)
-    op.drop_column('market_maker_clients', 'created_by')
-    op.drop_column('market_maker_clients', 'is_active')
-    op.drop_column('market_maker_clients', 'description')
-    op.drop_column('market_maker_clients', 'user_id')
-    op.add_column('cash_market_trades', sa.Column('seller_user_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('buyer_user_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('gross_cost', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('swap_commission', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('total_cost', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('platform_fee', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('ai_client_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('seller_entity_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('seller_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('price_eur', sa.NUMERIC(precision=18, scale=4), autoincrement=False, nullable=True))
-    op.add_column('cash_market_trades', sa.Column('buyer_entity_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.create_foreign_key('cash_market_trades_seller_id_fkey', 'cash_market_trades', 'sellers', ['seller_id'], ['id'])
-    op.create_foreign_key('cash_market_trades_buyer_entity_id_fkey', 'cash_market_trades', 'entities', ['buyer_entity_id'], ['id'])
-    op.create_foreign_key('cash_market_trades_buyer_user_id_fkey', 'cash_market_trades', 'users', ['buyer_user_id'], ['id'])
-    op.create_foreign_key('cash_market_trades_seller_entity_id_fkey', 'cash_market_trades', 'entities', ['seller_entity_id'], ['id'])
-    op.create_foreign_key('cash_market_trades_ai_client_id_fkey', 'cash_market_trades', 'ai_clients', ['ai_client_id'], ['id'])
-    op.create_foreign_key('cash_market_trades_seller_user_id_fkey', 'cash_market_trades', 'users', ['seller_user_id'], ['id'])
-    op.drop_index(op.f('ix_cash_market_trades_ticket_id'), table_name='cash_market_trades')
-    op.drop_index(op.f('ix_cash_market_trades_market_maker_id'), table_name='cash_market_trades')
-    op.create_index('idx_cash_market_trades_ticket_id', 'cash_market_trades', ['ticket_id'], unique=False)
-    op.create_index('idx_cash_market_trades_buyer_user_id', 'cash_market_trades', ['buyer_user_id'], unique=False)
-    op.create_index('idx_cash_market_trades_buyer_entity_id', 'cash_market_trades', ['buyer_entity_id'], unique=False)
-    op.drop_constraint(None, 'asset_transactions', type_='foreignkey')
-    op.drop_index(op.f('ix_asset_transactions_ticket_id'), table_name='asset_transactions')
-    op.drop_index(op.f('ix_asset_transactions_market_maker_id'), table_name='asset_transactions')
-    op.drop_index(op.f('ix_asset_transactions_created_at'), table_name='asset_transactions')
-    op.alter_column('asset_transactions', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=True)
-    op.alter_column('asset_transactions', 'reference',
-               existing_type=sa.String(length=255),
-               type_=sa.VARCHAR(length=100),
-               existing_nullable=True)
-    op.alter_column('asset_transactions', 'balance_before',
-               existing_type=sa.NUMERIC(precision=18, scale=2),
-               nullable=False)
-    op.alter_column('asset_transactions', 'asset_type',
-               existing_type=sa.String(length=10),
-               type_=postgresql.ENUM('EUR', 'CEA', 'EUA', name='assettype'),
-               nullable=False)
-    op.alter_column('asset_transactions', 'entity_id',
-               existing_type=sa.UUID(),
-               nullable=False)
-    op.drop_column('asset_transactions', 'certificate_type')
-    op.drop_column('asset_transactions', 'market_maker_id')
-    op.drop_column('asset_transactions', 'ticket_id')
-    op.create_table('refresh_tokens',
-    sa.Column('id', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('user_id', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('token_hash', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
-    sa.Column('expires_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.Column('revoked', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.Column('revoked_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.Column('used', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.Column('used_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='refresh_tokens_user_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name='refresh_tokens_pkey')
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "event_type",
+            postgresql.ENUM(
+                "DEPOSIT",
+                "DEPOSIT_CONFIRMED",
+                "LIMIT_ORDER_PLACED",
+                "LIMIT_ORDER_MODIFIED",
+                "LIMIT_ORDER_CANCELLED",
+                "MARKET_ORDER_EXECUTED",
+                "TRADE_EXECUTED",
+                "WITHDRAWAL",
+                "AI_ORDER_PLACED",
+                "AI_ORDER_CANCELLED",
+                "AI_LIQUIDITY_ADJUSTED",
+                name="ticketeventtype",
+            ),
+            autoincrement=False,
+            nullable=False,
+        ),
     )
-    op.create_index('ix_refresh_tokens_token_hash', 'refresh_tokens', ['token_hash'], unique=True)
-    op.create_table('ai_clients',
-    sa.Column('id', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('client_id', sa.VARCHAR(length=20), autoincrement=False, nullable=False),
-    sa.Column('name', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
-    sa.Column('description', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('eur_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=False),
-    sa.Column('cea_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=False),
-    sa.Column('eua_balance', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=False),
-    sa.Column('max_order_size', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=False),
-    sa.Column('max_daily_volume', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=False),
-    sa.Column('trading_enabled', sa.BOOLEAN(), autoincrement=False, nullable=False),
-    sa.Column('is_active', sa.BOOLEAN(), autoincrement=False, nullable=False),
-    sa.Column('notes', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('created_by', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.Column('updated_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name='ai_clients_created_by_fkey'),
-    sa.PrimaryKeyConstraint('id', name='ai_clients_pkey'),
-    postgresql_ignore_search_path=False
+    op.add_column(
+        "ticket_logs",
+        sa.Column("order_id", sa.UUID(), autoincrement=False, nullable=True),
     )
-    op.create_index('ix_ai_clients_client_id', 'ai_clients', ['client_id'], unique=True)
-    op.create_table('agent_config',
-    sa.Column('id', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('name', sa.VARCHAR(length=100), autoincrement=False, nullable=False),
-    sa.Column('is_active', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.Column('ollama_base_url', sa.VARCHAR(length=500), autoincrement=False, nullable=True),
-    sa.Column('model_name', sa.VARCHAR(length=100), autoincrement=False, nullable=True),
-    sa.Column('temperature', sa.NUMERIC(precision=3, scale=2), autoincrement=False, nullable=True),
-    sa.Column('max_tokens', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('top_p', sa.NUMERIC(precision=3, scale=2), autoincrement=False, nullable=True),
-    sa.Column('system_prompt', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('action_prompt_template', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('run_interval_seconds', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('max_orders_per_run', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('cooldown_after_trade', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('last_run_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.Column('last_run_status', sa.VARCHAR(length=50), autoincrement=False, nullable=True),
-    sa.Column('last_run_error', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.Column('updated_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('id', name='agent_config_pkey')
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "platform_fee",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
     )
-    op.create_table('agent_action_logs',
-    sa.Column('id', sa.UUID(), autoincrement=False, nullable=False),
-    sa.Column('market_maker_id', sa.UUID(), autoincrement=False, nullable=True),
-    sa.Column('action_type', sa.VARCHAR(length=50), autoincrement=False, nullable=False),
-    sa.Column('certificate_type', postgresql.ENUM('EUA', 'CEA', name='certificatetype'), autoincrement=False, nullable=True),
-    sa.Column('prompt_sent', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('llm_response', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('model_used', sa.VARCHAR(length=100), autoincrement=False, nullable=True),
-    sa.Column('tokens_used', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('response_time_ms', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('order_id', sa.UUID(), autoincrement=False, nullable=True),
-    sa.Column('order_side', postgresql.ENUM('BUY', 'SELL', name='orderside'), autoincrement=False, nullable=True),
-    sa.Column('order_price', sa.NUMERIC(precision=18, scale=4), autoincrement=False, nullable=True),
-    sa.Column('order_quantity', sa.NUMERIC(precision=18, scale=2), autoincrement=False, nullable=True),
-    sa.Column('success', sa.BOOLEAN(), autoincrement=False, nullable=True),
-    sa.Column('error_message', sa.TEXT(), autoincrement=False, nullable=True),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['market_maker_id'], ['market_maker_clients.id'], name='agent_action_logs_market_maker_id_fkey'),
-    sa.ForeignKeyConstraint(['order_id'], ['orders.id'], name='agent_action_logs_order_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name='agent_action_logs_pkey')
+    op.add_column(
+        "ticket_logs", sa.Column("notes", sa.TEXT(), autoincrement=False, nullable=True)
     )
-    op.create_index('ix_agent_action_logs_market_maker_id', 'agent_action_logs', ['market_maker_id'], unique=False)
-    op.create_index('ix_agent_action_logs_created_at', 'agent_action_logs', ['created_at'], unique=False)
-    op.create_index('idx_agent_action_logs_market_maker', 'agent_action_logs', ['market_maker_id'], unique=False)
-    op.create_index('idx_agent_action_logs_created_at', 'agent_action_logs', ['created_at'], unique=False)
+    op.add_column(
+        "ticket_logs",
+        sa.Column("seller_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "counterparty_user_id", sa.UUID(), autoincrement=False, nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "swap_commission",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column("deposit_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "price",
+            sa.NUMERIC(precision=18, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "total_cost",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "order_type",
+            postgresql.ENUM("MARKET", "LIMIT", name="ordertype"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "price_eur",
+            sa.NUMERIC(precision=18, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column("trade_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "volume",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "currency",
+            postgresql.ENUM("EUR", "USD", "CNY", "HKD", name="currency"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "side",
+            postgresql.ENUM("BUY", "SELL", name="orderside"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "counterparty_entity_id", sa.UUID(), autoincrement=False, nullable=True
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "details",
+            postgresql.JSON(astext_type=sa.Text()),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "certificate_type",
+            postgresql.ENUM("EUA", "CEA", name="certificatetype"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "ticket_logs",
+        sa.Column(
+            "amount",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.drop_constraint(None, "ticket_logs", type_="foreignkey")
+    op.create_foreign_key(
+        "ticket_logs_entity_id_fkey", "ticket_logs", "entities", ["entity_id"], ["id"]
+    )
+    op.create_foreign_key(
+        "ticket_logs_order_id_fkey", "ticket_logs", "orders", ["order_id"], ["id"]
+    )
+    op.create_foreign_key(
+        "ticket_logs_deposit_id_fkey", "ticket_logs", "deposits", ["deposit_id"], ["id"]
+    )
+    op.create_foreign_key(
+        "ticket_logs_seller_id_fkey", "ticket_logs", "sellers", ["seller_id"], ["id"]
+    )
+    op.create_foreign_key(
+        "ticket_logs_counterparty_entity_id_fkey",
+        "ticket_logs",
+        "entities",
+        ["counterparty_entity_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "ticket_logs_counterparty_user_id_fkey",
+        "ticket_logs",
+        "users",
+        ["counterparty_user_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "ticket_logs_trade_id_fkey",
+        "ticket_logs",
+        "cash_market_trades",
+        ["trade_id"],
+        ["id"],
+    )
+    op.drop_index(op.f("ix_ticket_logs_timestamp"), table_name="ticket_logs")
+    op.drop_index(op.f("ix_ticket_logs_tags"), table_name="ticket_logs")
+    op.drop_index(op.f("ix_ticket_logs_status"), table_name="ticket_logs")
+    op.drop_index(op.f("ix_ticket_logs_market_maker_id"), table_name="ticket_logs")
+    op.drop_index(op.f("ix_ticket_logs_entity_type"), table_name="ticket_logs")
+    op.drop_index(op.f("ix_ticket_logs_action_type"), table_name="ticket_logs")
+    op.create_index(
+        "ix_ticket_logs_trade_id", "ticket_logs", ["trade_id"], unique=False
+    )
+    op.create_index(
+        "ix_ticket_logs_order_id", "ticket_logs", ["order_id"], unique=False
+    )
+    op.create_index(
+        "ix_ticket_logs_event_type", "ticket_logs", ["event_type"], unique=False
+    )
+    op.create_index(
+        "ix_ticket_logs_created_at", "ticket_logs", ["created_at"], unique=False
+    )
+    op.drop_column("ticket_logs", "tags")
+    op.drop_column("ticket_logs", "related_ticket_ids")
+    op.drop_column("ticket_logs", "after_state")
+    op.drop_column("ticket_logs", "before_state")
+    op.drop_column("ticket_logs", "session_id")
+    op.drop_column("ticket_logs", "user_agent")
+    op.drop_column("ticket_logs", "response_data")
+    op.drop_column("ticket_logs", "request_payload")
+    op.drop_column("ticket_logs", "status")
+    op.drop_column("ticket_logs", "entity_type")
+    op.drop_column("ticket_logs", "action_type")
+    op.drop_column("ticket_logs", "timestamp")
+    op.create_index("idx_sellers_client_code", "sellers", ["client_code"], unique=False)
+    op.add_column(
+        "orders",
+        sa.Column(
+            "all_or_none",
+            sa.BOOLEAN(),
+            server_default=sa.text("true"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "orders",
+        sa.Column("ai_client_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "orders", sa.Column("user_id", sa.UUID(), autoincrement=False, nullable=True)
+    )
+    op.add_column(
+        "orders",
+        sa.Column(
+            "order_type",
+            postgresql.ENUM("MARKET", "LIMIT", name="ordertype"),
+            server_default=sa.text("'LIMIT'::ordertype"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.create_foreign_key("orders_user_id_fkey", "orders", "users", ["user_id"], ["id"])
+    op.create_foreign_key(
+        "orders_ai_client_id_fkey", "orders", "ai_clients", ["ai_client_id"], ["id"]
+    )
+    op.drop_index(op.f("ix_orders_ticket_id"), table_name="orders")
+    op.drop_index(op.f("ix_orders_seller_id"), table_name="orders")
+    op.drop_index(op.f("ix_orders_market_maker_id"), table_name="orders")
+    op.create_index("idx_orders_user_id", "orders", ["user_id"], unique=False)
+    op.create_index("idx_orders_ticket_id", "orders", ["ticket_id"], unique=False)
+    op.create_index("idx_orders_seller_id", "orders", ["seller_id"], unique=False)
+    op.create_index(
+        "idx_orders_market_maker", "orders", ["market_maker_id"], unique=False
+    )
+    op.create_index("idx_orders_ai_client_id", "orders", ["ai_client_id"], unique=False)
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "total_volume_traded",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column("total_orders", sa.INTEGER(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "market_maker_type",
+            postgresql.ENUM("BUYER", "SELLER", "BOTH", name="marketmakertype"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "min_order_size",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "status",
+            postgresql.ENUM("ACTIVE", "PAUSED", "DISABLED", name="marketmakerstatus"),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "max_spread_pct",
+            sa.NUMERIC(precision=5, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "daily_volume_used",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column("notes", sa.TEXT(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "daily_volume_limit",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "eur_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "client_code", sa.VARCHAR(length=20), autoincrement=False, nullable=False
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "max_order_size",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "min_spread_pct",
+            sa.NUMERIC(precision=5, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "cea_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "market_maker_clients",
+        sa.Column(
+            "eua_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.drop_constraint(None, "market_maker_clients", type_="foreignkey")
+    op.drop_constraint(None, "market_maker_clients", type_="foreignkey")
+    op.drop_index(
+        op.f("ix_market_maker_clients_user_id"), table_name="market_maker_clients"
+    )
+    op.drop_index(
+        op.f("ix_market_maker_clients_created_by"), table_name="market_maker_clients"
+    )
+    op.create_index(
+        "ix_market_maker_clients_client_code",
+        "market_maker_clients",
+        ["client_code"],
+        unique=True,
+    )
+    op.create_index(
+        "idx_market_maker_clients_code",
+        "market_maker_clients",
+        ["client_code"],
+        unique=False,
+    )
+    op.alter_column(
+        "market_maker_clients",
+        "updated_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=True,
+    )
+    op.alter_column(
+        "market_maker_clients",
+        "created_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=True,
+    )
+    op.drop_column("market_maker_clients", "created_by")
+    op.drop_column("market_maker_clients", "is_active")
+    op.drop_column("market_maker_clients", "description")
+    op.drop_column("market_maker_clients", "user_id")
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("seller_user_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("buyer_user_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column(
+            "gross_cost",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column(
+            "swap_commission",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column(
+            "total_cost",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column(
+            "platform_fee",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("ai_client_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("seller_entity_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("seller_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column(
+            "price_eur",
+            sa.NUMERIC(precision=18, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        "cash_market_trades",
+        sa.Column("buyer_entity_id", sa.UUID(), autoincrement=False, nullable=True),
+    )
+    op.create_foreign_key(
+        "cash_market_trades_seller_id_fkey",
+        "cash_market_trades",
+        "sellers",
+        ["seller_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "cash_market_trades_buyer_entity_id_fkey",
+        "cash_market_trades",
+        "entities",
+        ["buyer_entity_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "cash_market_trades_buyer_user_id_fkey",
+        "cash_market_trades",
+        "users",
+        ["buyer_user_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "cash_market_trades_seller_entity_id_fkey",
+        "cash_market_trades",
+        "entities",
+        ["seller_entity_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "cash_market_trades_ai_client_id_fkey",
+        "cash_market_trades",
+        "ai_clients",
+        ["ai_client_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "cash_market_trades_seller_user_id_fkey",
+        "cash_market_trades",
+        "users",
+        ["seller_user_id"],
+        ["id"],
+    )
+    op.drop_index(
+        op.f("ix_cash_market_trades_ticket_id"), table_name="cash_market_trades"
+    )
+    op.drop_index(
+        op.f("ix_cash_market_trades_market_maker_id"), table_name="cash_market_trades"
+    )
+    op.create_index(
+        "idx_cash_market_trades_ticket_id",
+        "cash_market_trades",
+        ["ticket_id"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_cash_market_trades_buyer_user_id",
+        "cash_market_trades",
+        ["buyer_user_id"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_cash_market_trades_buyer_entity_id",
+        "cash_market_trades",
+        ["buyer_entity_id"],
+        unique=False,
+    )
+    op.drop_constraint(None, "asset_transactions", type_="foreignkey")
+    op.drop_index(
+        op.f("ix_asset_transactions_ticket_id"), table_name="asset_transactions"
+    )
+    op.drop_index(
+        op.f("ix_asset_transactions_market_maker_id"), table_name="asset_transactions"
+    )
+    op.drop_index(
+        op.f("ix_asset_transactions_created_at"), table_name="asset_transactions"
+    )
+    op.alter_column(
+        "asset_transactions",
+        "created_at",
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=True,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "reference",
+        existing_type=sa.String(length=255),
+        type_=sa.VARCHAR(length=100),
+        existing_nullable=True,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "balance_before",
+        existing_type=sa.NUMERIC(precision=18, scale=2),
+        nullable=False,
+    )
+    op.alter_column(
+        "asset_transactions",
+        "asset_type",
+        existing_type=sa.String(length=10),
+        type_=postgresql.ENUM("EUR", "CEA", "EUA", name="assettype"),
+        nullable=False,
+    )
+    op.alter_column(
+        "asset_transactions", "entity_id", existing_type=sa.UUID(), nullable=False
+    )
+    op.drop_column("asset_transactions", "certificate_type")
+    op.drop_column("asset_transactions", "market_maker_id")
+    op.drop_column("asset_transactions", "ticket_id")
+    op.create_table(
+        "refresh_tokens",
+        sa.Column("id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column("user_id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column(
+            "token_hash", sa.VARCHAR(length=255), autoincrement=False, nullable=False
+        ),
+        sa.Column(
+            "expires_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=False
+        ),
+        sa.Column("revoked", sa.BOOLEAN(), autoincrement=False, nullable=True),
+        sa.Column(
+            "revoked_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.Column("used", sa.BOOLEAN(), autoincrement=False, nullable=True),
+        sa.Column(
+            "used_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name="refresh_tokens_user_id_fkey"
+        ),
+        sa.PrimaryKeyConstraint("id", name="refresh_tokens_pkey"),
+    )
+    op.create_index(
+        "ix_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True
+    )
+    op.create_table(
+        "ai_clients",
+        sa.Column("id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column(
+            "client_id", sa.VARCHAR(length=20), autoincrement=False, nullable=False
+        ),
+        sa.Column("name", sa.VARCHAR(length=255), autoincrement=False, nullable=False),
+        sa.Column("description", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column(
+            "eur_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column(
+            "cea_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column(
+            "eua_balance",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column(
+            "max_order_size",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column(
+            "max_daily_volume",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column("trading_enabled", sa.BOOLEAN(), autoincrement=False, nullable=False),
+        sa.Column("is_active", sa.BOOLEAN(), autoincrement=False, nullable=False),
+        sa.Column("notes", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column("created_by", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column(
+            "created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=False
+        ),
+        sa.Column(
+            "updated_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=False
+        ),
+        sa.ForeignKeyConstraint(
+            ["created_by"], ["users.id"], name="ai_clients_created_by_fkey"
+        ),
+        sa.PrimaryKeyConstraint("id", name="ai_clients_pkey"),
+        postgresql_ignore_search_path=False,
+    )
+    op.create_index("ix_ai_clients_client_id", "ai_clients", ["client_id"], unique=True)
+    op.create_table(
+        "agent_config",
+        sa.Column("id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column("name", sa.VARCHAR(length=100), autoincrement=False, nullable=False),
+        sa.Column("is_active", sa.BOOLEAN(), autoincrement=False, nullable=True),
+        sa.Column(
+            "ollama_base_url",
+            sa.VARCHAR(length=500),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column(
+            "model_name", sa.VARCHAR(length=100), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "temperature",
+            sa.NUMERIC(precision=3, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column("max_tokens", sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column(
+            "top_p",
+            sa.NUMERIC(precision=3, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column("system_prompt", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column(
+            "action_prompt_template", sa.TEXT(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "run_interval_seconds", sa.INTEGER(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "max_orders_per_run", sa.INTEGER(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "cooldown_after_trade", sa.INTEGER(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "last_run_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "last_run_status", sa.VARCHAR(length=50), autoincrement=False, nullable=True
+        ),
+        sa.Column("last_run_error", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column(
+            "created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.Column(
+            "updated_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.PrimaryKeyConstraint("id", name="agent_config_pkey"),
+    )
+    op.create_table(
+        "agent_action_logs",
+        sa.Column("id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column("market_maker_id", sa.UUID(), autoincrement=False, nullable=True),
+        sa.Column(
+            "action_type", sa.VARCHAR(length=50), autoincrement=False, nullable=False
+        ),
+        sa.Column(
+            "certificate_type",
+            postgresql.ENUM("EUA", "CEA", name="certificatetype"),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column("prompt_sent", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column("llm_response", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column(
+            "model_used", sa.VARCHAR(length=100), autoincrement=False, nullable=True
+        ),
+        sa.Column("tokens_used", sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column("response_time_ms", sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column("order_id", sa.UUID(), autoincrement=False, nullable=True),
+        sa.Column(
+            "order_side",
+            postgresql.ENUM("BUY", "SELL", name="orderside"),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column(
+            "order_price",
+            sa.NUMERIC(precision=18, scale=4),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column(
+            "order_quantity",
+            sa.NUMERIC(precision=18, scale=2),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column("success", sa.BOOLEAN(), autoincrement=False, nullable=True),
+        sa.Column("error_message", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column(
+            "created_at", postgresql.TIMESTAMP(), autoincrement=False, nullable=True
+        ),
+        sa.ForeignKeyConstraint(
+            ["market_maker_id"],
+            ["market_maker_clients.id"],
+            name="agent_action_logs_market_maker_id_fkey",
+        ),
+        sa.ForeignKeyConstraint(
+            ["order_id"], ["orders.id"], name="agent_action_logs_order_id_fkey"
+        ),
+        sa.PrimaryKeyConstraint("id", name="agent_action_logs_pkey"),
+    )
+    op.create_index(
+        "ix_agent_action_logs_market_maker_id",
+        "agent_action_logs",
+        ["market_maker_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_agent_action_logs_created_at",
+        "agent_action_logs",
+        ["created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_agent_action_logs_market_maker",
+        "agent_action_logs",
+        ["market_maker_id"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_agent_action_logs_created_at",
+        "agent_action_logs",
+        ["created_at"],
+        unique=False,
+    )
     # ### end Alembic commands ###

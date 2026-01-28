@@ -384,22 +384,59 @@ export interface AdminPasswordReset {
 }
 
 // Deposit Types
-export type DepositStatus = 'pending' | 'confirmed' | 'rejected';
+export type DepositStatus = 'pending' | 'confirmed' | 'on_hold' | 'cleared' | 'rejected';
 export type Currency = 'EUR' | 'USD' | 'CNY' | 'HKD';
+export type HoldType = 'FIRST_DEPOSIT' | 'SUBSEQUENT' | 'LARGE_AMOUNT';
+export type AMLStatus = 'PENDING' | 'ON_HOLD' | 'CLEARED' | 'REJECTED';
+export type RejectionReason =
+  | 'WIRE_NOT_RECEIVED'
+  | 'AMOUNT_MISMATCH'
+  | 'SOURCE_VERIFICATION_FAILED'
+  | 'AML_FLAG'
+  | 'SANCTIONS_HIT'
+  | 'SUSPICIOUS_ACTIVITY'
+  | 'OTHER';
 
 export interface Deposit {
   id: string;
   entity_id: string;
   entity_name?: string;
+  user_id?: string;
   user_email?: string;
-  amount: number;
-  currency: Currency;
+
+  // Reported by client
+  reported_amount?: number;
+  reported_currency?: Currency;
+  source_bank?: string;
+  source_iban?: string;
+  source_swift?: string;
+  client_notes?: string;
+
+  // Confirmed by admin
+  amount?: number;
+  currency?: Currency;
   wire_reference?: string;
   bank_reference?: string;
+
+  // Status
   status: DepositStatus;
+  aml_status?: AMLStatus;
+  hold_type?: HoldType;
+  hold_days_required?: number;
+  hold_expires_at?: string;
+
+  // Timestamps
   reported_at?: string;
   confirmed_at?: string;
+  cleared_at?: string;
+  rejected_at?: string;
+
+  // Audit trail
   confirmed_by?: string;
+  cleared_by?: string;
+  rejected_by?: string;
+  rejection_reason?: string;
+  admin_notes?: string;
   notes?: string;
   created_at: string;
 }
@@ -410,6 +447,66 @@ export interface DepositCreate {
   currency: Currency;
   wire_reference?: string;
   notes?: string;
+}
+
+// AML Deposit Request/Response Types
+export interface AnnounceDepositRequest {
+  amount: number;
+  currency: Currency;
+  source_bank?: string;
+  source_iban?: string;
+  source_swift?: string;
+  client_notes?: string;
+}
+
+export interface ConfirmDepositRequest {
+  actual_amount: number;
+  actual_currency: Currency;
+  wire_reference?: string;
+  bank_reference?: string;
+  admin_notes?: string;
+}
+
+export interface ClearDepositRequest {
+  admin_notes?: string;
+  force_clear?: boolean;
+}
+
+export interface RejectDepositRequest {
+  reason: RejectionReason;
+  admin_notes?: string;
+}
+
+export interface WireInstructions {
+  bank_name: string;
+  iban: string;
+  swift_bic: string;
+  beneficiary: string;
+  reference_format: string;
+  important_notes: string[];
+}
+
+export interface DepositListResponse {
+  deposits: Deposit[];
+  total: number;
+  has_more: boolean;
+}
+
+export interface DepositStats {
+  pending_count: number;
+  on_hold_count: number;
+  on_hold_total: number;
+  cleared_count: number;
+  cleared_total: number;
+  rejected_count: number;
+  expired_holds_count: number;
+}
+
+export interface HoldCalculation {
+  hold_type: HoldType;
+  hold_days: number;
+  estimated_release_date: string;
+  reason: string;
 }
 
 export interface EntityBalance {
@@ -601,6 +698,95 @@ export interface SettlementStatusHistory {
   status: SettlementStatus;
   notes?: string;
   created_at: string;
+}
+
+// =============================================================================
+// Withdrawal Types
+// =============================================================================
+
+export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+
+export interface Withdrawal {
+  id: string;
+  entity_id: string;
+  entity_name?: string;
+  user_id?: string;
+  user_email?: string;
+
+  // Asset details
+  asset_type: AssetType;
+  amount: number;
+
+  // Status
+  status: WithdrawalStatus;
+
+  // Destination (EUR)
+  destination_bank?: string;
+  destination_iban?: string;
+  destination_swift?: string;
+  destination_account_holder?: string;
+
+  // Destination (CEA/EUA)
+  destination_registry?: string;
+  destination_account_id?: string;
+
+  // References
+  wire_reference?: string;
+  internal_reference?: string;
+
+  // Notes
+  client_notes?: string;
+  admin_notes?: string;
+  rejection_reason?: string;
+
+  // Timestamps
+  requested_at?: string;
+  processed_at?: string;
+  completed_at?: string;
+  rejected_at?: string;
+
+  // Audit
+  processed_by?: string;
+  completed_by?: string;
+  rejected_by?: string;
+
+  created_at: string;
+}
+
+export interface WithdrawalRequest {
+  asset_type: AssetType;
+  amount: number;
+  // EUR
+  destination_bank?: string;
+  destination_iban?: string;
+  destination_swift?: string;
+  destination_account_holder?: string;
+  // CEA/EUA
+  destination_registry?: string;
+  destination_account_id?: string;
+  client_notes?: string;
+}
+
+export interface ApproveWithdrawalRequest {
+  admin_notes?: string;
+}
+
+export interface CompleteWithdrawalRequest {
+  wire_reference?: string;
+  admin_notes?: string;
+}
+
+export interface RejectWithdrawalRequest {
+  rejection_reason: string;
+  admin_notes?: string;
+}
+
+export interface WithdrawalStats {
+  pending: number;
+  processing: number;
+  completed: number;
+  rejected: number;
+  total: number;
 }
 
 // Re-export backoffice types for convenience

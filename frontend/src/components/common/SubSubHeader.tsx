@@ -30,7 +30,7 @@ export function SubSubHeader({ left, children, className }: SubSubHeaderProps) {
   return (
     <div
       className={cn(
-        'bg-navy-900/80 border-b border-navy-800 px-6 py-3',
+        'flex items-center bg-navy-900/80 border-b border-navy-700 px-6 py-3 min-h-[3rem]',
         className
       )}
     >

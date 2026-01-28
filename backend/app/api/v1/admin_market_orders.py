@@ -1,26 +1,35 @@
 """Admin Market Orders API - Place/cancel orders on behalf of Market Makers"""
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+
+import logging
+from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
-from decimal import Decimal
-from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
-    User, MarketMakerClient, AssetTransaction, CertificateType,
-    TransactionType, Order, OrderStatus, OrderSide, TicketStatus
+    CertificateType,
+    MarketMakerClient,
+    Order,
+    OrderSide,
+    OrderStatus,
+    TicketStatus,
+    TransactionType,
+    User,
 )
 from ...schemas.schemas import (
-    OrderResponse, OrderBookResponse, OrderBookLevel, MessageResponse
+    OrderBookLevel,
+    OrderBookResponse,
 )
 from ...services.market_maker_service import MarketMakerService
-from ...services.ticket_service import TicketService
 from ...services.order_service import determine_order_market
-from pydantic import BaseModel, Field
-import logging
+from ...services.ticket_service import TicketService
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +39,7 @@ router = APIRouter(prefix="/market-orders", tags=["Admin Market Orders"])
 # Request/Response Models
 class AdminOrderCreate(BaseModel):
     """Request to create order on behalf of Market Maker"""
+
     market_maker_id: UUID
     certificate_type: str = Field(..., pattern="^(EUA|CEA)$")
     side: str = Field(..., pattern="^(BID|ASK)$")  # BID (buy) or ASK (sell) orders
@@ -39,6 +49,7 @@ class AdminOrderCreate(BaseModel):
 
 class AdminOrderResponse(BaseModel):
     """Response after creating order"""
+
     order_id: UUID
     ticket_id: str
     message: str
@@ -48,6 +59,7 @@ class AdminOrderResponse(BaseModel):
 
 class MarketMakerOrderResponse(BaseModel):
     """Order details with MM info"""
+
     id: UUID
     market_maker_id: UUID
     market_maker_name: str
@@ -67,7 +79,7 @@ class MarketMakerOrderResponse(BaseModel):
 async def get_orderbook_replica(
     certificate_type: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get order book replica showing all open orders.
@@ -80,7 +92,9 @@ async def get_orderbook_replica(
     try:
         cert_type = CertificateType(certificate_type)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+        )
 
     # Fetch SELL orders (asks) sorted by price ASC, then created_at ASC (FIFO)
     sell_result = await db.execute(
@@ -89,7 +103,7 @@ async def get_orderbook_replica(
             and_(
                 Order.certificate_type == cert_type,
                 Order.side == OrderSide.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.asc(), Order.created_at.asc())
@@ -103,7 +117,7 @@ async def get_orderbook_replica(
             and_(
                 Order.certificate_type == cert_type,
                 Order.side == OrderSide.BUY,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.desc(), Order.created_at.asc())
@@ -181,7 +195,7 @@ async def get_orderbook_replica(
 async def create_market_order(
     data: AdminOrderCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Admin places BID (buy) or ASK (sell) order on behalf of Market Maker.
@@ -212,7 +226,9 @@ async def create_market_order(
     try:
         cert_type = CertificateType(data.certificate_type)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}"
+        )
 
     # Map frontend side (BID/ASK) to backend OrderSide (BUY/SELL)
     if data.side == "BID":
@@ -245,12 +261,12 @@ async def create_market_order(
         if not has_sufficient:
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient {cert_type.value} balance for this ASK order"
+                detail=f"Insufficient {cert_type.value} balance for this ASK order",
             )
 
         # Get current balance before locking
         balances = await MarketMakerService.get_balances(db, data.market_maker_id)
-        balance_before = balances[cert_type.value]["available"]
+        balances[cert_type.value]["available"]
 
         # Lock assets via TRADE_DEBIT transaction
         transaction, trans_ticket_id = await MarketMakerService.create_transaction(
@@ -279,7 +295,7 @@ async def create_market_order(
         side=order_side,
         price=price,
         quantity=quantity,
-        filled_quantity=Decimal('0'),
+        filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
         ticket_id=trans_ticket_id,  # Link to transaction ticket (None for BID orders)
     )
@@ -339,7 +355,7 @@ async def list_market_maker_orders(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List orders placed by Market Makers.
@@ -351,10 +367,12 @@ async def list_market_maker_orders(
     - status: Filter by OPEN, FILLED, CANCELLED, etc.
     """
     # Build query
-    query = select(Order, MarketMakerClient).join(
-        MarketMakerClient, Order.market_maker_id == MarketMakerClient.id
-    ).where(
-        Order.market_maker_id.isnot(None)  # Only MM orders
+    query = (
+        select(Order, MarketMakerClient)
+        .join(MarketMakerClient, Order.market_maker_id == MarketMakerClient.id)
+        .where(
+            Order.market_maker_id.isnot(None)  # Only MM orders
+        )
     )
 
     # Apply filters
@@ -366,7 +384,9 @@ async def list_market_maker_orders(
             cert_type = CertificateType(certificate_type)
             query = query.where(Order.certificate_type == cert_type)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+            )
 
     if status:
         try:
@@ -409,7 +429,7 @@ async def list_market_maker_orders(
 async def cancel_market_order(
     order_id: UUID,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Admin cancels Market Maker order and releases locked assets (for ASK orders).
@@ -437,13 +457,15 @@ async def cancel_market_order(
 
     # Verify it's a MM order
     if not order.market_maker_id:
-        raise HTTPException(status_code=400, detail="Order does not belong to a Market Maker")
+        raise HTTPException(
+            status_code=400, detail="Order does not belong to a Market Maker"
+        )
 
     # Check if order can be cancelled
     if order.status not in [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot cancel order with status {order.status.value}"
+            detail=f"Cannot cancel order with status {order.status.value}",
         )
 
     # Calculate remaining quantity to release
@@ -507,6 +529,8 @@ async def cancel_market_order(
     return {
         "ticket_id": ticket.ticket_id,
         "message": f"Order {order.id} cancelled successfully",
-        "released_amount": float(remaining_quantity) if order.side == OrderSide.SELL else 0.0,
+        "released_amount": float(remaining_quantity)
+        if order.side == OrderSide.SELL
+        else 0.0,
         "release_ticket_id": trans_ticket_id,
     }

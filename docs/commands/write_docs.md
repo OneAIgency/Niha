@@ -11,8 +11,12 @@ The code is always the source of truth if there is any ambiguity or discrepancie
 Update or add documentation in these areas:
 
 - **Primary entry-point documentation** (README or equivalent) – brief high-level overview of the feature
-- **Application truth document** (`app-truth.md` if it exists) – update with information regarding application functioning parameters that should always be met when implementing something like communication between components, ports, endpoints, or anything regarding base functioning of the app
-- **Design system documentation** (`docs/design-system/` if it exists) – update component documentation if UI components were created or modified. Reference `@interface.md` for comprehensive UI/UX documentation
+- **Application truth document** – **`app_truth.md`** (project root; if it exists). Update with information regarding application functioning parameters that should always be met (communication between components, ports, endpoints, base behaviour). If the feature affects UI/UX or frontend standards, add or update the relevant section and point to the design system reference files below.
+- **Interface & design system documentation** (if UI components were created or modified):
+  - **`docs/commands/interface.md`** – Design system principles and component requirements
+  - **`frontend/docs/DESIGN_SYSTEM.md`** – Main design system doc: update component patterns, tokens, or examples if needed
+  - **`frontend/src/styles/design-tokens.css`** – Add or document new CSS variables/utility classes only when introducing new tokens
+  - **`app_truth.md`** – If the project keeps UI/UX or design system location there, update it to reflect any new standards or file locations
 - **Code comments** – function/method/API documentation for IDEs, inline comments only where the purpose is unclear
 - **Main documentation set** (e.g., `/docs` or equivalent) – reflect changes, removals, and additions, and add clear, minimal examples
 - **New files** – only when the feature is large enough to justify them
@@ -20,15 +24,16 @@ Update or add documentation in these areas:
 ## Rules
 
 1. Always match the project's documentation style, format, verbosity and structure
-2. Don't add docs to implementation-only directories (except for code comments)
-3. NEVER create new documentation files in the same directory as review or plan documents - these directories are for historical reference only, not for new documentation
-4. Avoid redundancy unless it improves usability
-5. Review the existing file(s) being updated before deciding if more documentation needs to be written
-6. Don't document tests unless the user specifically instructs you to
-7. Keep examples practical and runnable
-8. Include troubleshooting sections for complex features
-9. Document environment variables and configuration options
-10. Add API endpoint documentation with request/response examples
+2. When documenting UI/UX or design system changes, align with **`app_truth.md`** §9 and the interface reference files listed above (e.g. `frontend/docs/DESIGN_SYSTEM.md`, `docs/commands/interface.md`)
+3. Don't add docs to implementation-only directories (except for code comments)
+4. NEVER create new documentation files in the same directory as review or plan documents - these directories are for historical reference only, not for new documentation
+5. Avoid redundancy unless it improves usability
+6. Review the existing file(s) being updated before deciding if more documentation needs to be written
+7. Don't document tests unless the user specifically instructs you to
+8. Keep examples practical and runnable
+9. Include troubleshooting sections for complex features
+10. Document environment variables and configuration options
+11. Add API endpoint documentation with request/response examples
 
 ## Output
 

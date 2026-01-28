@@ -10,22 +10,29 @@ Tests the complete settlement lifecycle from CEA purchase to final settlement:
 
 These tests validate the entire user journey.
 """
+
+from datetime import datetime, timedelta
+from decimal import Decimal
+
 import pytest
 import pytest_asyncio
-from decimal import Decimal
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.models import (
-    User, UserRole, Entity, Jurisdiction,
-    Order, OrderSide, OrderStatus, MarketType, CertificateType,
-    SettlementBatch, SettlementStatus, SettlementType,
-    SettlementStatusHistory, EntityHolding, AssetType
+    AssetType,
+    Entity,
+    EntityHolding,
+    Jurisdiction,
+    SettlementBatch,
+    SettlementStatus,
+    SettlementType,
+    User,
+    UserRole,
 )
-from app.services.settlement_service import SettlementService
 from app.services.settlement_processor import SettlementProcessor
+from app.services.settlement_service import SettlementService
 
 
 @pytest_asyncio.fixture
@@ -52,7 +59,7 @@ async def buyer_user(db_session: AsyncSession, buyer_entity):
         password_hash="hashed_password",
         role=UserRole.APPROVED,
         is_active=True,
-        entity_id=buyer_entity.id
+        entity_id=buyer_entity.id,
     )
     db_session.add(user)
     await db_session.commit()
@@ -62,9 +69,7 @@ async def buyer_user(db_session: AsyncSession, buyer_entity):
 
 @pytest.mark.asyncio
 async def test_complete_cea_purchase_settlement_workflow(
-    db_session: AsyncSession,
-    buyer_entity,
-    buyer_user
+    db_session: AsyncSession, buyer_entity, buyer_user
 ):
     """
     E2E Test: Complete CEA Purchase Settlement Workflow
@@ -85,7 +90,7 @@ async def test_complete_cea_purchase_settlement_workflow(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     # Verify settlement created correctly
@@ -112,8 +117,7 @@ async def test_complete_cea_purchase_settlement_workflow(
     # === STEP 2: Day 0 (T+0) - Settlement in PENDING ===
     # User checks settlement status
     settlements = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=buyer_entity.id
+        db=db_session, entity_id=buyer_entity.id
     )
     assert len(settlements) == 1
     assert settlements[0].id == settlement_id
@@ -189,15 +193,13 @@ async def test_complete_cea_purchase_settlement_workflow(
 
     # Verify settlement no longer appears in "pending"
     pending = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=buyer_entity.id
+        db=db_session, entity_id=buyer_entity.id
     )
     assert len(pending) == 0  # SETTLED settlements excluded
 
     # === STEP 7: Verify complete timeline is accessible ===
     settlement_obj, history = await SettlementService.get_settlement_timeline(
-        db=db_session,
-        settlement_id=settlement_id
+        db=db_session, settlement_id=settlement_id
     )
 
     assert settlement_obj.id == settlement_id
@@ -215,9 +217,7 @@ async def test_complete_cea_purchase_settlement_workflow(
 
 @pytest.mark.asyncio
 async def test_multiple_concurrent_settlements(
-    db_session: AsyncSession,
-    buyer_entity,
-    buyer_user
+    db_session: AsyncSession, buyer_entity, buyer_user
 ):
     """
     E2E Test: Multiple Concurrent Settlements
@@ -236,7 +236,7 @@ async def test_multiple_concurrent_settlements(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     settlement_b = await SettlementService.create_cea_purchase_settlement(
@@ -247,7 +247,7 @@ async def test_multiple_concurrent_settlements(
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     # Make settlement_a ready to advance, but not settlement_b
@@ -267,8 +267,7 @@ async def test_multiple_concurrent_settlements(
 
     # User can see both settlements
     settlements = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=buyer_entity.id
+        db=db_session, entity_id=buyer_entity.id
     )
     assert len(settlements) == 2
 
@@ -276,7 +275,7 @@ async def test_multiple_concurrent_settlements(
     in_transit = await SettlementService.get_pending_settlements(
         db=db_session,
         entity_id=buyer_entity.id,
-        status_filter=SettlementStatus.TRANSFER_INITIATED
+        status_filter=SettlementStatus.TRANSFER_INITIATED,
     )
     assert len(in_transit) == 1
     assert in_transit[0].id == settlement_a.id
@@ -284,9 +283,7 @@ async def test_multiple_concurrent_settlements(
 
 @pytest.mark.asyncio
 async def test_settlement_prevents_premature_asset_delivery(
-    db_session: AsyncSession,
-    buyer_entity,
-    buyer_user
+    db_session: AsyncSession, buyer_entity, buyer_user
 ):
     """
     E2E Test: Settlement Prevents Premature Asset Delivery
@@ -303,17 +300,17 @@ async def test_settlement_prevents_premature_asset_delivery(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     # Query entity holdings - should have NO CEA yet
     result = await db_session.execute(
         select(EntityHolding).where(
             EntityHolding.entity_id == buyer_entity.id,
-            EntityHolding.asset_type == AssetType.CEA
+            EntityHolding.asset_type == AssetType.CEA,
         )
     )
-    holdings = result.scalars().all()
+    result.scalars().all()
 
     # During PENDING status, no CEA should be credited
     assert settlement.status == SettlementStatus.PENDING
@@ -324,7 +321,9 @@ async def test_settlement_prevents_premature_asset_delivery(
     settlement.expected_settlement_date = datetime.utcnow() - timedelta(days=1)
     await db_session.commit()
     await SettlementProcessor.process_pending_settlements(db=db_session)
-    await SettlementProcessor.process_pending_settlements(db=db_session)  # Advance to IN_TRANSIT
+    await SettlementProcessor.process_pending_settlements(
+        db=db_session
+    )  # Advance to IN_TRANSIT
     await db_session.refresh(settlement)
 
     # Still IN_TRANSIT - no assets delivered yet
@@ -340,9 +339,7 @@ async def test_settlement_prevents_premature_asset_delivery(
 
 @pytest.mark.asyncio
 async def test_settlement_weekend_handling(
-    db_session: AsyncSession,
-    buyer_entity,
-    buyer_user
+    db_session: AsyncSession, buyer_entity, buyer_user
 ):
     """
     E2E Test: Weekend Handling in T+N Calculations
@@ -351,7 +348,7 @@ async def test_settlement_weekend_handling(
     Example: Friday purchase → Monday (skip Sat/Sun), Tuesday, Wednesday delivery
     """
     # Create settlement on a Friday (simulated)
-    settlement = await SettlementService.create_cea_purchase_settlement(
+    await SettlementService.create_cea_purchase_settlement(
         db=db_session,
         entity_id=buyer_entity.id,
         order_id=None,
@@ -359,7 +356,7 @@ async def test_settlement_weekend_handling(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     # Verify business days calculation
@@ -376,10 +373,7 @@ async def test_settlement_weekend_handling(
 
 @pytest.mark.asyncio
 async def test_settlement_user_isolation(
-    db_session: AsyncSession,
-    buyer_entity,
-    buyer_user,
-    test_admin_user
+    db_session: AsyncSession, buyer_entity, buyer_user, test_admin_user
 ):
     """
     E2E Test: User Isolation - Users Only See Their Own Settlements
@@ -388,10 +382,7 @@ async def test_settlement_user_isolation(
     User A cannot see User B's settlements.
     """
     # Create second entity and user
-    other_entity = Entity(
-        name="Other Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    other_entity = Entity(name="Other Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(other_entity)
     await db_session.commit()
     await db_session.refresh(other_entity)
@@ -405,7 +396,7 @@ async def test_settlement_user_isolation(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=buyer_user.id
+        created_by=buyer_user.id,
     )
 
     # Create settlement for other_entity
@@ -417,21 +408,19 @@ async def test_settlement_user_isolation(
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Buyer should only see their own settlement
     buyer_settlements = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=buyer_entity.id
+        db=db_session, entity_id=buyer_entity.id
     )
     assert len(buyer_settlements) == 1
     assert buyer_settlements[0].id == settlement_a.id
 
     # Other entity should only see their own settlement
     other_settlements = await SettlementService.get_pending_settlements(
-        db=db_session,
-        entity_id=other_entity.id
+        db=db_session, entity_id=other_entity.id
     )
     assert len(other_settlements) == 1
     assert other_settlements[0].id == settlement_b.id

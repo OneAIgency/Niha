@@ -1,6 +1,7 @@
-from pydantic_settings import BaseSettings
-from typing import List
 import secrets
+from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -11,7 +12,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Database
-    DATABASE_URL: str = "postgresql://niha_user:niha_secure_pass_2024@localhost:5432/niha_carbon"
+    DATABASE_URL: str = (
+        "postgresql://niha_user:niha_secure_pass_2024@localhost:5432/niha_carbon"
+    )
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

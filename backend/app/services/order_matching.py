@@ -5,22 +5,31 @@ FIFO price-time priority matching engine for the Cash Market.
 Handles order preview, market orders, and limit orders with proper fee calculations.
 """
 
-from decimal import Decimal
-from datetime import datetime
-from typing import List, Tuple, Optional
 from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.models import (
-    Order, Seller, Entity, EntityHolding, AssetTransaction, CashMarketTrade,
-    OrderSide, OrderStatus, CertificateType, AssetType, TransactionType, MarketType
+    AssetTransaction,
+    AssetType,
+    CashMarketTrade,
+    CertificateType,
+    Entity,
+    EntityHolding,
+    MarketType,
+    Order,
+    OrderSide,
+    OrderStatus,
+    Seller,
+    TransactionType,
 )
 from ..services.currency_service import currency_service
 from ..services.settlement_service import SettlementService
-
 
 # Platform fee rate: 0.5%
 PLATFORM_FEE_RATE = Decimal("0.005")
@@ -33,6 +42,7 @@ EUR_MIGRATION_DATE = datetime(2026, 1, 21)
 @dataclass
 class OrderFillResult:
     """Result of a single fill from the order book"""
+
     order_id: UUID
     seller_code: str
     price: Decimal  # Price in CNY
@@ -44,6 +54,7 @@ class OrderFillResult:
 @dataclass
 class OrderPreviewResult:
     """Result of order preview calculation"""
+
     fills: List[OrderFillResult]
     total_quantity: Decimal
     total_cost_gross: Decimal
@@ -84,13 +95,15 @@ async def normalize_order_price_to_eur(order: Order) -> Decimal:
     return order_price
 
 
-async def get_entity_balance(db: AsyncSession, entity_id: UUID, asset_type: AssetType) -> Decimal:
+async def get_entity_balance(
+    db: AsyncSession, entity_id: UUID, asset_type: AssetType
+) -> Decimal:
     """Get entity's balance for a specific asset type"""
     result = await db.execute(
         select(EntityHolding).where(
             and_(
                 EntityHolding.entity_id == entity_id,
-                EntityHolding.asset_type == asset_type
+                EntityHolding.asset_type == asset_type,
             )
         )
     )
@@ -106,7 +119,7 @@ async def update_entity_balance(
     transaction_type: TransactionType,
     created_by: UUID,
     reference: Optional[str] = None,
-    notes: Optional[str] = None
+    notes: Optional[str] = None,
 ) -> Decimal:
     """
     Update entity balance and create audit trail.
@@ -117,7 +130,7 @@ async def update_entity_balance(
         select(EntityHolding).where(
             and_(
                 EntityHolding.entity_id == entity_id,
-                EntityHolding.asset_type == asset_type
+                EntityHolding.asset_type == asset_type,
             )
         )
     )
@@ -132,9 +145,7 @@ async def update_entity_balance(
     else:
         # Create new holding
         holding = EntityHolding(
-            entity_id=entity_id,
-            asset_type=asset_type,
-            quantity=balance_after
+            entity_id=entity_id, asset_type=asset_type, quantity=balance_after
         )
         db.add(holding)
 
@@ -148,14 +159,16 @@ async def update_entity_balance(
         balance_after=balance_after,
         reference=reference,
         notes=notes,
-        created_by=created_by
+        created_by=created_by,
     )
     db.add(transaction)
 
     return balance_after
 
 
-async def get_cea_sell_orders(db: AsyncSession, limit_price: Optional[Decimal] = None) -> List[Order]:
+async def get_cea_sell_orders(
+    db: AsyncSession, limit_price: Optional[Decimal] = None
+) -> List[Order]:
     """
     Get available CEA sell orders sorted by price-time priority (FIFO).
 
@@ -168,19 +181,13 @@ async def get_cea_sell_orders(db: AsyncSession, limit_price: Optional[Decimal] =
     Returns:
         List of Order objects sorted by price ASC, then created_at ASC
     """
-    query = (
-        select(Order)
-        .where(
-            and_(
-                Order.certificate_type == CertificateType.CEA,
-                Order.side == OrderSide.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
-                # Include orders from Sellers OR Market Makers
-                or_(
-                    Order.seller_id.isnot(None),
-                    Order.market_maker_id.isnot(None)
-                )
-            )
+    query = select(Order).where(
+        and_(
+            Order.certificate_type == CertificateType.CEA,
+            Order.side == OrderSide.SELL,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            # Include orders from Sellers OR Market Makers
+            or_(Order.seller_id.isnot(None), Order.market_maker_id.isnot(None)),
         )
     )
 
@@ -199,7 +206,7 @@ async def preview_buy_order(
     amount_eur: Optional[Decimal] = None,
     quantity: Optional[Decimal] = None,
     limit_price: Optional[Decimal] = None,
-    all_or_none: bool = False
+    all_or_none: bool = False,
 ) -> OrderPreviewResult:
     """
     Preview a buy order without executing it.
@@ -235,7 +242,7 @@ async def preview_buy_order(
             net_price_per_unit=Decimal("0"),
             can_execute=False,
             execution_message="Must specify either amount_eur or quantity",
-            partial_fill=False
+            partial_fill=False,
         )
 
     # Get sell orders
@@ -254,7 +261,7 @@ async def preview_buy_order(
             net_price_per_unit=Decimal("0"),
             can_execute=False,
             execution_message="No CEA sellers available",
-            partial_fill=False
+            partial_fill=False,
         )
 
     # Calculate max gross we can spend (accounting for fees)
@@ -284,7 +291,9 @@ async def preview_buy_order(
         # Normalize order price to EUR (handles both legacy CNY and new EUR orders)
         order_price_eur = await normalize_order_price_to_eur(order)
         order_price_cny = Decimal(str(order.price))  # Keep for display/audit
-        remaining_order_qty = Decimal(str(order.quantity)) - Decimal(str(order.filled_quantity))
+        remaining_order_qty = Decimal(str(order.quantity)) - Decimal(
+            str(order.filled_quantity)
+        )
 
         if remaining_order_qty <= Decimal("0"):
             continue
@@ -301,9 +310,14 @@ async def preview_buy_order(
             cost_for_qty = qty_to_buy * order_price_eur
             fee_for_cost = cost_for_qty * PLATFORM_FEE_RATE
             total_needed = cost_for_qty + fee_for_cost
-            if total_needed > available_eur - total_cost_gross - (total_cost_gross * PLATFORM_FEE_RATE):
+            if total_needed > available_eur - total_cost_gross - (
+                total_cost_gross * PLATFORM_FEE_RATE
+            ):
                 # Adjust quantity to what we can afford
-                max_gross_remaining = (available_eur - total_cost_gross * (Decimal("1") + PLATFORM_FEE_RATE)) / (Decimal("1") + PLATFORM_FEE_RATE)
+                max_gross_remaining = (
+                    available_eur
+                    - total_cost_gross * (Decimal("1") + PLATFORM_FEE_RATE)
+                ) / (Decimal("1") + PLATFORM_FEE_RATE)
                 qty_to_buy = min(qty_to_buy, max_gross_remaining / order_price_eur)
 
         if qty_to_buy <= Decimal("0"):
@@ -313,16 +327,20 @@ async def preview_buy_order(
 
         # Get seller/MM code for display (fetch lazily only when needed)
         # For now, use order ID as code - callers can fetch seller/MM info separately if needed
-        seller_code = str(order.seller_id) if order.seller_id else str(order.market_maker_id)
+        seller_code = (
+            str(order.seller_id) if order.seller_id else str(order.market_maker_id)
+        )
 
-        fills.append(OrderFillResult(
-            order_id=order.id,
-            seller_code=seller_code,
-            price=order_price_cny,
-            price_eur=order_price_eur,
-            quantity=qty_to_buy,
-            cost_eur=cost_eur
-        ))
+        fills.append(
+            OrderFillResult(
+                order_id=order.id,
+                seller_code=seller_code,
+                price=order_price_cny,
+                price_eur=order_price_eur,
+                quantity=qty_to_buy,
+                cost_eur=cost_eur,
+            )
+        )
 
         total_cost_gross += cost_eur
         total_quantity += qty_to_buy
@@ -335,8 +353,16 @@ async def preview_buy_order(
     # Calculate summary
     platform_fee_amount = total_cost_gross * PLATFORM_FEE_RATE
     total_cost_net = total_cost_gross + platform_fee_amount
-    weighted_avg_price = (total_cost_gross / total_quantity) if total_quantity > Decimal("0") else Decimal("0")
-    net_price_per_unit = (total_cost_net / total_quantity) if total_quantity > Decimal("0") else Decimal("0")
+    weighted_avg_price = (
+        (total_cost_gross / total_quantity)
+        if total_quantity > Decimal("0")
+        else Decimal("0")
+    )
+    net_price_per_unit = (
+        (total_cost_net / total_quantity)
+        if total_quantity > Decimal("0")
+        else Decimal("0")
+    )
 
     # Best and worst prices
     best_price = fills[0].price_eur if fills else None
@@ -359,12 +385,16 @@ async def preview_buy_order(
                 net_price_per_unit=net_price_per_unit,
                 can_execute=False,
                 execution_message=f"All-or-none: Only {total_quantity:.2f} of {quantity:.2f} CEA available",
-                partial_fill=True
+                partial_fill=True,
             )
 
     # Check if we can actually execute
     can_execute = total_quantity > Decimal("0") and total_cost_net <= available_eur
-    execution_message = "Ready to execute" if can_execute else "Insufficient balance or no matching orders"
+    execution_message = (
+        "Ready to execute"
+        if can_execute
+        else "Insufficient balance or no matching orders"
+    )
 
     if total_cost_net > available_eur:
         execution_message = f"Insufficient balance: need {total_cost_net:.2f} EUR, have {available_eur:.2f} EUR"
@@ -382,13 +412,14 @@ async def preview_buy_order(
         net_price_per_unit=net_price_per_unit,
         can_execute=can_execute,
         execution_message=execution_message,
-        partial_fill=partial_fill
+        partial_fill=partial_fill,
     )
 
 
 @dataclass
 class OrderExecutionResult:
     """Result of order execution"""
+
     success: bool
     order_id: Optional[UUID]
     message: str
@@ -408,7 +439,7 @@ async def execute_market_buy_order(
     user_id: UUID,
     amount_eur: Optional[Decimal] = None,
     quantity: Optional[Decimal] = None,
-    all_or_none: bool = False
+    all_or_none: bool = False,
 ) -> OrderExecutionResult:
     """
     Execute a market buy order for CEA.
@@ -437,7 +468,7 @@ async def execute_market_buy_order(
         amount_eur=amount_eur,
         quantity=quantity,
         limit_price=None,  # Market order - no limit
-        all_or_none=all_or_none
+        all_or_none=all_or_none,
     )
 
     if not preview.can_execute:
@@ -452,7 +483,7 @@ async def execute_market_buy_order(
             total_cost_net=Decimal("0"),
             weighted_avg_price=Decimal("0"),
             eur_balance=await get_entity_balance(db, entity_id, AssetType.EUR),
-            certificate_balance=await get_entity_balance(db, entity_id, AssetType.CEA)
+            certificate_balance=await get_entity_balance(db, entity_id, AssetType.CEA),
         )
 
     # Create buy order record (NEW ORDERS STORED IN EUR)
@@ -464,7 +495,7 @@ async def execute_market_buy_order(
         price=Decimal(str(preview.weighted_avg_price)),  # Store in EUR
         quantity=preview.total_quantity,
         filled_quantity=preview.total_quantity,
-        status=OrderStatus.FILLED
+        status=OrderStatus.FILLED,
     )
     db.add(buy_order)
     await db.flush()  # Get the order ID
@@ -472,9 +503,7 @@ async def execute_market_buy_order(
     # Execute trades
     for fill in preview.fills:
         # Get the sell order
-        result = await db.execute(
-            select(Order).where(Order.id == fill.order_id)
-        )
+        result = await db.execute(select(Order).where(Order.id == fill.order_id))
         sell_order = result.scalar_one()
 
         # Create trade record
@@ -484,12 +513,14 @@ async def execute_market_buy_order(
             certificate_type=CertificateType.CEA,
             price=fill.price,
             quantity=fill.quantity,
-            executed_at=datetime.utcnow()
+            executed_at=datetime.utcnow(),
         )
         db.add(trade)
 
         # Update sell order
-        sell_order.filled_quantity = Decimal(str(sell_order.filled_quantity)) + fill.quantity
+        sell_order.filled_quantity = (
+            Decimal(str(sell_order.filled_quantity)) + fill.quantity
+        )
         if sell_order.filled_quantity >= sell_order.quantity:
             sell_order.status = OrderStatus.FILLED
         else:
@@ -516,7 +547,7 @@ async def execute_market_buy_order(
         transaction_type=TransactionType.TRADE_BUY,
         created_by=user_id,
         reference=str(buy_order.id),
-        notes=f"Market buy {preview.total_quantity:.2f} CEA @ avg {preview.weighted_avg_price:.4f} EUR/CEA"
+        notes=f"Market buy {preview.total_quantity:.2f} CEA @ avg {preview.weighted_avg_price:.4f} EUR/CEA",
     )
 
     # Create settlement batch for CEA delivery (T+3)
@@ -529,7 +560,7 @@ async def execute_market_buy_order(
         quantity=preview.total_quantity,
         price=preview.weighted_avg_price,
         seller_id=None,  # Multiple sellers possible
-        created_by=user_id
+        created_by=user_id,
     )
 
     # Get current CEA balance (won't change until settlement completes)
@@ -548,7 +579,7 @@ async def execute_market_buy_order(
         total_cost_net=preview.total_cost_net,
         weighted_avg_price=preview.weighted_avg_price,
         eur_balance=new_eur_balance,
-        certificate_balance=new_cea_balance
+        certificate_balance=new_cea_balance,
     )
 
 
@@ -558,7 +589,9 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
 
     Returns both bids (buy orders from entities) and asks (sell orders from sellers).
     """
-    cert_enum = CertificateType.CEA if certificate_type == "CEA" else CertificateType.EUA
+    cert_enum = (
+        CertificateType.CEA if certificate_type == "CEA" else CertificateType.EUA
+    )
 
     # Get sell orders (asks) - from Sellers
     sell_result = await db.execute(
@@ -568,7 +601,7 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
             and_(
                 Order.certificate_type == cert_enum,
                 Order.side == OrderSide.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.asc(), Order.created_at.asc())
@@ -583,7 +616,7 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
             and_(
                 Order.certificate_type == cert_enum,
                 Order.side == OrderSide.BUY,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.desc(), Order.created_at.asc())  # Best bid first

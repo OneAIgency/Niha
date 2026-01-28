@@ -1,25 +1,35 @@
 """Liquidity management service"""
+
+import logging
 import uuid
 from decimal import Decimal
-from typing import List, Dict, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 
 from app.models.models import (
-    MarketMakerClient, MarketMakerType, Order, OrderSide, OrderStatus,
-    CertificateType, AssetTransaction, TransactionType, LiquidityOperation,
-    MarketType
+    AssetTransaction,
+    CertificateType,
+    LiquidityOperation,
+    MarketMakerClient,
+    MarketMakerType,
+    MarketType,
+    Order,
+    OrderSide,
+    OrderStatus,
+    TicketStatus,
+    TransactionType,
 )
-from app.services.ticket_service import TicketService
 from app.services.market_maker_service import MarketMakerService
-from app.models.models import TicketStatus
-import logging
+from app.services.ticket_service import TicketService
 
 logger = logging.getLogger(__name__)
 
 
 class InsufficientAssetsError(Exception):
     """Raised when market makers lack sufficient assets"""
+
     def __init__(self, asset_type: str, required: Decimal, available: Decimal):
         self.asset_type = asset_type
         self.required = required
@@ -33,12 +43,12 @@ class InsufficientAssetsError(Exception):
 class LiquidityService:
     """
     Service for managing liquidity operations.
-    
+
     Provides automated liquidity injection by coordinating orders across multiple
     market makers. Supports two market maker types:
     - CASH_BUYER: Holds EUR, places BUY orders (BID liquidity)
     - CEA_CASH_SELLER: Holds certificates, places SELL orders (ASK liquidity)
-    
+
     Orders are distributed across 3 price levels with tight spreads (0.2-0.5%)
     and volume allocation (50/30/20) for optimal market depth.
     """
@@ -46,7 +56,7 @@ class LiquidityService:
     # Default prices when no market data available
     DEFAULT_PRICES = {
         CertificateType.CEA: Decimal("14.0"),
-        CertificateType.EUA: Decimal("81.0")
+        CertificateType.EUA: Decimal("81.0"),
     }
 
     # Liquidity operation constants
@@ -57,13 +67,13 @@ class LiquidityService:
     async def get_liquidity_providers(db: AsyncSession) -> List[MarketMakerClient]:
         """
         Get all active EUR-holding market makers with balances.
-        
+
         Returns market makers of type CASH_BUYER that have positive EUR balance
         and are active. Used for placing BID orders.
-        
+
         Args:
             db: Database session
-            
+
         Returns:
             List of MarketMakerClient instances, sorted by EUR balance descending
         """
@@ -73,7 +83,7 @@ class LiquidityService:
                 and_(
                     MarketMakerClient.mm_type == MarketMakerType.CASH_BUYER,
                     MarketMakerClient.is_active == True,
-                    MarketMakerClient.eur_balance > 0
+                    MarketMakerClient.eur_balance > 0,
                 )
             )
             .order_by(MarketMakerClient.eur_balance.desc())
@@ -82,23 +92,22 @@ class LiquidityService:
 
     @staticmethod
     async def get_asset_holders(
-        db: AsyncSession,
-        certificate_type: CertificateType
+        db: AsyncSession, certificate_type: CertificateType
     ) -> List[Dict[str, Any]]:
         """
         Get all active asset-holding market makers with certificate balances.
-        
+
         Returns market makers of type CEA_CASH_SELLER that have available
         certificate balance for the specified type. Used for placing ASK orders.
-        
+
         Args:
             db: Database session
             certificate_type: Type of certificate (CEA or EUA)
-            
+
         Returns:
             List of dictionaries with 'mm' (MarketMakerClient) and 'available'
             (Decimal balance) keys, sorted by available balance descending
-            
+
         Note:
             This method has a known N+1 query issue. It fetches all asset holder
             MMs in one query, then separately queries balances for each MM.
@@ -110,11 +119,10 @@ class LiquidityService:
         # Future optimization: Refactor balance calculation to use joins for bulk retrieval.
 
         result = await db.execute(
-            select(MarketMakerClient)
-            .where(
+            select(MarketMakerClient).where(
                 and_(
                     MarketMakerClient.mm_type == MarketMakerType.CEA_CASH_SELLER,
-                    MarketMakerClient.is_active == True
+                    MarketMakerClient.is_active == True,
                 )
             )
         )
@@ -126,15 +134,14 @@ class LiquidityService:
             balances = await MarketMakerService.get_balances(db, mm.id)
             balance_data = balances.get(certificate_type.value)
             if not balance_data:
-                logger.warning(f"No balance data for {certificate_type.value} on MM {mm.id}")
+                logger.warning(
+                    f"No balance data for {certificate_type.value} on MM {mm.id}"
+                )
                 continue
 
             available = balance_data.get("available", Decimal("0"))
             if available > 0:
-                mm_data.append({
-                    "mm": mm,
-                    "available": available
-                })
+                mm_data.append({"mm": mm, "available": available})
 
         # Sort by available balance descending
         mm_data.sort(key=lambda x: x["available"], reverse=True)
@@ -142,8 +149,7 @@ class LiquidityService:
 
     @staticmethod
     async def calculate_reference_price(
-        db: AsyncSession,
-        certificate_type: CertificateType
+        db: AsyncSession, certificate_type: CertificateType
     ) -> Decimal:
         """Calculate reference price from current orderbook"""
         from app.services.order_matching import get_real_orderbook
@@ -153,8 +159,10 @@ class LiquidityService:
 
             # Use mid-price if both sides exist
             if orderbook["best_bid"] and orderbook["best_ask"]:
-                return (Decimal(str(orderbook["best_bid"])) +
-                       Decimal(str(orderbook["best_ask"]))) / 2
+                return (
+                    Decimal(str(orderbook["best_bid"]))
+                    + Decimal(str(orderbook["best_ask"]))
+                ) / 2
 
             # Use best bid or ask if only one exists
             if orderbook["best_bid"]:
@@ -175,8 +183,7 @@ class LiquidityService:
 
     @staticmethod
     def generate_price_levels(
-        reference_price: Decimal,
-        side: OrderSide
+        reference_price: Decimal, side: OrderSide
     ) -> List[Tuple[Decimal, Decimal]]:
         """
         Generate 3 price levels with volume distribution.
@@ -214,7 +221,7 @@ class LiquidityService:
         db: AsyncSession,
         certificate_type: CertificateType,
         bid_amount_eur: Decimal,
-        ask_amount_eur: Decimal
+        ask_amount_eur: Decimal,
     ) -> Dict:
         """
         Preview liquidity creation without executing.
@@ -265,12 +272,14 @@ class LiquidityService:
         missing_assets_list = []
 
         if not bid_sufficient:
-            missing_assets_list.append({
-                "asset_type": "EUR",
-                "required": float(bid_amount_eur),
-                "available": float(total_eur_available),
-                "shortfall": float(bid_amount_eur - total_eur_available)
-            })
+            missing_assets_list.append(
+                {
+                    "asset_type": "EUR",
+                    "required": float(bid_amount_eur),
+                    "available": float(total_eur_available),
+                    "shortfall": float(bid_amount_eur - total_eur_available),
+                }
+            )
 
         # Get asset holders
         ah_data = await LiquidityService.get_asset_holders(db, certificate_type)
@@ -281,64 +290,72 @@ class LiquidityService:
         ask_sufficient = total_certs_available >= ask_quantity_needed
 
         if not ask_sufficient:
-            missing_assets_list.append({
-                "asset_type": certificate_type.value,
-                "required": float(ask_quantity_needed),
-                "available": float(total_certs_available),
-                "shortfall": float(ask_quantity_needed - total_certs_available)
-            })
+            missing_assets_list.append(
+                {
+                    "asset_type": certificate_type.value,
+                    "required": float(ask_quantity_needed),
+                    "available": float(total_certs_available),
+                    "shortfall": float(ask_quantity_needed - total_certs_available),
+                }
+            )
 
         # Build BID plan
         bid_plan = {
             "mms": [],
             "total_amount": float(bid_amount_eur),
-            "price_levels": []
+            "price_levels": [],
         }
 
         if lp_mms:
             eur_per_mm = bid_amount_eur / len(lp_mms)
             for mm in lp_mms:
-                bid_plan["mms"].append({
-                    "mm_id": str(mm.id),
-                    "mm_name": mm.name,
-                    "mm_type": mm.mm_type.value,
-                    "allocation": float(eur_per_mm),
-                    "orders_count": LiquidityService.ORDERS_PER_MM
-                })
+                bid_plan["mms"].append(
+                    {
+                        "mm_id": str(mm.id),
+                        "mm_name": mm.name,
+                        "mm_type": mm.mm_type.value,
+                        "allocation": float(eur_per_mm),
+                        "orders_count": LiquidityService.ORDERS_PER_MM,
+                    }
+                )
 
             # Price levels
-            levels = LiquidityService.generate_price_levels(reference_price, OrderSide.BUY)
+            levels = LiquidityService.generate_price_levels(
+                reference_price, OrderSide.BUY
+            )
             for price, pct in levels:
-                bid_plan["price_levels"].append({
-                    "price": float(price),
-                    "percentage": float(pct * 100)
-                })
+                bid_plan["price_levels"].append(
+                    {"price": float(price), "percentage": float(pct * 100)}
+                )
 
         # Build ASK plan
         ask_plan = {
             "mms": [],
             "total_amount": float(ask_amount_eur),
-            "price_levels": []
+            "price_levels": [],
         }
 
         if ah_data:
             quantity_per_mm = ask_quantity_needed / len(ah_data)
             for ah in ah_data:
-                ask_plan["mms"].append({
-                    "mm_id": str(ah["mm"].id),
-                    "mm_name": ah["mm"].name,
-                    "mm_type": ah["mm"].mm_type.value,
-                    "allocation": float(quantity_per_mm),
-                    "orders_count": LiquidityService.ORDERS_PER_MM
-                })
+                ask_plan["mms"].append(
+                    {
+                        "mm_id": str(ah["mm"].id),
+                        "mm_name": ah["mm"].name,
+                        "mm_type": ah["mm"].mm_type.value,
+                        "allocation": float(quantity_per_mm),
+                        "orders_count": LiquidityService.ORDERS_PER_MM,
+                    }
+                )
 
             # Price levels
-            levels = LiquidityService.generate_price_levels(reference_price, OrderSide.SELL)
+            levels = LiquidityService.generate_price_levels(
+                reference_price, OrderSide.SELL
+            )
             for price, pct in levels:
-                ask_plan["price_levels"].append({
-                    "price": float(price),
-                    "percentage": float(pct * 100)
-                })
+                ask_plan["price_levels"].append(
+                    {"price": float(price), "percentage": float(pct * 100)}
+                )
 
         # Suggested actions if insufficient
         suggested_actions = []
@@ -358,8 +375,9 @@ class LiquidityService:
             "ask_plan": ask_plan,
             "missing_assets": missing_assets_list if missing_assets_list else None,
             "suggested_actions": suggested_actions,
-            "total_orders_count": len(bid_plan["mms"]) * LiquidityService.ORDERS_PER_MM + len(ask_plan["mms"]) * LiquidityService.ORDERS_PER_MM,
-            "estimated_spread": LiquidityService.ESTIMATED_SPREAD_PERCENT
+            "total_orders_count": len(bid_plan["mms"]) * LiquidityService.ORDERS_PER_MM
+            + len(ask_plan["mms"]) * LiquidityService.ORDERS_PER_MM,
+            "estimated_spread": LiquidityService.ESTIMATED_SPREAD_PERCENT,
         }
 
     @staticmethod
@@ -369,7 +387,7 @@ class LiquidityService:
         bid_amount_eur: Decimal,
         ask_amount_eur: Decimal,
         created_by_id: uuid.UUID,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> LiquidityOperation:
         """
         Execute liquidity creation by placing orders across MMs.
@@ -399,7 +417,7 @@ class LiquidityService:
             db=db,
             certificate_type=certificate_type,
             bid_amount_eur=bid_amount_eur,
-            ask_amount_eur=ask_amount_eur
+            ask_amount_eur=ask_amount_eur,
         )
 
         if not preview["can_execute"]:
@@ -408,7 +426,7 @@ class LiquidityService:
             raise InsufficientAssetsError(
                 asset_type=missing["asset_type"],
                 required=Decimal(str(missing["required"])),
-                available=Decimal(str(missing["available"]))
+                available=Decimal(str(missing["available"])),
             )
 
         # Step 2: Calculate reference price
@@ -424,12 +442,16 @@ class LiquidityService:
         if not lp_mms or len(lp_mms) == 0:
             raise ValueError("No active liquidity providers available for BID orders")
         if not ah_data or len(ah_data) == 0:
-            raise ValueError(f"No active asset holders available for ASK orders with {certificate_type.value}")
+            raise ValueError(
+                f"No active asset holders available for ASK orders with {certificate_type.value}"
+            )
 
         # Step 4: Create BID orders across liquidity providers
         bid_orders = []
         eur_per_lp = bid_amount_eur / len(lp_mms)
-        bid_price_levels = LiquidityService.generate_price_levels(reference_price, OrderSide.BUY)
+        bid_price_levels = LiquidityService.generate_price_levels(
+            reference_price, OrderSide.BUY
+        )
 
         for lp_mm in lp_mms:
             for price, pct in bid_price_levels:
@@ -444,7 +466,7 @@ class LiquidityService:
                     side=OrderSide.BUY,
                     quantity=quantity,
                     price=price,
-                    status=OrderStatus.OPEN
+                    status=OrderStatus.OPEN,
                 )
                 db.add(order)
                 bid_orders.append(order)
@@ -458,7 +480,9 @@ class LiquidityService:
         ask_orders = []
         ask_quantity_needed = ask_amount_eur / reference_price
         quantity_per_ah = ask_quantity_needed / len(ah_data)
-        ask_price_levels = LiquidityService.generate_price_levels(reference_price, OrderSide.SELL)
+        ask_price_levels = LiquidityService.generate_price_levels(
+            reference_price, OrderSide.SELL
+        )
 
         for ah in ah_data:
             ah_mm = ah["mm"]
@@ -473,7 +497,7 @@ class LiquidityService:
                     side=OrderSide.SELL,
                     quantity=quantity,
                     price=price,
-                    status=OrderStatus.OPEN
+                    status=OrderStatus.OPEN,
                 )
                 db.add(order)
                 ask_orders.append(order)
@@ -484,6 +508,7 @@ class LiquidityService:
 
             # Convert CertificateType to AssetType (same values: CEA/EUA)
             from app.models.models import AssetType
+
             asset_type_value = AssetType(certificate_type.value)
 
             transaction = AssetTransaction(
@@ -494,8 +519,9 @@ class LiquidityService:
                 transaction_type=TransactionType.TRADE_DEBIT,
                 amount=-quantity_per_ah,  # Negative for debit (lock)
                 balance_before=ah["available"],  # Balance before the lock
-                balance_after=ah["available"] - quantity_per_ah,  # Balance after the lock
-                created_by=created_by_id
+                balance_after=ah["available"]
+                - quantity_per_ah,  # Balance after the lock
+                created_by=created_by_id,
             )
             db.add(transaction)
 
@@ -510,29 +536,33 @@ class LiquidityService:
             request_payload={
                 "certificate_type": certificate_type.value,
                 "bid_amount_eur": str(bid_amount_eur),
-                "ask_amount_eur": str(ask_amount_eur)
+                "ask_amount_eur": str(ask_amount_eur),
             },
             response_data={
                 "bid_orders_count": len(lp_mms) * LiquidityService.ORDERS_PER_MM,
                 "ask_orders_count": len(ah_data) * LiquidityService.ORDERS_PER_MM,
-                "reference_price": str(reference_price)
-            }
+                "reference_price": str(reference_price),
+            },
         )
 
         # Step 8: Create LiquidityOperation record
         market_makers_used = []
         for lp_mm in lp_mms:
-            market_makers_used.append({
-                "mm_id": str(lp_mm.id),
-                "mm_type": lp_mm.mm_type.value,
-                "amount": str(eur_per_lp)
-            })
+            market_makers_used.append(
+                {
+                    "mm_id": str(lp_mm.id),
+                    "mm_type": lp_mm.mm_type.value,
+                    "amount": str(eur_per_lp),
+                }
+            )
         for ah in ah_data:
-            market_makers_used.append({
-                "mm_id": str(ah["mm"].id),
-                "mm_type": ah["mm"].mm_type.value,
-                "amount": str(quantity_per_ah)
-            })
+            market_makers_used.append(
+                {
+                    "mm_id": str(ah["mm"].id),
+                    "mm_type": ah["mm"].mm_type.value,
+                    "amount": str(quantity_per_ah),
+                }
+            )
 
         all_orders = bid_orders + ask_orders
         operation = LiquidityOperation(
@@ -547,7 +577,7 @@ class LiquidityService:
             orders_created=[order.id for order in all_orders],
             reference_price=reference_price,
             created_by=created_by_id,
-            notes=notes
+            notes=notes,
         )
         db.add(operation)
 

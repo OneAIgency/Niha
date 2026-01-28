@@ -6,7 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Format currency (Platform default: EUR)
+/**
+ * Format a number as currency. Callers must pass a number; for missing amount
+ * in UI, display "—" or N/A instead of formatCurrency(0) to avoid masking invalid data.
+ * Platform default: EUR.
+ */
 export function formatCurrency(
   value: number,
   currency: string = 'EUR',
@@ -62,8 +66,12 @@ export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOpt
   });
 }
 
-// Relative time format
-export function formatRelativeTime(date: string | Date): string {
+/**
+ * Formats a date as relative time (e.g. "5m ago", "2h ago", "Jan 28").
+ * Returns '—' when date is null or undefined (safe for missing API fields like created_at).
+ */
+export function formatRelativeTime(date: string | Date | null | undefined): string {
+  if (date == null) return '—';
   const now = new Date();
   // Ensure UTC interpretation if no timezone present in ISO string
   let dateString = typeof date === 'string' ? date : date.toISOString();

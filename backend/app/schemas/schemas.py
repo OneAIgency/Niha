@@ -1,9 +1,10 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
-from enum import Enum
 from decimal import Decimal
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 # Enums
@@ -47,8 +48,9 @@ class OrderSide(str, Enum):
 
 class OrderType(str, Enum):
     """Order execution type"""
+
     MARKET = "MARKET"  # Execute immediately at best available price
-    LIMIT = "LIMIT"    # Place in order book at specified price
+    LIMIT = "LIMIT"  # Place in order book at specified price
 
 
 class OrderStatus(str, Enum):
@@ -133,6 +135,7 @@ class UserResponse(BaseModel):
 
 class UserDetailResponse(UserResponse):
     """Extended user info for admin views"""
+
     entity_name: Optional[str] = None
 
 
@@ -140,7 +143,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
-    password: Optional[str] = Field(None, min_length=8)  # Optional - if not provided, send invitation
+    password: Optional[str] = Field(
+        None, min_length=8
+    )  # Optional - if not provided, send invitation
     role: UserRole = UserRole.PENDING
     entity_id: Optional[UUID] = None
     position: Optional[str] = None
@@ -500,8 +505,10 @@ class OrderBookLevel(BaseModel):
 # Order Preview and Execution Schemas
 # =============================================================================
 
+
 class OrderFill(BaseModel):
     """Single fill from the order book"""
+
     seller_code: str
     price: float
     quantity: float
@@ -510,17 +517,25 @@ class OrderFill(BaseModel):
 
 class OrderPreviewRequest(BaseModel):
     """Request to preview an order before execution"""
+
     certificate_type: CertificateType
     side: OrderSide
-    amount_eur: Optional[float] = Field(None, gt=0, description="Amount in EUR to spend (for BUY)")
+    amount_eur: Optional[float] = Field(
+        None, gt=0, description="Amount in EUR to spend (for BUY)"
+    )
     quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
     order_type: OrderType = OrderType.MARKET
-    limit_price: Optional[float] = Field(None, gt=0, description="Limit price (required for LIMIT orders)")
-    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+    limit_price: Optional[float] = Field(
+        None, gt=0, description="Limit price (required for LIMIT orders)"
+    )
+    all_or_none: bool = Field(
+        False, description="Only execute if entire order can be filled"
+    )
 
 
 class OrderPreviewResponse(BaseModel):
     """Response with preview of order execution"""
+
     certificate_type: str
     side: str
     order_type: str
@@ -559,24 +574,33 @@ class OrderPreviewResponse(BaseModel):
 
 class MarketOrderRequest(BaseModel):
     """Request to execute a market order"""
+
     certificate_type: CertificateType
     side: OrderSide
-    amount_eur: Optional[float] = Field(None, gt=0, description="Amount in EUR to spend (for BUY)")
+    amount_eur: Optional[float] = Field(
+        None, gt=0, description="Amount in EUR to spend (for BUY)"
+    )
     quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
-    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+    all_or_none: bool = Field(
+        False, description="Only execute if entire order can be filled"
+    )
 
 
 class LimitOrderRequest(BaseModel):
     """Request to place a limit order"""
+
     certificate_type: CertificateType
     side: OrderSide
     price: float = Field(..., gt=0, description="Limit price")
     quantity: float = Field(..., gt=0, description="Quantity to buy/sell")
-    all_or_none: bool = Field(False, description="Only execute if entire order can be filled")
+    all_or_none: bool = Field(
+        False, description="Only execute if entire order can be filled"
+    )
 
 
 class OrderExecutionResponse(BaseModel):
     """Response after order execution"""
+
     success: bool
     order_id: Optional[UUID] = None
     message: str
@@ -671,8 +695,11 @@ class AuthenticationAttemptResponse(BaseModel):
 # Admin User Management Schemas
 class AdminUserFullResponse(UserResponse):
     """Full user details for admin - includes auth history and stats"""
+
     entity_name: Optional[str] = None
-    password_set: bool = False  # Indicates if user has password (NOT the actual password)
+    password_set: bool = (
+        False  # Indicates if user has password (NOT the actual password)
+    )
     login_count: int = 0
     last_login_ip: Optional[str] = None
     failed_login_count_24h: int = 0
@@ -682,6 +709,7 @@ class AdminUserFullResponse(UserResponse):
 
 class AdminUserUpdate(BaseModel):
     """Schema for admin to update any user field"""
+
     email: Optional[EmailStr] = None
     first_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
@@ -694,6 +722,7 @@ class AdminUserUpdate(BaseModel):
 
 class AdminPasswordReset(BaseModel):
     """Admin can reset user password"""
+
     new_password: str = Field(..., min_length=8)
     force_change: bool = True  # Force user to change on next login
 
@@ -702,7 +731,26 @@ class AdminPasswordReset(BaseModel):
 class DepositStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
+    ON_HOLD = "on_hold"
+    CLEARED = "cleared"
     REJECTED = "rejected"
+
+
+class HoldType(str, Enum):
+    """Types of AML hold periods"""
+
+    FIRST_DEPOSIT = "FIRST_DEPOSIT"
+    SUBSEQUENT = "SUBSEQUENT"
+    LARGE_AMOUNT = "LARGE_AMOUNT"
+
+
+class AMLStatus(str, Enum):
+    """AML review status"""
+
+    PENDING = "PENDING"
+    ON_HOLD = "ON_HOLD"
+    CLEARED = "CLEARED"
+    REJECTED = "REJECTED"
 
 
 class Currency(str, Enum):
@@ -714,6 +762,7 @@ class Currency(str, Enum):
 
 class DepositCreate(BaseModel):
     """Backoffice creates deposit when confirming wire transfer"""
+
     entity_id: UUID
     amount: float = Field(..., gt=0)
     currency: Currency
@@ -723,13 +772,17 @@ class DepositCreate(BaseModel):
 
 class UserDepositReport(BaseModel):
     """User reports a wire transfer they've made (APPROVED users only)"""
+
     amount: float = Field(..., gt=0, description="Amount sent in wire transfer")
     currency: Currency = Field(..., description="Currency of wire transfer")
-    wire_reference: Optional[str] = Field(None, max_length=100, description="Bank wire reference number")
+    wire_reference: Optional[str] = Field(
+        None, max_length=100, description="Bank wire reference number"
+    )
 
 
 class DepositConfirm(BaseModel):
     """Backoffice confirms a pending deposit with actual received amount"""
+
     amount: float = Field(..., gt=0, description="Actual amount received")
     currency: Currency = Field(..., description="Actual currency received")
     notes: Optional[str] = Field(None, description="Admin notes")
@@ -757,6 +810,7 @@ class DepositResponse(BaseModel):
 
 class EntityBalanceResponse(BaseModel):
     """Entity balance info for dashboard/backoffice"""
+
     entity_id: UUID
     entity_name: str
     balance_amount: float
@@ -767,16 +821,197 @@ class EntityBalanceResponse(BaseModel):
 
 class DepositWithEntityResponse(DepositResponse):
     """Deposit with entity details for backoffice list"""
+
     entity_name: Optional[str] = None
     user_email: Optional[str] = None
+
+
+# =============================================================================
+# Enhanced Deposit Schemas for AML Hold Management
+# =============================================================================
+
+
+class DepositAnnouncementRequest(BaseModel):
+    """Client announces incoming wire transfer"""
+
+    amount: float = Field(..., gt=0, description="Amount being sent")
+    currency: Currency = Field(..., description="Currency of wire transfer")
+    source_bank: str = Field(
+        ..., min_length=2, max_length=255, description="Name of sending bank"
+    )
+    source_iban: Optional[str] = Field(
+        None, max_length=50, description="IBAN of source account"
+    )
+    source_swift: Optional[str] = Field(
+        None, max_length=20, description="SWIFT/BIC of source bank"
+    )
+    wire_reference: Optional[str] = Field(
+        None, max_length=100, description="Wire transfer reference"
+    )
+    notes: Optional[str] = Field(None, description="Additional notes from client")
+
+
+class WireInstructions(BaseModel):
+    """Bank wire instructions for deposit"""
+
+    bank_name: str = "Nihao Group Bank Partner"
+    account_name: str = "Nihao Carbon Trading Ltd"
+    iban: str = "DE89370400440532013000"
+    swift: str = "COBADEFFXXX"
+    reference_prefix: str
+    instructions: str = "Please include the reference in your wire transfer"
+
+
+class DepositAnnouncementResponse(BaseModel):
+    """Response after client announces deposit"""
+
+    deposit_id: UUID
+    wire_instructions: WireInstructions
+    expected_hold_type: HoldType
+    expected_hold_days: int
+    message: str
+
+
+class DepositConfirmRequest(BaseModel):
+    """Admin confirms wire receipt"""
+
+    actual_amount: float = Field(..., gt=0, description="Actual amount received")
+    actual_currency: Currency = Field(..., description="Actual currency received")
+    received_at: Optional[datetime] = Field(
+        None, description="When wire was received (defaults to now)"
+    )
+    admin_notes: Optional[str] = Field(None, description="Admin notes")
+
+
+class DepositApproveRequest(BaseModel):
+    """Admin approves deposit after AML hold"""
+
+    admin_notes: Optional[str] = Field(None, description="Approval notes")
+
+
+class RejectionReason(str, Enum):
+    """Standard rejection reasons"""
+
+    SUSPICIOUS_ACTIVITY = "SUSPICIOUS_ACTIVITY"
+    INCOMPLETE_KYC = "INCOMPLETE_KYC"
+    AML_COMPLIANCE_CONCERN = "AML_COMPLIANCE_CONCERN"
+    SOURCE_OF_FUNDS_UNCLEAR = "SOURCE_OF_FUNDS_UNCLEAR"
+    WIRE_NOT_RECEIVED = "WIRE_NOT_RECEIVED"
+    AMOUNT_MISMATCH = "AMOUNT_MISMATCH"
+    OTHER = "OTHER"
+
+
+class DepositRejectRequest(BaseModel):
+    """Admin rejects deposit"""
+
+    reason: RejectionReason = Field(..., description="Rejection reason category")
+    reason_details: str = Field(..., min_length=10, description="Detailed explanation")
+    admin_notes: Optional[str] = Field(None, description="Internal admin notes")
+
+
+class DepositDetailResponse(BaseModel):
+    """Full deposit details for review"""
+
+    id: UUID
+    entity_id: UUID
+    entity_name: str
+    user_id: Optional[UUID] = None
+    user_email: Optional[str] = None
+
+    # Reported by client
+    reported_amount: Optional[float] = None
+    reported_currency: Optional[str] = None
+    source_bank: Optional[str] = None
+    source_iban: Optional[str] = None
+    source_swift: Optional[str] = None
+    wire_reference: Optional[str] = None
+    client_notes: Optional[str] = None
+
+    # Confirmed by admin
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    bank_reference: Optional[str] = None
+
+    # Status
+    status: DepositStatus
+    aml_status: Optional[AMLStatus] = None
+    hold_type: Optional[HoldType] = None
+    hold_days_required: Optional[int] = None
+    hold_expires_at: Optional[datetime] = None
+
+    # Timestamps
+    reported_at: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+    cleared_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+
+    # Admin info
+    confirmed_by: Optional[UUID] = None
+    confirmed_by_name: Optional[str] = None
+    cleared_by_admin_id: Optional[UUID] = None
+    cleared_by_name: Optional[str] = None
+    rejected_by_admin_id: Optional[UUID] = None
+    rejected_by_name: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    admin_notes: Optional[str] = None
+
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DepositListFilters(BaseModel):
+    """Filters for admin deposit list"""
+
+    status: Optional[DepositStatus] = None
+    aml_status: Optional[AMLStatus] = None
+    entity_id: Optional[UUID] = None
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    amount_min: Optional[float] = None
+    amount_max: Optional[float] = None
+    search: Optional[str] = Field(
+        None, description="Search by entity name, email, wire ref"
+    )
+
+
+class MyDepositResponse(BaseModel):
+    """Deposit info for client view"""
+
+    id: UUID
+    reported_amount: float
+    reported_currency: str
+    status: DepositStatus
+    aml_status: Optional[str] = None
+    hold_type: Optional[str] = None
+    hold_expires_at: Optional[datetime] = None
+    reported_at: datetime
+    confirmed_at: Optional[datetime] = None
+    cleared_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class HoldCalculationResult(BaseModel):
+    """Result of hold period calculation"""
+
+    hold_type: HoldType
+    hold_days: int
+    reason: str
 
 
 # =============================================================================
 # Asset Management Schemas (EUR, CEA, EUA)
 # =============================================================================
 
+
 class AssetTypeEnum(str, Enum):
     """Types of assets that can be held by entities"""
+
     EUR = "EUR"
     CEA = "CEA"
     EUA = "EUA"
@@ -784,6 +1019,7 @@ class AssetTypeEnum(str, Enum):
 
 class MarketMakerTypeEnum(str, Enum):
     """Types of market makers"""
+
     CEA_CASH_SELLER = "CEA_CASH_SELLER"
     CASH_BUYER = "CASH_BUYER"
     SWAP_MAKER = "SWAP_MAKER"
@@ -791,6 +1027,7 @@ class MarketMakerTypeEnum(str, Enum):
 
 class TransactionTypeEnum(str, Enum):
     """Types of asset transactions"""
+
     DEPOSIT = "deposit"
     WITHDRAWAL = "withdrawal"
     TRADE_BUY = "trade_buy"
@@ -800,14 +1037,18 @@ class TransactionTypeEnum(str, Enum):
 
 class AddAssetRequest(BaseModel):
     """Request to add assets to an entity"""
+
     asset_type: AssetTypeEnum
     amount: float = Field(..., gt=0, description="Amount to add (must be positive)")
-    reference: Optional[str] = Field(None, max_length=100, description="External reference")
+    reference: Optional[str] = Field(
+        None, max_length=100, description="External reference"
+    )
     notes: Optional[str] = Field(None, description="Admin notes")
 
 
 class EntityHoldingResponse(BaseModel):
     """Single asset holding for an entity"""
+
     entity_id: UUID
     asset_type: str
     quantity: float
@@ -819,6 +1060,7 @@ class EntityHoldingResponse(BaseModel):
 
 class AssetTransactionResponse(BaseModel):
     """Asset transaction record for audit trail"""
+
     id: UUID
     entity_id: UUID
     asset_type: str
@@ -837,6 +1079,7 @@ class AssetTransactionResponse(BaseModel):
 
 class EntityAssetsResponse(BaseModel):
     """Complete asset overview for an entity"""
+
     entity_id: UUID
     entity_name: str
     eur_balance: float = 0
@@ -848,6 +1091,7 @@ class EntityAssetsResponse(BaseModel):
 # =============================================================================
 # Market Maker Schemas
 # =============================================================================
+
 
 class MarketMakerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -959,6 +1203,7 @@ class TicketLogStats(BaseModel):
 # Liquidity Management Schemas
 # =============================================================================
 
+
 class LiquidityPreviewRequest(BaseModel):
     certificate_type: CertificateType
     bid_amount_eur: Decimal = Field(..., gt=0)
@@ -1015,6 +1260,7 @@ class LiquidityCreateResponse(BaseModel):
 
 class ProvisionAction(str, Enum):
     """Actions for provisioning market makers"""
+
     CREATE_NEW = "create_new"
     FUND_EXISTING = "fund_existing"
 

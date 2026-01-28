@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   FileText,
   Users,
@@ -47,21 +48,33 @@ interface IPLookupResult {
   as: string;
 }
 
-type TabType = 'requests' | 'kyc' | 'deposits' | 'details';
+type OnboardingSubpage = 'requests' | 'kyc' | 'deposits';
 
-export function BackofficePage() {
-  const [activeTab, setActiveTab] = useState<TabType>('requests');
+const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
+  { path: 'requests', label: 'Contact Requests', icon: Users },
+  { path: 'kyc', label: 'KYC Review', icon: FileText },
+  { path: 'deposits', label: 'Deposits', icon: Banknote },
+];
+
+function getOnboardingSubpage(pathname: string): OnboardingSubpage {
+  if (pathname.endsWith('/kyc') || pathname.includes('/onboarding/kyc')) return 'kyc';
+  if (pathname.endsWith('/deposits') || pathname.includes('/onboarding/deposits')) return 'deposits';
+  return 'requests';
+}
+
+export function BackofficeOnboardingPage() {
+  const { pathname } = useLocation();
+  const activeSubpage = getOnboardingSubpage(pathname);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use realtime hook for contact requests
   const {
     contactRequests: realtimeContactRequests,
     connectionStatus,
     refresh: refreshContactRequests,
   } = useBackofficeRealtime();
 
-  // Map realtime data to local interface
   const contactRequests: ContactRequest[] = realtimeContactRequests.map(r => ({
     id: r.id,
     entity_name: r.entity_name,
@@ -78,42 +91,34 @@ export function BackofficePage() {
   }));
   const contactRequestsCount = contactRequests.length;
 
-  // KYC state
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KYCDocument[]>([]);
-
-  // User details state
   const [showDocumentViewer, setShowDocumentViewer] = useState<DocumentViewerState | null>(null);
   const [documentContentUrl, setDocumentContentUrl] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
   const [documentError, setDocumentError] = useState<string | null>(null);
-
-  // IP Lookup Modal state
   const [ipLookupData, setIpLookupData] = useState<IPLookupResult | null>(null);
   const [ipLookupLoading, setIpLookupLoading] = useState(false);
   const [showIpModal, setShowIpModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  // Deposits state
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
 
   useEffect(() => {
-    if (activeTab !== 'requests') {
+    if (activeSubpage !== 'requests') {
       loadData();
     } else {
       setLoading(realtimeContactRequests.length === 0 && connectionStatus === 'connecting');
     }
-  }, [activeTab, realtimeContactRequests.length, connectionStatus]);
+  }, [activeSubpage, realtimeContactRequests.length, connectionStatus]);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      if (activeTab === 'kyc') {
+      if (activeSubpage === 'kyc') {
         const [users, docs] = await Promise.all([
           backofficeApi.getPendingUsers(),
-          backofficeApi.getKYCDocuments()
+          backofficeApi.getKYCDocuments(),
         ]);
         setKycUsers(users.map((u: PendingUserResponse): KYCUser => ({
           id: u.id,
@@ -125,7 +130,7 @@ export function BackofficePage() {
           created_at: u.created_at || new Date().toISOString(),
         })));
         setKycDocuments(docs);
-      } else if (activeTab === 'deposits') {
+      } else if (activeSubpage === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
         setPendingDeposits(deposits.map((d: PendingDepositResponse): PendingDeposit => ({
           id: d.id,
@@ -151,7 +156,7 @@ export function BackofficePage() {
   };
 
   const handleRefresh = () => {
-    if (activeTab === 'requests') {
+    if (activeSubpage === 'requests') {
       refreshContactRequests();
     } else {
       loadData();
@@ -249,7 +254,6 @@ export function BackofficePage() {
     setDocumentLoading(true);
     setDocumentError(null);
     setDocumentContentUrl(null);
-
     try {
       const blob = await backofficeApi.getDocumentContent(documentId);
       const url = URL.createObjectURL(blob);
@@ -273,9 +277,7 @@ export function BackofficePage() {
   };
 
   const handleCloseDocumentViewer = () => {
-    if (documentContentUrl) {
-      URL.revokeObjectURL(documentContentUrl);
-    }
+    if (documentContentUrl) URL.revokeObjectURL(documentContentUrl);
     setShowDocumentViewer(null);
     setDocumentContentUrl(null);
     setDocumentError(null);
@@ -283,7 +285,6 @@ export function BackofficePage() {
 
   const handleDownloadDocument = () => {
     if (!showDocumentViewer || !documentContentUrl) return;
-
     const link = document.createElement('a');
     link.href = documentContentUrl;
     link.download = showDocumentViewer.fileName;
@@ -321,7 +322,7 @@ export function BackofficePage() {
     try {
       await backofficeApi.reviewDocument(docId, status, notes);
       setKycDocuments(prev =>
-        prev.map(d => d.id === docId ? { ...d, status } : d)
+        prev.map(d => (d.id === docId ? { ...d, status } : d))
       );
     } catch (err) {
       logger.error('Failed to review document', err);
@@ -330,89 +331,95 @@ export function BackofficePage() {
     }
   };
 
-  const getUserDocuments = (userId: string) => {
-    return kycDocuments.filter(d => d.user_id === userId);
-  };
+  const getUserDocuments = (userId: string) =>
+    kycDocuments.filter(d => d.user_id === userId);
 
-  const tabs = [
-    { id: 'requests' as TabType, label: 'Contact Requests', icon: Users, count: contactRequestsCount },
-    { id: 'kyc' as TabType, label: 'KYC Review', icon: FileText, count: kycUsers.length },
-    { id: 'deposits' as TabType, label: 'Deposits', icon: Banknote, count: pendingDeposits.length },
-  ];
+  const subSubHeaderLeft = (
+    <nav className="flex items-center gap-2" aria-label="Onboarding subpages">
+      {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
+        const to = `/backoffice/onboarding/${path}`;
+        const isActive = activeSubpage === path;
+        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : pendingDeposits.length;
+        return (
+          <Link
+            key={path}
+            to={to}
+            aria-label={label}
+            aria-current={isActive ? 'page' : undefined}
+            title={label}
+            className={cn(
+              'group subsubheader-nav-btn flex items-center gap-2',
+              isActive ? 'subsubheader-nav-btn-active' : 'subsubheader-nav-btn-inactive'
+            )}
+          >
+            <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <span className="whitespace-nowrap">{label}</span>
+            {count > 0 && (
+              <span className="subsubheader-nav-badge" aria-label={`${count} items`}>
+                {count}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  const subSubHeaderRight = (
+    <div className="flex items-center gap-2">
+      {activeSubpage === 'requests' && (
+        <div
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium',
+            connectionStatus === 'connected' && 'bg-navy-700 text-navy-300',
+            connectionStatus === 'connecting' && 'bg-navy-700 text-navy-400',
+            connectionStatus === 'disconnected' && 'bg-navy-700 text-navy-400',
+            connectionStatus === 'error' && 'bg-red-500/20 text-red-400'
+          )}
+        >
+          {connectionStatus === 'connected' ? (
+            <><Wifi className="w-3 h-3" /> Live</>
+          ) : connectionStatus === 'connecting' ? (
+            <><RefreshCw className="w-3 h-3 animate-spin" /> Connecting...</>
+          ) : connectionStatus === 'error' ? (
+            <><WifiOff className="w-3 h-3" /> Error</>
+          ) : (
+            <><WifiOff className="w-3 h-3" /> Offline</>
+          )}
+        </div>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleRefresh}
+        icon={<RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />}
+      >
+        Refresh
+      </Button>
+    </div>
+  );
 
   return (
-    <BackofficeLayout>
-      {/* Error Display */}
+    <BackofficeLayout
+      subSubHeaderLeft={subSubHeaderLeft}
+      subSubHeader={subSubHeaderRight}
+    >
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertCircle className="w-5 h-5" />
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-2 text-red-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
           {error}
-          <button onClick={() => setError(null)} className="ml-auto">
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="ml-auto p-1 rounded-xl text-navy-400 hover:bg-navy-700 hover:text-white"
+            aria-label="Dismiss"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap',
-              activeTab === tab.id
-                ? 'bg-navy-600 text-white'
-                : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300 hover:bg-navy-200 dark:hover:bg-navy-600'
-            )}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-            {tab.count !== null && tab.count > 0 && (
-              <span className={cn(
-                'px-2 py-0.5 rounded-full text-xs',
-                activeTab === tab.id
-                  ? 'bg-white/20 text-white'
-                  : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-400'
-              )}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-        {/* Connection Status Indicator (only for requests tab) */}
-        {activeTab === 'requests' && (
-          <div className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium',
-            connectionStatus === 'connected' && 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300',
-            connectionStatus === 'connecting' && 'bg-navy-100 dark:bg-navy-700 text-navy-500 dark:text-navy-400',
-            connectionStatus === 'disconnected' && 'bg-navy-100 dark:bg-navy-700 text-navy-500 dark:text-navy-400',
-            connectionStatus === 'error' && 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-          )}>
-            {connectionStatus === 'connected' ? (
-              <><Wifi className="w-3 h-3" /> Live</>
-            ) : connectionStatus === 'connecting' ? (
-              <><RefreshCw className="w-3 h-3 animate-spin" /> Connecting...</>
-            ) : connectionStatus === 'error' ? (
-              <><WifiOff className="w-3 h-3" /> Error</>
-            ) : (
-              <><WifiOff className="w-3 h-3" /> Offline</>
-            )}
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          className="ml-auto"
-          icon={<RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />}
-        >
-          Refresh
-        </Button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'requests' && (
+      {activeSubpage === 'requests' && (
         <ContactRequestsTab
           contactRequests={contactRequests}
           loading={loading}
@@ -427,7 +434,7 @@ export function BackofficePage() {
         />
       )}
 
-      {activeTab === 'kyc' && (
+      {activeSubpage === 'kyc' && (
         <KYCReviewTab
           kycUsers={kycUsers}
           kycDocuments={kycDocuments}
@@ -442,7 +449,7 @@ export function BackofficePage() {
         />
       )}
 
-      {activeTab === 'deposits' && (
+      {activeSubpage === 'deposits' && (
         <PendingDepositsTab
           pendingDeposits={pendingDeposits}
           loading={loading}
@@ -452,7 +459,6 @@ export function BackofficePage() {
         />
       )}
 
-      {/* Document Viewer Modal */}
       <DocumentViewerModal
         document={showDocumentViewer}
         documentContentUrl={documentContentUrl}
@@ -463,7 +469,6 @@ export function BackofficePage() {
         onRetry={showDocumentViewer ? () => loadDocumentContent(showDocumentViewer.id) : undefined}
       />
 
-      {/* IP Lookup Modal */}
       <IPLookupModal
         isOpen={showIpModal}
         onClose={() => {

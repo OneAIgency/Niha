@@ -1,25 +1,36 @@
 """Market Maker Admin API endpoints"""
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+
+import logging
 from typing import List, Optional
 from uuid import UUID
-from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
-    User, MarketMakerClient, AssetTransaction, CertificateType,
-    TransactionType, Order, OrderStatus, TicketStatus, MarketMakerType
+    AssetTransaction,
+    CertificateType,
+    MarketMakerClient,
+    MarketMakerType,
+    Order,
+    OrderStatus,
+    TicketStatus,
+    TransactionType,
+    User,
 )
 from ...schemas.schemas import (
-    MarketMakerCreate, MarketMakerUpdate, MarketMakerResponse,
-    MarketMakerBalance, AssetTransactionCreate, MarketMakerTransactionResponse,
-    MessageResponse, TicketLogResponse
+    AssetTransactionCreate,
+    MarketMakerBalance,
+    MarketMakerCreate,
+    MarketMakerResponse,
+    MarketMakerTransactionResponse,
+    MarketMakerUpdate,
 )
 from ...services.market_maker_service import MarketMakerService
 from ...services.ticket_service import TicketService
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +43,7 @@ async def list_market_makers(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List all Market Maker clients with current balances and stats.
@@ -72,10 +83,7 @@ async def list_market_makers(
         # Get filled orders count (as proxy for trades)
         trade_count_result = await db.execute(
             select(func.count(Order.id)).where(
-                and_(
-                    Order.market_maker_id == mm.id,
-                    Order.status == OrderStatus.FILLED
-                )
+                and_(Order.market_maker_id == mm.id, Order.status == OrderStatus.FILLED)
             )
         )
         total_trades = trade_count_result.scalar() or 0
@@ -105,7 +113,7 @@ async def create_market_maker(
     request: Request,
     data: MarketMakerCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create new Market Maker client.
@@ -114,9 +122,7 @@ async def create_market_maker(
     Returns: {id, ticket_id, message}
     """
     # Check if email already exists
-    result = await db.execute(
-        select(User).where(User.email == data.email)
-    )
+    result = await db.execute(select(User).where(User.email == data.email))
     existing_user = result.scalar_one_or_none()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already exists")
@@ -130,68 +136,67 @@ async def create_market_maker(
         if data.initial_balances:
             raise HTTPException(
                 status_code=400,
-                detail="CASH_BUYER cannot have certificate balances, only EUR"
+                detail="CASH_BUYER cannot have certificate balances, only EUR",
             )
         if data.initial_eur_balance is None or data.initial_eur_balance <= 0:
             raise HTTPException(
                 status_code=400,
-                detail="CASH_BUYER must have positive initial_eur_balance"
+                detail="CASH_BUYER must have positive initial_eur_balance",
             )
     elif mm_type == MarketMakerType.CEA_CASH_SELLER:
         # CEA_CASH_SELLER: CEA-CASH market, sells CEA for EUR
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
-                status_code=400,
-                detail="CEA_CASH_SELLER cannot have EUR balance"
+                status_code=400, detail="CEA_CASH_SELLER cannot have EUR balance"
             )
         if not data.initial_balances or "CEA" not in data.initial_balances:
             raise HTTPException(
-                status_code=400,
-                detail="CEA_CASH_SELLER must have initial CEA balance"
+                status_code=400, detail="CEA_CASH_SELLER must have initial CEA balance"
             )
         if data.initial_balances["CEA"] <= 0:
             raise HTTPException(
-                status_code=400,
-                detail="CEA_CASH_SELLER must have positive CEA balance"
+                status_code=400, detail="CEA_CASH_SELLER must have positive CEA balance"
             )
         invalid_certs = set(data.initial_balances.keys()) - {"CEA"}
         if invalid_certs:
             raise HTTPException(
                 status_code=400,
-                detail=f"CEA_CASH_SELLER can only have CEA balance, found: {invalid_certs}"
+                detail=f"CEA_CASH_SELLER can only have CEA balance, found: {invalid_certs}",
             )
         if "EUA" in data.initial_balances:
             raise HTTPException(
                 status_code=400,
-                detail="CEA_CASH_SELLER operates in CEA-CASH market, cannot have EUA"
+                detail="CEA_CASH_SELLER operates in CEA-CASH market, cannot have EUA",
             )
     elif mm_type == MarketMakerType.SWAP_MAKER:
         # SWAP_MAKER: SWAP market, facilitates CEA↔EUA conversions
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
                 status_code=400,
-                detail="SWAP_MAKER operates in SWAP market, cannot have EUR"
+                detail="SWAP_MAKER operates in SWAP market, cannot have EUR",
             )
-        if not data.initial_balances or "CEA" not in data.initial_balances or "EUA" not in data.initial_balances:
+        if (
+            not data.initial_balances
+            or "CEA" not in data.initial_balances
+            or "EUA" not in data.initial_balances
+        ):
             raise HTTPException(
-                status_code=400,
-                detail="SWAP_MAKER must have both CEA and EUA balances"
+                status_code=400, detail="SWAP_MAKER must have both CEA and EUA balances"
             )
         if data.initial_balances["CEA"] <= 0 or data.initial_balances["EUA"] <= 0:
             raise HTTPException(
                 status_code=400,
-                detail="SWAP_MAKER must have positive CEA and EUA balances"
+                detail="SWAP_MAKER must have positive CEA and EUA balances",
             )
         invalid_certs = set(data.initial_balances.keys()) - {"CEA", "EUA"}
         if invalid_certs:
             raise HTTPException(
                 status_code=400,
-                detail=f"SWAP_MAKER can only have CEA and EUA balances, found: {invalid_certs}"
+                detail=f"SWAP_MAKER can only have CEA and EUA balances, found: {invalid_certs}",
             )
     else:
         raise HTTPException(
-            status_code=500,
-            detail=f"Unknown market maker type: {mm_type}"
+            status_code=500, detail=f"Unknown market maker type: {mm_type}"
         )
 
     # Create Market Maker
@@ -206,12 +211,14 @@ async def create_market_maker(
         initial_eur_balance=data.initial_eur_balance,
     )
 
-    logger.info(f"Admin {admin_user.email} created Market Maker {mm_client.name} (ID: {mm_client.id})")
+    logger.info(
+        f"Admin {admin_user.email} created Market Maker {mm_client.name} (ID: {mm_client.id})"
+    )
 
     return {
         "id": str(mm_client.id),
         "ticket_id": ticket_id,
-        "message": f"Market Maker '{mm_client.name}' created successfully"
+        "message": f"Market Maker '{mm_client.name}' created successfully",
     }
 
 
@@ -219,7 +226,7 @@ async def create_market_maker(
 async def get_market_maker(
     market_maker_id: UUID,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get Market Maker details by ID.
@@ -251,10 +258,7 @@ async def get_market_maker(
     # Get filled orders count
     trade_count_result = await db.execute(
         select(func.count(Order.id)).where(
-            and_(
-                Order.market_maker_id == mm.id,
-                Order.status == OrderStatus.FILLED
-            )
+            and_(Order.market_maker_id == mm.id, Order.status == OrderStatus.FILLED)
         )
     )
     total_trades = trade_count_result.scalar() or 0
@@ -278,7 +282,7 @@ async def update_market_maker(
     market_maker_id: UUID,
     data: MarketMakerUpdate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update Market Maker details.
@@ -324,11 +328,13 @@ async def update_market_maker(
         tags=["market_maker", "update"],
     )
 
-    logger.info(f"Admin {admin_user.email} updated Market Maker {mm.name} (ID: {mm.id})")
+    logger.info(
+        f"Admin {admin_user.email} updated Market Maker {mm.name} (ID: {mm.id})"
+    )
 
     return {
         "ticket_id": ticket.ticket_id,
-        "message": f"Market Maker '{mm.name}' updated successfully"
+        "message": f"Market Maker '{mm.name}' updated successfully",
     }
 
 
@@ -336,7 +342,7 @@ async def update_market_maker(
 async def delete_market_maker(
     market_maker_id: UUID,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Soft delete Market Maker (set is_active = False).
@@ -361,7 +367,7 @@ async def delete_market_maker(
         select(func.count(Order.id)).where(
             and_(
                 Order.market_maker_id == mm.id,
-                Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]),
             )
         )
     )
@@ -370,7 +376,7 @@ async def delete_market_maker(
     if open_orders_count > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot deactivate Market Maker with {open_orders_count} open orders. Cancel orders first."
+            detail=f"Cannot deactivate Market Maker with {open_orders_count} open orders. Cancel orders first.",
         )
 
     # Capture before state
@@ -380,9 +386,7 @@ async def delete_market_maker(
     mm.is_active = False
 
     # Also deactivate associated user
-    result = await db.execute(
-        select(User).where(User.id == mm.user_id)
-    )
+    result = await db.execute(select(User).where(User.id == mm.user_id))
     user = result.scalar_one_or_none()
     if user:
         user.is_active = False
@@ -407,11 +411,13 @@ async def delete_market_maker(
         tags=["market_maker", "deletion"],
     )
 
-    logger.info(f"Admin {admin_user.email} deactivated Market Maker {mm.name} (ID: {mm.id})")
+    logger.info(
+        f"Admin {admin_user.email} deactivated Market Maker {mm.name} (ID: {mm.id})"
+    )
 
     return {
         "ticket_id": ticket.ticket_id,
-        "message": f"Market Maker '{mm.name}' deactivated successfully"
+        "message": f"Market Maker '{mm.name}' deactivated successfully",
     }
 
 
@@ -419,7 +425,7 @@ async def delete_market_maker(
 async def get_market_maker_balances(
     market_maker_id: UUID,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get current balances for Market Maker.
@@ -448,7 +454,10 @@ async def get_market_maker_balances(
     return formatted_balances
 
 
-@router.get("/{market_maker_id}/transactions", response_model=List[MarketMakerTransactionResponse])
+@router.get(
+    "/{market_maker_id}/transactions",
+    response_model=List[MarketMakerTransactionResponse],
+)
 async def list_market_maker_transactions(
     market_maker_id: UUID,
     certificate_type: Optional[str] = None,
@@ -456,7 +465,7 @@ async def list_market_maker_transactions(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List all transactions for a Market Maker.
@@ -472,23 +481,29 @@ async def list_market_maker_transactions(
         raise HTTPException(status_code=404, detail="Market Maker not found")
 
     # Build query
-    query = select(AssetTransaction).where(
-        AssetTransaction.market_maker_id == market_maker_id
-    ).order_by(AssetTransaction.created_at.desc())
+    query = (
+        select(AssetTransaction)
+        .where(AssetTransaction.market_maker_id == market_maker_id)
+        .order_by(AssetTransaction.created_at.desc())
+    )
 
     if certificate_type:
         try:
             cert_type_enum = CertificateType(certificate_type)
             query = query.where(AssetTransaction.certificate_type == cert_type_enum)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+            )
 
     if transaction_type:
         try:
             trans_type_enum = TransactionType(transaction_type)
             query = query.where(AssetTransaction.transaction_type == trans_type_enum)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid transaction_type: {transaction_type}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid transaction_type: {transaction_type}"
+            )
 
     # Pagination
     offset = (page - 1) * per_page
@@ -519,7 +534,7 @@ async def create_market_maker_transaction(
     market_maker_id: UUID,
     data: AssetTransactionCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create asset transaction (deposit/withdrawal) for Market Maker.
@@ -545,13 +560,17 @@ async def create_market_maker_transaction(
     try:
         cert_type = CertificateType(data.certificate_type)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}"
+        )
 
     # Validate transaction type
     try:
         trans_type = TransactionType(data.transaction_type)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid transaction_type: {data.transaction_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid transaction_type: {data.transaction_type}"
+        )
 
     # Calculate amount (negative for withdrawals)
     amount = data.amount if trans_type == TransactionType.DEPOSIT else -data.amount
@@ -568,7 +587,7 @@ async def create_market_maker_transaction(
         if not has_sufficient:
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient available balance for {cert_type.value} withdrawal"
+                detail=f"Insufficient available balance for {cert_type.value} withdrawal",
             )
 
     # Create transaction
@@ -591,5 +610,5 @@ async def create_market_maker_transaction(
         "transaction_id": str(transaction.id),
         "ticket_id": ticket_id,
         "balance_after": float(transaction.balance_after),
-        "message": f"{trans_type.value.title()} of {data.amount} {cert_type.value} completed successfully"
+        "message": f"{trans_type.value.title()} of {data.amount} {cert_type.value} completed successfully",
     }

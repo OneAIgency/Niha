@@ -11,20 +11,23 @@ Provides monitoring capabilities for the settlement system:
 This service runs alongside the settlement processor to ensure
 settlement health and identify issues requiring manual intervention.
 """
+
 import logging
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.models import (
-    SettlementBatch, SettlementStatus, SettlementType,
-    SettlementStatusHistory, User, Entity
+    Entity,
+    SettlementBatch,
+    SettlementStatus,
+    User,
 )
 from ..services.email_service import EmailService
-from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SettlementMetrics:
     """Settlement system health metrics"""
+
     total_pending: int
     total_in_progress: int
     total_settled_today: int
@@ -46,6 +50,7 @@ class SettlementMetrics:
 @dataclass
 class SettlementAlert:
     """Alert for settlement requiring attention"""
+
     severity: str  # "WARNING", "ERROR", "CRITICAL"
     settlement_id: str
     batch_reference: str
@@ -81,21 +86,25 @@ class SettlementMonitoring:
 
         in_progress_count = await db.scalar(
             select(func.count(SettlementBatch.id)).where(
-                SettlementBatch.status.in_([
-                    SettlementStatus.TRANSFER_INITIATED,
-                    SettlementStatus.IN_TRANSIT,
-                    SettlementStatus.AT_CUSTODY
-                ])
+                SettlementBatch.status.in_(
+                    [
+                        SettlementStatus.TRANSFER_INITIATED,
+                        SettlementStatus.IN_TRANSIT,
+                        SettlementStatus.AT_CUSTODY,
+                    ]
+                )
             )
         )
 
         # Settled today
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         settled_today_count = await db.scalar(
             select(func.count(SettlementBatch.id)).where(
                 and_(
                     SettlementBatch.status == SettlementStatus.SETTLED,
-                    SettlementBatch.updated_at >= today_start
+                    SettlementBatch.updated_at >= today_start,
                 )
             )
         )
@@ -113,10 +122,9 @@ class SettlementMonitoring:
             select(func.count(SettlementBatch.id)).where(
                 and_(
                     SettlementBatch.expected_settlement_date < now,
-                    SettlementBatch.status.notin_([
-                        SettlementStatus.SETTLED,
-                        SettlementStatus.FAILED
-                    ])
+                    SettlementBatch.status.notin_(
+                        [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                    ),
                 )
             )
         )
@@ -124,10 +132,9 @@ class SettlementMonitoring:
         # Total value pending
         pending_value = await db.scalar(
             select(func.sum(SettlementBatch.total_value_eur)).where(
-                SettlementBatch.status.notin_([
-                    SettlementStatus.SETTLED,
-                    SettlementStatus.FAILED
-                ])
+                SettlementBatch.status.notin_(
+                    [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                )
             )
         ) or Decimal("0")
 
@@ -136,7 +143,7 @@ class SettlementMonitoring:
             select(func.sum(SettlementBatch.total_value_eur)).where(
                 and_(
                     SettlementBatch.status == SettlementStatus.SETTLED,
-                    SettlementBatch.updated_at >= today_start
+                    SettlementBatch.updated_at >= today_start,
                 )
             )
         ) or Decimal("0")
@@ -144,12 +151,14 @@ class SettlementMonitoring:
         # Average settlement time (PENDING → SETTLED)
         avg_time = None
         result = await db.execute(
-            select(SettlementBatch).where(
+            select(SettlementBatch)
+            .where(
                 and_(
                     SettlementBatch.status == SettlementStatus.SETTLED,
-                    SettlementBatch.actual_settlement_date.isnot(None)
+                    SettlementBatch.actual_settlement_date.isnot(None),
                 )
-            ).limit(100)  # Last 100 settlements
+            )
+            .limit(100)  # Last 100 settlements
         )
         settled = result.scalars().all()
         if settled:
@@ -157,19 +166,23 @@ class SettlementMonitoring:
             count = 0
             for s in settled:
                 if s.actual_settlement_date:
-                    duration = (s.actual_settlement_date - s.created_at).total_seconds() / 3600
+                    duration = (
+                        s.actual_settlement_date - s.created_at
+                    ).total_seconds() / 3600
                     total_hours += duration
                     count += 1
             avg_time = total_hours / count if count > 0 else None
 
         # Oldest pending settlement
         oldest_pending_result = await db.execute(
-            select(SettlementBatch).where(
-                SettlementBatch.status.notin_([
-                    SettlementStatus.SETTLED,
-                    SettlementStatus.FAILED
-                ])
-            ).order_by(SettlementBatch.created_at.asc()).limit(1)
+            select(SettlementBatch)
+            .where(
+                SettlementBatch.status.notin_(
+                    [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                )
+            )
+            .order_by(SettlementBatch.created_at.asc())
+            .limit(1)
         )
         oldest = oldest_pending_result.scalars().first()
         oldest_days = None
@@ -185,7 +198,7 @@ class SettlementMonitoring:
             avg_settlement_time_hours=avg_time,
             total_value_pending_eur=pending_value,
             total_value_settled_today_eur=settled_today_value,
-            oldest_pending_days=oldest_days
+            oldest_pending_days=oldest_days,
         )
 
     @staticmethod
@@ -206,105 +219,114 @@ class SettlementMonitoring:
 
         # === CRITICAL: Failed Settlements ===
         failed_result = await db.execute(
-            select(SettlementBatch, Entity).join(
-                Entity, SettlementBatch.entity_id == Entity.id
-            ).where(
-                SettlementBatch.status == SettlementStatus.FAILED
-            )
+            select(SettlementBatch, Entity)
+            .join(Entity, SettlementBatch.entity_id == Entity.id)
+            .where(SettlementBatch.status == SettlementStatus.FAILED)
         )
         for settlement, entity in failed_result:
-            alerts.append(SettlementAlert(
-                severity="CRITICAL",
-                settlement_id=str(settlement.id),
-                batch_reference=settlement.batch_reference,
-                alert_type="FAILED_SETTLEMENT",
-                message=f"Settlement failed - requires manual intervention",
-                entity_name=entity.name,
-                total_value_eur=settlement.total_value_eur
-            ))
+            alerts.append(
+                SettlementAlert(
+                    severity="CRITICAL",
+                    settlement_id=str(settlement.id),
+                    batch_reference=settlement.batch_reference,
+                    alert_type="FAILED_SETTLEMENT",
+                    message="Settlement failed - requires manual intervention",
+                    entity_name=entity.name,
+                    total_value_eur=settlement.total_value_eur,
+                )
+            )
 
         # === ERROR: Critically Overdue (3+ days past expected) ===
         critical_overdue = await db.execute(
-            select(SettlementBatch, Entity).join(
-                Entity, SettlementBatch.entity_id == Entity.id
-            ).where(
+            select(SettlementBatch, Entity)
+            .join(Entity, SettlementBatch.entity_id == Entity.id)
+            .where(
                 and_(
-                    SettlementBatch.expected_settlement_date < now - timedelta(days=SettlementMonitoring.OVERDUE_CRITICAL_DAYS),
-                    SettlementBatch.status.notin_([
-                        SettlementStatus.SETTLED,
-                        SettlementStatus.FAILED
-                    ])
+                    SettlementBatch.expected_settlement_date
+                    < now - timedelta(days=SettlementMonitoring.OVERDUE_CRITICAL_DAYS),
+                    SettlementBatch.status.notin_(
+                        [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                    ),
                 )
             )
         )
         for settlement, entity in critical_overdue:
             days_overdue = (now - settlement.expected_settlement_date).days
-            alerts.append(SettlementAlert(
-                severity="ERROR",
-                settlement_id=str(settlement.id),
-                batch_reference=settlement.batch_reference,
-                alert_type="CRITICALLY_OVERDUE",
-                message=f"Settlement {days_overdue} days overdue - urgent review required",
-                entity_name=entity.name,
-                days_overdue=days_overdue,
-                total_value_eur=settlement.total_value_eur
-            ))
+            alerts.append(
+                SettlementAlert(
+                    severity="ERROR",
+                    settlement_id=str(settlement.id),
+                    batch_reference=settlement.batch_reference,
+                    alert_type="CRITICALLY_OVERDUE",
+                    message=f"Settlement {days_overdue} days overdue - urgent review required",
+                    entity_name=entity.name,
+                    days_overdue=days_overdue,
+                    total_value_eur=settlement.total_value_eur,
+                )
+            )
 
         # === WARNING: Overdue (1+ days past expected) ===
         warning_overdue = await db.execute(
-            select(SettlementBatch, Entity).join(
-                Entity, SettlementBatch.entity_id == Entity.id
-            ).where(
+            select(SettlementBatch, Entity)
+            .join(Entity, SettlementBatch.entity_id == Entity.id)
+            .where(
                 and_(
-                    SettlementBatch.expected_settlement_date < now - timedelta(days=SettlementMonitoring.OVERDUE_WARNING_DAYS),
-                    SettlementBatch.expected_settlement_date >= now - timedelta(days=SettlementMonitoring.OVERDUE_CRITICAL_DAYS),
-                    SettlementBatch.status.notin_([
-                        SettlementStatus.SETTLED,
-                        SettlementStatus.FAILED
-                    ])
+                    SettlementBatch.expected_settlement_date
+                    < now - timedelta(days=SettlementMonitoring.OVERDUE_WARNING_DAYS),
+                    SettlementBatch.expected_settlement_date
+                    >= now - timedelta(days=SettlementMonitoring.OVERDUE_CRITICAL_DAYS),
+                    SettlementBatch.status.notin_(
+                        [SettlementStatus.SETTLED, SettlementStatus.FAILED]
+                    ),
                 )
             )
         )
         for settlement, entity in warning_overdue:
             days_overdue = (now - settlement.expected_settlement_date).days
-            alerts.append(SettlementAlert(
-                severity="WARNING",
-                settlement_id=str(settlement.id),
-                batch_reference=settlement.batch_reference,
-                alert_type="OVERDUE",
-                message=f"Settlement {days_overdue} days overdue",
-                entity_name=entity.name,
-                days_overdue=days_overdue,
-                total_value_eur=settlement.total_value_eur
-            ))
+            alerts.append(
+                SettlementAlert(
+                    severity="WARNING",
+                    settlement_id=str(settlement.id),
+                    batch_reference=settlement.batch_reference,
+                    alert_type="OVERDUE",
+                    message=f"Settlement {days_overdue} days overdue",
+                    entity_name=entity.name,
+                    days_overdue=days_overdue,
+                    total_value_eur=settlement.total_value_eur,
+                )
+            )
 
         # === WARNING: Stuck in Status (48+ hours no progress) ===
         stuck_threshold = now - timedelta(hours=SettlementMonitoring.STUCK_STATUS_HOURS)
         stuck_result = await db.execute(
-            select(SettlementBatch, Entity).join(
-                Entity, SettlementBatch.entity_id == Entity.id
-            ).where(
+            select(SettlementBatch, Entity)
+            .join(Entity, SettlementBatch.entity_id == Entity.id)
+            .where(
                 and_(
                     SettlementBatch.updated_at < stuck_threshold,
-                    SettlementBatch.status.notin_([
-                        SettlementStatus.PENDING,  # Expected to wait
-                        SettlementStatus.SETTLED,
-                        SettlementStatus.FAILED
-                    ])
+                    SettlementBatch.status.notin_(
+                        [
+                            SettlementStatus.PENDING,  # Expected to wait
+                            SettlementStatus.SETTLED,
+                            SettlementStatus.FAILED,
+                        ]
+                    ),
                 )
             )
         )
         for settlement, entity in stuck_result:
             hours_stuck = (now - settlement.updated_at).total_seconds() / 3600
-            alerts.append(SettlementAlert(
-                severity="WARNING",
-                settlement_id=str(settlement.id),
-                batch_reference=settlement.batch_reference,
-                alert_type="STUCK_IN_STATUS",
-                message=f"Settlement stuck in {settlement.status.value} for {int(hours_stuck)} hours",
-                entity_name=entity.name,
-                total_value_eur=settlement.total_value_eur
-            ))
+            alerts.append(
+                SettlementAlert(
+                    severity="WARNING",
+                    settlement_id=str(settlement.id),
+                    batch_reference=settlement.batch_reference,
+                    alert_type="STUCK_IN_STATUS",
+                    message=f"Settlement stuck in {settlement.status.value} for {int(hours_stuck)} hours",
+                    entity_name=entity.name,
+                    total_value_eur=settlement.total_value_eur,
+                )
+            )
 
         # Sort by severity: CRITICAL > ERROR > WARNING
         severity_order = {"CRITICAL": 0, "ERROR": 1, "WARNING": 2}
@@ -329,26 +351,30 @@ class SettlementMonitoring:
         alerts = await SettlementMonitoring.detect_alerts(db)
 
         # Get settlements completed today
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         completed_result = await db.execute(
-            select(SettlementBatch, Entity).join(
-                Entity, SettlementBatch.entity_id == Entity.id
-            ).where(
+            select(SettlementBatch, Entity)
+            .join(Entity, SettlementBatch.entity_id == Entity.id)
+            .where(
                 and_(
                     SettlementBatch.status == SettlementStatus.SETTLED,
-                    SettlementBatch.updated_at >= today_start
+                    SettlementBatch.updated_at >= today_start,
                 )
             )
         )
         completed_today = []
         for settlement, entity in completed_result:
-            completed_today.append({
-                "batch_reference": settlement.batch_reference,
-                "entity_name": entity.name,
-                "quantity": float(settlement.quantity),
-                "total_value_eur": float(settlement.total_value_eur),
-                "settlement_type": settlement.settlement_type.value
-            })
+            completed_today.append(
+                {
+                    "batch_reference": settlement.batch_reference,
+                    "entity_name": entity.name,
+                    "quantity": float(settlement.quantity),
+                    "total_value_eur": float(settlement.total_value_eur),
+                    "settlement_type": settlement.settlement_type.value,
+                }
+            )
 
         return {
             "report_date": datetime.utcnow().isoformat(),
@@ -361,7 +387,7 @@ class SettlementMonitoring:
                 "avg_settlement_time_hours": metrics.avg_settlement_time_hours,
                 "pending_value_eur": float(metrics.total_value_pending_eur),
                 "settled_today_value_eur": float(metrics.total_value_settled_today_eur),
-                "oldest_pending_days": metrics.oldest_pending_days
+                "oldest_pending_days": metrics.oldest_pending_days,
             },
             "alerts": [
                 {
@@ -371,15 +397,19 @@ class SettlementMonitoring:
                     "batch_reference": alert.batch_reference,
                     "entity": alert.entity_name,
                     "days_overdue": alert.days_overdue,
-                    "value_eur": float(alert.total_value_eur) if alert.total_value_eur else None
+                    "value_eur": float(alert.total_value_eur)
+                    if alert.total_value_eur
+                    else None,
                 }
                 for alert in alerts
             ],
-            "completed_today": completed_today
+            "completed_today": completed_today,
         }
 
     @staticmethod
-    async def send_alert_emails(db: AsyncSession, alerts: List[SettlementAlert]) -> None:
+    async def send_alert_emails(
+        db: AsyncSession, alerts: List[SettlementAlert]
+    ) -> None:
         """
         Send email alerts for critical issues.
 
@@ -395,9 +425,7 @@ class SettlementMonitoring:
             return
 
         # Get admin users
-        result = await db.execute(
-            select(User).where(User.role == "ADMIN")
-        )
+        result = await db.execute(select(User).where(User.role == "ADMIN"))
         admins = result.scalars().all()
 
         if not admins:
@@ -413,7 +441,7 @@ class SettlementMonitoring:
                 Batch: {alert.batch_reference}<br>
                 Entity: {alert.entity_name}<br>
                 {alert.message}<br>
-                {f'Value: €{alert.total_value_eur:,.2f}' if alert.total_value_eur else ''}
+                {f"Value: €{alert.total_value_eur:,.2f}" if alert.total_value_eur else ""}
             </li>
             """
         alert_html += "</ul>"
@@ -425,7 +453,7 @@ class SettlementMonitoring:
                 await email_service._send_email(
                     to_email=admin.email,
                     subject=f"[NIHA] Settlement System Alert - {len(critical_alerts)} Issue(s)",
-                    html_content=alert_html
+                    html_content=alert_html,
                 )
                 logger.info(f"Sent settlement alerts to {admin.email}")
             except Exception as e:
@@ -473,7 +501,7 @@ class SettlementMonitoring:
                 "alert_count": len(alerts),
                 "critical_alerts": len([a for a in alerts if a.severity == "CRITICAL"]),
                 "error_alerts": len([a for a in alerts if a.severity == "ERROR"]),
-                "warning_alerts": len([a for a in alerts if a.severity == "WARNING"])
+                "warning_alerts": len([a for a in alerts if a.severity == "WARNING"]),
             }
 
         except Exception as e:
@@ -481,5 +509,5 @@ class SettlementMonitoring:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }

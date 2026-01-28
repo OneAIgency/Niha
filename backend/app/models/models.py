@@ -1,9 +1,23 @@
+import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Numeric, Integer, Text, Enum as SQLEnum, JSON, LargeBinary
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    Numeric,
+    String,
+    Text,
+)
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
-import enum
+
 from ..core.database import Base
 
 
@@ -30,15 +44,15 @@ class UserRole(str, enum.Enum):
 
 class DocumentType(str, enum.Enum):
     # Company Documents
-    REGISTRATION = "REGISTRATION"          # Business Registration Certificate
-    TAX_CERTIFICATE = "TAX_CERTIFICATE"    # Tax Registration Certificate
-    ARTICLES = "ARTICLES"                  # Articles of Association
+    REGISTRATION = "REGISTRATION"  # Business Registration Certificate
+    TAX_CERTIFICATE = "TAX_CERTIFICATE"  # Tax Registration Certificate
+    ARTICLES = "ARTICLES"  # Articles of Association
     FINANCIAL_STATEMENTS = "FINANCIAL_STATEMENTS"  # Latest Financial Statements
-    GHG_PERMIT = "GHG_PERMIT"              # Greenhouse Gas Emissions Permit (optional)
+    GHG_PERMIT = "GHG_PERMIT"  # Greenhouse Gas Emissions Permit (optional)
     # Representative Documents
-    ID = "ID"                              # Government-Issued ID
-    PROOF_AUTHORITY = "PROOF_AUTHORITY"    # Proof of Authority / Power of Attorney
-    CONTACT_INFO = "CONTACT_INFO"          # Representative Contact Information
+    ID = "ID"  # Government-Issued ID
+    PROOF_AUTHORITY = "PROOF_AUTHORITY"  # Proof of Authority / Power of Attorney
+    CONTACT_INFO = "CONTACT_INFO"  # Representative Contact Information
 
 
 class DocumentStatus(str, enum.Enum):
@@ -116,9 +130,28 @@ class OrderStatus(str, enum.Enum):
 
 
 class DepositStatus(str, enum.Enum):
-    PENDING = "pending"          # User claims they sent wire
-    CONFIRMED = "confirmed"      # Backoffice confirmed receipt
-    REJECTED = "rejected"        # Wire not received or invalid
+    PENDING = "pending"  # User announced wire transfer
+    CONFIRMED = "confirmed"  # Backoffice confirmed receipt, now ON_HOLD
+    ON_HOLD = "on_hold"  # AML hold period active
+    CLEARED = "cleared"  # AML hold passed, funds available
+    REJECTED = "rejected"  # Wire not received or AML rejected
+
+
+class HoldType(str, enum.Enum):
+    """Types of AML hold periods"""
+
+    FIRST_DEPOSIT = "FIRST_DEPOSIT"  # First deposit from entity
+    SUBSEQUENT = "SUBSEQUENT"  # Regular subsequent deposit
+    LARGE_AMOUNT = "LARGE_AMOUNT"  # Large amount (>500K EUR)
+
+
+class AMLStatus(str, enum.Enum):
+    """AML review status for deposits"""
+
+    PENDING = "PENDING"  # Awaiting wire confirmation
+    ON_HOLD = "ON_HOLD"  # Hold period active
+    CLEARED = "CLEARED"  # Approved and funds released
+    REJECTED = "REJECTED"  # Rejected for AML reasons
 
 
 class Currency(str, enum.Enum):
@@ -130,15 +163,19 @@ class Currency(str, enum.Enum):
 
 class MarketMakerType(str, enum.Enum):
     """Types of market maker clients - organized by market"""
-    CEA_CASH_SELLER = "CEA_CASH_SELLER"    # CEA-CASH market: Holds CEA, places SELL orders
-    CASH_BUYER = "CASH_BUYER"              # CEA-CASH market: Holds EUR, places BUY orders
-    SWAP_MAKER = "SWAP_MAKER"              # SWAP market: Facilitates CEA↔EUA swaps
+
+    CEA_CASH_SELLER = (
+        "CEA_CASH_SELLER"  # CEA-CASH market: Holds CEA, places SELL orders
+    )
+    CASH_BUYER = "CASH_BUYER"  # CEA-CASH market: Holds EUR, places BUY orders
+    SWAP_MAKER = "SWAP_MAKER"  # SWAP market: Facilitates CEA↔EUA swaps
 
 
 class MarketType(str, enum.Enum):
     """Trading markets"""
+
     CEA_CASH = "CEA_CASH"  # Cash market: Buy/sell CEA with EUR
-    SWAP = "SWAP"          # Swap market: Exchange CEA↔EUA
+    SWAP = "SWAP"  # Swap market: Exchange CEA↔EUA
 
 
 class Entity(Base):
@@ -163,8 +200,12 @@ class Entity(Base):
 
     users = relationship("User", back_populates="entity", foreign_keys="User.entity_id")
     certificates = relationship("Certificate", back_populates="entity")
-    buy_trades = relationship("Trade", foreign_keys="Trade.buyer_entity_id", back_populates="buyer")
-    sell_trades = relationship("Trade", foreign_keys="Trade.seller_entity_id", back_populates="seller")
+    buy_trades = relationship(
+        "Trade", foreign_keys="Trade.buyer_entity_id", back_populates="buyer"
+    )
+    sell_trades = relationship(
+        "Trade", foreign_keys="Trade.seller_entity_id", back_populates="seller"
+    )
     swap_requests = relationship("SwapRequest", back_populates="entity")
     kyc_documents = relationship("KYCDocument", back_populates="entity")
     deposits = relationship("Deposit", back_populates="entity")
@@ -197,27 +238,57 @@ class User(Base):
     entity = relationship("Entity", back_populates="users", foreign_keys=[entity_id])
     activity_logs = relationship("ActivityLog", back_populates="user")
     sessions = relationship("UserSession", back_populates="user")
-    kyc_documents = relationship("KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id")
+    kyc_documents = relationship(
+        "KYCDocument", back_populates="user", foreign_keys="KYCDocument.user_id"
+    )
     auth_attempts = relationship("AuthenticationAttempt", back_populates="user")
-    market_maker_client = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.user_id", back_populates="user", uselist=False)
-    created_market_maker_clients = relationship("MarketMakerClient", foreign_keys="MarketMakerClient.created_by", back_populates="creator")
+    market_maker_client = relationship(
+        "MarketMakerClient",
+        foreign_keys="MarketMakerClient.user_id",
+        back_populates="user",
+        uselist=False,
+    )
+    created_market_maker_clients = relationship(
+        "MarketMakerClient",
+        foreign_keys="MarketMakerClient.created_by",
+        back_populates="creator",
+    )
 
 
 class MarketMakerClient(Base):
     """Market Maker client managed by admin"""
+
     __tablename__ = "market_maker_clients"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
     name = Column(String(100), nullable=False)  # Display name like "MM-Alpha"
-    client_code = Column(String(20), unique=True, nullable=False, index=True)  # e.g., "MM-001", "MM-002"
+    client_code = Column(
+        String(20), unique=True, nullable=False, index=True
+    )  # e.g., "MM-001", "MM-002"
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    mm_type = Column(SQLEnum(MarketMakerType), default=MarketMakerType.CEA_CASH_SELLER, nullable=False)
-    eur_balance = Column(Numeric(18, 2), default=0, nullable=False)  # For Liquidity Providers
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    created_by = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    mm_type = Column(
+        SQLEnum(MarketMakerType),
+        default=MarketMakerType.CEA_CASH_SELLER,
+        nullable=False,
+    )
+    eur_balance = Column(
+        Numeric(18, 2), default=0, nullable=False
+    )  # For Liquidity Providers
 
     @property
     def market(self) -> MarketType:
@@ -228,7 +299,10 @@ class MarketMakerClient(Base):
             MarketType.CEA_CASH for CEA_CASH_SELLER and CASH_BUYER
             MarketType.SWAP for SWAP_MAKER
         """
-        if self.mm_type in (MarketMakerType.CEA_CASH_SELLER, MarketMakerType.CASH_BUYER):
+        if self.mm_type in (
+            MarketMakerType.CEA_CASH_SELLER,
+            MarketMakerType.CASH_BUYER,
+        ):
             return MarketType.CEA_CASH
         elif self.mm_type == MarketMakerType.SWAP_MAKER:
             return MarketType.SWAP
@@ -237,8 +311,12 @@ class MarketMakerClient(Base):
             raise ValueError(f"Unknown market maker type: {self.mm_type}")
 
     # Relationships
-    user = relationship("User", foreign_keys=[user_id], back_populates="market_maker_client")
-    creator = relationship("User", foreign_keys=[created_by], back_populates="created_market_maker_clients")
+    user = relationship(
+        "User", foreign_keys=[user_id], back_populates="market_maker_client"
+    )
+    creator = relationship(
+        "User", foreign_keys=[created_by], back_populates="created_market_maker_clients"
+    )
     transactions = relationship("AssetTransaction", back_populates="market_maker")
     orders = relationship("Order", back_populates="market_maker")
 
@@ -253,7 +331,9 @@ class ContactRequest(Base):
     position = Column(String(100))
     reference = Column(String(255))
     request_type = Column(String(50), default="join")  # 'join' or 'nda'
-    nda_file_path = Column(String(500), nullable=True)  # Deprecated - kept for migration
+    nda_file_path = Column(
+        String(500), nullable=True
+    )  # Deprecated - kept for migration
     nda_file_name = Column(String(255), nullable=True)
     nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
@@ -298,8 +378,12 @@ class Trade(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
 
-    buyer = relationship("Entity", foreign_keys=[buyer_entity_id], back_populates="buy_trades")
-    seller = relationship("Entity", foreign_keys=[seller_entity_id], back_populates="sell_trades")
+    buyer = relationship(
+        "Entity", foreign_keys=[buyer_entity_id], back_populates="buy_trades"
+    )
+    seller = relationship(
+        "Entity", foreign_keys=[seller_entity_id], back_populates="sell_trades"
+    )
 
 
 class SwapRequest(Base):
@@ -312,7 +396,9 @@ class SwapRequest(Base):
     quantity = Column(Numeric(18, 2), nullable=False)
     desired_rate = Column(Numeric(10, 6))
     status = Column(SQLEnum(SwapStatus), default=SwapStatus.OPEN)
-    matched_with = Column(UUID(as_uuid=True), ForeignKey("swap_requests.id"), nullable=True)
+    matched_with = Column(
+        UUID(as_uuid=True), ForeignKey("swap_requests.id"), nullable=True
+    )
     anonymous_code = Column(String(10), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -333,11 +419,16 @@ class PriceHistory(Base):
 
 class ActivityLog(Base):
     """Track user activity for audit and analytics"""
+
     __tablename__ = "activity_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    action = Column(String(100), nullable=False)  # login, logout, view_page, trade, etc.
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    action = Column(
+        String(100), nullable=False
+    )  # login, logout, view_page, trade, etc.
     details = Column(JSON, nullable=True)  # {page: "marketplace", ip: "x.x.x.x", ...}
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
@@ -349,11 +440,16 @@ class ActivityLog(Base):
 
 class KYCDocument(Base):
     """KYC documents uploaded by users/entities"""
+
     __tablename__ = "kyc_documents"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True
+    )
     document_type = Column(SQLEnum(DocumentType), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
@@ -372,6 +468,7 @@ class KYCDocument(Base):
 
 class ScrapingSource(Base):
     """Configuration for price scraping sources"""
+
     __tablename__ = "scraping_sources"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -384,17 +481,22 @@ class ScrapingSource(Base):
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
     last_price = Column(Numeric(18, 4), nullable=True)
-    config = Column(JSON, nullable=True)  # Additional scraper configuration (CSS selectors, etc.)
+    config = Column(
+        JSON, nullable=True
+    )  # Additional scraper configuration (CSS selectors, etc.)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class UserSession(Base):
     """Track user sessions for security and analytics"""
+
     __tablename__ = "user_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
     device_info = Column(JSON, nullable=True)
@@ -408,15 +510,27 @@ class UserSession(Base):
 
 class Order(Base):
     """Cash market orders for trading"""
+
     __tablename__ = "orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     market = Column(SQLEnum(MarketType), nullable=False)  # NEW: Which market
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)  # Buyer entity (for BUY orders)
-    seller_id = Column(UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True)  # Seller (for SELL orders)
-    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)  # Market maker (for MM orders)
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True
+    )  # Buyer entity (for BUY orders)
+    seller_id = Column(
+        UUID(as_uuid=True), ForeignKey("sellers.id"), nullable=True, index=True
+    )  # Seller (for SELL orders)
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=True,
+        index=True,
+    )  # Market maker (for MM orders)
     ticket_id = Column(String(30), nullable=True, index=True)  # Link to audit log
-    certificate_type = Column(SQLEnum(CertificateType), nullable=False)  # Still needed for SWAP
+    certificate_type = Column(
+        SQLEnum(CertificateType), nullable=False
+    )  # Still needed for SWAP
     side = Column(SQLEnum(OrderSide), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
@@ -428,41 +542,70 @@ class Order(Base):
     entity = relationship("Entity")
     seller = relationship("Seller", back_populates="orders")
     market_maker = relationship("MarketMakerClient", back_populates="orders")
-    buy_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.buy_order_id", back_populates="buy_order")
-    sell_trades = relationship("CashMarketTrade", foreign_keys="CashMarketTrade.sell_order_id", back_populates="sell_order")
+    buy_trades = relationship(
+        "CashMarketTrade",
+        foreign_keys="CashMarketTrade.buy_order_id",
+        back_populates="buy_order",
+    )
+    sell_trades = relationship(
+        "CashMarketTrade",
+        foreign_keys="CashMarketTrade.sell_order_id",
+        back_populates="sell_order",
+    )
 
 
 class CashMarketTrade(Base):
     """Executed trades from the cash market matching engine"""
+
     __tablename__ = "cash_market_trades"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    buy_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
-    sell_order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
-    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    buy_order_id = Column(
+        UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True
+    )
+    sell_order_id = Column(
+        UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True
+    )
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=True,
+        index=True,
+    )
     ticket_id = Column(String(30), nullable=True, index=True)
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
     executed_at = Column(DateTime, default=datetime.utcnow, index=True)
 
-    buy_order = relationship("Order", foreign_keys=[buy_order_id], back_populates="buy_trades")
-    sell_order = relationship("Order", foreign_keys=[sell_order_id], back_populates="sell_trades")
+    buy_order = relationship(
+        "Order", foreign_keys=[buy_order_id], back_populates="buy_trades"
+    )
+    sell_order = relationship(
+        "Order", foreign_keys=[sell_order_id], back_populates="sell_trades"
+    )
     market_maker = relationship("MarketMakerClient")
 
 
 class AuthenticationAttempt(Base):
     """Track all authentication attempts for security and audit"""
+
     __tablename__ = "authentication_attempts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
-    email = Column(String(255), nullable=False, index=True)  # Store email even if user doesn't exist
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+    email = Column(
+        String(255), nullable=False, index=True
+    )  # Store email even if user doesn't exist
     success = Column(Boolean, nullable=False)
     method = Column(SQLEnum(AuthMethod), nullable=False)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
-    failure_reason = Column(String(255), nullable=True)  # 'invalid_password', 'user_not_found', 'account_disabled', etc.
+    failure_reason = Column(
+        String(255), nullable=True
+    )  # 'invalid_password', 'user_not_found', 'account_disabled', etc.
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", back_populates="auth_attempts")
@@ -470,10 +613,13 @@ class AuthenticationAttempt(Base):
 
 class Seller(Base):
     """CEA sellers with unique client codes for the Cash Market"""
+
     __tablename__ = "sellers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    client_code = Column(String(20), unique=True, nullable=False, index=True)  # e.g., "CEA-001", "CEA-002"
+    client_code = Column(
+        String(20), unique=True, nullable=False, index=True
+    )  # e.g., "CEA-001", "CEA-002"
     name = Column(String(255), nullable=False)
     company_name = Column(String(255), nullable=True)
     jurisdiction = Column(SQLEnum(Jurisdiction), default=Jurisdiction.CN)
@@ -490,50 +636,98 @@ class Seller(Base):
 
 
 class Deposit(Base):
-    """Track wire transfer deposits from entities"""
+    """Track wire transfer deposits from entities with AML hold management"""
+
     __tablename__ = "deposits"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True
+    )
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+
     # User-reported deposit details (what user says they sent)
     reported_amount = Column(Numeric(18, 2), nullable=True)
     reported_currency = Column(SQLEnum(Currency), nullable=True)
+
     # Confirmed deposit details (what backoffice actually received)
     amount = Column(Numeric(18, 2), nullable=True)  # Actual confirmed amount
     currency = Column(SQLEnum(Currency), nullable=True)  # Actual confirmed currency
     wire_reference = Column(String(100), nullable=True)  # Bank wire reference
     bank_reference = Column(String(100), nullable=True)  # Our internal reference
+
+    # Source bank details (provided by client)
+    source_bank = Column(String(255), nullable=True)
+    source_iban = Column(String(50), nullable=True)
+    source_swift = Column(String(20), nullable=True)
+
     # Status tracking
     status = Column(SQLEnum(DepositStatus), default=DepositStatus.PENDING)
+
+    # AML Hold fields
+    hold_type = Column(
+        String(50), nullable=True
+    )  # FIRST_DEPOSIT, SUBSEQUENT, LARGE_AMOUNT
+    hold_days_required = Column(Integer, nullable=True)
+    hold_expires_at = Column(DateTime, nullable=True)
+    aml_status = Column(
+        String(50), nullable=True, default="PENDING"
+    )  # PENDING, ON_HOLD, CLEARED, REJECTED
+
     # Timestamps
-    reported_at = Column(DateTime, default=datetime.utcnow)  # When user reported the wire
-    confirmed_at = Column(DateTime, nullable=True)  # When backoffice confirmed
+    reported_at = Column(
+        DateTime, default=datetime.utcnow
+    )  # When user announced the wire
+    confirmed_at = Column(DateTime, nullable=True)  # When backoffice confirmed receipt
+
+    # Approval/Rejection tracking
+    cleared_at = Column(DateTime, nullable=True)
+    cleared_by_admin_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    rejected_at = Column(DateTime, nullable=True)
+    rejected_by_admin_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    rejection_reason = Column(Text, nullable=True)
+
     # Backoffice tracking
     confirmed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    notes = Column(Text, nullable=True)  # Admin notes
+    notes = Column(Text, nullable=True)  # Legacy admin notes
+    admin_notes = Column(Text, nullable=True)  # Detailed admin notes
+    client_notes = Column(Text, nullable=True)  # Notes from client
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relationships
     entity = relationship("Entity", back_populates="deposits")
+    user = relationship("User", foreign_keys=[user_id])
     confirmed_by_user = relationship("User", foreign_keys=[confirmed_by])
+    cleared_by_admin = relationship("User", foreign_keys=[cleared_by_admin_id])
+    rejected_by_admin = relationship("User", foreign_keys=[rejected_by_admin_id])
 
 
 class AssetType(str, enum.Enum):
     """Types of assets that can be held by entities"""
-    EUR = "EUR"       # Cash in EUR
-    CEA = "CEA"       # China Emission Allowances
-    EUA = "EUA"       # EU Allowances
+
+    EUR = "EUR"  # Cash in EUR
+    CEA = "CEA"  # China Emission Allowances
+    EUA = "EUA"  # EU Allowances
 
 
 class TransactionType(str, enum.Enum):
     """Types of asset transactions for audit trail"""
+
     DEPOSIT = "DEPOSIT"
     WITHDRAWAL = "WITHDRAWAL"
-    TRADE_DEBIT = "TRADE_DEBIT"      # Locks assets when order placed
-    TRADE_CREDIT = "TRADE_CREDIT"    # Releases assets when order cancelled/filled
-    TRADE_BUY = "TRADE_BUY"          # Asset purchase transaction
-    TRADE_SELL = "TRADE_SELL"        # Asset sale transaction
-    ADJUSTMENT = "ADJUSTMENT"        # Admin balance adjustment
+    TRADE_DEBIT = "TRADE_DEBIT"  # Locks assets when order placed
+    TRADE_CREDIT = "TRADE_CREDIT"  # Releases assets when order cancelled/filled
+    TRADE_BUY = "TRADE_BUY"  # Asset purchase transaction
+    TRADE_SELL = "TRADE_SELL"  # Asset sale transaction
+    ADJUSTMENT = "ADJUSTMENT"  # Admin balance adjustment
 
 
 class TicketStatus(str, enum.Enum):
@@ -543,10 +737,13 @@ class TicketStatus(str, enum.Enum):
 
 class EntityHolding(Base):
     """Track entity holdings of various asset types (EUR, CEA, EUA)"""
+
     __tablename__ = "entity_holdings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True
+    )
     asset_type = Column(SQLEnum(AssetType), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -556,30 +753,42 @@ class EntityHolding(Base):
 
     __table_args__ = (
         # One record per entity per asset type
-        {'sqlite_autoincrement': True},
+        {"sqlite_autoincrement": True},
     )
 
 
 class AssetTransaction(Base):
     """Audit trail for all asset movements"""
+
     __tablename__ = "asset_transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Existing fields (for backward compatibility with Entity-based transactions)
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
-    asset_type = Column(SQLEnum(AssetType), nullable=True)  # EUR, CEA, EUA (for Entity transactions)
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True
+    )
+    asset_type = Column(
+        SQLEnum(AssetType), nullable=True
+    )  # EUR, CEA, EUA (for Entity transactions)
     balance_before = Column(Numeric(18, 2), nullable=True)
     reference = Column(String(255), nullable=True)
 
     # New fields (for Market Makers system)
     ticket_id = Column(String(30), nullable=True, index=True)  # Links to TicketLog
-    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=True,
+        index=True,
+    )
     certificate_type = Column(SQLEnum(CertificateType), nullable=True)
 
     # Common fields (used by both Entity and Market Maker transactions)
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
-    amount = Column(Numeric(18, 2), nullable=False)  # Positive for deposits/credits, negative for debits/withdrawals
+    amount = Column(
+        Numeric(18, 2), nullable=False
+    )  # Positive for deposits/credits, negative for debits/withdrawals
     balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
     notes = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
@@ -593,22 +802,38 @@ class AssetTransaction(Base):
 
 class TicketLog(Base):
     """Comprehensive audit trail for all system actions"""
+
     __tablename__ = "ticket_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    ticket_id = Column(String(30), unique=True, nullable=False, index=True)  # TKT-2026-001234
+    ticket_id = Column(
+        String(30), unique=True, nullable=False, index=True
+    )  # TKT-2026-001234
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
-    market_maker_id = Column(UUID(as_uuid=True), ForeignKey("market_maker_clients.id"), nullable=True, index=True)
-    action_type = Column(String(100), nullable=False, index=True)  # ORDER_PLACED, MM_CREATED, etc.
-    entity_type = Column(String(50), nullable=False, index=True)  # Order, MarketMaker, User, etc.
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=True,
+        index=True,
+    )
+    action_type = Column(
+        String(100), nullable=False, index=True
+    )  # ORDER_PLACED, MM_CREATED, etc.
+    entity_type = Column(
+        String(50), nullable=False, index=True
+    )  # Order, MarketMaker, User, etc.
     entity_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     status = Column(SQLEnum(TicketStatus), nullable=False, index=True)
     request_payload = Column(JSONB, nullable=True)
     response_data = Column(JSONB, nullable=True)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
-    session_id = Column(UUID(as_uuid=True), ForeignKey("user_sessions.id"), nullable=True)
+    session_id = Column(
+        UUID(as_uuid=True), ForeignKey("user_sessions.id"), nullable=True
+    )
     before_state = Column(JSONB, nullable=True)
     after_state = Column(JSONB, nullable=True)
     related_ticket_ids = Column(ARRAY(String(30)), nullable=True)
@@ -633,6 +858,7 @@ class LiquidityOperation(Base):
         ...
     ]
     """
+
     __tablename__ = "liquidity_operations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -648,7 +874,9 @@ class LiquidityOperation(Base):
     actual_ask_liquidity_eur = Column(Numeric(18, 2), nullable=False)
 
     # Execution details
-    market_makers_used = Column(JSONB, nullable=False)  # [{mm_id, mm_type, amount}, ...]
+    market_makers_used = Column(
+        JSONB, nullable=False
+    )  # [{mm_id, mm_type, amount}, ...]
     orders_created = Column(ARRAY(UUID(as_uuid=True)), nullable=False)
     reference_price = Column(Numeric(18, 4), nullable=False)
 
@@ -661,20 +889,31 @@ class LiquidityOperation(Base):
     creator = relationship("User", foreign_keys=[created_by])
 
 
+class WithdrawalStatus(str, enum.Enum):
+    """Status for withdrawal requests"""
+
+    PENDING = "PENDING"  # User requested withdrawal, awaiting admin
+    PROCESSING = "PROCESSING"  # Admin approved, processing transfer
+    COMPLETED = "COMPLETED"  # Withdrawal completed
+    REJECTED = "REJECTED"  # Withdrawal rejected
+
+
 class SettlementStatus(str, enum.Enum):
     """Settlement status progression for T+N external settlements"""
-    PENDING = "PENDING"                          # T+0: Order confirmed, awaiting T+1
-    TRANSFER_INITIATED = "TRANSFER_INITIATED"    # T+1: Transfer started to registry
-    IN_TRANSIT = "IN_TRANSIT"                    # T+2: In registry processing
-    AT_CUSTODY = "AT_CUSTODY"                    # T+3: Arrived at Nihao custody
-    SETTLED = "SETTLED"                          # Final settlement completed
-    FAILED = "FAILED"                            # Settlement failed, requires intervention
+
+    PENDING = "PENDING"  # T+0: Order confirmed, awaiting T+1
+    TRANSFER_INITIATED = "TRANSFER_INITIATED"  # T+1: Transfer started to registry
+    IN_TRANSIT = "IN_TRANSIT"  # T+2: In registry processing
+    AT_CUSTODY = "AT_CUSTODY"  # T+3: Arrived at Nihao custody
+    SETTLED = "SETTLED"  # Final settlement completed
+    FAILED = "FAILED"  # Settlement failed, requires intervention
 
 
 class SettlementType(str, enum.Enum):
     """Types of settlement operations"""
-    CEA_PURCHASE = "CEA_PURCHASE"              # CEA purchase from seller (T+3)
-    SWAP_CEA_TO_EUA = "SWAP_CEA_TO_EUA"       # Swap CEA→EUA (CEA T+2, EUA T+5)
+
+    CEA_PURCHASE = "CEA_PURCHASE"  # CEA purchase from seller (T+3)
+    SWAP_CEA_TO_EUA = "SWAP_CEA_TO_EUA"  # Swap CEA→EUA (CEA T+2, EUA T+5)
 
 
 class SettlementBatch(Base):
@@ -688,6 +927,7 @@ class SettlementBatch(Base):
     - CEA Purchase: T+1 to T+3 business days
     - Swap CEA→EUA: CEA T+1 to T+2, EUA T+1 to T+5
     """
+
     __tablename__ = "settlement_batches"
 
     # Primary identification
@@ -696,14 +936,30 @@ class SettlementBatch(Base):
     # Example: "SET-2026-001234-CEA", "SET-2026-001235-EUA"
 
     # Ownership and linkage
-    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
-    trade_id = Column(UUID(as_uuid=True), ForeignKey("cash_market_trades.id"), nullable=True, index=True)
-    counterparty_id = Column(UUID(as_uuid=True), nullable=True)  # Seller or Market Maker ID
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True
+    )
+    order_id = Column(
+        UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True
+    )
+    trade_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cash_market_trades.id"),
+        nullable=True,
+        index=True,
+    )
+    counterparty_id = Column(
+        UUID(as_uuid=True), nullable=True
+    )  # Seller or Market Maker ID
 
     # Settlement details
     settlement_type = Column(SQLEnum(SettlementType), nullable=False, index=True)
-    status = Column(SQLEnum(SettlementStatus), default=SettlementStatus.PENDING, nullable=False, index=True)
+    status = Column(
+        SQLEnum(SettlementStatus),
+        default=SettlementStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
     asset_type = Column(SQLEnum(CertificateType), nullable=False)  # CEA or EUA
 
     # Financial details
@@ -712,24 +968,34 @@ class SettlementBatch(Base):
     total_value_eur = Column(Numeric(18, 2), nullable=False)
 
     # Timeline tracking
-    expected_settlement_date = Column(DateTime, nullable=False, index=True)  # T+1, T+3, or T+5
+    expected_settlement_date = Column(
+        DateTime, nullable=False, index=True
+    )  # T+1, T+3, or T+5
     actual_settlement_date = Column(DateTime, nullable=True)
 
     # External registry tracking
-    registry_reference = Column(String(100), nullable=True)  # Reference from external registry
+    registry_reference = Column(
+        String(100), nullable=True
+    )  # Reference from external registry
 
     # Additional info
     notes = Column(Text, nullable=True)
 
     # Audit timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
     entity = relationship("Entity", foreign_keys=[entity_id])
     order = relationship("Order", foreign_keys=[order_id])
     trade = relationship("CashMarketTrade", foreign_keys=[trade_id])
-    status_history = relationship("SettlementStatusHistory", back_populates="settlement_batch", cascade="all, delete-orphan")
+    status_history = relationship(
+        "SettlementStatusHistory",
+        back_populates="settlement_batch",
+        cascade="all, delete-orphan",
+    )
 
 
 class SettlementStatusHistory(Base):
@@ -739,15 +1005,89 @@ class SettlementStatusHistory(Base):
     Tracks every status transition with timestamp, notes, and responsible user.
     Provides complete audit trail for regulatory compliance.
     """
+
     __tablename__ = "settlement_status_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    settlement_batch_id = Column(UUID(as_uuid=True), ForeignKey("settlement_batches.id"), nullable=False, index=True)
+    settlement_batch_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("settlement_batches.id"),
+        nullable=False,
+        index=True,
+    )
     status = Column(SQLEnum(SettlementStatus), nullable=False)
     notes = Column(Text, nullable=True)  # Reason for status change, admin comments
-    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # Admin who made the change
+    updated_by = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )  # Admin who made the change
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Relationships
     settlement_batch = relationship("SettlementBatch", back_populates="status_history")
     updater = relationship("User", foreign_keys=[updated_by])
+
+
+class Withdrawal(Base):
+    """Track withdrawal requests from entities"""
+
+    __tablename__ = "withdrawals"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True
+    )
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+
+    # Asset details
+    asset_type = Column(SQLEnum(AssetType), nullable=False)
+    amount = Column(Numeric(18, 2), nullable=False)
+
+    # Status
+    status = Column(
+        SQLEnum(WithdrawalStatus), default=WithdrawalStatus.PENDING, nullable=False
+    )
+
+    # Destination details (for EUR withdrawals)
+    destination_bank = Column(String(255), nullable=True)
+    destination_iban = Column(String(50), nullable=True)
+    destination_swift = Column(String(20), nullable=True)
+    destination_account_holder = Column(String(255), nullable=True)
+
+    # Destination details (for CEA/EUA transfers)
+    destination_registry = Column(String(100), nullable=True)
+    destination_account_id = Column(String(100), nullable=True)
+
+    # Reference numbers
+    wire_reference = Column(String(100), nullable=True)
+    internal_reference = Column(String(100), unique=True, nullable=True)
+
+    # Rejection details
+    rejection_reason = Column(Text, nullable=True)
+
+    # Notes
+    client_notes = Column(Text, nullable=True)
+    admin_notes = Column(Text, nullable=True)
+
+    # Timestamps
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+
+    # Admin tracking
+    processed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    completed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    rejected_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    # Standard audit columns
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    entity = relationship("Entity", foreign_keys=[entity_id])
+    user = relationship("User", foreign_keys=[user_id])
+    processed_by_user = relationship("User", foreign_keys=[processed_by])
+    completed_by_user = relationship("User", foreign_keys=[completed_by])
+    rejected_by_user = relationship("User", foreign_keys=[rejected_by])

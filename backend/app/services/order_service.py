@@ -1,13 +1,15 @@
 """Order creation utilities and helpers"""
+
 from typing import Optional
 from uuid import UUID
-from app.models.models import MarketMakerClient, MarketType, CertificateType
+
+from app.models.models import CertificateType, MarketMakerClient, MarketType
 
 
 def determine_order_market(
     market_maker: Optional[MarketMakerClient] = None,
     entity_id: Optional[UUID] = None,
-    certificate_type: Optional[CertificateType] = None
+    certificate_type: Optional[CertificateType] = None,
 ) -> MarketType:
     """
     Determine which market an order belongs to.
@@ -44,4 +46,6 @@ def determine_order_market(
         # TODO: When SWAP market opens to entities, add logic here
         return MarketType.CEA_CASH
 
-    raise ValueError("Must provide either market_maker or entity_id to determine market")
+    raise ValueError(
+        "Must provide either market_maker or entity_id to determine market"
+    )

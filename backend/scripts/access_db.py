@@ -10,11 +10,13 @@ Usage:
     python access_db.py --stats
 """
 
+import argparse
 import asyncio
 import sys
-import argparse
-from sqlalchemy import text, select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.core.config import settings
 
 # Convert postgresql:// to postgresql+asyncpg://
@@ -40,15 +42,17 @@ async def execute_query(query: str):
             result = await session.execute(text(query))
             rows = result.fetchall()
             columns = result.keys()
-            
+
             # Print column headers
             print(" | ".join(columns))
             print("-" * (len(" | ".join(columns))))
-            
+
             # Print rows
             for row in rows:
-                print(" | ".join(str(val) if val is not None else "NULL" for val in row))
-            
+                print(
+                    " | ".join(str(val) if val is not None else "NULL" for val in row)
+                )
+
             print(f"\n({len(rows)} rows)")
             return rows
         except Exception as e:
@@ -77,20 +81,25 @@ async def list_tables():
 async def show_stats():
     """Show statistics about main tables"""
     tables = [
-        'users', 'orders', 'trades', 'cash_market_trades', 
-        'swap_requests', 'asset_transactions', 'certificates',
-        'entities', 'deposits', 'settlement_batches'
+        "users",
+        "orders",
+        "trades",
+        "cash_market_trades",
+        "swap_requests",
+        "asset_transactions",
+        "certificates",
+        "entities",
+        "deposits",
+        "settlement_batches",
     ]
-    
+
     print("Database Statistics:")
     print("=" * 50)
-    
+
     async with AsyncSessionLocal() as session:
         for table in tables:
             try:
-                result = await session.execute(
-                    text(f"SELECT COUNT(*) FROM {table}")
-                )
+                result = await session.execute(text(f"SELECT COUNT(*) FROM {table}"))
                 count = result.scalar()
                 print(f"{table:30} {count:>10} rows")
             except Exception as e:
@@ -104,16 +113,20 @@ async def show_sample_data(table_name: str, limit: int = 5):
 
 
 async def main():
-    parser = argparse.ArgumentParser(description='Access Nihao Carbon Database')
-    parser.add_argument('--query', '-q', type=str, help='Execute a SQL query')
-    parser.add_argument('--count', '-c', type=str, help='Count rows in a table')
-    parser.add_argument('--tables', '-t', action='store_true', help='List all tables')
-    parser.add_argument('--stats', '-s', action='store_true', help='Show database statistics')
-    parser.add_argument('--sample', type=str, help='Show sample data from a table')
-    parser.add_argument('--limit', type=int, default=5, help='Limit for sample data (default: 5)')
-    
+    parser = argparse.ArgumentParser(description="Access Nihao Carbon Database")
+    parser.add_argument("--query", "-q", type=str, help="Execute a SQL query")
+    parser.add_argument("--count", "-c", type=str, help="Count rows in a table")
+    parser.add_argument("--tables", "-t", action="store_true", help="List all tables")
+    parser.add_argument(
+        "--stats", "-s", action="store_true", help="Show database statistics"
+    )
+    parser.add_argument("--sample", type=str, help="Show sample data from a table")
+    parser.add_argument(
+        "--limit", type=int, default=5, help="Limit for sample data (default: 5)"
+    )
+
     args = parser.parse_args()
-    
+
     if args.query:
         await execute_query(args.query)
     elif args.count:

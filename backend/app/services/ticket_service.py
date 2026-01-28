@@ -1,12 +1,15 @@
 """Ticket generation and audit logging service"""
+
+import logging
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from app.models.models import TicketLog, TicketStatus
+
 from app.core.security import RedisManager
-import logging
+from app.models.models import TicketLog, TicketStatus
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +88,11 @@ class TicketService:
 
     @staticmethod
     async def get_entity_state(
-        db: AsyncSession,
-        entity_type: str,
-        entity_id: uuid.UUID
+        db: AsyncSession, entity_type: str, entity_id: uuid.UUID
     ) -> Optional[Dict[str, Any]]:
         """Get current state of entity for before/after tracking"""
         # Import here to avoid circular imports
-        from app.models.models import Order, User, MarketMakerClient, AssetTransaction
+        from app.models.models import AssetTransaction, MarketMakerClient, Order, User
 
         model_map = {
             "Order": Order,

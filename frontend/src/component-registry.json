@@ -1,7 +1,15 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-26T17:01:53.368Z",
+  "generatedAt": "2026-01-28T17:07:56.722Z",
   "components": [
+    {
+      "name": "AMLDepositsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/AMLDepositsTab.tsx",
+      "importPath": "components/backoffice/AMLDepositsTab",
+      "props": [],
+      "description": "AML Deposits Tab Component"
+    },
     {
       "name": "AddAssetModal",
       "category": "backoffice",
@@ -813,6 +821,43 @@
       "description": ""
     },
     {
+      "name": "WithdrawalRequestModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/WithdrawalRequestModal.tsx",
+      "importPath": "components/backoffice/WithdrawalRequestModal",
+      "props": [
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onSuccess",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "availableBalances",
+          "type": "{ eur: number; cea: number; eua: number;",
+          "optional": false
+        }
+      ],
+      "description": "WithdrawalRequestModal - Client interface for requesting withdrawals"
+    },
+    {
+      "name": "WithdrawalsTab",
+      "category": "backoffice",
+      "path": "src/components/backoffice/WithdrawalsTab.tsx",
+      "importPath": "components/backoffice/WithdrawalsTab",
+      "props": [],
+      "description": "WithdrawalsTab - Admin interface for managing withdrawal requests"
+    },
+    {
       "name": "DepthChart",
       "category": "cash-market",
       "path": "src/components/cash-market/DepthChart.tsx",
@@ -1230,7 +1275,7 @@
           "optional": true
         }
       ],
-      "description": ""
+      "description": "Shared button component. Variants: primary | secondary | outline | ghost."
     },
     {
       "name": "CEAPriceDisplay",

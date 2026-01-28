@@ -73,6 +73,24 @@
   --color-info-light: #dbeafe;           /* blue-100 */
   --color-info-text: #1e40af;            /* blue-700 */
 
+  /* Subheader nav (subpage button states – e.g. backoffice) */
+  --color-subheader-nav-active-bg: #475569;   /* navy-600 – opened subpage */
+  --color-subheader-nav-active-text: #ffffff;
+  --color-subheader-nav-inactive-text: #94a3b8;   /* navy-400 */
+  --color-subheader-nav-inactive-hover-bg: #334155;   /* navy-700 */
+  --color-subheader-nav-inactive-hover-text: #cbd5e1;   /* navy-300 */
+
+  /* SubSubHeader nav (child-level buttons under Subheader – e.g. Onboarding subpages) */
+  --color-subsubheader-nav-active-bg: #334155;   /* navy-700 – current subpage */
+  --color-subsubheader-nav-active-text: #ffffff;
+  --color-subsubheader-nav-inactive-text: #94a3b8;   /* navy-400 */
+  --color-subsubheader-nav-inactive-hover-bg: #475569;   /* navy-600 */
+  --color-subsubheader-nav-inactive-hover-text: #cbd5e1;   /* navy-300 */
+
+  /* SubSubHeader nav count badge (new items / pending count – high visibility) */
+  --color-subsubheader-nav-badge-bg: #dc2626;   /* red-600 */
+  --color-subsubheader-nav-badge-text: #ffffff;
+
   /* ========================================
      TYPOGRAPHY SYSTEM
      ======================================== */
@@ -353,6 +371,67 @@
 .bg-warning { background-color: var(--color-warning-light); }
 .bg-error { background-color: var(--color-error-light); }
 .bg-info { background-color: var(--color-info-light); }
+
+/* Subheader nav button states (backoffice / subpage navigation) */
+.subheader-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border-radius: 0.75rem;
+  transition: color 0.2s, background-color 0.2s;
+}
+.subheader-nav-btn-active {
+  background-color: var(--color-subheader-nav-active-bg);
+  color: var(--color-subheader-nav-active-text);
+}
+.subheader-nav-btn-inactive {
+  color: var(--color-subheader-nav-inactive-text);
+}
+.subheader-nav-btn-inactive:hover {
+  background-color: var(--color-subheader-nav-inactive-hover-bg);
+  color: var(--color-subheader-nav-inactive-hover-text);
+}
+
+/* SubSubHeader nav button states (child-level under Subheader; e.g. Onboarding: Contact Requests, KYC, Deposits) */
+.subsubheader-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  border-radius: 0.5rem;
+  transition: color 0.2s, background-color 0.2s;
+}
+.subsubheader-nav-btn-active {
+  background-color: var(--color-subsubheader-nav-active-bg);
+  color: var(--color-subsubheader-nav-active-text);
+}
+.subsubheader-nav-btn-inactive {
+  color: var(--color-subsubheader-nav-inactive-text);
+}
+.subsubheader-nav-btn-inactive:hover {
+  background-color: var(--color-subsubheader-nav-inactive-hover-bg);
+  color: var(--color-subsubheader-nav-inactive-hover-text);
+}
+
+/* SubSubHeader nav count badge (pending/new items – high visibility, red) */
+.subsubheader-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: var(--font-semibold);
+  line-height: 1;
+  border-radius: 9999px;
+  background-color: var(--color-subsubheader-nav-badge-bg);
+  color: var(--color-subsubheader-nav-badge-text);
+}
 
 /* Glass Effect */
 .glass {

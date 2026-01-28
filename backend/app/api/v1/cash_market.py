@@ -3,47 +3,55 @@ Cash Market API Router
 
 Order-driven market with order book, market depth, and FIFO matching.
 """
+
 import random
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
-from fastapi import APIRouter, Query, HTTPException, Depends
 from decimal import Decimal
-from sqlalchemy import select, func, and_, or_
-from sqlalchemy.orm import joinedload
+from typing import List, Optional
 
-from ...schemas.schemas import (
-    OrderCreate,
-    OrderResponse,
-    OrderBookResponse,
-    OrderBookLevel,
-    MarketDepthResponse,
-    MarketDepthPoint,
-    CashMarketTradeResponse,
-    MarketStatsResponse,
-    CertificateType,
-    OrderSide,
-    MessageResponse,
-    OrderPreviewRequest,
-    OrderPreviewResponse,
-    OrderFill,
-    MarketOrderRequest,
-    LimitOrderRequest,
-    OrderExecutionResponse,
-    OrderType,
-)
-from ...services.simulation import simulation_engine
-from ...services.order_matching import (
-    preview_buy_order,
-    execute_market_buy_order,
-    get_real_orderbook,
-    get_entity_balance,
-    PLATFORM_FEE_RATE,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, select
+
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...models.models import Order, CashMarketTrade, Seller, Entity, User, EntityHolding, AssetType, MarketType
-from ...models.models import OrderSide as OrderSideEnum, OrderStatus, CertificateType as CertTypeEnum
+from ...models.models import (
+    AssetType,
+    CashMarketTrade,
+    Entity,
+    MarketType,
+    Order,
+    OrderStatus,
+    Seller,
+    User,
+)
+from ...models.models import CertificateType as CertTypeEnum
+from ...models.models import OrderSide as OrderSideEnum
+from ...schemas.schemas import (
+    CashMarketTradeResponse,
+    CertificateType,
+    MarketDepthPoint,
+    MarketDepthResponse,
+    MarketOrderRequest,
+    MarketStatsResponse,
+    MessageResponse,
+    OrderBookLevel,
+    OrderBookResponse,
+    OrderCreate,
+    OrderExecutionResponse,
+    OrderFill,
+    OrderPreviewRequest,
+    OrderPreviewResponse,
+    OrderResponse,
+    OrderSide,
+)
+from ...services.order_matching import (
+    PLATFORM_FEE_RATE,
+    execute_market_buy_order,
+    get_entity_balance,
+    get_real_orderbook,
+    preview_buy_order,
+)
 
 router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
 
@@ -63,7 +71,9 @@ class OrderBookSimulator:
         self._trades_cache = {}
         self._cache_time = {}
 
-    def _generate_orders(self, cert_type: str, side: str, count: int, base_price: float) -> List[dict]:
+    def _generate_orders(
+        self, cert_type: str, side: str, count: int, base_price: float
+    ) -> List[dict]:
         """Generate simulated orders for one side of the book"""
         orders = []
 
@@ -92,11 +102,13 @@ class OrderBookSimulator:
 
             quantity = round(base_qty * order_count, 2)
 
-            orders.append({
-                "price": price,
-                "quantity": quantity,
-                "order_count": order_count,
-            })
+            orders.append(
+                {
+                    "price": price,
+                    "quantity": quantity,
+                    "order_count": order_count,
+                }
+            )
 
         return orders
 
@@ -180,21 +192,22 @@ class OrderBookSimulator:
 
             # Time (spread over last hour)
             executed_at = base_time - timedelta(
-                minutes=random.randint(0, 60),
-                seconds=random.randint(0, 59)
+                minutes=random.randint(0, 60), seconds=random.randint(0, 59)
             )
 
             # Side (slightly favor buys for bullish appearance)
             side = "BUY" if random.random() < 0.52 else "SELL"
 
-            trades.append({
-                "id": str(uuid.uuid4()),
-                "certificate_type": cert_type,
-                "price": price,
-                "quantity": quantity,
-                "side": side,
-                "executed_at": executed_at.isoformat(),
-            })
+            trades.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "certificate_type": cert_type,
+                    "price": price,
+                    "quantity": quantity,
+                    "side": side,
+                    "executed_at": executed_at.isoformat(),
+                }
+            )
 
         # Sort by time (newest first)
         trades.sort(key=lambda x: x["executed_at"], reverse=True)
@@ -211,17 +224,21 @@ class OrderBookSimulator:
         # Convert to cumulative depth points
         bid_depth = []
         for bid in orderbook["bids"]:
-            bid_depth.append({
-                "price": bid["price"],
-                "cumulative_quantity": bid["cumulative_quantity"],
-            })
+            bid_depth.append(
+                {
+                    "price": bid["price"],
+                    "cumulative_quantity": bid["cumulative_quantity"],
+                }
+            )
 
         ask_depth = []
         for ask in orderbook["asks"]:
-            ask_depth.append({
-                "price": ask["price"],
-                "cumulative_quantity": ask["cumulative_quantity"],
-            })
+            ask_depth.append(
+                {
+                    "price": ask["price"],
+                    "cumulative_quantity": ask["cumulative_quantity"],
+                }
+            )
 
         return {
             "certificate_type": cert_type,
@@ -272,8 +289,7 @@ async def get_market_depth(certificate_type: CertificateType):
 
 @router.get("/trades/{certificate_type}", response_model=List[CashMarketTradeResponse])
 async def get_recent_trades(
-    certificate_type: CertificateType,
-    limit: int = Query(50, ge=1, le=100)
+    certificate_type: CertificateType, limit: int = Query(50, ge=1, le=100)
 ):
     """
     Get recent executed trades for a certificate type.
@@ -317,14 +333,16 @@ async def get_market_stats(certificate_type: CertificateType):
 async def place_order(
     order: OrderCreate,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """
     Place a new order in the cash market.
     Creates a real order in the database linked to the user's entity.
     """
     if not current_user.entity_id:
-        raise HTTPException(status_code=400, detail="User must have an entity to place orders")
+        raise HTTPException(
+            status_code=400, detail="User must have an entity to place orders"
+        )
 
     # Create the order in database
     new_order = Order(
@@ -334,8 +352,8 @@ async def place_order(
         side=OrderSideEnum(order.side.value),
         price=Decimal(str(order.price)),
         quantity=Decimal(str(order.quantity)),
-        filled_quantity=Decimal('0'),
-        status=OrderStatus.OPEN
+        filled_quantity=Decimal("0"),
+        status=OrderStatus.OPEN,
     )
 
     db.add(new_order)
@@ -359,10 +377,12 @@ async def place_order(
 
 @router.get("/orders/my", response_model=List[OrderResponse])
 async def get_my_orders(
-    status: Optional[str] = Query(None, description="Filter by status: OPEN, FILLED, CANCELLED"),
+    status: Optional[str] = Query(
+        None, description="Filter by status: OPEN, FILLED, CANCELLED"
+    ),
     certificate_type: Optional[CertificateType] = None,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """
     Get the current user's orders from the database.
@@ -383,7 +403,9 @@ async def get_my_orders(
             pass  # Invalid status, ignore filter
 
     if certificate_type:
-        query = query.where(Order.certificate_type == CertTypeEnum(certificate_type.value))
+        query = query.where(
+            Order.certificate_type == CertTypeEnum(certificate_type.value)
+        )
 
     # Order by most recent first
     query = query.order_by(Order.created_at.desc()).limit(100)
@@ -411,9 +433,7 @@ async def get_my_orders(
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
 async def cancel_order(
-    order_id: str,
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    order_id: str, current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """
     Cancel an open order.
@@ -428,9 +448,7 @@ async def cancel_order(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid order ID")
 
-    result = await db.execute(
-        select(Order).where(Order.id == order_uuid)
-    )
+    result = await db.execute(select(Order).where(Order.id == order_uuid))
     order = result.scalar_one_or_none()
 
     if not order:
@@ -438,11 +456,16 @@ async def cancel_order(
 
     # Verify ownership
     if order.entity_id != current_user.entity_id:
-        raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to cancel this order"
+        )
 
     # Check if order can be cancelled
     if order.status not in [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]:
-        raise HTTPException(status_code=400, detail=f"Cannot cancel order with status {order.status.value}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel order with status {order.status.value}",
+        )
 
     # Cancel the order
     order.status = OrderStatus.CANCELLED
@@ -450,14 +473,14 @@ async def cancel_order(
     await db.commit()
 
     return MessageResponse(
-        message=f"Order {order_id} cancelled successfully",
-        success=True
+        message=f"Order {order_id} cancelled successfully", success=True
     )
 
 
 # ====================
 # REAL CEA ORDER BOOK ENDPOINTS
 # ====================
+
 
 @router.get("/cea/orderbook", response_model=OrderBookResponse)
 async def get_cea_orderbook(db=Depends(get_db)):
@@ -473,7 +496,7 @@ async def get_cea_orderbook(db=Depends(get_db)):
             and_(
                 Order.certificate_type == CertTypeEnum.CEA,
                 Order.side == OrderSideEnum.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.asc(), Order.created_at.asc())
@@ -491,7 +514,7 @@ async def get_cea_orderbook(db=Depends(get_db)):
                 "quantity": 0,
                 "order_count": 0,
                 "cumulative_quantity": 0,
-                "seller_codes": []
+                "seller_codes": [],
             }
         price_levels[price_key]["quantity"] += remaining
         price_levels[price_key]["order_count"] += 1
@@ -513,12 +536,15 @@ async def get_cea_orderbook(db=Depends(get_db)):
     return OrderBookResponse(
         certificate_type="CEA",
         bids=[],  # No real bids yet - buyers come from entities
-        asks=[OrderBookLevel(
-            price=a["price"],
-            quantity=a["quantity"],
-            order_count=a["order_count"],
-            cumulative_quantity=a["cumulative_quantity"]
-        ) for a in asks],
+        asks=[
+            OrderBookLevel(
+                price=a["price"],
+                quantity=a["quantity"],
+                order_count=a["order_count"],
+                cumulative_quantity=a["cumulative_quantity"],
+            )
+            for a in asks
+        ],
         spread=None,
         best_bid=None,
         best_ask=best_ask,
@@ -534,9 +560,7 @@ async def get_cea_sellers(db=Depends(get_db)):
     Get all CEA sellers with their available inventory.
     """
     result = await db.execute(
-        select(Seller)
-        .where(Seller.is_active == True)
-        .order_by(Seller.client_code)
+        select(Seller).where(Seller.is_active == True).order_by(Seller.client_code)
     )
     sellers = result.scalars().all()
 
@@ -554,11 +578,7 @@ async def get_cea_sellers(db=Depends(get_db)):
 
 
 @router.post("/cea/buy")
-async def buy_cea_fifo(
-    amount_eur: float,
-    entity_id: str,
-    db=Depends(get_db)
-):
+async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):
     """
     Execute a CEA buy order using FIFO price-time priority matching.
 
@@ -575,9 +595,7 @@ async def buy_cea_fifo(
     CNY_TO_EUR = 0.127
 
     # Fetch entity to verify balance
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == entity_id)
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == entity_id))
     entity = entity_result.scalar_one_or_none()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
@@ -597,7 +615,7 @@ async def buy_cea_fifo(
             and_(
                 Order.certificate_type == CertTypeEnum.CEA,
                 Order.side == OrderSideEnum.SELL,
-                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED])
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
             )
         )
         .order_by(Order.price.asc(), Order.created_at.asc())
@@ -635,7 +653,7 @@ async def buy_cea_fifo(
             certificate_type=CertTypeEnum.CEA,
             price=Decimal(str(order_price_cny)),
             quantity=Decimal(str(qty_to_buy)),
-            executed_at=datetime.utcnow()
+            executed_at=datetime.utcnow(),
         )
         db.add(trade)
 
@@ -651,14 +669,16 @@ async def buy_cea_fifo(
         seller.total_transactions = (seller.total_transactions or 0) + 1
 
         # Track the trade
-        trades_executed.append({
-            "seller_code": seller.client_code,
-            "seller_name": seller.name,
-            "quantity": round(qty_to_buy, 2),
-            "price_cny": round(order_price_cny, 4),
-            "price_eur": round(order_price_eur, 4),
-            "cost_eur": round(cost_eur, 2),
-        })
+        trades_executed.append(
+            {
+                "seller_code": seller.client_code,
+                "seller_name": seller.name,
+                "quantity": round(qty_to_buy, 2),
+                "price_cny": round(order_price_cny, 4),
+                "price_eur": round(order_price_eur, 4),
+                "cost_eur": round(cost_eur, 2),
+            }
+        )
 
         remaining_eur -= cost_eur
         total_cea_bought += qty_to_buy
@@ -683,10 +703,10 @@ async def buy_cea_fifo(
 # NEW REAL TRADING ENDPOINTS
 # ====================
 
+
 @router.get("/real/orderbook/{certificate_type}", response_model=OrderBookResponse)
 async def get_real_orderbook_endpoint(
-    certificate_type: CertificateType,
-    db=Depends(get_db)
+    certificate_type: CertificateType, db=Depends(get_db)
 ):
     """
     Get the real order book from database.
@@ -709,8 +729,7 @@ async def get_real_orderbook_endpoint(
 
 @router.get("/user/balances")
 async def get_user_balances(
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    current_user: User = Depends(get_current_user), db=Depends(get_db)
 ):
     """
     Get the current user's asset balances (EUR, CEA, EUA).
@@ -739,7 +758,7 @@ async def get_user_balances(
 async def preview_order(
     request: OrderPreviewRequest,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """
     Preview an order before execution.
@@ -755,10 +774,14 @@ async def preview_order(
 
     # Only support BUY for now (CEA market)
     if request.side != OrderSide.BUY:
-        raise HTTPException(status_code=400, detail="Only BUY orders are currently supported")
+        raise HTTPException(
+            status_code=400, detail="Only BUY orders are currently supported"
+        )
 
     if request.certificate_type != CertificateType.CEA:
-        raise HTTPException(status_code=400, detail="Only CEA trading is currently supported")
+        raise HTTPException(
+            status_code=400, detail="Only CEA trading is currently supported"
+        )
 
     # Convert to Decimal
     amount_eur = Decimal(str(request.amount_eur)) if request.amount_eur else None
@@ -772,7 +795,7 @@ async def preview_order(
         amount_eur=amount_eur,
         quantity=quantity,
         limit_price=limit_price,
-        all_or_none=request.all_or_none
+        all_or_none=request.all_or_none,
     )
 
     return OrderPreviewResponse(
@@ -788,7 +811,7 @@ async def preview_order(
                 seller_code=f.seller_code,
                 price=float(f.price_eur),
                 quantity=float(f.quantity),
-                cost=float(f.cost_eur)
+                cost=float(f.cost_eur),
             )
             for f in preview.fills
         ],
@@ -805,7 +828,7 @@ async def preview_order(
         remaining_balance=float(available_eur - preview.total_cost_net),
         can_execute=preview.can_execute,
         execution_message=preview.execution_message,
-        partial_fill=preview.partial_fill
+        partial_fill=preview.partial_fill,
     )
 
 
@@ -813,7 +836,7 @@ async def preview_order(
 async def execute_market_order(
     request: MarketOrderRequest,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     """
     Execute a market order immediately at best available prices.
@@ -826,10 +849,14 @@ async def execute_market_order(
 
     # Only support BUY for now
     if request.side != OrderSide.BUY:
-        raise HTTPException(status_code=400, detail="Only BUY orders are currently supported")
+        raise HTTPException(
+            status_code=400, detail="Only BUY orders are currently supported"
+        )
 
     if request.certificate_type != CertificateType.CEA:
-        raise HTTPException(status_code=400, detail="Only CEA trading is currently supported")
+        raise HTTPException(
+            status_code=400, detail="Only CEA trading is currently supported"
+        )
 
     # Convert to Decimal
     amount_eur = Decimal(str(request.amount_eur)) if request.amount_eur else None
@@ -842,7 +869,7 @@ async def execute_market_order(
         user_id=current_user.id,
         amount_eur=amount_eur,
         quantity=quantity,
-        all_or_none=request.all_or_none
+        all_or_none=request.all_or_none,
     )
 
     return OrderExecutionResponse(
@@ -862,10 +889,10 @@ async def execute_market_order(
                 seller_code=f.seller_code,
                 price=float(f.price_eur),
                 quantity=float(f.quantity),
-                cost=float(f.cost_eur)
+                cost=float(f.cost_eur),
             )
             for f in result.fills
         ],
         eur_balance=float(result.eur_balance),
-        certificate_balance=float(result.certificate_balance)
+        certificate_balance=float(result.certificate_balance),
     )

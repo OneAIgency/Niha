@@ -59,6 +59,8 @@ When creating or reviewing components, verify:
 - Responsive on mobile, tablet, and desktop
 - Handles loading, error, and empty states
 
+**Backoffice nav levels:** Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` from `frontend/src/styles/design-tokens.css`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; customize via CSS variables in the same file. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8–9.
+
 ## Output
 
 1. **Design System Documentation**: Update `docs/design-system/` with tokens, themes, and components

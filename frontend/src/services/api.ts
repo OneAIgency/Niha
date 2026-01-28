@@ -29,6 +29,14 @@ import type {
   AuthenticationAttempt,
   Deposit,
   DepositCreate,
+  AnnounceDepositRequest,
+  ConfirmDepositRequest,
+  ClearDepositRequest,
+  RejectDepositRequest,
+  WireInstructions,
+  DepositListResponse,
+  DepositStats,
+  HoldCalculation,
   Entity,
   EntityBalance,
   MarketMaker,
@@ -38,6 +46,12 @@ import type {
   SettlementBatch,
   Trade,
   TransactionType,
+  Withdrawal,
+  WithdrawalRequest,
+  ApproveWithdrawalRequest,
+  CompleteWithdrawalRequest,
+  RejectWithdrawalRequest,
+  WithdrawalStats,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -995,11 +1009,99 @@ export const backofficeApi = {
     return data;
   },
 
-  // Get all pending deposits
+  // Get all pending deposits (legacy - use new AML endpoints)
   getPendingDeposits: async (): Promise<Deposit[]> => {
     const { data } = await api.get('/backoffice/deposits', {
       params: { status: 'pending' },
     });
+    return data;
+  },
+
+  // ============== NEW AML Deposit Endpoints ==============
+
+  // Client endpoints
+  getWireInstructions: async (): Promise<WireInstructions> => {
+    const { data } = await api.get('/deposits/wire-instructions');
+    return data;
+  },
+
+  announceDeposit: async (request: AnnounceDepositRequest): Promise<Deposit> => {
+    const { data } = await api.post('/deposits/announce', request);
+    return data;
+  },
+
+  getMyDepositsAML: async (params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<DepositListResponse> => {
+    const { data } = await api.get('/deposits/my-deposits', { params });
+    return data;
+  },
+
+  previewHoldPeriod: async (amount: number): Promise<HoldCalculation> => {
+    const { data } = await api.get('/deposits/preview-hold', {
+      params: { amount },
+    });
+    return data;
+  },
+
+  // Admin AML endpoints
+  getPendingDepositsAML: async (params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<DepositListResponse> => {
+    const { data } = await api.get('/deposits/pending', { params });
+    return data;
+  },
+
+  getOnHoldDeposits: async (params?: {
+    include_expired?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<DepositListResponse> => {
+    const { data } = await api.get('/deposits/on-hold', { params });
+    return data;
+  },
+
+  getDepositStats: async (entityId?: string): Promise<DepositStats> => {
+    const { data } = await api.get('/deposits/stats', {
+      params: entityId ? { entity_id: entityId } : undefined,
+    });
+    return data;
+  },
+
+  getDepositAML: async (depositId: string): Promise<Deposit> => {
+    const { data } = await api.get(`/deposits/${depositId}`);
+    return data;
+  },
+
+  confirmDepositAML: async (
+    depositId: string,
+    request: ConfirmDepositRequest
+  ): Promise<Deposit> => {
+    const { data } = await api.post(`/deposits/${depositId}/confirm`, request);
+    return data;
+  },
+
+  clearDeposit: async (
+    depositId: string,
+    request: ClearDepositRequest
+  ): Promise<Deposit> => {
+    const { data } = await api.post(`/deposits/${depositId}/clear`, request);
+    return data;
+  },
+
+  rejectDepositAML: async (
+    depositId: string,
+    request: RejectDepositRequest
+  ): Promise<Deposit> => {
+    const { data } = await api.post(`/deposits/${depositId}/reject`, request);
+    return data;
+  },
+
+  processExpiredHolds: async (): Promise<MessageResponse> => {
+    const { data } = await api.post('/deposits/process-expired-holds');
     return data;
   },
 
@@ -1528,6 +1630,68 @@ export const settlementApi = {
 
   getSettlementDetails: async (settlementId: string): Promise<SettlementBatch> => {
     const { data } = await api.get<SettlementBatch>(`/settlement/${settlementId}`);
+    return data;
+  },
+};
+
+// =============================================================================
+// Withdrawals API
+// =============================================================================
+
+export const withdrawalApi = {
+  // Client endpoints
+  requestWithdrawal: async (request: WithdrawalRequest): Promise<{
+    success: boolean;
+    withdrawal_id?: string;
+    internal_reference?: string;
+    error?: string;
+  }> => {
+    const { data } = await api.post('/withdrawals/request', request);
+    return data;
+  },
+
+  getMyWithdrawals: async (): Promise<Withdrawal[]> => {
+    const { data } = await api.get('/withdrawals/my-withdrawals');
+    return data;
+  },
+
+  // Admin endpoints
+  getPendingWithdrawals: async (): Promise<Withdrawal[]> => {
+    const { data } = await api.get('/withdrawals/pending');
+    return data;
+  },
+
+  getProcessingWithdrawals: async (): Promise<Withdrawal[]> => {
+    const { data } = await api.get('/withdrawals/processing');
+    return data;
+  },
+
+  getWithdrawalStats: async (): Promise<WithdrawalStats> => {
+    const { data } = await api.get('/withdrawals/stats');
+    return data;
+  },
+
+  approveWithdrawal: async (
+    withdrawalId: string,
+    request: ApproveWithdrawalRequest
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data } = await api.post(`/withdrawals/${withdrawalId}/approve`, request);
+    return data;
+  },
+
+  completeWithdrawal: async (
+    withdrawalId: string,
+    request: CompleteWithdrawalRequest
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data } = await api.post(`/withdrawals/${withdrawalId}/complete`, request);
+    return data;
+  },
+
+  rejectWithdrawal: async (
+    withdrawalId: string,
+    request: RejectWithdrawalRequest
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data } = await api.post(`/withdrawals/${withdrawalId}/reject`, request);
     return data;
   },
 };

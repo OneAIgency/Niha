@@ -1,17 +1,18 @@
 """Logging and Audit Trail API endpoints"""
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, desc
-from typing import List, Optional, Dict, Any
-from uuid import UUID
+
+import logging
 from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
-from ...models.models import User, TicketLog, TicketStatus, MarketMakerClient
+from ...models.models import TicketLog, TicketStatus, User
 from ...schemas.schemas import TicketLogResponse, TicketLogStats
-from ...services.ticket_service import TicketService
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -21,31 +22,39 @@ router = APIRouter(prefix="/logging", tags=["Logging & Audit"])
 @router.get("/tickets", response_model=Dict[str, Any])
 async def list_tickets(
     # Date range filters
-    start_date: Optional[datetime] = Query(None, description="Filter tickets from this date"),
-    end_date: Optional[datetime] = Query(None, description="Filter tickets until this date"),
-
+    start_date: Optional[datetime] = Query(
+        None, description="Filter tickets from this date"
+    ),
+    end_date: Optional[datetime] = Query(
+        None, description="Filter tickets until this date"
+    ),
     # Entity filters
-    action_type: Optional[str] = Query(None, description="Filter by action type (e.g., ORDER_PLACED)"),
-    entity_type: Optional[str] = Query(None, description="Filter by entity type (e.g., Order, User)"),
+    action_type: Optional[str] = Query(
+        None, description="Filter by action type (e.g., ORDER_PLACED)"
+    ),
+    entity_type: Optional[str] = Query(
+        None, description="Filter by entity type (e.g., Order, User)"
+    ),
     entity_id: Optional[UUID] = Query(None, description="Filter by specific entity ID"),
-
     # Actor filters
-    user_id: Optional[UUID] = Query(None, description="Filter by user who performed action"),
+    user_id: Optional[UUID] = Query(
+        None, description="Filter by user who performed action"
+    ),
     market_maker_id: Optional[UUID] = Query(None, description="Filter by market maker"),
-
     # Status filter
-    status: Optional[TicketStatus] = Query(None, description="Filter by status (SUCCESS/FAILED)"),
-
+    status: Optional[TicketStatus] = Query(
+        None, description="Filter by status (SUCCESS/FAILED)"
+    ),
     # Search filters
-    search: Optional[str] = Query(None, description="Search in ticket_id, action_type, entity_type"),
+    search: Optional[str] = Query(
+        None, description="Search in ticket_id, action_type, entity_type"
+    ),
     tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),
-
     # Pagination
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
-
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List all audit tickets with comprehensive filtering.
@@ -96,7 +105,7 @@ async def list_tickets(
             or_(
                 TicketLog.ticket_id.ilike(search_pattern),
                 TicketLog.action_type.ilike(search_pattern),
-                TicketLog.entity_type.ilike(search_pattern)
+                TicketLog.entity_type.ilike(search_pattern),
             )
         )
 
@@ -129,16 +138,14 @@ async def list_tickets(
     tickets = result.scalars().all()
 
     # Convert to response format
-    tickets_data = [
-        TicketLogResponse.model_validate(ticket) for ticket in tickets
-    ]
+    tickets_data = [TicketLogResponse.model_validate(ticket) for ticket in tickets]
 
     return {
         "tickets": tickets_data,
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0
+        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0,
     }
 
 
@@ -146,7 +153,7 @@ async def list_tickets(
 async def get_ticket_details(
     ticket_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get full details for a specific ticket.
@@ -158,9 +165,7 @@ async def get_ticket_details(
     - Related tickets
     - Tags
     """
-    result = await db.execute(
-        select(TicketLog).where(TicketLog.ticket_id == ticket_id)
-    )
+    result = await db.execute(select(TicketLog).where(TicketLog.ticket_id == ticket_id))
     ticket = result.scalar_one_or_none()
 
     if not ticket:
@@ -174,9 +179,8 @@ async def get_logging_stats(
     # Date range for stats
     start_date: Optional[datetime] = Query(None, description="Stats from this date"),
     end_date: Optional[datetime] = Query(None, description="Stats until this date"),
-
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get dashboard statistics for audit logs.
@@ -204,11 +208,15 @@ async def get_logging_stats(
     total_actions = result.scalar()
 
     # Success/failure counts
-    success_query = select(func.count()).select_from(TicketLog).where(
-        TicketLog.status == TicketStatus.SUCCESS
+    success_query = (
+        select(func.count())
+        .select_from(TicketLog)
+        .where(TicketLog.status == TicketStatus.SUCCESS)
     )
-    failed_query = select(func.count()).select_from(TicketLog).where(
-        TicketLog.status == TicketStatus.FAILED
+    failed_query = (
+        select(func.count())
+        .select_from(TicketLog)
+        .where(TicketLog.status == TicketStatus.FAILED)
     )
 
     if filters:
@@ -222,10 +230,11 @@ async def get_logging_stats(
     failed_count = result.scalar()
 
     # Breakdown by action type
-    action_type_query = select(
-        TicketLog.action_type,
-        func.count().label("count")
-    ).group_by(TicketLog.action_type).order_by(desc("count"))
+    action_type_query = (
+        select(TicketLog.action_type, func.count().label("count"))
+        .group_by(TicketLog.action_type)
+        .order_by(desc("count"))
+    )
 
     if filters:
         action_type_query = action_type_query.where(and_(*filters))
@@ -234,15 +243,18 @@ async def get_logging_stats(
     by_action_type = {row.action_type: row.count for row in result}
 
     # Top users by action count
-    user_query = select(
-        TicketLog.user_id,
-        User.email,
-        User.company_name,
-        func.count().label("action_count")
-    ).join(User, TicketLog.user_id == User.id, isouter=True
-    ).group_by(TicketLog.user_id, User.email, User.company_name
-    ).order_by(desc("action_count")
-    ).limit(10)
+    user_query = (
+        select(
+            TicketLog.user_id,
+            User.email,
+            User.company_name,
+            func.count().label("action_count"),
+        )
+        .join(User, TicketLog.user_id == User.id, isouter=True)
+        .group_by(TicketLog.user_id, User.email, User.company_name)
+        .order_by(desc("action_count"))
+        .limit(10)
+    )
 
     if filters:
         user_query = user_query.where(and_(*filters))
@@ -253,7 +265,7 @@ async def get_logging_stats(
             "user_id": str(row.user_id) if row.user_id else None,
             "email": row.email,
             "company_name": row.company_name,
-            "action_count": row.action_count
+            "action_count": row.action_count,
         }
         for row in result
     ]
@@ -264,24 +276,21 @@ async def get_logging_stats(
     else:
         time_start = start_date
 
-    time_query = select(
-        func.date(TicketLog.timestamp).label("date"),
-        func.count().label("count")
-    ).where(
-        TicketLog.timestamp >= time_start
-    ).group_by(func.date(TicketLog.timestamp)
-    ).order_by("date")
+    time_query = (
+        select(
+            func.date(TicketLog.timestamp).label("date"), func.count().label("count")
+        )
+        .where(TicketLog.timestamp >= time_start)
+        .group_by(func.date(TicketLog.timestamp))
+        .order_by("date")
+    )
 
     if end_date:
         time_query = time_query.where(TicketLog.timestamp <= end_date)
 
     result = await db.execute(time_query)
     actions_over_time = [
-        {
-            "date": row.date.isoformat(),
-            "count": row.count
-        }
-        for row in result
+        {"date": row.date.isoformat(), "count": row.count} for row in result
     ]
 
     return TicketLogStats(
@@ -290,7 +299,7 @@ async def get_logging_stats(
         failed_count=failed_count,
         by_action_type=by_action_type,
         by_user=by_user,
-        actions_over_time=actions_over_time
+        actions_over_time=actions_over_time,
     )
 
 
@@ -303,7 +312,7 @@ async def list_market_maker_actions(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Pre-filtered view for Market Maker actions.
@@ -342,16 +351,14 @@ async def list_market_maker_actions(
     tickets = result.scalars().all()
 
     # Convert to response format
-    tickets_data = [
-        TicketLogResponse.model_validate(ticket) for ticket in tickets
-    ]
+    tickets_data = [TicketLogResponse.model_validate(ticket) for ticket in tickets]
 
     return {
         "tickets": tickets_data,
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0
+        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0,
     }
 
 
@@ -364,7 +371,7 @@ async def list_failed_actions(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Pre-filtered view for failed actions.
@@ -402,14 +409,12 @@ async def list_failed_actions(
     tickets = result.scalars().all()
 
     # Convert to response format
-    tickets_data = [
-        TicketLogResponse.model_validate(ticket) for ticket in tickets
-    ]
+    tickets_data = [TicketLogResponse.model_validate(ticket) for ticket in tickets]
 
     return {
         "tickets": tickets_data,
         "total": total,
         "page": page,
         "per_page": per_page,
-        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0
+        "total_pages": (total + per_page - 1) // per_page if total > 0 else 0,
     }

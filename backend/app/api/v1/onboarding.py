@@ -1,22 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from datetime import datetime
-from typing import Optional
 import os
 import uuid
+from datetime import datetime
+
 import aiofiles
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...core.config import settings
 from ...models.models import (
-    User, Entity, KYCDocument, UserRole, DocumentType, DocumentStatus
+    DocumentStatus,
+    DocumentType,
+    Entity,
+    KYCDocument,
+    User,
 )
 from ...schemas.schemas import (
-    MessageResponse,
     KYCDocumentResponse,
-    OnboardingStatusResponse
+    MessageResponse,
+    OnboardingStatusResponse,
 )
 from .backoffice import backoffice_ws_manager
 
@@ -37,21 +40,22 @@ REQUIRED_DOCUMENTS = [
 ]
 
 # Allowed file types and max size
-ALLOWED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png'}
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
 def get_upload_path():
     """Get or create upload directory"""
-    upload_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'uploads', 'kyc')
+    upload_dir = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "uploads", "kyc"
+    )
     os.makedirs(upload_dir, exist_ok=True)
     return upload_dir
 
 
 @router.get("/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's onboarding/KYC status.
@@ -63,7 +67,9 @@ async def get_onboarding_status(
 
     # Check which required documents are uploaded and approved
     uploaded_types = {doc.document_type for doc in documents}
-    approved_types = {doc.document_type for doc in documents if doc.status == DocumentStatus.APPROVED}
+    approved_types = {
+        doc.document_type for doc in documents if doc.status == DocumentStatus.APPROVED
+    }
     rejected_docs = [doc for doc in documents if doc.status == DocumentStatus.REJECTED]
 
     documents_uploaded = len(uploaded_types)
@@ -82,17 +88,14 @@ async def get_onboarding_status(
         status = "pending"
 
     # Can submit if all required docs are uploaded and none are rejected
-    can_submit = (
-        uploaded_types >= set(REQUIRED_DOCUMENTS) and
-        not rejected_docs
-    )
+    can_submit = uploaded_types >= set(REQUIRED_DOCUMENTS) and not rejected_docs
 
     return OnboardingStatusResponse(
         documents_uploaded=documents_uploaded,
         documents_required=documents_required,
         documents=[KYCDocumentResponse.model_validate(doc) for doc in documents],
         can_submit=can_submit,
-        status=status
+        status=status,
     )
 
 
@@ -101,7 +104,7 @@ async def upload_document(
     document_type: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Upload a KYC document.
@@ -112,7 +115,7 @@ async def upload_document(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid document type. Must be one of: {[d.value for d in DocumentType]}"
+            detail=f"Invalid document type. Must be one of: {[d.value for d in DocumentType]}",
         )
 
     # Validate file extension
@@ -120,7 +123,7 @@ async def upload_document(
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
     # Read file to check size
@@ -128,13 +131,12 @@ async def upload_document(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+            detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
         )
 
     # Check if document of this type already exists
     existing_query = select(KYCDocument).where(
-        KYCDocument.user_id == current_user.id,
-        KYCDocument.document_type == doc_type
+        KYCDocument.user_id == current_user.id, KYCDocument.document_type == doc_type
     )
     existing_result = await db.execute(existing_query)
     existing_doc = existing_result.scalar_one_or_none()
@@ -143,7 +145,7 @@ async def upload_document(
     if existing_doc and existing_doc.status != DocumentStatus.REJECTED:
         raise HTTPException(
             status_code=400,
-            detail=f"Document of type {doc_type.value} already uploaded. Delete it first to upload a new one."
+            detail=f"Document of type {doc_type.value} already uploaded. Delete it first to upload a new one.",
         )
 
     # Generate unique filename
@@ -152,7 +154,7 @@ async def upload_document(
     file_path = os.path.join(upload_path, unique_filename)
 
     # Save file
-    async with aiofiles.open(file_path, 'wb') as f:
+    async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)
 
     # Delete existing rejected document if exists
@@ -171,7 +173,7 @@ async def upload_document(
         file_name=file.filename,
         file_size=len(content),
         mime_type=file.content_type,
-        status=DocumentStatus.PENDING
+        status=DocumentStatus.PENDING,
     )
 
     db.add(document)
@@ -179,23 +181,27 @@ async def upload_document(
     await db.refresh(document)
 
     # Broadcast KYC document upload event to backoffice
-    await backoffice_ws_manager.broadcast("kyc_document_uploaded", {
-        "document_id": str(document.id),
-        "user_id": str(document.user_id),
-        "user_email": current_user.email,
-        "document_type": document.document_type.value,
-        "file_name": document.file_name,
-        "status": document.status.value,
-        "created_at": document.created_at.isoformat() if document.created_at else None
-    })
+    await backoffice_ws_manager.broadcast(
+        "kyc_document_uploaded",
+        {
+            "document_id": str(document.id),
+            "user_id": str(document.user_id),
+            "user_email": current_user.email,
+            "document_type": document.document_type.value,
+            "file_name": document.file_name,
+            "status": document.status.value,
+            "created_at": document.created_at.isoformat()
+            if document.created_at
+            else None,
+        },
+    )
 
     return KYCDocumentResponse.model_validate(document)
 
 
 @router.get("/documents")
 async def get_my_documents(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's uploaded KYC documents.
@@ -216,7 +222,7 @@ async def get_my_documents(
 async def delete_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a KYC document. Only allowed for pending or rejected documents.
@@ -224,7 +230,7 @@ async def delete_document(
     result = await db.execute(
         select(KYCDocument).where(
             KYCDocument.id == uuid.UUID(document_id),
-            KYCDocument.user_id == current_user.id
+            KYCDocument.user_id == current_user.id,
         )
     )
     document = result.scalar_one_or_none()
@@ -233,10 +239,7 @@ async def delete_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     if document.status == DocumentStatus.APPROVED:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete approved documents"
-        )
+        raise HTTPException(status_code=400, detail="Cannot delete approved documents")
 
     # Store document info before deletion for broadcasting
     doc_info = {
@@ -260,8 +263,7 @@ async def delete_document(
 
 @router.post("/submit", response_model=MessageResponse)
 async def submit_for_review(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Submit KYC documents for review.
@@ -280,14 +282,14 @@ async def submit_for_review(
     if missing_docs:
         raise HTTPException(
             status_code=400,
-            detail=f"Missing required documents: {[d.value for d in missing_docs]}"
+            detail=f"Missing required documents: {[d.value for d in missing_docs]}",
         )
 
     # Check for rejected documents
     if rejected_docs:
         raise HTTPException(
             status_code=400,
-            detail="Please re-upload rejected documents before submitting"
+            detail="Please re-upload rejected documents before submitting",
         )
 
     # Update entity KYC submission timestamp if exists

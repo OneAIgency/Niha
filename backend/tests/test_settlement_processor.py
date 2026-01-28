@@ -1,23 +1,27 @@
 """Tests for settlement processor background job"""
+
+from datetime import datetime, timedelta
+from decimal import Decimal
+
 import pytest
 import pytest_asyncio
-from decimal import Decimal
-from datetime import datetime, timedelta
+
+from app.models.models import (
+    CertificateType,
+    Entity,
+    Jurisdiction,
+    SettlementBatch,
+    SettlementStatus,
+    SettlementType,
+)
 from app.services.settlement_processor import SettlementProcessor
 from app.services.settlement_service import SettlementService
-from app.models.models import (
-    User, UserRole, Entity, Jurisdiction,
-    SettlementBatch, SettlementStatus, SettlementType, CertificateType
-)
 
 
 @pytest_asyncio.fixture
 async def test_entity(db_session, test_admin_user):
     """Create a test entity"""
-    entity = Entity(
-        name="Test Entity",
-        jurisdiction=Jurisdiction.EU
-    )
+    entity = Entity(name="Test Entity", jurisdiction=Jurisdiction.EU)
     db_session.add(entity)
     await db_session.commit()
     await db_session.refresh(entity)
@@ -37,20 +41,28 @@ async def test_get_next_status_progression(db_session, test_entity):
         quantity=Decimal("100"),
         price=Decimal("10.00"),
         total_value_eur=Decimal("1000.00"),
-        expected_settlement_date=datetime.utcnow()
+        expected_settlement_date=datetime.utcnow(),
     )
 
     # Test normal progression
-    assert SettlementProcessor._get_next_status(pending_settlement) == SettlementStatus.TRANSFER_INITIATED
+    assert SettlementProcessor._get_next_status(pending_settlement) == (
+        SettlementStatus.TRANSFER_INITIATED
+    )
 
     pending_settlement.status = SettlementStatus.TRANSFER_INITIATED
-    assert SettlementProcessor._get_next_status(pending_settlement) == SettlementStatus.IN_TRANSIT
+    assert SettlementProcessor._get_next_status(pending_settlement) == (
+        SettlementStatus.IN_TRANSIT
+    )
 
     pending_settlement.status = SettlementStatus.IN_TRANSIT
-    assert SettlementProcessor._get_next_status(pending_settlement) == SettlementStatus.AT_CUSTODY
+    assert SettlementProcessor._get_next_status(pending_settlement) == (
+        SettlementStatus.AT_CUSTODY
+    )
 
     pending_settlement.status = SettlementStatus.AT_CUSTODY
-    assert SettlementProcessor._get_next_status(pending_settlement) == SettlementStatus.SETTLED
+    assert SettlementProcessor._get_next_status(pending_settlement) == (
+        SettlementStatus.SETTLED
+    )
 
     # Test terminal statuses have no next status
     pending_settlement.status = SettlementStatus.SETTLED
@@ -61,7 +73,9 @@ async def test_get_next_status_progression(db_session, test_entity):
 
 
 @pytest.mark.asyncio
-async def test_should_advance_status_based_on_time(db_session, test_entity, test_admin_user):
+async def test_should_advance_status_based_on_time(
+    db_session, test_entity, test_admin_user
+):
     """Test settlement auto-advancement based on elapsed time"""
     # Create settlement with expected date in the past (should advance)
     past_date = datetime.utcnow() - timedelta(days=1)
@@ -73,7 +87,7 @@ async def test_should_advance_status_based_on_time(db_session, test_entity, test
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     # Manually set expected date to past
     settlement_past.expected_settlement_date = past_date
@@ -94,7 +108,7 @@ async def test_should_advance_status_based_on_time(db_session, test_entity, test
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     settlement_future.expected_settlement_date = future_date
     await db_session.commit()
@@ -119,7 +133,7 @@ async def test_should_advance_status_respects_status_order(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # T+3 CEA purchases should have:
@@ -157,7 +171,7 @@ async def test_should_not_advance_terminal_statuses(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Progress through all states to reach SETTLED
@@ -166,28 +180,28 @@ async def test_should_not_advance_terminal_statuses(
         settlement_id=settlement.id,
         new_status=SettlementStatus.TRANSFER_INITIATED,
         notes="Transfer started",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement.id,
         new_status=SettlementStatus.IN_TRANSIT,
         notes="In transit",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement.id,
         new_status=SettlementStatus.AT_CUSTODY,
         notes="At custody",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement.id,
         new_status=SettlementStatus.SETTLED,
         notes="Completed",
-        updated_by=test_admin_user.id
+        updated_by=test_admin_user.id,
     )
 
     # Set expected date to past
@@ -201,7 +215,6 @@ async def test_should_not_advance_terminal_statuses(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Processor tests need proper session mocking - greenlet issues")
 async def test_process_pending_settlements_advances_ready(
     db_session, test_entity, test_admin_user
 ):
@@ -220,7 +233,7 @@ async def test_process_pending_settlements_advances_ready(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Manually set expected date to yesterday
@@ -239,13 +252,13 @@ async def test_process_pending_settlements_advances_ready(
     assert settlement.status == SettlementStatus.TRANSFER_INITIATED
 
     # Verify history was created
+    await db_session.refresh(settlement, attribute_names=["status_history"])
     assert len(settlement.status_history) == 2
     assert settlement.status_history[-1].status == SettlementStatus.TRANSFER_INITIATED
     assert "Automatic status update" in settlement.status_history[-1].notes
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Processor tests need proper session mocking - greenlet issues")
 async def test_process_pending_settlements_skips_future(
     db_session, test_entity, test_admin_user
 ):
@@ -259,7 +272,7 @@ async def test_process_pending_settlements_skips_future(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Manually set expected date to tomorrow
@@ -275,13 +288,12 @@ async def test_process_pending_settlements_skips_future(
     await SettlementProcessor.process_pending_settlements(db=db_session)
 
     # Verify status unchanged
-    await db_session.refresh(settlement)
+    await db_session.refresh(settlement, attribute_names=["status_history"])
     assert settlement.status == initial_status
     assert len(settlement.status_history) == 1  # Only initial history
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Processor tests need proper session mocking - greenlet issues")
 async def test_process_pending_settlements_handles_multiple(
     db_session, test_entity, test_admin_user
 ):
@@ -295,7 +307,7 @@ async def test_process_pending_settlements_handles_multiple(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
     settlement_ready.expected_settlement_date = datetime.utcnow() - timedelta(days=1)
 
@@ -307,9 +319,11 @@ async def test_process_pending_settlements_handles_multiple(
         quantity=Decimal("500"),
         price=Decimal("14.00"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
-    settlement_not_ready.expected_settlement_date = datetime.utcnow() + timedelta(days=1)
+    settlement_not_ready.expected_settlement_date = datetime.utcnow() + timedelta(
+        days=1
+    )
 
     settlement_settled = await SettlementService.create_cea_purchase_settlement(
         db=db_session,
@@ -319,15 +333,11 @@ async def test_process_pending_settlements_handles_multiple(
         quantity=Decimal("750"),
         price=Decimal("13.75"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
-    await SettlementService.update_settlement_status(
-        db=db_session,
-        settlement_id=settlement_settled.id,
-        new_status=SettlementStatus.SETTLED,
-        notes="Already settled",
-        updated_by=test_admin_user.id
-    )
+    # Manually set status to SETTLED (bypassing service validation)
+    settlement_settled.status = SettlementStatus.SETTLED
+    settlement_settled.updated_by = test_admin_user.id
 
     await db_session.commit()
 
@@ -345,7 +355,6 @@ async def test_process_pending_settlements_handles_multiple(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Processor tests need proper session mocking - greenlet issues")
 async def test_check_overdue_settlements(db_session, test_entity, test_admin_user):
     """Test check_overdue_settlements identifies overdue settlements"""
     # Create settlement that's way overdue (expected 5 days ago)
@@ -357,7 +366,7 @@ async def test_check_overdue_settlements(db_session, test_entity, test_admin_use
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Set to overdue
@@ -365,8 +374,8 @@ async def test_check_overdue_settlements(db_session, test_entity, test_admin_use
     settlement.status = SettlementStatus.IN_TRANSIT  # Still in transit after 5 days
     await db_session.commit()
 
-    # Run overdue check (this would log warnings in production)
-    await SettlementProcessor.check_overdue_settlements()
+    # Run overdue check with injected session
+    await SettlementProcessor.check_overdue_settlements(db=db_session)
 
     # In production, this would send alerts/notifications
     # For testing, we just verify it runs without error
@@ -374,7 +383,6 @@ async def test_check_overdue_settlements(db_session, test_entity, test_admin_use
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Processor tests need proper session mocking - greenlet issues")
 async def test_full_settlement_lifecycle_automation(
     db_session, test_entity, test_admin_user
 ):
@@ -388,7 +396,7 @@ async def test_full_settlement_lifecycle_automation(
         quantity=Decimal("1000"),
         price=Decimal("13.50"),
         seller_id=None,
-        created_by=test_admin_user.id
+        created_by=test_admin_user.id,
     )
 
     # Simulate T+0 (today) - should be PENDING
@@ -399,31 +407,32 @@ async def test_full_settlement_lifecycle_automation(
     await db_session.commit()
 
     # Run processor - should advance to TRANSFER_INITIATED
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.TRANSFER_INITIATED
 
     # Run again - should advance to IN_TRANSIT
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.IN_TRANSIT
 
     # Run again - should advance to AT_CUSTODY
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.AT_CUSTODY
 
     # Run again - should advance to SETTLED
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.SETTLED
 
     # Run again - should stay SETTLED (terminal)
-    await SettlementProcessor.process_pending_settlements()
+    await SettlementProcessor.process_pending_settlements(db=db_session)
     await db_session.refresh(settlement)
     assert settlement.status == SettlementStatus.SETTLED
 
     # Verify complete history
+    await db_session.refresh(settlement, attribute_names=["status_history"])
     assert len(settlement.status_history) == 5  # All 5 status changes
     statuses = [h.status for h in settlement.status_history]
     assert statuses == [

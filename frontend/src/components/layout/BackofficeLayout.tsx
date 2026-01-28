@@ -7,11 +7,13 @@ import {
   Bot,
   ShoppingCart,
   Zap,
+  Wallet,
+  UserPlus,
 } from 'lucide-react';
-import { Subheader, SubSubHeader } from '../common';
+import { Subheader, SubSubHeader, SubheaderNavButton } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/logging' | '/users';
+type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/deposits' | '/backoffice/logging' | '/users';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -37,10 +39,34 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-blue-500',
     description: 'Review access requests, KYC documents, and user activity',
   },
+  '/backoffice/onboarding': {
+    icon: UserPlus,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Onboarding content and actions',
+  },
+  '/backoffice/onboarding/requests': {
+    icon: UserPlus,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Contact requests, KYC review, and deposits',
+  },
+  '/backoffice/onboarding/kyc': {
+    icon: UserPlus,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Contact requests, KYC review, and deposits',
+  },
+  '/backoffice/onboarding/deposits': {
+    icon: UserPlus,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Contact requests, KYC review, and deposits',
+  },
   '/backoffice/market-makers': {
     icon: Bot,
-    iconBg: 'bg-purple-500/20',
-    iconColor: 'text-purple-500',
+    iconBg: 'bg-blue-500/20',
+    iconColor: 'text-blue-500',
     description: 'Manage MM clients and assets',
   },
   '/backoffice/market-orders': {
@@ -57,9 +83,15 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
   },
   '/backoffice/logging': {
     icon: Activity,
-    iconBg: 'bg-orange-500/20',
-    iconColor: 'text-orange-500',
+    iconBg: 'bg-amber-500/20',
+    iconColor: 'text-amber-500',
     description: 'View comprehensive audit trail',
+  },
+  '/backoffice/deposits': {
+    icon: Wallet,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Manage deposits and AML checks',
   },
   '/users': {
     icon: Users,
@@ -70,9 +102,11 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
 };
 
 const BACKOFFICE_NAV = [
+  { to: '/backoffice/onboarding', label: 'Onboarding', icon: UserPlus },
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
   { to: '/backoffice/market-orders', label: 'Market Orders', icon: ShoppingCart },
   { to: '/backoffice/liquidity', label: 'Liquidity', icon: Zap },
+  { to: '/backoffice/deposits', label: 'Deposits', icon: Wallet },
   { to: '/backoffice/logging', label: 'Audit Logging', icon: Activity },
   { to: '/users', label: 'Users', icon: Users },
 ] as const;
@@ -92,9 +126,10 @@ interface BackofficeLayoutProps {
 /**
  * BackofficeLayout Component
  *
- * Shared layout for all backoffice pages providing:
- * - Consistent Subheader with route-based icon and description
- * - Compact navigation buttons in Subheader
+ * Shared layout for all backoffice pages. Used inside the main Layout (one Header for the whole app).
+ * Provides:
+ * - Subheader with route-based icon and description
+ * - Compact nav buttons in Subheader (icon-only, label on hover; active shows icon + label)
  * - Optional SubSubHeader for page-specific content (filters, actions)
  * - Standardized content container
  *
@@ -129,21 +164,13 @@ export function BackofficeLayout({ children, subSubHeaderLeft, subSubHeader }: B
             const isActive = isRouteActive(pathname, item.to);
             const Icon = item.icon;
             return (
-              <Link
+              <SubheaderNavButton
                 key={item.to}
                 to={item.to}
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                  isActive
-                    ? 'bg-navy-600 text-white'
-                    : 'text-navy-400 hover:bg-navy-700 hover:text-navy-300'
-                )}
-              >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                {item.label}
-              </Link>
+                label={item.label}
+                icon={<Icon className="w-4 h-4" aria-hidden="true" />}
+                isActive={isActive}
+              />
             );
           })}
         </nav>

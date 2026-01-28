@@ -1,19 +1,20 @@
 """Liquidity Management API endpoints"""
+
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from decimal import Decimal
-import logging
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
-from ...models.models import User, CertificateType
+from ...models.models import User
 from ...schemas.schemas import (
-    LiquidityPreviewRequest,
-    LiquidityPreviewResponse,
     LiquidityCreateRequest,
     LiquidityCreateResponse,
+    LiquidityPreviewRequest,
+    LiquidityPreviewResponse,
 )
-from ...services.liquidity_service import LiquidityService, InsufficientAssetsError
+from ...services.liquidity_service import InsufficientAssetsError, LiquidityService
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/liquidity", tags=["Liquidity"])
 async def preview_liquidity_creation(
     data: LiquidityPreviewRequest,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Preview liquidity creation without executing.
@@ -36,7 +37,7 @@ async def preview_liquidity_creation(
             db=db,
             certificate_type=data.certificate_type,
             bid_amount_eur=data.bid_amount_eur,
-            ask_amount_eur=data.ask_amount_eur
+            ask_amount_eur=data.ask_amount_eur,
         )
 
         logger.info(
@@ -57,7 +58,7 @@ async def preview_liquidity_creation(
 async def create_liquidity(
     data: LiquidityCreateRequest,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Execute liquidity creation by placing orders across market makers.
@@ -76,7 +77,7 @@ async def create_liquidity(
             bid_amount_eur=data.bid_amount_eur,
             ask_amount_eur=data.ask_amount_eur,
             created_by_id=admin_user.id,
-            notes=data.notes
+            notes=data.notes,
         )
 
         # Commit the transaction
@@ -95,7 +96,7 @@ async def create_liquidity(
             orders_created=len(operation.orders_created),
             bid_liquidity_eur=operation.actual_bid_liquidity_eur,
             ask_liquidity_eur=operation.actual_ask_liquidity_eur,
-            market_makers_used=operation.market_makers_used
+            market_makers_used=operation.market_makers_used,
         )
 
     except InsufficientAssetsError as e:
@@ -112,8 +113,8 @@ async def create_liquidity(
                 "asset_type": e.asset_type,
                 "required": float(e.required),
                 "available": float(e.available),
-                "shortfall": float(e.shortfall)
-            }
+                "shortfall": float(e.shortfall),
+            },
         )
 
     except ValueError as e:

@@ -1,42 +1,55 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+import asyncio
+import os
+from datetime import datetime
+from decimal import Decimal
+from typing import List, Optional
+from uuid import UUID
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-import os
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, update
-from datetime import datetime
-from typing import Optional, List
-from uuid import UUID
-from decimal import Decimal
-import asyncio
-import json
 
 # Constants for deposit validation
-MAX_DEPOSIT_AMOUNT = Decimal('100000000')  # 100 million max per deposit
+MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
-    User, Entity, KYCDocument, UserSession, Trade, UserRole,
-    DocumentStatus, KYCStatus, Deposit, DepositStatus, Currency,
-    EntityHolding, AssetTransaction, AssetType, TransactionType
+    AssetTransaction,
+    AssetType,
+    Currency,
+    Deposit,
+    DepositStatus,
+    DocumentStatus,
+    Entity,
+    EntityHolding,
+    KYCDocument,
+    KYCStatus,
+    Trade,
+    TransactionType,
+    User,
+    UserRole,
+    UserSession,
 )
 from ...schemas.schemas import (
-    MessageResponse,
-    KYCDocumentResponse,
-    KYCDocumentReview,
-    UserSessionResponse,
-    UserApprovalRequest,
-    DepositCreate,
-    DepositConfirm,
-    DepositResponse,
-    DepositWithEntityResponse,
-    EntityBalanceResponse,
-    Currency as SchemaCurrency,
     AddAssetRequest,
-    EntityAssetsResponse,
     AssetTransactionResponse,
-    AssetTypeEnum
+    AssetTypeEnum,
+    DepositConfirm,
+    DepositCreate,
+    EntityAssetsResponse,
+    KYCDocumentReview,
+    MessageResponse,
+    UserApprovalRequest,
 )
 from ...services.email_service import email_service
 
@@ -44,6 +57,7 @@ router = APIRouter(prefix="/backoffice", tags=["Backoffice"])
 
 
 # ============== WebSocket Connection Manager ==============
+
 
 class BackofficeConnectionManager:
     """Manage WebSocket connections for backoffice realtime updates"""
@@ -64,7 +78,7 @@ class BackofficeConnectionManager:
         message = {
             "type": event_type,
             "data": data,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
         disconnected = []
         for connection in self.active_connections:
@@ -92,20 +106,21 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
 
     try:
         # Send initial connection confirmation
-        await websocket.send_json({
-            "type": "connected",
-            "message": "Connected to backoffice realtime updates",
-            "timestamp": datetime.utcnow().isoformat()
-        })
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "message": "Connected to backoffice realtime updates",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
 
         # Keep connection alive with heartbeat
         while True:
             await asyncio.sleep(30)
             try:
-                await websocket.send_json({
-                    "type": "heartbeat",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+                await websocket.send_json(
+                    {"type": "heartbeat", "timestamp": datetime.utcnow().isoformat()}
+                )
             except Exception:
                 break
 
@@ -117,8 +132,7 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
 
 @router.get("/pending-users")
 async def get_pending_users(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Get users awaiting approval (pending status with submitted KYC).
@@ -138,8 +152,10 @@ async def get_pending_users(
     pending_list = []
     for user in users:
         # Count documents
-        doc_count_query = select(func.count()).select_from(KYCDocument).where(
-            KYCDocument.user_id == user.id
+        doc_count_query = (
+            select(func.count())
+            .select_from(KYCDocument)
+            .where(KYCDocument.user_id == user.id)
         )
         doc_result = await db.execute(doc_count_query)
         doc_count = doc_result.scalar()
@@ -154,15 +170,17 @@ async def get_pending_users(
             if entity:
                 entity_name = entity.name
 
-        pending_list.append({
-            "id": str(user.id),
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "entity_name": entity_name,
-            "documents_count": doc_count,
-            "created_at": user.created_at.isoformat() if user.created_at else None
-        })
+        pending_list.append(
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "entity_name": entity_name,
+                "documents_count": doc_count,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+            }
+        )
 
     return pending_list
 
@@ -171,15 +189,13 @@ async def get_pending_users(
 async def approve_user(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Approve a pending user. Changes role from PENDING to APPROVED.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -188,7 +204,7 @@ async def approve_user(
     if user.role != UserRole.PENDING:
         raise HTTPException(
             status_code=400,
-            detail=f"User is not pending approval (current role: {user.role.value})"
+            detail=f"User is not pending approval (current role: {user.role.value})",
         )
 
     # Update user role
@@ -222,15 +238,13 @@ async def reject_user(
     user_id: str,
     rejection: UserApprovalRequest,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Reject a pending user.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -257,15 +271,13 @@ async def reject_user(
 async def fund_user(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Mark a user as funded. Changes role from APPROVED to FUNDED.
     Admin only.
     """
-    result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -274,7 +286,7 @@ async def fund_user(
     if user.role not in [UserRole.APPROVED, UserRole.PENDING]:
         raise HTTPException(
             status_code=400,
-            detail=f"User cannot be funded (current role: {user.role.value})"
+            detail=f"User cannot be funded (current role: {user.role.value})",
         )
 
     user.role = UserRole.FUNDED
@@ -294,7 +306,7 @@ async def get_all_kyc_documents(
     user_id: Optional[str] = None,
     status: Optional[str] = None,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all KYC documents, optionally filtered by user or status.
@@ -311,7 +323,7 @@ async def get_all_kyc_documents(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DocumentStatus]}"
+                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DocumentStatus]}",
             )
         query = query.where(KYCDocument.status == doc_status)
 
@@ -321,25 +333,27 @@ async def get_all_kyc_documents(
     docs_with_user = []
     for doc in documents:
         # Get user info
-        user_result = await db.execute(
-            select(User).where(User.id == doc.user_id)
-        )
+        user_result = await db.execute(select(User).where(User.id == doc.user_id))
         user = user_result.scalar_one_or_none()
 
-        docs_with_user.append({
-            "id": str(doc.id),
-            "user_id": str(doc.user_id),
-            "user_email": user.email if user else None,
-            "user_name": f"{user.first_name or ''} {user.last_name or ''}".strip() if user else None,
-            "entity_id": str(doc.entity_id) if doc.entity_id else None,
-            "document_type": doc.document_type.value,
-            "file_name": doc.file_name,
-            "mime_type": doc.mime_type,
-            "status": doc.status.value,
-            "reviewed_at": doc.reviewed_at.isoformat() if doc.reviewed_at else None,
-            "notes": doc.notes,
-            "created_at": doc.created_at.isoformat()
-        })
+        docs_with_user.append(
+            {
+                "id": str(doc.id),
+                "user_id": str(doc.user_id),
+                "user_email": user.email if user else None,
+                "user_name": f"{user.first_name or ''} {user.last_name or ''}".strip()
+                if user
+                else None,
+                "entity_id": str(doc.entity_id) if doc.entity_id else None,
+                "document_type": doc.document_type.value,
+                "file_name": doc.file_name,
+                "mime_type": doc.mime_type,
+                "status": doc.status.value,
+                "reviewed_at": doc.reviewed_at.isoformat() if doc.reviewed_at else None,
+                "notes": doc.notes,
+                "created_at": doc.created_at.isoformat(),
+            }
+        )
 
     return docs_with_user
 
@@ -349,7 +363,7 @@ async def review_kyc_document(
     document_id: str,
     review: KYCDocumentReview,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Review (approve/reject) a KYC document.
@@ -372,25 +386,28 @@ async def review_kyc_document(
     await db.commit()
 
     # Broadcast KYC document review event
-    await backoffice_ws_manager.broadcast("kyc_document_reviewed", {
-        "document_id": str(document.id),
-        "user_id": str(document.user_id),
-        "document_type": document.document_type.value,
-        "status": document.status.value,
-        "notes": document.notes,
-        "reviewed_at": document.reviewed_at.isoformat() if document.reviewed_at else None
-    })
-
-    return MessageResponse(
-        message=f"Document has been {review.status.value}"
+    await backoffice_ws_manager.broadcast(
+        "kyc_document_reviewed",
+        {
+            "document_id": str(document.id),
+            "user_id": str(document.user_id),
+            "document_type": document.document_type.value,
+            "status": document.status.value,
+            "notes": document.notes,
+            "reviewed_at": document.reviewed_at.isoformat()
+            if document.reviewed_at
+            else None,
+        },
     )
+
+    return MessageResponse(message=f"Document has been {review.status.value}")
 
 
 @router.get("/kyc-documents/{document_id}/content")
 async def get_document_content(
     document_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get KYC document content for preview/download.
@@ -411,10 +428,8 @@ async def get_document_content(
     return FileResponse(
         path=document.file_path,
         filename=document.file_name,
-        media_type=document.mime_type or 'application/octet-stream',
-        headers={
-            "Content-Disposition": f'inline; filename="{document.file_name}"'
-        }
+        media_type=document.mime_type or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{document.file_name}"'},
     )
 
 
@@ -422,7 +437,7 @@ async def get_document_content(
 async def get_user_sessions(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get a user's session history.
@@ -446,7 +461,7 @@ async def get_user_sessions(
             "started_at": s.started_at.isoformat() if s.started_at else None,
             "ended_at": s.ended_at.isoformat() if s.ended_at else None,
             "duration_seconds": s.duration_seconds,
-            "is_active": s.is_active
+            "is_active": s.is_active,
         }
         for s in sessions
     ]
@@ -456,16 +471,14 @@ async def get_user_sessions(
 async def get_user_trades(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get a user's trading history.
     Admin only.
     """
     # Get user's entity
-    user_result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = user_result.scalar_one_or_none()
 
     if not user or not user.entity_id:
@@ -475,8 +488,8 @@ async def get_user_trades(
     query = (
         select(Trade)
         .where(
-            (Trade.buyer_entity_id == user.entity_id) |
-            (Trade.seller_entity_id == user.entity_id)
+            (Trade.buyer_entity_id == user.entity_id)
+            | (Trade.seller_entity_id == user.entity_id)
         )
         .order_by(Trade.created_at.desc())
         .limit(100)
@@ -496,7 +509,7 @@ async def get_user_trades(
             "status": t.status.value,
             "is_buyer": str(t.buyer_entity_id) == str(user.entity_id),
             "created_at": t.created_at.isoformat() if t.created_at else None,
-            "completed_at": t.completed_at.isoformat() if t.completed_at else None
+            "completed_at": t.completed_at.isoformat() if t.completed_at else None,
         }
         for t in trades
     ]
@@ -504,12 +517,13 @@ async def get_user_trades(
 
 # ============== DEPOSIT MANAGEMENT ==============
 
+
 @router.get("/deposits")
 async def get_all_deposits(
     status: Optional[str] = None,
     entity_id: Optional[str] = None,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all deposits, optionally filtered by status or entity.
@@ -523,7 +537,7 @@ async def get_all_deposits(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DepositStatus]}"
+                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DepositStatus]}",
             )
         query = query.where(Deposit.status == dep_status)
 
@@ -550,24 +564,34 @@ async def get_all_deposits(
             user = user_result.scalar_one_or_none()
             user_email = user.email if user else None
 
-        deposits_with_entity.append({
-            "id": str(dep.id),
-            "entity_id": str(dep.entity_id),
-            "entity_name": entity.name if entity else None,
-            "user_email": user_email,
-            "reported_amount": float(dep.reported_amount) if dep.reported_amount else None,
-            "reported_currency": dep.reported_currency.value if dep.reported_currency else None,
-            "amount": float(dep.amount) if dep.amount else None,
-            "currency": dep.currency.value if dep.currency else None,
-            "wire_reference": dep.wire_reference,
-            "bank_reference": dep.bank_reference,
-            "status": dep.status.value,
-            "reported_at": (dep.reported_at.isoformat() + "Z") if dep.reported_at else None,
-            "confirmed_at": (dep.confirmed_at.isoformat() + "Z") if dep.confirmed_at else None,
-            "confirmed_by": str(dep.confirmed_by) if dep.confirmed_by else None,
-            "notes": dep.notes,
-            "created_at": dep.created_at.isoformat() + "Z"
-        })
+        deposits_with_entity.append(
+            {
+                "id": str(dep.id),
+                "entity_id": str(dep.entity_id),
+                "entity_name": entity.name if entity else None,
+                "user_email": user_email,
+                "reported_amount": float(dep.reported_amount)
+                if dep.reported_amount
+                else None,
+                "reported_currency": dep.reported_currency.value
+                if dep.reported_currency
+                else None,
+                "amount": float(dep.amount) if dep.amount else None,
+                "currency": dep.currency.value if dep.currency else None,
+                "wire_reference": dep.wire_reference,
+                "bank_reference": dep.bank_reference,
+                "status": dep.status.value,
+                "reported_at": (dep.reported_at.isoformat() + "Z")
+                if dep.reported_at
+                else None,
+                "confirmed_at": (dep.confirmed_at.isoformat() + "Z")
+                if dep.confirmed_at
+                else None,
+                "confirmed_by": str(dep.confirmed_by) if dep.confirmed_by else None,
+                "notes": dep.notes,
+                "created_at": dep.created_at.isoformat() + "Z",
+            }
+        )
 
     return deposits_with_entity
 
@@ -576,7 +600,7 @@ async def get_all_deposits(
 async def create_deposit(
     deposit_data: DepositCreate,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create and confirm a deposit for an entity.
@@ -590,14 +614,12 @@ async def create_deposit(
     if deposit_amount > MAX_DEPOSIT_AMOUNT:
         raise HTTPException(
             status_code=400,
-            detail=f"Deposit amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})"
+            detail=f"Deposit amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})",
         )
 
     # Verify entity exists with row lock to prevent race conditions
     entity_result = await db.execute(
-        select(Entity)
-        .where(Entity.id == deposit_data.entity_id)
-        .with_for_update()
+        select(Entity).where(Entity.id == deposit_data.entity_id).with_for_update()
     )
     entity = entity_result.scalar_one_or_none()
 
@@ -611,12 +633,13 @@ async def create_deposit(
             raise HTTPException(
                 status_code=400,
                 detail=f"Currency mismatch: entity has existing balance in {entity.balance_currency.value}, "
-                       f"cannot add {deposit_currency.value}. Please use the same currency or zero the balance first."
+                f"cannot add {deposit_currency.value}. Please use the same currency or zero the balance first.",
             )
 
     # Generate bank reference using cryptographically secure random
     import secrets
     import string
+
     bank_ref = f"DEP-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}"
 
     # Create deposit record
@@ -629,19 +652,17 @@ async def create_deposit(
         status=DepositStatus.CONFIRMED,
         confirmed_at=datetime.utcnow(),
         confirmed_by=admin_user.id,
-        notes=deposit_data.notes
+        notes=deposit_data.notes,
     )
     db.add(deposit)
 
     # Update entity balance atomically using the locked row
-    entity.balance_amount = (entity.balance_amount or Decimal('0')) + deposit_amount
+    entity.balance_amount = (entity.balance_amount or Decimal("0")) + deposit_amount
     entity.balance_currency = deposit_currency
-    entity.total_deposited = (entity.total_deposited or Decimal('0')) + deposit_amount
+    entity.total_deposited = (entity.total_deposited or Decimal("0")) + deposit_amount
 
     # Find users for this entity and upgrade to FUNDED if APPROVED
-    users_result = await db.execute(
-        select(User).where(User.entity_id == entity.id)
-    )
+    users_result = await db.execute(select(User).where(User.entity_id == entity.id))
     users = users_result.scalars().all()
 
     for user in users:
@@ -666,15 +687,13 @@ async def create_deposit(
 async def get_deposit(
     deposit_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get a specific deposit's details.
     Admin only.
     """
-    result = await db.execute(
-        select(Deposit).where(Deposit.id == UUID(deposit_id))
-    )
+    result = await db.execute(select(Deposit).where(Deposit.id == UUID(deposit_id)))
     deposit = result.scalar_one_or_none()
 
     if not deposit:
@@ -690,18 +709,26 @@ async def get_deposit(
         "id": str(deposit.id),
         "entity_id": str(deposit.entity_id),
         "entity_name": entity.name if entity else None,
-        "reported_amount": float(deposit.reported_amount) if deposit.reported_amount else None,
-        "reported_currency": deposit.reported_currency.value if deposit.reported_currency else None,
+        "reported_amount": float(deposit.reported_amount)
+        if deposit.reported_amount
+        else None,
+        "reported_currency": deposit.reported_currency.value
+        if deposit.reported_currency
+        else None,
         "amount": float(deposit.amount) if deposit.amount else None,
         "currency": deposit.currency.value if deposit.currency else None,
         "wire_reference": deposit.wire_reference,
         "bank_reference": deposit.bank_reference,
         "status": deposit.status.value,
-        "reported_at": (deposit.reported_at.isoformat() + "Z") if deposit.reported_at else None,
-        "confirmed_at": (deposit.confirmed_at.isoformat() + "Z") if deposit.confirmed_at else None,
+        "reported_at": (deposit.reported_at.isoformat() + "Z")
+        if deposit.reported_at
+        else None,
+        "confirmed_at": (deposit.confirmed_at.isoformat() + "Z")
+        if deposit.confirmed_at
+        else None,
         "confirmed_by": str(deposit.confirmed_by) if deposit.confirmed_by else None,
         "notes": deposit.notes,
-        "created_at": deposit.created_at.isoformat() + "Z"
+        "created_at": deposit.created_at.isoformat() + "Z",
     }
 
 
@@ -710,7 +737,7 @@ async def confirm_pending_deposit(
     deposit_id: str,
     confirmation: DepositConfirm,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Confirm a pending deposit with actual received amount.
@@ -719,9 +746,7 @@ async def confirm_pending_deposit(
     """
     # Get deposit with row lock
     result = await db.execute(
-        select(Deposit)
-        .where(Deposit.id == UUID(deposit_id))
-        .with_for_update()
+        select(Deposit).where(Deposit.id == UUID(deposit_id)).with_for_update()
     )
     deposit = result.scalar_one_or_none()
 
@@ -731,14 +756,12 @@ async def confirm_pending_deposit(
     if deposit.status != DepositStatus.PENDING:
         raise HTTPException(
             status_code=400,
-            detail=f"Deposit is not pending (current status: {deposit.status.value})"
+            detail=f"Deposit is not pending (current status: {deposit.status.value})",
         )
 
     # Get entity with row lock
     entity_result = await db.execute(
-        select(Entity)
-        .where(Entity.id == deposit.entity_id)
-        .with_for_update()
+        select(Entity).where(Entity.id == deposit.entity_id).with_for_update()
     )
     entity = entity_result.scalar_one_or_none()
 
@@ -752,7 +775,7 @@ async def confirm_pending_deposit(
     if confirmed_amount > MAX_DEPOSIT_AMOUNT:
         raise HTTPException(
             status_code=400,
-            detail=f"Amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})"
+            detail=f"Amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})",
         )
 
     confirmed_currency = Currency(confirmation.currency.value)
@@ -767,14 +790,12 @@ async def confirm_pending_deposit(
         deposit.notes = confirmation.notes
 
     # Update entity balance
-    entity.balance_amount = (entity.balance_amount or Decimal('0')) + confirmed_amount
+    entity.balance_amount = (entity.balance_amount or Decimal("0")) + confirmed_amount
     entity.balance_currency = confirmed_currency
-    entity.total_deposited = (entity.total_deposited or Decimal('0')) + confirmed_amount
+    entity.total_deposited = (entity.total_deposited or Decimal("0")) + confirmed_amount
 
     # Upgrade users from APPROVED to FUNDED
-    users_result = await db.execute(
-        select(User).where(User.entity_id == entity.id)
-    )
+    users_result = await db.execute(select(User).where(User.entity_id == entity.id))
     users = users_result.scalars().all()
 
     upgraded_count = 0
@@ -793,13 +814,16 @@ async def confirm_pending_deposit(
             pass
 
     # Broadcast WebSocket event
-    await backoffice_ws_manager.broadcast("deposit_confirmed", {
-        "deposit_id": str(deposit.id),
-        "entity_id": str(entity.id),
-        "entity_name": entity.name,
-        "amount": float(confirmed_amount),
-        "currency": confirmed_currency.value
-    })
+    await backoffice_ws_manager.broadcast(
+        "deposit_confirmed",
+        {
+            "deposit_id": str(deposit.id),
+            "entity_id": str(entity.id),
+            "entity_name": entity.name,
+            "amount": float(confirmed_amount),
+            "currency": confirmed_currency.value,
+        },
+    )
 
     return MessageResponse(
         message=f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
@@ -810,15 +834,13 @@ async def confirm_pending_deposit(
 async def reject_pending_deposit(
     deposit_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Reject a pending deposit.
     Admin only.
     """
-    result = await db.execute(
-        select(Deposit).where(Deposit.id == UUID(deposit_id))
-    )
+    result = await db.execute(select(Deposit).where(Deposit.id == UUID(deposit_id)))
     deposit = result.scalar_one_or_none()
 
     if not deposit:
@@ -827,7 +849,7 @@ async def reject_pending_deposit(
     if deposit.status != DepositStatus.PENDING:
         raise HTTPException(
             status_code=400,
-            detail=f"Deposit is not pending (current status: {deposit.status.value})"
+            detail=f"Deposit is not pending (current status: {deposit.status.value})",
         )
 
     deposit.status = DepositStatus.REJECTED
@@ -840,15 +862,13 @@ async def reject_pending_deposit(
 async def get_entity_balance(
     entity_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get an entity's balance and deposit history.
     Admin only.
     """
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
@@ -856,9 +876,10 @@ async def get_entity_balance(
 
     # Count deposits
     deposit_count_result = await db.execute(
-        select(func.count()).select_from(Deposit).where(
-            Deposit.entity_id == entity.id,
-            Deposit.status == DepositStatus.CONFIRMED
+        select(func.count())
+        .select_from(Deposit)
+        .where(
+            Deposit.entity_id == entity.id, Deposit.status == DepositStatus.CONFIRMED
         )
     )
     deposit_count = deposit_count_result.scalar()
@@ -867,9 +888,11 @@ async def get_entity_balance(
         "entity_id": str(entity.id),
         "entity_name": entity.name,
         "balance_amount": float(entity.balance_amount or 0),
-        "balance_currency": entity.balance_currency.value if entity.balance_currency else None,
+        "balance_currency": entity.balance_currency.value
+        if entity.balance_currency
+        else None,
         "total_deposited": float(entity.total_deposited or 0),
-        "deposit_count": deposit_count
+        "deposit_count": deposit_count,
     }
 
 
@@ -877,16 +900,14 @@ async def get_entity_balance(
 async def get_user_deposits(
     user_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all deposits for a user's entity.
     Admin only.
     """
     # Get user's entity
-    user_result = await db.execute(
-        select(User).where(User.id == UUID(user_id))
-    )
+    user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
     user = user_result.scalar_one_or_none()
 
     if not user or not user.entity_id:
@@ -912,7 +933,7 @@ async def get_user_deposits(
             "bank_reference": d.bank_reference,
             "status": d.status.value,
             "confirmed_at": d.confirmed_at.isoformat() if d.confirmed_at else None,
-            "created_at": d.created_at.isoformat()
+            "created_at": d.created_at.isoformat(),
         }
         for d in deposits
     ]
@@ -920,12 +941,13 @@ async def get_user_deposits(
 
 # ============== Asset Management Endpoints ==============
 
+
 @router.post("/entities/{entity_id}/add-asset", response_model=MessageResponse)
 async def add_asset_to_entity(
     entity_id: str,
     asset_request: AddAssetRequest,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Add EUR, CEA, or EUA to an entity's account.
@@ -933,9 +955,7 @@ async def add_asset_to_entity(
     Admin only.
     """
     # Validate entity exists
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
@@ -953,7 +973,7 @@ async def add_asset_to_entity(
     holding_result = await db.execute(
         select(EntityHolding).where(
             EntityHolding.entity_id == UUID(entity_id),
-            EntityHolding.asset_type == model_asset_type
+            EntityHolding.asset_type == model_asset_type,
         )
     )
     holding = holding_result.scalar_one_or_none()
@@ -962,7 +982,7 @@ async def add_asset_to_entity(
         holding = EntityHolding(
             entity_id=UUID(entity_id),
             asset_type=model_asset_type,
-            quantity=Decimal('0')
+            quantity=Decimal("0"),
         )
         db.add(holding)
         await db.flush()  # Get the holding ID
@@ -986,7 +1006,7 @@ async def add_asset_to_entity(
         balance_after=balance_after,
         reference=asset_request.reference,
         notes=asset_request.notes,
-        created_by=admin_user.id
+        created_by=admin_user.id,
     )
     db.add(transaction)
 
@@ -994,14 +1014,16 @@ async def add_asset_to_entity(
     if model_asset_type == AssetType.EUR:
         entity.balance_amount = balance_after
         entity.balance_currency = Currency.EUR
-        entity.total_deposited = (entity.total_deposited or Decimal('0')) + amount_to_add
+        entity.total_deposited = (
+            entity.total_deposited or Decimal("0")
+        ) + amount_to_add
 
     # Upgrade user(s) to FUNDED if they have any balance now
     if balance_after > 0:
         users_result = await db.execute(
             select(User).where(
                 User.entity_id == UUID(entity_id),
-                User.role.in_([UserRole.APPROVED, UserRole.PENDING])
+                User.role.in_([UserRole.APPROVED, UserRole.PENDING]),
             )
         )
         users = users_result.scalars().all()
@@ -1014,7 +1036,7 @@ async def add_asset_to_entity(
     asset_label = {
         AssetType.EUR: "EUR",
         AssetType.CEA: "CEA certificates",
-        AssetType.EUA: "EUA certificates"
+        AssetType.EUA: "EUA certificates",
     }[model_asset_type]
 
     return MessageResponse(
@@ -1026,16 +1048,14 @@ async def add_asset_to_entity(
 async def get_entity_assets(
     entity_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all asset balances for an entity (EUR, CEA, EUA).
     Admin only.
     """
     # Validate entity exists
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
@@ -1049,9 +1069,9 @@ async def get_entity_assets(
 
     # Build balance map
     balances = {
-        AssetType.EUR: Decimal('0'),
-        AssetType.CEA: Decimal('0'),
-        AssetType.EUA: Decimal('0'),
+        AssetType.EUR: Decimal("0"),
+        AssetType.CEA: Decimal("0"),
+        AssetType.EUA: Decimal("0"),
     }
     for h in holdings:
         balances[h.asset_type] = h.quantity
@@ -1087,10 +1107,10 @@ async def get_entity_assets(
                 reference=t.reference,
                 notes=t.notes,
                 created_by=t.created_by,
-                created_at=t.created_at
+                created_at=t.created_at,
             )
             for t in transactions
-        ]
+        ],
     )
 
 
@@ -1100,23 +1120,23 @@ async def get_entity_transactions(
     asset_type: Optional[AssetTypeEnum] = None,
     limit: int = Query(50, le=100),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get transaction history for an entity.
     Admin only.
     """
     # Validate entity exists
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
     # Build query
-    query = select(AssetTransaction).where(AssetTransaction.entity_id == UUID(entity_id))
+    query = select(AssetTransaction).where(
+        AssetTransaction.entity_id == UUID(entity_id)
+    )
 
     if asset_type:
         asset_type_map = {
@@ -1143,7 +1163,7 @@ async def get_entity_transactions(
             "reference": t.reference,
             "notes": t.notes,
             "created_by": str(t.created_by),
-            "created_at": t.created_at.isoformat()
+            "created_at": t.created_at.isoformat(),
         }
         for t in transactions
     ]
@@ -1153,11 +1173,19 @@ async def get_entity_transactions(
 # Asset Balance Update (Admin Edit Assets)
 # =============================================================================
 
+
 class UpdateAssetRequest(BaseModel):
     """Request to update an entity's asset balance"""
-    new_balance: float = Field(..., ge=0, description="New balance value (must be >= 0)")
-    notes: Optional[str] = Field(None, max_length=500, description="Admin notes for audit")
-    reference: Optional[str] = Field(None, max_length=100, description="Reference for tracking")
+
+    new_balance: float = Field(
+        ..., ge=0, description="New balance value (must be >= 0)"
+    )
+    notes: Optional[str] = Field(
+        None, max_length=500, description="Admin notes for audit"
+    )
+    reference: Optional[str] = Field(
+        None, max_length=100, description="Reference for tracking"
+    )
 
 
 @router.put("/entities/{entity_id}/assets/{asset_type}")
@@ -1166,7 +1194,7 @@ async def update_asset_balance(
     asset_type: AssetTypeEnum,
     request: UpdateAssetRequest,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update an entity's asset balance to a specific value.
@@ -1174,9 +1202,7 @@ async def update_asset_balance(
     Admin only.
     """
     # Validate entity exists
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
@@ -1194,12 +1220,12 @@ async def update_asset_balance(
     holding_result = await db.execute(
         select(EntityHolding).where(
             EntityHolding.entity_id == UUID(entity_id),
-            EntityHolding.asset_type == model_asset_type
+            EntityHolding.asset_type == model_asset_type,
         )
     )
     holding = holding_result.scalar_one_or_none()
 
-    balance_before = Decimal('0')
+    balance_before = Decimal("0")
     if holding:
         balance_before = holding.quantity
     else:
@@ -1207,7 +1233,7 @@ async def update_asset_balance(
         holding = EntityHolding(
             entity_id=UUID(entity_id),
             asset_type=model_asset_type,
-            quantity=Decimal('0')
+            quantity=Decimal("0"),
         )
         db.add(holding)
 
@@ -1228,7 +1254,7 @@ async def update_asset_balance(
         balance_after=new_balance,
         reference=request.reference,
         notes=request.notes or f"Admin adjustment by {admin_user.email}",
-        created_by=admin_user.id
+        created_by=admin_user.id,
     )
     db.add(transaction)
 
@@ -1238,7 +1264,7 @@ async def update_asset_balance(
 
     await db.commit()
 
-    asset_labels = {'EUR': 'EUR', 'CEA': 'CEA', 'EUA': 'EUA'}
+    asset_labels = {"EUR": "EUR", "CEA": "CEA", "EUA": "EUA"}
     asset_label = asset_labels.get(asset_type.value, asset_type.value)
     direction = "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"
 
@@ -1251,25 +1277,30 @@ async def update_asset_balance(
 # Entity Orders Management (Admin)
 # =============================================================================
 
+
 @router.get("/entities/{entity_id}/orders")
 async def get_entity_orders(
     entity_id: str,
-    status: Optional[str] = Query(None, description="Filter by status: OPEN, PARTIALLY_FILLED, FILLED, CANCELLED"),
-    certificate_type: Optional[str] = Query(None, description="Filter by certificate type: EUA, CEA"),
+    status: Optional[str] = Query(
+        None, description="Filter by status: OPEN, PARTIALLY_FILLED, FILLED, CANCELLED"
+    ),
+    certificate_type: Optional[str] = Query(
+        None, description="Filter by certificate type: EUA, CEA"
+    ),
     limit: int = Query(50, le=200),
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get all orders for an entity.
     Admin only.
     """
-    from ...models.models import Order, OrderStatus as ModelOrderStatus, CertificateType as ModelCertificateType
+    from ...models.models import CertificateType as ModelCertificateType
+    from ...models.models import Order
+    from ...models.models import OrderStatus as ModelOrderStatus
 
     # Validate entity exists
-    entity_result = await db.execute(
-        select(Entity).where(Entity.id == UUID(entity_id))
-    )
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
     entity = entity_result.scalar_one_or_none()
 
     if not entity:
@@ -1290,7 +1321,9 @@ async def get_entity_orders(
             cert_type_enum = ModelCertificateType(certificate_type)
             query = query.where(Order.certificate_type == cert_type_enum)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid certificate_type: {certificate_type}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+            )
 
     query = query.order_by(Order.created_at.desc()).limit(limit)
 
@@ -1319,18 +1352,17 @@ async def get_entity_orders(
 async def admin_cancel_order(
     order_id: str,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Cancel any order (admin only).
     Only OPEN or PARTIALLY_FILLED orders can be cancelled.
     """
-    from ...models.models import Order, OrderStatus as ModelOrderStatus
+    from ...models.models import Order
+    from ...models.models import OrderStatus as ModelOrderStatus
 
     # Get the order
-    result = await db.execute(
-        select(Order).where(Order.id == UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == UUID(order_id)))
     order = result.scalar_one_or_none()
 
     if not order:
@@ -1340,7 +1372,7 @@ async def admin_cancel_order(
     if order.status not in [ModelOrderStatus.OPEN, ModelOrderStatus.PARTIALLY_FILLED]:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot cancel order with status {order.status.value}"
+            detail=f"Cannot cancel order with status {order.status.value}",
         )
 
     # Cancel the order
@@ -1349,9 +1381,7 @@ async def admin_cancel_order(
 
     await db.commit()
 
-    return MessageResponse(
-        message=f"Order {order_id} cancelled successfully"
-    )
+    return MessageResponse(message=f"Order {order_id} cancelled successfully")
 
 
 @router.put("/orders/{order_id}")
@@ -1359,19 +1389,18 @@ async def admin_update_order(
     order_id: str,
     update: dict,
     admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update an order's price or quantity (admin only).
     Only OPEN orders can be updated.
     Quantity can only be reduced, not increased.
     """
-    from ...models.models import Order, OrderStatus as ModelOrderStatus
+    from ...models.models import Order
+    from ...models.models import OrderStatus as ModelOrderStatus
 
     # Get the order
-    result = await db.execute(
-        select(Order).where(Order.id == UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == UUID(order_id)))
     order = result.scalar_one_or_none()
 
     if not order:
@@ -1381,25 +1410,27 @@ async def admin_update_order(
     if order.status != ModelOrderStatus.OPEN:
         raise HTTPException(
             status_code=400,
-            detail=f"Can only update OPEN orders. Current status: {order.status.value}"
+            detail=f"Can only update OPEN orders. Current status: {order.status.value}",
         )
 
     # Update price if provided
-    if 'price' in update and update['price'] is not None:
-        new_price = float(update['price'])
+    if "price" in update and update["price"] is not None:
+        new_price = float(update["price"])
         if new_price <= 0:
             raise HTTPException(status_code=400, detail="Price must be greater than 0")
         order.price = Decimal(str(new_price))
 
     # Update quantity if provided
-    if 'quantity' in update and update['quantity'] is not None:
-        new_quantity = float(update['quantity'])
+    if "quantity" in update and update["quantity"] is not None:
+        new_quantity = float(update["quantity"])
         if new_quantity <= 0:
-            raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+            raise HTTPException(
+                status_code=400, detail="Quantity must be greater than 0"
+            )
         if new_quantity < float(order.filled_quantity):
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot reduce quantity below filled amount ({float(order.filled_quantity)})"
+                detail=f"Cannot reduce quantity below filled amount ({float(order.filled_quantity)})",
             )
         order.quantity = Decimal(str(new_quantity))
 
@@ -1419,5 +1450,5 @@ async def admin_update_order(
         "status": order.status.value,
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat() if order.updated_at else None,
-        "message": "Order updated successfully"
+        "message": "Order updated successfully",
     }

@@ -1,10 +1,9 @@
-from logging.config import fileConfig
 import os
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -13,12 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import the Base from database.py and all models
 from app.core.database import Base
-from app.models.models import (
-    User, Entity, MarketMakerClient, ContactRequest, Certificate, Trade,
-    SwapRequest, KYCDocument, ActivityLog, UserSession, Order, CashMarketTrade,
-    Deposit, EntityHolding, AssetTransaction, TicketLog, Seller,
-    AuthenticationAttempt, PriceHistory, ScrapingSource, LiquidityOperation
-)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -27,7 +20,7 @@ config = context.config
 # Get database URL from environment variable
 database_url = os.environ.get(
     "DATABASE_URL",
-    "postgresql://niha_user:niha_secure_pass_2024@localhost:5432/niha_carbon"
+    "postgresql://niha_user:niha_secure_pass_2024@localhost:5432/niha_carbon",
 )
 
 # Set the sqlalchemy.url in the config
@@ -86,9 +79,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

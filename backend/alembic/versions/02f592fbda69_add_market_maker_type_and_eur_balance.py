@@ -5,15 +5,14 @@ Revises: e5f6a7b8c9d0
 Create Date: 2026-01-20 13:57:46.298851
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
-revision: str = '02f592fbda69'
-down_revision: Union[str, None] = 'e5f6a7b8c9d0'
+revision: str = "02f592fbda69"
+down_revision: Union[str, None] = "e5f6a7b8c9d0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -53,8 +52,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drop columns
-    op.drop_column('market_maker_clients', 'eur_balance')
-    op.drop_column('market_maker_clients', 'mm_type')
+    op.drop_column("market_maker_clients", "eur_balance")
+    op.drop_column("market_maker_clients", "mm_type")
 
     # Drop enum type
     op.execute("DROP TYPE marketmakertype")
