@@ -168,7 +168,9 @@ class SettlementService:
 
         except Exception as e:
             await db.rollback()
-            raise handle_database_error(e, "create CEA purchase settlement", logger)
+            raise handle_database_error(
+                e, "create CEA purchase settlement", logger
+            ) from e
 
     @staticmethod
     async def update_settlement_status(
@@ -258,7 +260,7 @@ class SettlementService:
                     user = user_result.scalar_one_or_none()
 
                     if user and user.email:
-                        # Send completion email for SETTLED status, update email for others
+                        # Send completion email for SETTLED, update email otherwise
                         if new_status == SettlementStatus.SETTLED:
                             # Get new balance after settlement
                             asset_type_enum = (
@@ -313,7 +315,7 @@ class SettlementService:
 
         except Exception as e:
             await db.rollback()
-            raise handle_database_error(e, "update settlement status", logger)
+            raise handle_database_error(e, "update settlement status", logger) from e
 
     @staticmethod
     async def finalize_settlement(
@@ -370,7 +372,7 @@ class SettlementService:
             logger.info(f"Finalized settlement {settlement.batch_reference}")
 
         except Exception as e:
-            raise handle_database_error(e, "finalize settlement", logger)
+            raise handle_database_error(e, "finalize settlement", logger) from e
 
     @staticmethod
     async def get_pending_settlements(
@@ -408,7 +410,7 @@ class SettlementService:
             return list(result.scalars().all())
 
         except Exception as e:
-            raise handle_database_error(e, "get pending settlements", logger)
+            raise handle_database_error(e, "get pending settlements", logger) from e
 
     @staticmethod
     def calculate_settlement_progress(settlement: SettlementBatch) -> int:
@@ -453,7 +455,7 @@ class SettlementService:
             # Re-raise ValueError for proper 404 handling in API layer
             raise
         except Exception as e:
-            raise handle_database_error(e, "get settlement timeline", logger)
+            raise handle_database_error(e, "get settlement timeline", logger) from e
 
 
 # Module-level wrapper functions for API compatibility

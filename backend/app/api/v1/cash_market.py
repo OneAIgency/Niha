@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 
 from ...core.database import get_db
-from ...core.security import get_current_user, get_funded_user
+from ...core.security import get_funded_user
 from ...models.models import (
     AssetType,
     CashMarketTrade,
@@ -183,7 +183,7 @@ class OrderBookSimulator:
 
         base_time = datetime.utcnow()
 
-        for i in range(100):  # Generate more than limit for variety
+        for _i in range(100):  # Generate more than limit for variety
             # Price with small variance
             price = round(base_price * (1 + random.uniform(-0.01, 0.01)), 2)
 
@@ -289,7 +289,7 @@ async def get_market_depth(certificate_type: CertificateType):
 
 @router.get("/trades/{certificate_type}", response_model=List[CashMarketTradeResponse])
 async def get_recent_trades(
-    certificate_type: CertificateType, limit: int = Query(50, ge=1, le=100)
+    certificate_type: CertificateType, limit: int = Query(50, ge=1, le=100)  # noqa: B008
 ):
     """
     Get recent executed trades for a certificate type.
@@ -332,8 +332,8 @@ async def get_market_stats(certificate_type: CertificateType):
 @router.post("/orders", response_model=OrderResponse)
 async def place_order(
     order: OrderCreate,
-    current_user: User = Depends(get_funded_user),
-    db=Depends(get_db),
+    current_user: User = Depends(get_funded_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
     Place a new order in the cash market.
@@ -378,12 +378,12 @@ async def place_order(
 
 @router.get("/orders/my", response_model=List[OrderResponse])
 async def get_my_orders(
-    status: Optional[str] = Query(
+    status: Optional[str] = Query(  # noqa: B008
         None, description="Filter by status: OPEN, FILLED, CANCELLED"
     ),
     certificate_type: Optional[CertificateType] = None,
-    current_user: User = Depends(get_funded_user),
-    db=Depends(get_db),
+    current_user: User = Depends(get_funded_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
     Get the current user's orders from the database.
@@ -434,7 +434,7 @@ async def get_my_orders(
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
 async def cancel_order(
-    order_id: str, current_user: User = Depends(get_funded_user), db=Depends(get_db)
+    order_id: str, current_user: User = Depends(get_funded_user), db=Depends(get_db)  # noqa: B008
 ):
     """
     Cancel an open order. FUNDED or ADMIN only.
@@ -446,8 +446,8 @@ async def cancel_order(
     # Find the order
     try:
         order_uuid = uuid.UUID(order_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid order ID")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid order ID") from e
 
     result = await db.execute(select(Order).where(Order.id == order_uuid))
     order = result.scalar_one_or_none()
@@ -484,12 +484,13 @@ async def cancel_order(
 
 
 @router.get("/cea/orderbook", response_model=OrderBookResponse)
-async def get_cea_orderbook(db=Depends(get_db)):
+async def get_cea_orderbook(db=Depends(get_db)):  # noqa: B008
     """
     Get the real CEA order book from database.
     Returns sell orders from registered sellers sorted by price-time priority (FIFO).
     """
-    # Fetch real CEA sell orders sorted by price ASC (best price first), then by time ASC (FIFO)
+    # Fetch real CEA sell orders sorted by:
+    # price ASC (best price first), then by time ASC (FIFO)
     result = await db.execute(
         select(Order, Seller)
         .join(Seller, Order.seller_id == Seller.id)
@@ -556,12 +557,12 @@ async def get_cea_orderbook(db=Depends(get_db)):
 
 
 @router.get("/cea/sellers")
-async def get_cea_sellers(db=Depends(get_db)):
+async def get_cea_sellers(db=Depends(get_db)):  # noqa: B008
     """
     Get all CEA sellers with their available inventory.
     """
     result = await db.execute(
-        select(Seller).where(Seller.is_active == True).order_by(Seller.client_code)
+        select(Seller).where(Seller.is_active.is_(True)).order_by(Seller.client_code)
     )
     sellers = result.scalars().all()
 
@@ -579,7 +580,7 @@ async def get_cea_sellers(db=Depends(get_db)):
 
 
 @router.post("/cea/buy")
-async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):
+async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):  # noqa: B008
     """
     Execute a CEA buy order using FIFO price-time priority matching.
 
@@ -587,7 +588,8 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):
     The buyer spends their entire cash balance to buy CEA from all available sellers.
 
     Algorithm:
-    1. Fetch all open CEA sell orders sorted by price ASC (best price), then created_at ASC (FIFO)
+    1. Fetch all open CEA sell orders sorted by price ASC (best price),
+       then created_at ASC (FIFO)
     2. Match against orders until buyer's funds are exhausted or no more orders
     3. Create CashMarketTrade for each matched order
     4. Update seller statistics
@@ -692,7 +694,10 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):
 
     return {
         "success": True,
-        "message": f"Purchased {round(total_cea_bought, 2)} CEA from {len(trades_executed)} sellers",
+        "message": (
+            f"Purchased {round(total_cea_bought, 2)} CEA "
+            f"from {len(trades_executed)} sellers"
+        ),
         "total_cea_bought": round(total_cea_bought, 2),
         "total_spent_eur": round(spent_amount, 2),
         "remaining_balance_eur": round(available_balance - spent_amount, 2),
@@ -707,7 +712,7 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):
 
 @router.get("/real/orderbook/{certificate_type}", response_model=OrderBookResponse)
 async def get_real_orderbook_endpoint(
-    certificate_type: CertificateType, db=Depends(get_db)
+    certificate_type: CertificateType, db=Depends(get_db)  # noqa: B008
 ):
     """
     Get the real order book from database.
@@ -730,7 +735,7 @@ async def get_real_orderbook_endpoint(
 
 @router.get("/user/balances")
 async def get_user_balances(
-    current_user: User = Depends(get_funded_user), db=Depends(get_db)
+    current_user: User = Depends(get_funded_user), db=Depends(get_db)  # noqa: B008
 ):
     """
     Get the current user's asset balances (EUR, CEA, EUA). FUNDED or ADMIN only.
@@ -758,8 +763,8 @@ async def get_user_balances(
 @router.post("/order/preview", response_model=OrderPreviewResponse)
 async def preview_order(
     request: OrderPreviewRequest,
-    current_user: User = Depends(get_funded_user),
-    db=Depends(get_db),
+    current_user: User = Depends(get_funded_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
     Preview an order before execution. FUNDED or ADMIN only.
@@ -836,8 +841,8 @@ async def preview_order(
 @router.post("/order/market", response_model=OrderExecutionResponse)
 async def execute_market_order(
     request: MarketOrderRequest,
-    current_user: User = Depends(get_funded_user),
-    db=Depends(get_db),
+    current_user: User = Depends(get_funded_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
     Execute a market order immediately at best available prices. FUNDED or ADMIN only.

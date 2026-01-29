@@ -8,6 +8,12 @@ import { logger } from '../utils/logger';
 const RECONNECT_DELAY = 3000; // 3 seconds
 const POLLING_INTERVAL = 30000; // 30 seconds fallback polling
 
+/** Helper to safely convert unknown value to string */
+function toStringOrUndefined(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  return String(value);
+}
+
 /** Ensures a plain object for key transformation (handles class instances / non-plain objects from WS). */
 function ensurePlainObject<T>(obj: unknown): T {
   if (obj === null || obj === undefined) return obj as T;
@@ -115,33 +121,46 @@ export function useBackofficeRealtime() {
       // KYC Document Events
       case 'kyc_document_uploaded':
         if (message.data) {
-          const newDoc: KYCDocumentBackoffice = {
-            id: message.data.document_id,
-            user_id: message.data.user_id,
-            user_email: message.data.user_email,
-            document_type: message.data.document_type,
-            file_name: message.data.file_name,
-            status: message.data.status,
-            created_at: message.data.created_at,
-          };
-          addKYCDocument(newDoc);
+          const data = message.data;
+          const documentId = toStringOrUndefined(data.document_id) ?? toStringOrUndefined(data.documentId);
+          const userId = toStringOrUndefined(data.user_id) ?? toStringOrUndefined(data.userId);
+          if (documentId && userId) {
+            const newDoc: KYCDocumentBackoffice = {
+              id: documentId,
+              user_id: userId,
+              user_email: toStringOrUndefined(data.user_email) ?? toStringOrUndefined(data.userEmail) ?? '',
+              document_type: toStringOrUndefined(data.document_type) ?? toStringOrUndefined(data.documentType) ?? '',
+              file_name: toStringOrUndefined(data.file_name) ?? toStringOrUndefined(data.fileName) ?? '',
+              status: toStringOrUndefined(data.status) ?? 'pending',
+              created_at: toStringOrUndefined(data.created_at) ?? toStringOrUndefined(data.createdAt) ?? new Date().toISOString(),
+            };
+            addKYCDocument(newDoc);
+          }
         }
         break;
 
       case 'kyc_document_reviewed':
         if (message.data) {
-          updateKYCDocument({
-            id: message.data.document_id,
-            status: message.data.status,
-            notes: message.data.notes,
-            reviewed_at: message.data.reviewed_at,
-          });
+          const data = message.data;
+          const documentId = toStringOrUndefined(data.document_id) ?? toStringOrUndefined(data.documentId);
+          if (documentId) {
+            updateKYCDocument({
+              id: documentId,
+              status: toStringOrUndefined(data.status),
+              notes: toStringOrUndefined(data.notes),
+              reviewed_at: toStringOrUndefined(data.reviewed_at) ?? toStringOrUndefined(data.reviewedAt),
+            });
+          }
         }
         break;
 
       case 'kyc_document_deleted':
         if (message.data) {
-          removeKYCDocument(message.data.document_id);
+          const data = message.data;
+          const documentId = toStringOrUndefined(data.document_id) ?? toStringOrUndefined(data.documentId);
+          if (documentId) {
+            removeKYCDocument(documentId);
+          }
         }
         break;
     }

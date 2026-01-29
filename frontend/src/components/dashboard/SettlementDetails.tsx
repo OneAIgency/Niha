@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -26,11 +26,7 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDetails();
-  }, [settlementId]);
-
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     try {
       setError(null);
       const details = await settlementApi.getSettlementDetails(settlementId);
@@ -42,7 +38,11 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [settlementId]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
 
   const getStatusIcon = (status: SettlementStatus) => {
     switch (status) {

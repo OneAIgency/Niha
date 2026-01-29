@@ -62,10 +62,10 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/contact-requests")
 async def get_contact_requests(
     status: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all contact requests with optional status filter.
@@ -121,8 +121,8 @@ async def get_contact_requests(
 async def update_contact_request(
     request_id: str,
     update: ContactRequestUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update a contact request status or notes.
@@ -149,7 +149,7 @@ async def update_contact_request(
         await db.refresh(contact)
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "updating contact request", logger)
+        raise handle_database_error(e, "updating contact request", logger) from e
 
     # Broadcast contact request update to backoffice
     asyncio.create_task(
@@ -179,8 +179,8 @@ async def update_contact_request(
 @router.delete("/contact-requests/{request_id}")
 async def delete_contact_request(
     request_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Delete a contact request permanently.
@@ -207,17 +207,17 @@ async def delete_contact_request(
 
 @router.post("/users/create-from-request")
 async def create_user_from_contact_request(
-    request_id: str = Query(..., description="Contact request ID"),
-    email: str = Query(..., description="User email"),
-    first_name: str = Query(..., description="First name"),
-    last_name: str = Query(..., description="Last name"),
-    mode: str = Query(..., description="Creation mode: 'manual' or 'invitation'"),
-    password: Optional[str] = Query(
+    request_id: str = Query(..., description="Contact request ID"),  # noqa: B008
+    email: str = Query(..., description="User email"),  # noqa: B008
+    first_name: str = Query(..., description="First name"),  # noqa: B008
+    last_name: str = Query(..., description="Last name"),  # noqa: B008
+    mode: str = Query(..., description="Creation mode: 'manual' or 'invitation'"),  # noqa: B008
+    password: Optional[str] = Query(  # noqa: B008
         None, description="Password (required for manual mode)"
     ),
-    position: Optional[str] = Query(None, description="Position/title"),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    position: Optional[str] = Query(None, description="Position/title"),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create a new user from an approved contact request.
@@ -296,7 +296,9 @@ async def create_user_from_contact_request(
             position=position,
             invitation_token=invitation_token,
             invitation_sent_at=datetime.utcnow(),
-            invitation_expires_at=datetime.utcnow() + timedelta(days=invitation_expiry_days),
+            invitation_expires_at=(
+                datetime.utcnow() + timedelta(days=invitation_expiry_days)
+            ),
             must_change_password=True,
             is_active=False,  # Activate when password is set
             creation_method="invitation",
@@ -320,9 +322,12 @@ async def create_user_from_contact_request(
                     "provider": mail_row.provider.value,
                     "use_env_credentials": mail_row.use_env_credentials,
                     "from_email": mail_row.from_email,
-                    "resend_api_key": mail_row.resend_api_key
-                    if not mail_row.use_env_credentials and mail_row.provider == MailProvider.RESEND
-                    else None,
+                    "resend_api_key": (
+                        mail_row.resend_api_key
+                        if not mail_row.use_env_credentials
+                        and mail_row.provider == MailProvider.RESEND
+                        else None
+                    ),
                     "smtp_host": mail_row.smtp_host,
                     "smtp_port": mail_row.smtp_port,
                     "smtp_use_tls": mail_row.smtp_use_tls,
@@ -337,7 +342,8 @@ async def create_user_from_contact_request(
             )
         except Exception:
             logger.exception(
-                "Failed to send invitation email for user %s (user created, contact ENROLLED)",
+                "Failed to send invitation email for user %s "
+                "(user created, contact ENROLLED)",
                 user.email,
             )
 
@@ -378,8 +384,8 @@ async def create_user_from_contact_request(
 @router.get("/contact-requests/{request_id}/nda")
 async def download_nda_file(
     request_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Download NDA file for a contact request.
@@ -419,7 +425,7 @@ async def download_nda_file(
 @router.get("/ip-lookup/{ip_address}")
 async def ip_whois_lookup(
     ip_address: str,
-    admin_user: User = Depends(get_admin_user),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
 ):
     """
     Perform WHOIS/GeoIP lookup for an IP address.
@@ -435,7 +441,10 @@ async def ip_whois_lookup(
             response = await client.get(
                 f"http://ip-api.com/json/{ip_address}",
                 params={
-                    "fields": "status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
+                    "fields": (
+                        "status,message,country,countryCode,region,regionName,"
+                        "city,zip,lat,lon,timezone,isp,org,as,query"
+                    )
                 },
             )
             data = response.json()
@@ -459,14 +468,16 @@ async def ip_whois_lookup(
             "org": data.get("org"),
             "as": data.get("as"),
         }
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="IP lookup timed out")
+    except httpx.TimeoutException as e:
+        raise HTTPException(status_code=504, detail="IP lookup timed out") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"IP lookup failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"IP lookup failed: {str(e)}"
+        ) from e
 
 
 @router.get("/dashboard")
-async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):
+async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
     Get admin dashboard statistics.
     """
@@ -500,9 +511,9 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):
 @router.get("/entities")
 async def get_entities(
     kyc_status: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all registered entities with optional KYC filter.
@@ -538,8 +549,8 @@ async def get_entities(
 async def update_entity_kyc(
     entity_id: str,
     kyc_status: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update entity KYC status.
@@ -571,10 +582,10 @@ async def update_entity_kyc(
 async def get_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all users with optional filters.
@@ -650,8 +661,8 @@ async def get_users(
 @router.post("/users", response_model=UserResponse)
 async def create_user(
     user_data: UserCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create a new user with password or send invitation email.
@@ -716,8 +727,8 @@ async def create_user(
 @router.get("/users/{user_id}")
 async def get_user(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get user details by ID.
@@ -749,8 +760,8 @@ async def get_user(
 async def change_user_role(
     user_id: str,
     role_update: UserRoleUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Change a user's role.
@@ -777,8 +788,8 @@ async def change_user_role(
 @router.delete("/users/{user_id}", response_model=MessageResponse)
 async def deactivate_user(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Deactivate a user account.
@@ -804,8 +815,8 @@ async def deactivate_user(
 @router.get("/users/{user_id}/full", response_model=AdminUserFullResponse)
 async def get_user_full_details(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get comprehensive user details including auth history and stats.
@@ -842,7 +853,7 @@ async def get_user_full_details(
         select(func.count())
         .select_from(AuthenticationAttempt)
         .where(AuthenticationAttempt.email == user.email)
-        .where(AuthenticationAttempt.success == True)
+        .where(AuthenticationAttempt.success.is_(True))
     )
     login_count = login_count_result.scalar() or 0
 
@@ -860,7 +871,7 @@ async def get_user_full_details(
         select(func.count())
         .select_from(AuthenticationAttempt)
         .where(AuthenticationAttempt.email == user.email)
-        .where(AuthenticationAttempt.success == False)
+        .where(AuthenticationAttempt.success.is_(False))
         .where(AuthenticationAttempt.created_at >= yesterday)
     )
     failed_login_count_24h = failed_24h_result.scalar() or 0
@@ -904,8 +915,8 @@ async def get_user_full_details(
 async def update_user_full(
     user_id: str,
     update: AdminUserUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update any user field.
@@ -965,8 +976,8 @@ async def update_user_full(
 async def admin_reset_password(
     user_id: str,
     reset: AdminPasswordReset,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Reset a user's password.
@@ -984,17 +995,20 @@ async def admin_reset_password(
     await db.commit()
 
     return MessageResponse(
-        message=f"Password reset for {user.email}. Force change on login: {reset.force_change}"
+        message=(
+            f"Password reset for {user.email}. "
+            f"Force change on login: {reset.force_change}"
+        )
     )
 
 
 @router.get("/users/{user_id}/auth-history")
 async def get_user_auth_history(
     user_id: str,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get authentication history for a specific user.
@@ -1058,10 +1072,10 @@ async def get_user_auth_history(
 async def get_activity_logs(
     user_id: Optional[str] = None,
     action: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get activity logs with optional filters.
@@ -1120,7 +1134,7 @@ async def get_activity_logs(
 
 @router.get("/activity-logs/stats", response_model=ActivityStatsResponse)
 async def get_activity_stats(
-    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get activity statistics.
@@ -1142,7 +1156,7 @@ async def get_activity_stats(
     active_sessions_result = await db.execute(
         select(func.count())
         .select_from(UserSession)
-        .where(UserSession.is_active == True)
+        .where(UserSession.is_active.is_(True))
     )
     active_sessions = active_sessions_result.scalar()
 
@@ -1180,7 +1194,7 @@ async def get_activity_stats(
 
 @router.get("/scraping-sources")
 async def get_scraping_sources(
-    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get all scraping source configurations.
@@ -1219,8 +1233,8 @@ async def get_scraping_sources(
 @router.post("/scraping-sources")
 async def create_scraping_source(
     source_data: ScrapingSourceCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create a new scraping source.
@@ -1267,8 +1281,8 @@ async def create_scraping_source(
 async def update_scraping_source(
     source_id: str,
     update: ScrapingSourceUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update a scraping source configuration.
@@ -1301,7 +1315,7 @@ async def update_scraping_source(
 
 
 def _scraping_error_status(e: Exception) -> tuple[int, str]:
-    """Map scraping exceptions to (status_code, detail). Log full details server-side."""
+    """Map scraping exceptions to (status_code, detail)."""
     msg = str(e).strip()
     if not msg or len(msg) > 200:
         msg = "Scraping failed. Check URL, selectors, and network."
@@ -1316,8 +1330,8 @@ def _scraping_error_status(e: Exception) -> tuple[int, str]:
 @router.post("/scraping-sources/{source_id}/test")
 async def test_scraping_source(
     source_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Test a scraping source by running a single scrape.
@@ -1349,8 +1363,8 @@ async def test_scraping_source(
 @router.post("/scraping-sources/{source_id}/refresh", response_model=MessageResponse)
 async def refresh_scraping_source(
     source_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Force refresh prices from a scraping source.
@@ -1376,14 +1390,14 @@ async def refresh_scraping_source(
             source.name,
         )
         status, detail = _scraping_error_status(e)
-        raise HTTPException(status_code=status, detail=detail)
+        raise HTTPException(status_code=status, detail=detail) from e
 
 
 @router.delete("/scraping-sources/{source_id}", response_model=MessageResponse)
 async def delete_scraping_source(
     source_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Delete a scraping source.
@@ -1410,8 +1424,8 @@ async def delete_scraping_source(
 
 @router.get("/settings/mail")
 async def get_mail_settings(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get mail (and invitation) configuration. Single row; returns defaults/empty if none.
@@ -1467,8 +1481,8 @@ async def get_mail_settings(
 @router.put("/settings/mail")
 async def update_mail_settings(
     update: MailConfigUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create or update mail configuration (single row). Admin only.
@@ -1525,7 +1539,7 @@ async def update_mail_settings(
         return {"message": "Mail settings updated", "success": True}
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "update mail settings", logger)
+        raise handle_database_error(e, "update mail settings", logger) from e
 
 
 # ==================== Market Overview ====================
@@ -1533,7 +1547,7 @@ async def update_mail_settings(
 
 @router.get("/market-overview")
 async def get_market_overview(
-    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get market overview statistics.

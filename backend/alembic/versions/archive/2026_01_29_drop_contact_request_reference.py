@@ -7,6 +7,7 @@ Create Date: 2026-01-29
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "2026_01_29_reference"
@@ -20,4 +21,6 @@ def upgrade():
 
 
 def downgrade():
-    op.add_column("contact_requests", sa.Column("reference", sa.String(255), nullable=True))
+    op.add_column(
+        "contact_requests", sa.Column("reference", sa.String(255), nullable=True)
+    )

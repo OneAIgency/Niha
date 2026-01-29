@@ -78,8 +78,8 @@ class MarketMakerOrderResponse(BaseModel):
 @router.get("/orderbook/{certificate_type}", response_model=OrderBookResponse)
 async def get_orderbook_replica(
     certificate_type: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get order book replica showing all open orders.
@@ -91,10 +91,10 @@ async def get_orderbook_replica(
     # Validate certificate type
     try:
         cert_type = CertificateType(certificate_type)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
-        )
+        ) from e
 
     # Fetch SELL orders (asks) sorted by price ASC, then created_at ASC (FIFO)
     sell_result = await db.execute(
@@ -194,8 +194,8 @@ async def get_orderbook_replica(
 @router.post("", response_model=AdminOrderResponse)
 async def create_market_order(
     data: AdminOrderCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Admin places BID (buy) or ASK (sell) order on behalf of Market Maker.
@@ -225,10 +225,10 @@ async def create_market_order(
     # Validate certificate type
     try:
         cert_type = CertificateType(data.certificate_type)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}"
-        )
+        ) from e
 
     # Map frontend side (BID/ASK) to backend OrderSide (BUY/SELL)
     if data.side == "BID":
@@ -352,10 +352,10 @@ async def list_market_maker_orders(
     market_maker_id: Optional[UUID] = None,
     certificate_type: Optional[str] = None,
     status: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     List orders placed by Market Makers.
@@ -383,17 +383,19 @@ async def list_market_maker_orders(
         try:
             cert_type = CertificateType(certificate_type)
             query = query.where(Order.certificate_type == cert_type)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
-            )
+            ) from e
 
     if status:
         try:
             status_enum = OrderStatus(status)
             query = query.where(Order.status == status_enum)
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid status: {status}"
+            ) from e
 
     # Order by most recent first
     query = query.order_by(Order.created_at.desc())
@@ -428,8 +430,8 @@ async def list_market_maker_orders(
 @router.delete("/{order_id}", response_model=dict)
 async def cancel_market_order(
     order_id: UUID,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Admin cancels Market Maker order and releases locked assets (for ASK orders).
@@ -480,7 +482,10 @@ async def cancel_market_order(
             certificate_type=order.certificate_type,
             transaction_type=TransactionType.TRADE_CREDIT,
             amount=remaining_quantity,  # Positive for credit
-            notes=f"Release {remaining_quantity} {order.certificate_type.value} from cancelled ASK order {order.id}",
+            notes=(
+                f"Release {remaining_quantity} {order.certificate_type.value} "
+                f"from cancelled ASK order {order.id}"
+            ),
             created_by_id=admin_user.id,
         )
 
@@ -521,7 +526,10 @@ async def cancel_market_order(
     await db.commit()
 
     side_display = "BID" if order.side == OrderSide.BUY else "ASK"
-    log_message = f"Admin {admin_user.email} cancelled {side_display} order {order.id} for MM {mm.name}"
+    log_message = (
+        f"Admin {admin_user.email} cancelled {side_display} order "
+        f"{order.id} for MM {mm.name}"
+    )
     if order.side == OrderSide.SELL:
         log_message += f": released {remaining_quantity} {order.certificate_type.value}"
     logger.info(log_message)

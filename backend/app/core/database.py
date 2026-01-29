@@ -61,11 +61,13 @@ async def create_seed_users():
     if not settings.DEBUG:
         if not os.environ.get("SEED_ADMIN_PASSWORD"):
             logger.warning(
-                "Using default admin password in non-DEBUG mode. Set SEED_ADMIN_PASSWORD env var."
+                "Using default admin password in non-DEBUG mode. "
+                "Set SEED_ADMIN_PASSWORD env var."
             )
         if not os.environ.get("SEED_TEST_PASSWORD"):
             logger.warning(
-                "Using default test password in non-DEBUG mode. Set SEED_TEST_PASSWORD env var."
+                "Using default test password in non-DEBUG mode. "
+                "Set SEED_TEST_PASSWORD env var."
             )
 
     # Create seed entities first

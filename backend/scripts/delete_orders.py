@@ -24,8 +24,13 @@ from sqlalchemy import delete, select
 # Add the app directory to the path
 sys.path.insert(0, ".")
 
-from app.core.database import AsyncSessionLocal, engine
-from app.models.models import CashMarketTrade, MarketType, Order, SwapRequest
+from app.core.database import AsyncSessionLocal, engine  # noqa: E402
+from app.models.models import (  # noqa: E402
+    CashMarketTrade,
+    MarketType,
+    Order,
+    SwapRequest,
+)
 
 
 async def delete_all_orders():

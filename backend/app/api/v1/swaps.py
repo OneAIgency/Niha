@@ -20,8 +20,8 @@ async def get_available_swaps(
     direction: SwapDirection = SwapDirection.ALL,
     min_quantity: Optional[float] = None,
     max_quantity: Optional[float] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=50),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=50),  # noqa: B008
 ):
     """
     Get available swap requests in the marketplace.
@@ -99,7 +99,7 @@ async def get_my_swaps():
     return []
 
 @router.get("/calculator")
-async def calculate_swap(from_type: str, quantity: float = Query(..., gt=0)):
+async def calculate_swap(from_type: str, quantity: float = Query(..., gt=0)):  # noqa: B008
     """
     Calculate swap output for a given input.
     """

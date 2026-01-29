@@ -3,23 +3,22 @@ import string
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import select, and_, desc
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from ..models.models import (
-    SwapRequest, 
-    SwapStatus, 
-    SwapDirection, 
     CertificateType,
-    Entity
+    SwapRequest,
+    SwapStatus,
 )
+
 
 class SwapService:
     @staticmethod
     def _generate_anonymous_code(length: int = 6) -> str:
         """Generate a random anonymous code (e.g., SWAP-XYZ)"""
-        suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+        chars = string.ascii_uppercase + string.digits
+        suffix = ''.join(random.choices(chars, k=length))
         return f"SWAP-{suffix}"
 
     @staticmethod
@@ -40,7 +39,9 @@ class SwapService:
         
         # Ensure code uniqueness (simplified loop)
         while True:
-            result = await db.execute(select(SwapRequest).where(SwapRequest.anonymous_code == code))
+            result = await db.execute(
+                select(SwapRequest).where(SwapRequest.anonymous_code == code)
+            )
             if not result.scalar_one_or_none():
                 break
             code = SwapService._generate_anonymous_code()

@@ -14,6 +14,7 @@ interface AllProvidersProps {
   children: ReactNode;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function AllProviders({ children }: AllProvidersProps) {
   return <BrowserRouter>{children}</BrowserRouter>;
 }
@@ -71,6 +72,7 @@ export function createDelayedRejection(error: Error, delay: number = 100) {
 }
 
 // Re-export everything from testing-library
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react';
 
 // Export userEvent

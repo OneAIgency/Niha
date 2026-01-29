@@ -12,7 +12,7 @@ from app.models.models import MailConfig, MailProvider
 
 @pytest_asyncio.fixture
 def override_admin_and_db(test_admin_user, db_session):
-    """Override get_current_user and get_db so admin endpoints see test admin and session."""
+    """Override get_current_user and get_db for admin endpoints."""
 
     async def mock_get_current_user():
         return test_admin_user
@@ -34,7 +34,9 @@ def admin_headers(test_admin_user, override_admin_and_db):
 
 
 @pytest.mark.asyncio
-async def test_get_mail_settings_no_row_returns_defaults(admin_headers, override_admin_and_db):
+async def test_get_mail_settings_no_row_returns_defaults(
+    admin_headers, override_admin_and_db
+):
     """GET /admin/settings/mail with no row returns default/empty structure."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get(
@@ -61,7 +63,9 @@ async def test_get_mail_settings_requires_admin():
 
 
 @pytest.mark.asyncio
-async def test_put_mail_settings_creates_row(db_session, admin_headers, override_admin_and_db):
+async def test_put_mail_settings_creates_row(
+    db_session, admin_headers, override_admin_and_db
+):
     """PUT /admin/settings/mail with no existing row creates one."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.put(
@@ -90,7 +94,9 @@ async def test_put_mail_settings_creates_row(db_session, admin_headers, override
 
 
 @pytest.mark.asyncio
-async def test_put_mail_settings_masks_secrets_on_get(db_session, admin_headers, override_admin_and_db):
+async def test_put_mail_settings_masks_secrets_on_get(
+    db_session, admin_headers, override_admin_and_db
+):
     """After PUT with resend_api_key, GET returns masked value (********)."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         await client.put(
@@ -101,7 +107,9 @@ async def test_put_mail_settings_masks_secrets_on_get(db_session, admin_headers,
             },
             headers=admin_headers,
         )
-        get_resp = await client.get("/api/v1/admin/settings/mail", headers=admin_headers)
+        get_resp = await client.get(
+            "/api/v1/admin/settings/mail", headers=admin_headers
+        )
     assert get_resp.status_code == 200
     data = get_resp.json()
     assert data["resend_api_key"] == "********"
@@ -109,7 +117,9 @@ async def test_put_mail_settings_masks_secrets_on_get(db_session, admin_headers,
 
 
 @pytest.mark.asyncio
-async def test_put_mail_settings_ignores_placeholder_password(db_session, admin_headers, override_admin_and_db):
+async def test_put_mail_settings_ignores_placeholder_password(
+    db_session, admin_headers, override_admin_and_db
+):
     """PUT with password '********' does not overwrite existing password."""
     from sqlalchemy import select
 
@@ -140,7 +150,9 @@ async def test_put_mail_settings_ignores_placeholder_password(db_session, admin_
 
 
 @pytest.mark.asyncio
-async def test_put_mail_settings_validates_invitation_link_base_url(db_session, admin_headers, override_admin_and_db):
+async def test_put_mail_settings_validates_invitation_link_base_url(
+    db_session, admin_headers, override_admin_and_db
+):
     """PUT rejects invitation_link_base_url that does not start with http(s)."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.put(

@@ -55,7 +55,7 @@ def get_upload_path():
 
 @router.get("/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's onboarding/KYC status.
@@ -101,10 +101,10 @@ async def get_onboarding_status(
 
 @router.post("/documents", response_model=KYCDocumentResponse)
 async def upload_document(
-    document_type: str = Form(...),
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    document_type: str = Form(...),  # noqa: B008
+    file: UploadFile = File(...),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Upload a KYC document.
@@ -112,11 +112,12 @@ async def upload_document(
     # Validate document type
     try:
         doc_type = DocumentType(document_type)
-    except ValueError:
+    except ValueError as e:
+        valid_types = [d.value for d in DocumentType]
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid document type. Must be one of: {[d.value for d in DocumentType]}",
-        )
+            detail=f"Invalid document type. Must be one of: {valid_types}",
+        ) from e
 
     # Validate file extension
     file_ext = os.path.splitext(file.filename)[1].lower()
@@ -145,7 +146,10 @@ async def upload_document(
     if existing_doc and existing_doc.status != DocumentStatus.REJECTED:
         raise HTTPException(
             status_code=400,
-            detail=f"Document of type {doc_type.value} already uploaded. Delete it first to upload a new one.",
+            detail=(
+                f"Document of type {doc_type.value} already uploaded. "
+                f"Delete it first to upload a new one."
+            ),
         )
 
     # Generate unique filename
@@ -201,7 +205,7 @@ async def upload_document(
 
 @router.get("/documents")
 async def get_my_documents(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's uploaded KYC documents.
@@ -221,8 +225,8 @@ async def get_my_documents(
 @router.delete("/documents/{document_id}", response_model=MessageResponse)
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Delete a KYC document. Only allowed for pending or rejected documents.
@@ -263,7 +267,7 @@ async def delete_document(
 
 @router.post("/submit", response_model=MessageResponse)
 async def submit_for_review(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Submit KYC documents for review.
@@ -304,5 +308,8 @@ async def submit_for_review(
     await db.commit()
 
     return MessageResponse(
-        message="KYC documents submitted for review. You will be notified once reviewed."
+        message=(
+            "KYC documents submitted for review. "
+            "You will be notified once reviewed."
+        )
     )

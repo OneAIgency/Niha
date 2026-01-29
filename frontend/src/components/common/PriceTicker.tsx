@@ -17,7 +17,7 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
       const timeout = setTimeout(() => setAnimate(false), 500);
       return () => clearTimeout(timeout);
     }
-  }, [prices?.updated_at]);
+  }, [prices]);
 
   if (!prices) {
     return null; // Hide ticker while loading instead of showing placeholders

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, get_current_user
-from ...models.models import AssetType, User, UserRole
+from ...models.models import AssetType, User
 from ...services import withdrawal_service
 
 router = APIRouter(prefix="/withdrawals", tags=["withdrawals"])
@@ -83,8 +83,8 @@ class WithdrawalResponse(BaseModel):
 @router.post("/request", response_model=WithdrawalResponse)
 async def request_withdrawal(
     request: WithdrawalRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Request a withdrawal.
@@ -101,11 +101,11 @@ async def request_withdrawal(
     # Validate asset type
     try:
         asset_type = AssetType(request.asset_type)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid asset type. Must be one of: EUR, CEA, EUA",
-        )
+            detail="Invalid asset type. Must be one of: EUR, CEA, EUA",
+        ) from e
 
     result = await withdrawal_service.request_withdrawal(
         db=db,
@@ -134,8 +134,8 @@ async def request_withdrawal(
 
 @router.get("/my-withdrawals")
 async def get_my_withdrawals(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Get withdrawal history for current user's entity"""
     if not current_user.entity_id:
@@ -155,8 +155,8 @@ async def get_my_withdrawals(
 
 @router.get("/pending")
 async def get_pending_withdrawals(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Get all pending withdrawal requests (admin only)"""
     return await withdrawal_service.get_pending_withdrawals(db)
@@ -164,8 +164,8 @@ async def get_pending_withdrawals(
 
 @router.get("/processing")
 async def get_processing_withdrawals(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Get all withdrawals currently being processed (admin only)"""
     return await withdrawal_service.get_processing_withdrawals(db)
@@ -173,8 +173,8 @@ async def get_processing_withdrawals(
 
 @router.get("/stats")
 async def get_withdrawal_stats(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Get withdrawal statistics (admin only)"""
     return await withdrawal_service.get_withdrawal_stats(db)
@@ -184,8 +184,8 @@ async def get_withdrawal_stats(
 async def approve_withdrawal(
     withdrawal_id: UUID,
     request: ApproveWithdrawalRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Approve a pending withdrawal and move to processing (admin only)"""
     result = await withdrawal_service.approve_withdrawal(
@@ -209,8 +209,8 @@ async def approve_withdrawal(
 async def complete_withdrawal(
     withdrawal_id: UUID,
     request: CompleteWithdrawalRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Complete a withdrawal (mark as transferred) (admin only)"""
     result = await withdrawal_service.complete_withdrawal(
@@ -235,8 +235,8 @@ async def complete_withdrawal(
 async def reject_withdrawal(
     withdrawal_id: UUID,
     request: RejectWithdrawalRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """Reject a withdrawal and refund the reserved balance (admin only)"""
     result = await withdrawal_service.reject_withdrawal(

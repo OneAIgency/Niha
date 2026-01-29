@@ -22,7 +22,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 # ==============================================================================
 # Domain Objects
@@ -58,8 +58,8 @@ class UnusedVarAgent(BaseFixerAgent):
 
     def apply(self, lines: List[str], issues: List[QualityIssue]) -> bool:
         changes_made = False
-        # Sort issues reverse by line to avoid index shifting problems if we were removing lines (we aren't, but good practice)
-        # Actually we are modifying lines in place.
+        # Sort issues reverse by line to avoid index shifting problems
+        # Actually we are modifying lines in place (not removing).
 
         target_issues = [i for i in issues if i.code == "F841"]
 
@@ -83,9 +83,8 @@ class UnusedVarAgent(BaseFixerAgent):
                     match.group(3),
                 )
 
-                # Check if the variable name matches the one in the error message usually?
-                # Ruff message: "Local variable `settlement1` is assigned to but never used"
-                # We can verify extraction from message
+                # Check if variable name matches the one in error message
+                # Ruff: "Local variable `x` is assigned to but never used"
 
                 var_from_msg = re.search(r"`([^`]+)`", issue.message)
                 if var_from_msg and var_from_msg.group(1) != var_name:
@@ -96,7 +95,7 @@ class UnusedVarAgent(BaseFixerAgent):
                 lines[idx] = f"{indent}{expression}"
                 changes_made = True
                 print(
-                    f"  [UnusedVarAgent] Fixed line {issue.line}: Removed '{var_name} ='"
+                    f"  [UnusedVarAgent] Line {issue.line}: Removed '{var_name} ='"
                 )
 
         return changes_made
@@ -122,8 +121,7 @@ class LineLengthAgent(BaseFixerAgent):
                 continue  # Already fixed or false positive
 
             # Strategy 1: Break function call / definition
-            # func(arg1, arg2) -> func(\n    arg1,\n    arg2\n)
-            # This is hard to do perfectly with regex, we'll try a simpler 'paren-wrap' strategy for asserts/returns
+            # Hard to do perfectly with regex, use paren-wrap for asserts
 
             # Strategy 2: Assertions with long lines
             # assert foo == bar -> assert foo == (\n    bar\n)
@@ -141,7 +139,7 @@ class LineLengthAgent(BaseFixerAgent):
                     lines[idx] = f"{prefix}(\n{new_indent}{rest}\n{new_indent[:-4]})"
                     changes_made = True
                     print(
-                        f"  [LineLengthAgent] Fixed line {issue.line}: Wrapped assert in parens"
+                        f"  [LineLengthAgent] Line {issue.line}: Wrapped assert"
                     )
                     continue
 
@@ -193,9 +191,8 @@ class Coordinator:
                     )
                     self.issues_by_file[issue.file_path].append(issue)
 
-            print(
-                f"📊 Analysis complete. Found issues in {len(self.issues_by_file)} files."
-            )
+            file_count = len(self.issues_by_file)
+            print(f"📊 Analysis complete. Found issues in {file_count} files.")
 
         except Exception as e:
             print(f"❌ Analysis failed: {e}")
@@ -214,8 +211,7 @@ class Coordinator:
 
             modified = False
 
-            # Run agents
-            # Note: Order matters. UnusedVar removes code, shortening lines. Run it first.
+            # Run agents (order matters: UnusedVar first to shorten lines)
             agents = [UnusedVarAgent(), LineLengthAgent()]
 
             for agent in agents:

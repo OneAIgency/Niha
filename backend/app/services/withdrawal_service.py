@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.models import (
@@ -73,7 +73,10 @@ async def request_withdrawal(
     if current_balance < amount:
         return {
             "success": False,
-            "error": f"Insufficient balance. Available: {current_balance} {asset_type.value}",
+            "error": (
+                f"Insufficient balance. Available: {current_balance} "
+                f"{asset_type.value}"
+            ),
             "available_balance": str(current_balance),
         }
 
@@ -86,7 +89,10 @@ async def request_withdrawal(
         if not destination_registry or not destination_account_id:
             return {
                 "success": False,
-                "error": f"Registry and account ID required for {asset_type.value} transfers",
+                "error": (
+                    f"Registry and account ID required for "
+                    f"{asset_type.value} transfers"
+                ),
             }
 
     # Generate internal reference
@@ -120,7 +126,7 @@ async def request_withdrawal(
         transaction_type=TransactionType.WITHDRAWAL,
         created_by=user_id,
         reference=internal_reference,
-        notes=f"Withdrawal request - pending approval",
+        notes="Withdrawal request - pending approval",
     )
 
     await db.flush()

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FileText,
@@ -102,15 +102,7 @@ export function BackofficeOnboardingPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
 
-  useEffect(() => {
-    if (activeSubpage !== 'requests') {
-      loadData();
-    } else {
-      setLoading(realtimeContactRequests.length === 0 && connectionStatus === 'connecting');
-    }
-  }, [activeSubpage, realtimeContactRequests.length, connectionStatus]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -152,7 +144,15 @@ export function BackofficeOnboardingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeSubpage]);
+
+  useEffect(() => {
+    if (activeSubpage !== 'requests') {
+      loadData();
+    } else {
+      setLoading(realtimeContactRequests.length === 0 && connectionStatus === 'connecting');
+    }
+  }, [activeSubpage, realtimeContactRequests.length, connectionStatus, loadData]);
 
   const handleRefresh = () => {
     if (activeSubpage === 'requests') {

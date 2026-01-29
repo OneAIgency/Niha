@@ -70,11 +70,14 @@ class SettlementProcessor:
 
                         processed_count += 1
                         logger.info(
-                            f"Advanced settlement {settlement.batch_reference} to {next_status}"
+                            "Advanced settlement %s to %s",
+                            settlement.batch_reference,
+                            next_status,
                         )
 
             logger.info(
-                f"Settlement processing complete. Advanced {processed_count} settlements."
+                "Settlement processing complete. Advanced %d settlements.",
+                processed_count,
             )
 
         except Exception as e:
@@ -82,7 +85,7 @@ class SettlementProcessor:
 
     @staticmethod
     def _should_advance_status(settlement: SettlementBatch) -> bool:
-        """Check if settlement should advance to next status based on expected timeline"""
+        """Check if settlement should advance based on expected timeline."""
         now = datetime.utcnow()
 
         # Terminal statuses should never advance
@@ -93,14 +96,14 @@ class SettlementProcessor:
         # For CEA (T+3): expected_settlement_date is 3 business days from creation
         # Calculate business days from creation to expected date
         if settlement.settlement_type.value == "CEA_PURCHASE":
-            total_days_for_settlement = 3  # T+3
+            pass  # T+3
         elif settlement.settlement_type.value == "SWAP_CEA_TO_EUA":
             if settlement.asset_type.value == "CEA":
-                total_days_for_settlement = 2  # T+2 for CEA swaps
+                pass  # T+2 for CEA swaps
             else:
-                total_days_for_settlement = 3  # T+3-T+5 for EUA swaps
+                pass  # T+3-T+5 for EUA swaps
         else:
-            3  # Default T+3
+            pass  # Default T+3
 
         # Calculate business days elapsed from creation
         created = settlement.created_at
@@ -204,8 +207,10 @@ class SettlementProcessor:
                 for settlement in overdue:
                     days_overdue = (now - settlement.expected_settlement_date).days
                     logger.warning(
-                        f"Settlement {settlement.batch_reference} is {days_overdue} days overdue. "
-                        f"Status: {settlement.status}"
+                        "Settlement %s is %d days overdue. Status: %s",
+                        settlement.batch_reference,
+                        days_overdue,
+                        settlement.status,
                     )
 
                     # Get entity information
@@ -232,11 +237,14 @@ class SettlementProcessor:
                                     current_status=settlement.status.value,
                                 )
                                 logger.info(
-                                    f"Overdue settlement alert sent to admin {admin.email}"
+                                    "Overdue settlement alert sent to admin %s",
+                                    admin.email,
                                 )
                             except Exception as email_error:
                                 logger.error(
-                                    f"Failed to send overdue alert to {admin.email}: {email_error}"
+                                    "Failed to send overdue alert to %s: %s",
+                                    admin.email,
+                                    email_error,
                                 )
 
         except Exception as e:

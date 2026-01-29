@@ -121,7 +121,8 @@ async def lifespan(app: FastAPI):
     deposit_task = asyncio.create_task(deposit_hold_processor_loop())
     _background_tasks.extend([processor_task, monitoring_task, deposit_task])
     logger.info(
-        "Settlement processor, monitoring and deposit hold processor started (running every 1 hour)"
+        "Settlement processor, monitoring and deposit hold processor started "
+        "(running every 1 hour)"
     )
 
     yield

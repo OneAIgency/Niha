@@ -18,9 +18,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Constants for deposit validation
-MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
-
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
@@ -52,6 +49,9 @@ from ...schemas.schemas import (
     UserApprovalRequest,
 )
 from ...services.email_service import email_service
+
+# Constants for deposit validation
+MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
 
 router = APIRouter(prefix="/backoffice", tags=["Backoffice"])
 
@@ -132,7 +132,7 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
 
 @router.get("/pending-users")
 async def get_pending_users(
-    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get users awaiting approval (pending status with submitted KYC).
@@ -142,7 +142,7 @@ async def get_pending_users(
     query = (
         select(User)
         .where(User.role == UserRole.PENDING)
-        .where(User.is_active == True)
+        .where(User.is_active.is_(True))
         .order_by(User.created_at.desc())
     )
 
@@ -188,8 +188,8 @@ async def get_pending_users(
 @router.put("/users/{user_id}/approve", response_model=MessageResponse)
 async def approve_user(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Approve a pending user. Changes role from PENDING to APPROVED.
@@ -237,8 +237,8 @@ async def approve_user(
 async def reject_user(
     user_id: str,
     rejection: UserApprovalRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Reject a pending user.
@@ -270,8 +270,8 @@ async def reject_user(
 @router.put("/users/{user_id}/fund", response_model=MessageResponse)
 async def fund_user(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Mark a user as funded. Changes role from APPROVED to FUNDED.
@@ -305,8 +305,8 @@ async def fund_user(
 async def get_all_kyc_documents(
     user_id: Optional[str] = None,
     status: Optional[str] = None,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all KYC documents, optionally filtered by user or status.
@@ -320,11 +320,12 @@ async def get_all_kyc_documents(
     if status:
         try:
             doc_status = DocumentStatus(status)
-        except ValueError:
+        except ValueError as e:
+            valid_values = [s.value for s in DocumentStatus]
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DocumentStatus]}",
-            )
+                detail=f"Invalid status '{status}'. Valid values: {valid_values}",
+            ) from e
         query = query.where(KYCDocument.status == doc_status)
 
     result = await db.execute(query)
@@ -362,8 +363,8 @@ async def get_all_kyc_documents(
 async def review_kyc_document(
     document_id: str,
     review: KYCDocumentReview,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Review (approve/reject) a KYC document.
@@ -406,8 +407,8 @@ async def review_kyc_document(
 @router.get("/kyc-documents/{document_id}/content")
 async def get_document_content(
     document_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get KYC document content for preview/download.
@@ -436,8 +437,8 @@ async def get_document_content(
 @router.get("/users/{user_id}/sessions")
 async def get_user_sessions(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get a user's session history.
@@ -470,8 +471,8 @@ async def get_user_sessions(
 @router.get("/users/{user_id}/trades")
 async def get_user_trades(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get a user's trading history.
@@ -522,8 +523,8 @@ async def get_user_trades(
 async def get_all_deposits(
     status: Optional[str] = None,
     entity_id: Optional[str] = None,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all deposits, optionally filtered by status or entity.
@@ -534,11 +535,12 @@ async def get_all_deposits(
     if status:
         try:
             dep_status = DepositStatus(status)
-        except ValueError:
+        except ValueError as e:
+            valid_values = [s.value for s in DepositStatus]
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in DepositStatus]}",
-            )
+                detail=f"Invalid status '{status}'. Valid values: {valid_values}",
+            ) from e
         query = query.where(Deposit.status == dep_status)
 
     if entity_id:
@@ -599,8 +601,8 @@ async def get_all_deposits(
 @router.post("/deposits", response_model=MessageResponse)
 async def create_deposit(
     deposit_data: DepositCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create and confirm a deposit for an entity.
@@ -614,7 +616,10 @@ async def create_deposit(
     if deposit_amount > MAX_DEPOSIT_AMOUNT:
         raise HTTPException(
             status_code=400,
-            detail=f"Deposit amount exceeds maximum allowed ({MAX_DEPOSIT_AMOUNT:,.2f})",
+            detail=(
+                f"Deposit amount exceeds maximum allowed "
+                f"({MAX_DEPOSIT_AMOUNT:,.2f})"
+            ),
         )
 
     # Verify entity exists with row lock to prevent race conditions
@@ -632,15 +637,20 @@ async def create_deposit(
         if entity.balance_amount and entity.balance_amount > 0:
             raise HTTPException(
                 status_code=400,
-                detail=f"Currency mismatch: entity has existing balance in {entity.balance_currency.value}, "
-                f"cannot add {deposit_currency.value}. Please use the same currency or zero the balance first.",
+                detail=(
+                    f"Currency mismatch: entity has existing balance in "
+                    f"{entity.balance_currency.value}, cannot add "
+                    f"{deposit_currency.value}. Please use the same currency "
+                    f"or zero the balance first."
+                ),
             )
 
     # Generate bank reference using cryptographically secure random
     import secrets
     import string
 
-    bank_ref = f"DEP-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}"
+    chars = string.ascii_uppercase + string.digits
+    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
 
     # Create deposit record
     deposit = Deposit(
@@ -679,15 +689,18 @@ async def create_deposit(
             pass
 
     return MessageResponse(
-        message=f"Deposit of {deposit_data.amount} {deposit_data.currency.value} confirmed for {entity.name}. Users upgraded to FUNDED."
+        message=(
+            f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
+            f"confirmed for {entity.name}. Users upgraded to FUNDED."
+        )
     )
 
 
 @router.get("/deposits/{deposit_id}")
 async def get_deposit(
     deposit_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get a specific deposit's details.
@@ -736,8 +749,8 @@ async def get_deposit(
 async def confirm_pending_deposit(
     deposit_id: str,
     confirmation: DepositConfirm,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Confirm a pending deposit with actual received amount.
@@ -826,15 +839,18 @@ async def confirm_pending_deposit(
     )
 
     return MessageResponse(
-        message=f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
+        message=(
+            f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} "
+            f"for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
+        )
     )
 
 
 @router.put("/deposits/{deposit_id}/reject", response_model=MessageResponse)
 async def reject_pending_deposit(
     deposit_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Reject a pending deposit.
@@ -861,8 +877,8 @@ async def reject_pending_deposit(
 @router.get("/entities/{entity_id}/balance")
 async def get_entity_balance(
     entity_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get an entity's balance and deposit history.
@@ -899,8 +915,8 @@ async def get_entity_balance(
 @router.get("/users/{user_id}/deposits")
 async def get_user_deposits(
     user_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all deposits for a user's entity.
@@ -946,8 +962,8 @@ async def get_user_deposits(
 async def add_asset_to_entity(
     entity_id: str,
     asset_request: AddAssetRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Add EUR, CEA, or EUA to an entity's account.
@@ -1040,15 +1056,18 @@ async def add_asset_to_entity(
     }[model_asset_type]
 
     return MessageResponse(
-        message=f"Successfully added {asset_request.amount:,.2f} {asset_label} to {entity.name}"
+        message=(
+            f"Successfully added {asset_request.amount:,.2f} {asset_label} "
+            f"to {entity.name}"
+        )
     )
 
 
 @router.get("/entities/{entity_id}/assets", response_model=EntityAssetsResponse)
 async def get_entity_assets(
     entity_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all asset balances for an entity (EUR, CEA, EUA).
@@ -1118,9 +1137,9 @@ async def get_entity_assets(
 async def get_entity_transactions(
     entity_id: str,
     asset_type: Optional[AssetTypeEnum] = None,
-    limit: int = Query(50, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get transaction history for an entity.
@@ -1193,8 +1212,8 @@ async def update_asset_balance(
     entity_id: str,
     asset_type: AssetTypeEnum,
     request: UpdateAssetRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update an entity's asset balance to a specific value.
@@ -1269,7 +1288,11 @@ async def update_asset_balance(
     direction = "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"
 
     return MessageResponse(
-        message=f"Successfully updated {entity.name}'s {asset_label} balance from {float(balance_before):,.2f} to {float(new_balance):,.2f} ({direction} by {abs(float(delta)):,.2f})"
+        message=(
+            f"Successfully updated {entity.name}'s {asset_label} balance from "
+            f"{float(balance_before):,.2f} to {float(new_balance):,.2f} "
+            f"({direction} by {abs(float(delta)):,.2f})"
+        )
     )
 
 
@@ -1281,15 +1304,15 @@ async def update_asset_balance(
 @router.get("/entities/{entity_id}/orders")
 async def get_entity_orders(
     entity_id: str,
-    status: Optional[str] = Query(
+    status: Optional[str] = Query(  # noqa: B008
         None, description="Filter by status: OPEN, PARTIALLY_FILLED, FILLED, CANCELLED"
     ),
-    certificate_type: Optional[str] = Query(
+    certificate_type: Optional[str] = Query(  # noqa: B008
         None, description="Filter by certificate type: EUA, CEA"
     ),
-    limit: int = Query(50, le=200),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, le=200),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all orders for an entity.
@@ -1313,17 +1336,19 @@ async def get_entity_orders(
         try:
             status_enum = ModelOrderStatus(status)
             query = query.where(Order.status == status_enum)
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid status: {status}"
+            ) from e
 
     if certificate_type:
         try:
             cert_type_enum = ModelCertificateType(certificate_type)
             query = query.where(Order.certificate_type == cert_type_enum)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
-            )
+            ) from e
 
     query = query.order_by(Order.created_at.desc()).limit(limit)
 
@@ -1351,8 +1376,8 @@ async def get_entity_orders(
 @router.delete("/orders/{order_id}")
 async def admin_cancel_order(
     order_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Cancel any order (admin only).
@@ -1388,8 +1413,8 @@ async def admin_cancel_order(
 async def admin_update_order(
     order_id: str,
     update: dict,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update an order's price or quantity (admin only).
@@ -1428,9 +1453,10 @@ async def admin_update_order(
                 status_code=400, detail="Quantity must be greater than 0"
             )
         if new_quantity < float(order.filled_quantity):
+            filled = float(order.filled_quantity)
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot reduce quantity below filled amount ({float(order.filled_quantity)})",
+                detail=f"Cannot reduce quantity below filled amount ({filled})",
             )
         order.quantity = Decimal(str(new_quantity))
 

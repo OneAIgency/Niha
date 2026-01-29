@@ -63,8 +63,14 @@ class PriceScraper:
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 Chrome/120.0.0.0"
+                    ),
+                    "Accept": (
+                        "text/html,application/xhtml+xml,"
+                        "application/xml;q=0.9,*/*;q=0.8"
+                    ),
                     "Accept-Language": "en-US,en;q=0.5",
                 }
                 response = await client.get(url, headers=headers)
@@ -113,10 +119,6 @@ class PriceScraper:
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options
-            from selenium.webdriver.chrome.service import Service
-            from selenium.webdriver.common.by import By
-            from selenium.webdriver.support import expected_conditions as EC
-            from selenium.webdriver.support.ui import WebDriverWait
 
             options = Options()
             options.add_argument("--headless")
@@ -125,7 +127,7 @@ class PriceScraper:
             options.add_argument("--disable-gpu")
             options.add_argument("--window-size=1920,1080")
             options.add_argument(
-                "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
             )
 
             driver = webdriver.Chrome(options=options)
@@ -167,7 +169,9 @@ class PriceScraper:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
                 context = await browser.new_context(
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+                    )
                 )
                 page = await context.new_page()
 
@@ -186,7 +190,10 @@ class PriceScraper:
         except ImportError:
             return {
                 "success": False,
-                "error": "Playwright not installed. Install with: pip install playwright && playwright install chromium",
+                "error": (
+                    "Playwright not installed. Install with: "
+                    "pip install playwright && playwright install chromium"
+                ),
             }
         except Exception as e:
             logger.error(f"Playwright scrape failed: {e}")
@@ -237,7 +244,9 @@ class PriceScraper:
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+                    ),
                     "Referer": "https://carboncredits.com/carbon-prices-today/",
                     "Accept": "*/*",
                 }
@@ -280,9 +289,8 @@ class PriceScraper:
                                         logger.info(f"Found CEA price: {price}")
                                         return price
 
-                    raise Exception(
-                        f"Could not find {source.certificate_type.value} price in response"
-                    )
+                    cert_val = source.certificate_type.value
+                    raise Exception(f"Could not find {cert_val} price")
                 else:
                     raise Exception(f"HTTP {response.status_code}")
 
@@ -380,11 +388,11 @@ class PriceScraper:
                 await db.commit()
                 raise Exception("No price found")
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             source.last_scrape_at = datetime.utcnow()
             source.last_scrape_status = ScrapeStatus.TIMEOUT
             await db.commit()
-            raise Exception("Scrape timeout")
+            raise Exception("Scrape timeout") from e
         except Exception:
             source.last_scrape_at = datetime.utcnow()
             source.last_scrape_status = ScrapeStatus.FAILED
@@ -402,7 +410,9 @@ class PriceScraper:
 
             async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+                    ),
                     "Referer": "https://carboncredits.com/carbon-prices-today/",
                 }
                 response = await client.get(api_url, headers=headers)
@@ -552,7 +562,9 @@ class PriceScraper:
 
                 if eua_records and cea_records:
                     logger.info(
-                        f"Using {len(eua_records)} EUA and {len(cea_records)} CEA records from database"
+                        "Using %d EUA and %d CEA records from database",
+                        len(eua_records),
+                        len(cea_records),
                     )
 
                     for record in eua_records:

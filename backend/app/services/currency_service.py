@@ -111,8 +111,12 @@ class CurrencyService:
         converted = (amount * rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         logger.info(
-            f"Currency conversion: {amount} {from_currency} → {converted} {to_currency} "
-            f"(rate: {rate})"
+            "Currency conversion: %s %s -> %s %s (rate: %s)",
+            amount,
+            from_currency,
+            converted,
+            to_currency,
+            rate,
         )
 
         return converted

@@ -16,7 +16,7 @@ def determine_order_market(
 
     Logic:
     - If order has market_maker_id: Use MM's market (via mm.market property)
-    - If order is for entity: Default to CEA_CASH (only cash market available for entities)
+    - If order is for entity: Default to CEA_CASH (only cash market for entities)
 
     Args:
         market_maker: MarketMakerClient instance if order is from MM

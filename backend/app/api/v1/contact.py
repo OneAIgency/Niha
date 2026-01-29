@@ -15,12 +15,12 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
+from ...core.exceptions import handle_database_error
 from ...models.models import ContactRequest, ContactStatus
 from ...schemas.schemas import (
     ContactRequestCreate,
     ContactRequestResponse,
 )
-from ...core.exceptions import handle_database_error
 from ...services.email_service import email_service
 from .backoffice import backoffice_ws_manager
 
@@ -44,7 +44,7 @@ def get_client_ip(request: Request) -> str:
 
 @router.post("/request", response_model=ContactRequestResponse)
 async def create_contact_request(
-    request: ContactRequestCreate, db: AsyncSession = Depends(get_db)
+    request: ContactRequestCreate, db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Submit a contact request to join the platform.
@@ -66,9 +66,10 @@ async def create_contact_request(
         await db.refresh(contact)
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "creating contact request", logger)
+        raise handle_database_error(e, "creating contact request", logger) from e
 
-    # Broadcast new contact request to backoffice (same shape as get_contact_requests / request_updated)
+    # Broadcast new contact request to backoffice
+    # (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
             "new_request",
@@ -101,12 +102,12 @@ async def create_contact_request(
 @router.post("/nda-request", response_model=ContactRequestResponse)
 async def create_nda_request(
     request: Request,
-    entity_name: str = Form(...),
-    contact_email: str = Form(...),
-    contact_name: str = Form(...),
-    position: str = Form(...),
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    entity_name: str = Form(...),  # noqa: B008
+    contact_email: str = Form(...),  # noqa: B008
+    contact_name: str = Form(...),  # noqa: B008
+    position: str = Form(...),  # noqa: B008
+    file: UploadFile = File(...),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Submit an NDA request with signed NDA document.
@@ -151,9 +152,10 @@ async def create_nda_request(
         await db.refresh(contact)
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "creating NDA contact request", logger)
+        raise handle_database_error(e, "creating NDA contact request", logger) from e
 
-    # Broadcast new NDA request to backoffice (same shape as get_contact_requests / request_updated)
+    # Broadcast new NDA request to backoffice
+    # (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
             "new_request",
@@ -185,7 +187,7 @@ async def create_nda_request(
 
 
 @router.get("/status/{email}", response_model=ContactRequestResponse)
-async def check_contact_status(email: str, db: AsyncSession = Depends(get_db)):
+async def check_contact_status(email: str, db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
     Check the status of a contact request by email.
     """

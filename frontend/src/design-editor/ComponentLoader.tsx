@@ -9,6 +9,7 @@ interface ComponentLoaderProps {
 /**
  * Dynamically loads a component using React.lazy
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function loadComponent(metadata: ComponentMetadata): ComponentType<Record<string, unknown>> {
   // Convert importPath to dynamic import
   // Example: "components/common/Button" -> "../components/common/Button"
@@ -34,7 +35,7 @@ export function loadComponent(metadata: ComponentMetadata): ComponentType<Record
 export function ComponentLoader({ metadata, props = {} }: ComponentLoaderProps) {
   const Component = useMemo(
     () => loadComponent(metadata),
-    [metadata.importPath]
+    [metadata]
   );
 
   return (

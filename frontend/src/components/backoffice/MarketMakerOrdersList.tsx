@@ -28,6 +28,7 @@ interface MarketMaker {
 
 interface OrderWithMM extends Order {
   market_maker_name?: string;
+  [key: string]: unknown;
 }
 
 export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersListProps) {
@@ -130,7 +131,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       key: 'market_maker_name',
       header: 'Market Maker',
       render: (value) => (
-        <span className="font-medium text-navy-900 dark:text-white">{value || 'Unknown'}</span>
+        <span className="font-medium text-navy-900 dark:text-white">{String(value || 'Unknown')}</span>
       ),
     },
     {
@@ -143,7 +144,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
           ) : (
             <Wind className="w-4 h-4 text-blue-500" />
           )}
-          <span className="font-semibold">{value}</span>
+          <span className="font-semibold">{String(value)}</span>
         </div>
       ),
     },
@@ -160,7 +161,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
             'font-semibold',
             value === 'SELL' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
           )}>
-            {value}
+            {String(value)}
           </span>
         </div>
       ),
@@ -171,7 +172,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       align: 'right',
       render: (value) => (
         <span className="font-mono font-semibold text-navy-900 dark:text-white">
-          €{value.toFixed(2)}
+          €{typeof value === 'number' ? value.toFixed(2) : Number(value).toFixed(2)}
         </span>
       ),
     },
@@ -181,7 +182,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       align: 'right',
       render: (value) => (
         <span className="font-mono text-navy-700 dark:text-navy-300">
-          {value.toLocaleString()}
+          {typeof value === 'number' ? value.toLocaleString() : Number(value).toLocaleString()}
         </span>
       ),
     },
@@ -189,14 +190,19 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       key: 'filled_quantity',
       header: 'Filled',
       align: 'right',
-      render: (value, row) => (
-        <span className="font-mono text-navy-700 dark:text-navy-300">
-          {value.toLocaleString()}
-          <span className="text-xs text-navy-400 ml-1">
-            ({((value / row.quantity) * 100).toFixed(0)}%)
+      render: (value, row) => {
+        const filledQty = typeof value === 'number' ? value : Number(value);
+        const totalQty = typeof row.quantity === 'number' ? row.quantity : Number(row.quantity);
+        const percentage = totalQty > 0 ? ((filledQty / totalQty) * 100).toFixed(0) : '0';
+        return (
+          <span className="font-mono text-navy-700 dark:text-navy-300">
+            {filledQty.toLocaleString()}
+            <span className="text-xs text-navy-400 ml-1">
+              ({percentage}%)
+            </span>
           </span>
-        </span>
-      ),
+        );
+      },
     },
     {
       key: 'remaining_quantity',
@@ -204,14 +210,14 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       align: 'right',
       render: (value) => (
         <span className="font-mono text-navy-700 dark:text-navy-300">
-          {value.toLocaleString()}
+          {typeof value === 'number' ? value.toLocaleString() : Number(value).toLocaleString()}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (value) => getStatusBadge(value),
+      render: (value) => getStatusBadge(String(value)),
     },
     {
       key: 'created_at',
@@ -219,7 +225,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       render: (value) => (
         <div className="flex items-center gap-1 text-navy-500 dark:text-navy-400 text-sm">
           <Clock className="w-3 h-3" />
-          {formatRelativeTime(value)}
+          {formatRelativeTime(typeof value === 'string' || value instanceof Date ? value : String(value))}
         </div>
       ),
     },

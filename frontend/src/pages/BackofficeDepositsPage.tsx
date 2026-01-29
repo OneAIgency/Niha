@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Clock,
     RefreshCw,
@@ -26,7 +26,7 @@ export function BackofficeDepositsPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'pending' | 'on_hold'>('pending');
 
-    const fetchDeposits = async () => {
+    const fetchDeposits = useCallback(async () => {
         setLoading(true);
         try {
             // Endpoint depends on filter
@@ -38,11 +38,11 @@ export function BackofficeDepositsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filter]);
 
     useEffect(() => {
         fetchDeposits();
-    }, [filter]);
+    }, [fetchDeposits]);
 
     const handleConfirm = async (id: string, amount: number) => {
         if (!window.confirm('Confirm wire receipt for this deposit?')) return;

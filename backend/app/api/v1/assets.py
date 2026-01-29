@@ -18,10 +18,9 @@ from sqlalchemy.orm import selectinload
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
-    AssetType,
     AssetTransaction,
+    AssetType,
     Entity,
-    EntityHolding,
     TransactionType,
     User,
 )
@@ -74,8 +73,8 @@ class TransactionHistoryResponse(BaseModel):
 @router.post("/credit")
 async def credit_assets(
     request: AssetCreditRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Credit assets to an entity (Admin only).
@@ -83,8 +82,8 @@ async def credit_assets(
     """
     try:
         asset_type = AssetType(request.asset_type)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset type")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid asset type") from e
 
     entity_id = UUID(request.entity_id)
 
@@ -102,7 +101,7 @@ async def credit_assets(
         amount=request.amount,
         transaction_type=TransactionType.ADJUSTMENT,
         created_by=admin_user.id,
-        reference=f"admin_credit",
+        reference="admin_credit",
         notes=request.notes or f"Admin credit: {request.amount} {asset_type.value}",
     )
 
@@ -117,8 +116,8 @@ async def credit_assets(
 @router.post("/debit")
 async def debit_assets(
     request: AssetDebitRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Debit assets from an entity (Admin only).
@@ -126,8 +125,8 @@ async def debit_assets(
     """
     try:
         asset_type = AssetType(request.asset_type)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid asset type")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid asset type") from e
 
     entity_id = UUID(request.entity_id)
 
@@ -146,11 +145,11 @@ async def debit_assets(
             amount=-request.amount,
             transaction_type=TransactionType.ADJUSTMENT,
             created_by=admin_user.id,
-            reference=f"admin_debit",
+            reference="admin_debit",
             notes=request.notes or f"Admin debit: {request.amount} {asset_type.value}",
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to debit: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to debit: {str(e)}") from e
 
     await db.commit()
 
@@ -162,8 +161,8 @@ async def debit_assets(
 
 @router.get("/entities", response_model=List[EntityBalanceResponse])
 async def get_all_entity_balances(
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get balance summary for all entities (Admin only).
@@ -193,8 +192,8 @@ async def get_all_entity_balances(
 @router.get("/entities/{entity_id}/balances")
 async def get_entity_balances(
     entity_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get detailed balance for a specific entity (Admin only).
@@ -202,7 +201,9 @@ async def get_entity_balances(
     entity_uuid = UUID(entity_id)
     
     result = await db.execute(
-        select(Entity).options(selectinload(Entity.holdings)).where(Entity.id == entity_uuid)
+        select(Entity)
+        .options(selectinload(Entity.holdings))
+        .where(Entity.id == entity_uuid)
     )
     entity = result.scalar_one_or_none()
     
@@ -211,9 +212,12 @@ async def get_entity_balances(
 
     balances = {}
     for holding in entity.holdings:
+        updated_at = (
+            holding.updated_at.isoformat() if holding.updated_at else None
+        )
         balances[holding.asset_type.value] = {
             "quantity": float(holding.quantity),
-            "updated_at": holding.updated_at.isoformat() if holding.updated_at else None,
+            "updated_at": updated_at,
         }
 
     return {
@@ -228,8 +232,8 @@ async def get_transaction_history(
     entity_id: Optional[str] = None,
     asset_type: Optional[str] = None,
     limit: int = 100,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get transaction history with optional filters (Admin only).
@@ -244,8 +248,8 @@ async def get_transaction_history(
     if asset_type:
         try:
             query = query.where(AssetTransaction.asset_type == AssetType(asset_type))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid asset type")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid asset type") from e
 
     result = await db.execute(query)
     transactions = result.scalars().all()

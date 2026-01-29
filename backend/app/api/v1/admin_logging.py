@@ -22,39 +22,39 @@ router = APIRouter(prefix="/logging", tags=["Logging & Audit"])
 @router.get("/tickets", response_model=Dict[str, Any])
 async def list_tickets(
     # Date range filters
-    start_date: Optional[datetime] = Query(
+    start_date: Optional[datetime] = Query(  # noqa: B008
         None, description="Filter tickets from this date"
     ),
-    end_date: Optional[datetime] = Query(
+    end_date: Optional[datetime] = Query(  # noqa: B008
         None, description="Filter tickets until this date"
     ),
     # Entity filters
-    action_type: Optional[str] = Query(
+    action_type: Optional[str] = Query(  # noqa: B008
         None, description="Filter by action type (e.g., ORDER_PLACED)"
     ),
-    entity_type: Optional[str] = Query(
+    entity_type: Optional[str] = Query(  # noqa: B008
         None, description="Filter by entity type (e.g., Order, User)"
     ),
-    entity_id: Optional[UUID] = Query(None, description="Filter by specific entity ID"),
+    entity_id: Optional[UUID] = Query(None, description="Filter by specific entity ID"),  # noqa: B008
     # Actor filters
-    user_id: Optional[UUID] = Query(
+    user_id: Optional[UUID] = Query(  # noqa: B008
         None, description="Filter by user who performed action"
     ),
-    market_maker_id: Optional[UUID] = Query(None, description="Filter by market maker"),
+    market_maker_id: Optional[UUID] = Query(None, description="Filter by market maker"),  # noqa: B008
     # Status filter
-    status: Optional[TicketStatus] = Query(
+    status: Optional[TicketStatus] = Query(  # noqa: B008
         None, description="Filter by status (SUCCESS/FAILED)"
     ),
     # Search filters
-    search: Optional[str] = Query(
+    search: Optional[str] = Query(  # noqa: B008
         None, description="Search in ticket_id, action_type, entity_type"
     ),
-    tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),
+    tags: Optional[str] = Query(None, description="Comma-separated tags to filter by"),  # noqa: B008
     # Pagination
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     List all audit tickets with comprehensive filtering.
@@ -152,8 +152,8 @@ async def list_tickets(
 @router.get("/tickets/{ticket_id}", response_model=TicketLogResponse)
 async def get_ticket_details(
     ticket_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get full details for a specific ticket.
@@ -177,10 +177,10 @@ async def get_ticket_details(
 @router.get("/stats", response_model=TicketLogStats)
 async def get_logging_stats(
     # Date range for stats
-    start_date: Optional[datetime] = Query(None, description="Stats from this date"),
-    end_date: Optional[datetime] = Query(None, description="Stats until this date"),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    start_date: Optional[datetime] = Query(None, description="Stats from this date"),  # noqa: B008
+    end_date: Optional[datetime] = Query(None, description="Stats until this date"),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get dashboard statistics for audit logs.
@@ -305,14 +305,14 @@ async def get_logging_stats(
 
 @router.get("/market-maker-actions", response_model=Dict[str, Any])
 async def list_market_maker_actions(
-    market_maker_id: Optional[UUID] = Query(None, description="Filter by specific MM"),
-    start_date: Optional[datetime] = Query(None, description="From date"),
-    end_date: Optional[datetime] = Query(None, description="Until date"),
-    status: Optional[TicketStatus] = Query(None, description="Filter by status"),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    market_maker_id: Optional[UUID] = Query(None, description="Filter by specific MM"),  # noqa: B008
+    start_date: Optional[datetime] = Query(None, description="From date"),  # noqa: B008
+    end_date: Optional[datetime] = Query(None, description="Until date"),  # noqa: B008
+    status: Optional[TicketStatus] = Query(None, description="Filter by status"),  # noqa: B008
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Pre-filtered view for Market Maker actions.
@@ -364,14 +364,14 @@ async def list_market_maker_actions(
 
 @router.get("/failed-actions", response_model=Dict[str, Any])
 async def list_failed_actions(
-    start_date: Optional[datetime] = Query(None, description="From date"),
-    end_date: Optional[datetime] = Query(None, description="Until date"),
-    action_type: Optional[str] = Query(None, description="Filter by action type"),
-    entity_type: Optional[str] = Query(None, description="Filter by entity type"),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    start_date: Optional[datetime] = Query(None, description="From date"),  # noqa: B008
+    end_date: Optional[datetime] = Query(None, description="Until date"),  # noqa: B008
+    action_type: Optional[str] = Query(None, description="Filter by action type"),  # noqa: B008
+    entity_type: Optional[str] = Query(None, description="Filter by entity type"),  # noqa: B008
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Pre-filtered view for failed actions.

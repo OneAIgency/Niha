@@ -24,8 +24,8 @@ router = APIRouter(prefix="/liquidity", tags=["Liquidity"])
 @router.post("/preview", response_model=LiquidityPreviewResponse)
 async def preview_liquidity_creation(
     data: LiquidityPreviewRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Preview liquidity creation without executing.
@@ -41,24 +41,28 @@ async def preview_liquidity_creation(
         )
 
         logger.info(
-            f"Admin {admin_user.email} previewed liquidity creation for {data.certificate_type.value}: "
-            f"BID={data.bid_amount_eur} EUR, ASK={data.ask_amount_eur} EUR"
+            "Admin %s previewed liquidity creation for %s: "
+            "BID=%s EUR, ASK=%s EUR",
+            admin_user.email,
+            data.certificate_type.value,
+            data.bid_amount_eur,
+            data.ask_amount_eur,
         )
 
         return preview
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error previewing liquidity creation: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.post("/create", response_model=LiquidityCreateResponse)
 async def create_liquidity(
     data: LiquidityCreateRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Execute liquidity creation by placing orders across market makers.
@@ -85,9 +89,13 @@ async def create_liquidity(
         await db.refresh(operation)
 
         logger.info(
-            f"Admin {admin_user.email} created liquidity for {data.certificate_type.value}: "
-            f"BID={data.bid_amount_eur} EUR, ASK={data.ask_amount_eur} EUR, "
-            f"Operation ID={operation.id}"
+            "Admin %s created liquidity for %s: "
+            "BID=%s EUR, ASK=%s EUR, Operation ID=%s",
+            admin_user.email,
+            data.certificate_type.value,
+            data.bid_amount_eur,
+            data.ask_amount_eur,
+            operation.id,
         )
 
         return LiquidityCreateResponse(
@@ -115,16 +123,16 @@ async def create_liquidity(
                 "available": float(e.available),
                 "shortfall": float(e.shortfall),
             },
-        )
+        ) from e
 
     except ValueError as e:
         # Rollback on validation errors
         await db.rollback()
         logger.warning(f"Validation error in liquidity creation: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     except Exception as e:
         # Rollback on any other error
         await db.rollback()
         logger.error(f"Error creating liquidity: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

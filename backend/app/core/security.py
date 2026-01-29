@@ -137,7 +137,7 @@ class RedisManager:
 
 # Dependency to get current user from JWT token
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),  # noqa: B008
 ):
     """
     Extract and validate JWT token to get current user.
@@ -183,7 +183,7 @@ async def get_current_user(
         return user
 
 
-async def get_current_active_user(current_user=Depends(get_current_user)):
+async def get_current_active_user(current_user=Depends(get_current_user)):  # noqa: B008
     """Dependency that checks if user is active"""
     if not current_user.is_active:
         raise HTTPException(
@@ -197,12 +197,14 @@ def require_roles(*allowed_roles: str):
     Factory function that creates a dependency to check user roles.
 
     Usage:
-        @router.get("/admin-only", dependencies=[Depends(require_roles("admin"))])
+        @router.get(
+            "/admin-only", dependencies=[Depends(require_roles("admin"))]
+        )  # noqa: B008
         async def admin_endpoint():
             ...
     """
 
-    async def role_checker(current_user=Depends(get_current_user)):
+    async def role_checker(current_user=Depends(get_current_user)):  # noqa: B008
         if current_user.role.value not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
@@ -220,14 +222,14 @@ def require_roles(*allowed_roles: str):
 # - get_approved_user: Require APPROVED, FUNDED, or ADMIN role
 # - require_roles(*roles): Factory for custom role requirements
 
-async def get_admin_user(current_user=Depends(get_current_user)):
+async def get_admin_user(current_user=Depends(get_current_user)):  # noqa: B008
     """
     Dependency that requires admin role.
     
     Usage:
         @router.get("/admin-endpoint")
         async def admin_function(
-            admin_user: User = Depends(get_admin_user),
+            admin_user: User = Depends(get_admin_user),  # noqa: B008
             ...
         ):
             # admin_user is guaranteed to have ADMIN role
@@ -243,12 +245,18 @@ async def get_admin_user(current_user=Depends(get_current_user)):
     logger = logging.getLogger(__name__)
 
     logger.info(
-        f"Admin check - User: {current_user.email}, Role: {current_user.role}, Role type: {type(current_user.role)}, Expected: {UserRole.ADMIN}"
+        "Admin check - User: %s, Role: %s, Role type: %s, Expected: %s",
+        current_user.email,
+        current_user.role,
+        type(current_user.role),
+        UserRole.ADMIN,
     )
 
     if current_user.role != UserRole.ADMIN:
         logger.warning(
-            f"Admin access denied for user {current_user.email} with role {current_user.role}"
+            "Admin access denied for user %s with role %s",
+            current_user.email,
+            current_user.role,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -257,7 +265,7 @@ async def get_admin_user(current_user=Depends(get_current_user)):
     return current_user
 
 
-async def get_funded_user(current_user=Depends(get_current_user)):
+async def get_funded_user(current_user=Depends(get_current_user)):  # noqa: B008
     """Dependency that requires funded or admin role"""
     from ..models.models import UserRole
 
@@ -268,7 +276,7 @@ async def get_funded_user(current_user=Depends(get_current_user)):
     return current_user
 
 
-async def get_approved_user(current_user=Depends(get_current_user)):
+async def get_approved_user(current_user=Depends(get_current_user)):  # noqa: B008
     """Dependency that requires approved, funded, or admin role"""
     from ..models.models import UserRole
 

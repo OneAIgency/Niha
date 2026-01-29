@@ -31,22 +31,28 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
                 p {{ color: #64748b; line-height: 1.6; }}
-                .button {{ display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-                .warning {{ background: #fef3c7; border-radius: 8px; padding: 12px; margin-top: 20px; font-size: 13px; color: #92400e; }}
+                .button {{ display: inline-block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
+                .warning {{ background: #fef3c7; border-radius: 8px;
+                    padding: 12px; margin-top: 20px; font-size: 13px; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
                 <h1>Sign in to your account</h1>
-                <p>Click the button below to securely sign in to the Nihao Carbon Trading Platform. This link will expire in 15 minutes.</p>
+                <p>Click the button below to securely sign in to the Nihao
+                Carbon Trading Platform. This link will expire in 15 minutes.</p>
                 <a href="{magic_link_url}" class="button">Sign In to Platform</a>
                 <div class="warning">
                     If you didn't request this email, you can safely ignore it.
@@ -80,18 +86,22 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
                 .success {{ color: #10b981; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
+                .details {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
                 .detail-row:last-child {{ border-bottom: none; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
-                .total {{ font-size: 24px; color: #0f172a; font-weight: 700; text-align: center; margin-top: 20px; }}
+                .total {{ font-size: 24px; color: #0f172a; font-weight: 700;
+                    text-align: center; margin-top: 20px; }}
             </style>
         </head>
         <body>
@@ -134,38 +144,44 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
-                .match-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
+                .match-icon {{ font-size: 48px; text-align: center; }}
                 h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
-                .swap-visual {{ display: flex; justify-content: center; align-items: center; gap: 20px; margin: 30px 0; }}
-                .cert {{ background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; min-width: 120px; }}
-                .cert-type {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .swap-visual {{ display: flex; justify-content: center;
+                    align-items: center; gap: 20px; margin: 30px 0; }}
+                .cert {{ background: #f8fafc; padding: 20px;
+                    border-radius: 12px; text-align: center; }}
+                .cert-type {{ font-size: 24px; font-weight: 700; }}
                 .cert-qty {{ color: #64748b; margin-top: 8px; }}
                 .arrow {{ font-size: 32px; color: #10b981; }}
-                .rate {{ text-align: center; color: #64748b; margin-top: 20px; }}
-                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 200px; }}
+                .rate {{ text-align: center; color: #64748b; }}
+                .button {{ display: block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; margin: 24px auto; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="match-icon">🎯</div>
+                <div class="match-icon">Match Found</div>
                 <h1>Swap Match Found!</h1>
                 <div class="swap-visual">
                     <div class="cert">
                         <div class="cert-type">{from_type}</div>
                         <div class="cert-qty">{quantity:,.0f} units</div>
                     </div>
-                    <div class="arrow">→</div>
+                    <div class="arrow">-&gt;</div>
                     <div class="cert">
                         <div class="cert-type">{to_type}</div>
                         <div class="cert-qty">{quantity * rate:,.0f} units</div>
                     </div>
                 </div>
-                <div class="rate">Exchange Rate: 1 {from_type} = {rate:.2f} {to_type}</div>
+                <div class="rate">Exchange Rate: 1 {from_type} =
+                    {rate:.2f} {to_type}</div>
                 <a href="http://localhost:5173/swap" class="button">View Swap</a>
             </div>
         </body>
@@ -182,8 +198,9 @@ class EmailService:
         mail_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Send invitation email to new user with password setup link.
-        When mail_config is provided (from DB), use its from_email, subject, body, link base URL.
-        Otherwise use env and hardcoded template.
+
+        When mail_config is provided (from DB), use its from_email, subject,
+        body, link base URL. Otherwise use env and hardcoded template.
         """
         name = first_name or "there"
         if mail_config:
@@ -192,7 +209,10 @@ class EmailService:
                 or "http://localhost:5173"
             )
             setup_url = f"{base_url}/setup-password?token={invitation_token}"
-            subject = mail_config.get("invitation_subject") or "Welcome to Nihao Carbon Trading Platform"
+            subject = (
+                mail_config.get("invitation_subject")
+                or "Welcome to Nihao Carbon Trading Platform"
+            )
             body_html = mail_config.get("invitation_body_html")
             if body_html:
                 html_content = body_html.replace("{{setup_url}}", setup_url).replace(
@@ -202,7 +222,11 @@ class EmailService:
                 html_content = self._default_invitation_html(name, setup_url)
             from_email = mail_config.get("from_email") or settings.FROM_EMAIL
             return await self._send_email(
-                to_email, subject, html_content, from_email=from_email, mail_config=mail_config
+                to_email,
+                subject,
+                html_content,
+                from_email=from_email,
+                mail_config=mail_config,
             )
         setup_url = f"http://localhost:5173/setup-password?token={invitation_token}"
         subject = "Welcome to Nihao Carbon Trading Platform"
@@ -215,31 +239,42 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; }}
                 p {{ color: #64748b; line-height: 1.6; }}
-                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 250px; }}
-                .highlight {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .button {{ display: block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; margin: 24px auto; }}
+                .highlight {{ background: #ecfdf5; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
                 .highlight p {{ color: #047857; margin: 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-                .warning {{ background: #fef3c7; border-radius: 8px; padding: 12px; margin-top: 20px; font-size: 13px; color: #92400e; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
+                .warning {{ background: #fef3c7; border-radius: 8px;
+                    padding: 12px; margin-top: 20px; font-size: 13px; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
                 <h1>Welcome, {name}!</h1>
-                <p>You've been invited to join the Nihao Carbon Trading Platform. Click the button below to set up your password and activate your account.</p>
+                <p>You've been invited to join the Nihao Carbon Trading
+                Platform. Click the button below to set up your password
+                and activate your account.</p>
                 <a href="{setup_url}" class="button">Set Up Your Password</a>
                 <div class="highlight">
                     <p><strong>What is Nihao Group?</strong></p>
-                    <p>We're a professional OTC carbon credit trading platform enabling swap trading between EU ETS (EUA) and China ETS (CEA) emission certificates.</p>
+                    <p>We're a professional OTC carbon credit trading platform
+                    enabling swap trading between EU ETS (EUA) and China ETS
+                    (CEA) emission certificates.</p>
                 </div>
                 <div class="warning">
-                    This invitation link will expire in 7 days. If you didn't expect this invitation, please ignore this email.
+                    This invitation link will expire in 7 days. If you didn't
+                    expect this invitation, please ignore this email.
                 </div>
                 <div class="footer">
                     <p>Nihao Group Ltd - Carbon Certificate Trading</p>
@@ -259,29 +294,36 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; }}
                 p {{ color: #64748b; line-height: 1.6; }}
-                .success-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
-                .highlight {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .success-icon {{ font-size: 48px; text-align: center; }}
+                .highlight {{ background: #ecfdf5; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
                 .highlight p {{ color: #047857; margin: 0; }}
-                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 200px; }}
+                .button {{ display: block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; margin: 24px auto; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">✅</div>
+                <div class="success-icon">Verified</div>
                 <h1>Congratulations, {name}!</h1>
-                <p>Your account has been verified and approved. You can now access the Nihao Carbon Trading Platform.</p>
+                <p>Your account has been verified and approved. You can now
+                access the Nihao Carbon Trading Platform.</p>
                 <div class="highlight">
                     <p><strong>What's next?</strong></p>
-                    <p>To start trading, please fund your account. Contact our support team for funding instructions.</p>
+                    <p>To start trading, please fund your account. Contact
+                    our support team for funding instructions.</p>
                 </div>
-                <a href="http://localhost:5173/dashboard" class="button">Go to Dashboard</a>
+                <a href="http://localhost:5173/dashboard"
+                    class="button">Go to Dashboard</a>
             </div>
         </body>
         </html>
@@ -298,26 +340,31 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; }}
                 p {{ color: #64748b; line-height: 1.6; }}
-                .success-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
-                .features {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .feature {{ display: flex; align-items: center; padding: 10px 0; }}
+                .success-icon {{ font-size: 48px; text-align: center; }}
+                .features {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .feature {{ display: flex; align-items: center; }}
                 .feature-icon {{ font-size: 20px; margin-right: 12px; }}
                 .feature-text {{ color: #0f172a; }}
-                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 200px; }}
+                .button {{ display: block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; margin: 24px auto; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">🎉</div>
+                <div class="success-icon">Active</div>
                 <h1>Welcome to Trading, {name}!</h1>
-                <p>Your account has been funded and you now have full access to our carbon trading platform.</p>
+                <p>Your account has been funded and you now have full access
+                to our carbon trading platform.</p>
                 <div class="features">
                     <div class="feature">
                         <span class="feature-icon">📊</span>
@@ -332,7 +379,8 @@ class EmailService:
                         <span class="feature-text">Execute OTC Trades</span>
                     </div>
                 </div>
-                <a href="http://localhost:5173/marketplace" class="button">Start Trading</a>
+                <a href="http://localhost:5173/marketplace"
+                    class="button">Start Trading</a>
             </div>
         </body>
         </html>
@@ -348,13 +396,15 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; }}
                 p {{ color: #64748b; line-height: 1.6; }}
-                .highlight {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .highlight {{ background: #ecfdf5; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
                 .highlight p {{ color: #047857; margin: 0; }}
             </style>
         </head>
@@ -362,12 +412,17 @@ class EmailService:
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
                 <h1>Thank you, {entity_name}!</h1>
-                <p>We have received your inquiry about our carbon certificate trading platform. Our team will review your request and contact you within 24-48 hours.</p>
+                <p>We have received your inquiry about our carbon certificate
+                trading platform. Our team will review your request and
+                contact you within 24-48 hours.</p>
                 <div class="highlight">
                     <p><strong>What happens next?</strong></p>
-                    <p>One of our carbon trading specialists will reach out to discuss your needs and guide you through the onboarding process.</p>
+                    <p>One of our carbon trading specialists will reach out
+                    to discuss your needs and guide you through the
+                    onboarding process.</p>
                 </div>
-                <p>In the meantime, feel free to explore our platform to learn more about EUA-CEA swaps and OTC trading benefits.</p>
+                <p>In the meantime, feel free to explore our platform to
+                learn more about EUA-CEA swaps and OTC trading benefits.</p>
             </div>
         </body>
         </html>
@@ -392,21 +447,28 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
                 h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
-                .status-badge {{ display: inline-block; background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
+                .status-badge {{ display: inline-block; background: #fef3c7;
+                    color: #92400e; padding: 6px 12px; border-radius: 6px;
+                    font-size: 13px; margin-bottom: 20px; }}
+                .details {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
                 .detail-row:last-child {{ border-bottom: none; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
-                .timeline {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .timeline h3 {{ color: #047857; margin: 0 0 12px 0; font-size: 15px; }}
-                .timeline p {{ color: #065f46; margin: 4px 0; font-size: 14px; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+                .timeline {{ background: #ecfdf5; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .timeline h3 {{ color: #047857; margin: 0 0 12px 0; }}
+                .timeline p {{ color: #065f46; margin: 4px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
             </style>
         </head>
         <body>
@@ -414,7 +476,9 @@ class EmailService:
                 <div class="logo">NIHAO<span>GROUP</span></div>
                 <h1>Settlement Created</h1>
                 <div class="status-badge">⏱️ PENDING</div>
-                <p style="color: #64748b; margin-bottom: 20px;">Hello {name}, your {certificate_type} purchase settlement has been initiated.</p>
+                <p style="color: #64748b; margin-bottom: 20px;">Hello {name},
+                your {certificate_type} purchase settlement has been
+                initiated.</p>
                 <div class="details">
                     <div class="detail-row">
                         <span class="label">Settlement ID</span>
@@ -439,7 +503,10 @@ class EmailService:
                     <p><strong>T+2:</strong> In Transit</p>
                     <p><strong>T+3:</strong> At Custody & Settled</p>
                 </div>
-                <p style="color: #64748b; font-size: 14px;">You will receive updates as your settlement progresses through each stage. Your {certificate_type} certificates will be available in your account on the expected delivery date.</p>
+                <p style="color: #64748b; font-size: 14px;">You will receive
+                updates as your settlement progresses through each stage.
+                Your {certificate_type} certificates will be available in
+                your account on the expected delivery date.</p>
                 <div class="footer">
                     <p>Nihao Group Ltd - Carbon Certificate Trading</p>
                     <p>Hong Kong | Italy</p>
@@ -509,20 +576,27 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
-                .status-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
-                h1 {{ color: #0f172a; font-size: 20px; text-align: center; margin-bottom: 12px; }}
-                .status-badge {{ display: inline-block; background: {config["bg"]}; color: {config["color"]}; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
-                .progress {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .progress-label {{ color: #64748b; font-size: 13px; margin-bottom: 8px; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; }}
+                .status-icon {{ font-size: 48px; text-align: center; }}
+                h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
+                .status-badge {{ display: inline-block;
+                    background: {config["bg"]}; color: {config["color"]};
+                    padding: 8px 16px; border-radius: 8px; }}
+                .progress {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .progress-label {{ color: #64748b; font-size: 13px; }}
+                .details {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
             </style>
         </head>
         <body>
@@ -531,9 +605,11 @@ class EmailService:
                 <div class="status-icon">{config["emoji"]}</div>
                 <h1>Settlement Status Updated</h1>
                 <div style="text-align: center;">
-                    <span class="status-badge">{config["label"].upper()}</span>
+                    <span class="status-badge">
+                        {config["label"].upper()}</span>
                 </div>
-                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, your settlement has progressed to the next stage.</p>
+                <p style="color: #64748b; text-align: center;">Hello {name},
+                    your settlement has progressed to the next stage.</p>
                 <div class="details">
                     <div class="detail-row">
                         <span class="label">Settlement ID</span>
@@ -549,11 +625,13 @@ class EmailService:
                     </div>
                     <div class="detail-row">
                         <span class="label">Previous Status</span>
-                        <span class="value">{old_status.replace("_", " ").title()}</span>
+                        <span class="value">
+                            {old_status.replace("_", " ").title()}</span>
                     </div>
                     <div class="detail-row">
                         <span class="label">New Status</span>
-                        <span class="value" style="color: {config["color"]};">{config["label"]}</span>
+                        <span class="value" style="color: {config["color"]};">
+                            {config["label"]}</span>
                     </div>
                 </div>
                 <div class="footer">
@@ -584,23 +662,32 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
-                .success-icon {{ font-size: 64px; text-align: center; margin: 20px 0; }}
-                h1 {{ color: #0f172a; font-size: 22px; text-align: center; margin-bottom: 12px; }}
-                .success-badge {{ display: inline-block; background: #d1fae5; color: #047857; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
-                .highlight {{ background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center; }}
-                .highlight .big-number {{ font-size: 36px; font-weight: 700; color: #047857; margin-bottom: 8px; }}
+                .success-icon {{ font-size: 64px; text-align: center; }}
+                h1 {{ color: #0f172a; font-size: 22px; text-align: center; }}
+                .success-badge {{ display: inline-block; background: #d1fae5;
+                    color: #047857; padding: 8px 16px; border-radius: 8px; }}
+                .highlight {{ background: #ecfdf5; border-radius: 12px;
+                    padding: 24px; margin: 24px 0; text-align: center; }}
+                .highlight .big-number {{ font-size: 36px; font-weight: 700;
+                    color: #047857; margin-bottom: 8px; }}
                 .highlight .label {{ color: #065f46; font-size: 14px; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .details {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
                 .detail-row:last-child {{ border-bottom: none; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
-                .button {{ display: block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 200px; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+                .button {{ display: block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; margin: 24px auto; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
             </style>
         </head>
         <body>
@@ -611,10 +698,12 @@ class EmailService:
                 <div style="text-align: center;">
                     <span class="success-badge">✅ SETTLED</span>
                 </div>
-                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, your certificates have been successfully delivered to your account.</p>
+                <p style="color: #64748b; text-align: center;">Hello {name},
+                    your certificates have been successfully delivered to
+                    your account.</p>
                 <div class="highlight">
                     <div class="big-number">+{quantity:,.2f}</div>
-                    <div class="label">{certificate_type} certificates added to your account</div>
+                    <div class="label">{certificate_type} certificates added</div>
                 </div>
                 <div class="details">
                     <div class="detail-row">
@@ -630,8 +719,10 @@ class EmailService:
                         <span class="value">{new_balance:,.2f} tCO2e</span>
                     </div>
                 </div>
-                <a href="http://localhost:5173/dashboard" class="button">View Dashboard</a>
-                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 24px;">Your certificates are now available for trading or swapping.</p>
+                <a href="http://localhost:5173/dashboard"
+                    class="button">View Dashboard</a>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">
+                    Your certificates are now available for trading.</p>
                 <div class="footer">
                     <p>Nihao Group Ltd - Carbon Certificate Trading</p>
                     <p>Hong Kong | Italy</p>
@@ -662,35 +753,44 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
-                .error-icon {{ font-size: 48px; text-align: center; margin: 20px 0; }}
-                h1 {{ color: #0f172a; font-size: 20px; text-align: center; margin-bottom: 12px; }}
-                .error-badge {{ display: inline-block; background: #fee2e2; color: #991b1b; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .error-icon {{ font-size: 48px; text-align: center; }}
+                h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
+                .error-badge {{ display: inline-block; background: #fee2e2;
+                    color: #991b1b; padding: 8px 16px; border-radius: 8px; }}
+                .details {{ background: #f8fafc; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
                 .detail-row:last-child {{ border-bottom: none; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
-                .error-box {{ background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin: 20px 0; }}
-                .error-box p {{ color: #991b1b; margin: 0; font-size: 14px; }}
-                .support {{ background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .support h3 {{ color: #1e40af; margin: 0 0 8px 0; font-size: 15px; }}
-                .support p {{ color: #1e3a8a; margin: 0; font-size: 14px; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+                .error-box {{ background: #fef2f2;
+                    border-left: 4px solid #ef4444; border-radius: 8px;
+                    padding: 16px; margin: 20px 0; }}
+                .error-box p {{ color: #991b1b; margin: 0; }}
+                .support {{ background: #dbeafe; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }}
+                .support h3 {{ color: #1e40af; margin: 0 0 8px 0; }}
+                .support p {{ color: #1e3a8a; margin: 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="error-icon">⚠️</div>
+                <div class="error-icon">Warning</div>
                 <h1>Settlement Failed</h1>
                 <div style="text-align: center;">
-                    <span class="error-badge">❌ FAILED</span>
+                    <span class="error-badge">FAILED</span>
                 </div>
-                <p style="color: #64748b; text-align: center; margin-bottom: 24px;">Hello {name}, we encountered an issue processing your settlement.</p>
+                <p style="color: #64748b; text-align: center;">Hello {name},
+                    we encountered an issue processing your settlement.</p>
                 <div class="details">
                     <div class="detail-row">
                         <span class="label">Settlement ID</span>
@@ -709,10 +809,13 @@ class EmailService:
                     <p><strong>Failure Reason:</strong> {failure_reason}</p>
                 </div>
                 <div class="support">
-                    <h3>🆘 What happens next?</h3>
-                    <p>Our support team has been notified and will contact you within 24 hours to resolve this issue. Your funds remain safe in your account.</p>
+                    <h3>What happens next?</h3>
+                    <p>Our support team has been notified and will contact
+                        you within 24 hours to resolve this issue. Your
+                        funds remain safe in your account.</p>
                 </div>
-                <p style="color: #64748b; font-size: 13px; text-align: center;">If you have urgent questions, please contact support@nihaogroup.com</p>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">
+                    Contact: support@nihaogroup.com</p>
                 <div class="footer">
                     <p>Nihao Group Ltd - Carbon Certificate Trading</p>
                     <p>Hong Kong | Italy</p>
@@ -744,25 +847,28 @@ class EmailService:
         <html>
         <head>
             <style>
-                body {{ font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; }}
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: white; }}
+                .container {{ border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
                 .logo span {{ color: #10b981; }}
-                .alert-header {{ background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 24px; }}
-                .alert-header h1 {{ color: #991b1b; font-size: 20px; margin: 0 0 8px 0; }}
-                .alert-header p {{ color: #dc2626; margin: 0; font-size: 14px; }}
-                .details {{ background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
+                .alert-header {{ background: #fef2f2; padding: 20px; }}
+                .alert-header {{ border-left: 4px solid #ef4444; }}
+                .alert-header h1 {{ color: #991b1b; font-size: 20px; }}
+                .alert-header p {{ color: #dc2626; font-size: 14px; }}
+                .details {{ background: #f8fafc; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
                 .detail-row:last-child {{ border-bottom: none; }}
                 .label {{ color: #64748b; }}
                 .value {{ color: #0f172a; font-weight: 600; }}
                 .overdue {{ color: #ef4444; font-weight: 700; font-size: 18px; }}
-                .actions {{ background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .actions h3 {{ color: #92400e; margin: 0 0 12px 0; font-size: 15px; }}
-                .actions ul {{ color: #78350f; margin: 0; padding-left: 20px; }}
+                .actions {{ background: #fef3c7; padding: 20px; margin: 20px 0; }}
+                .actions h3 {{ color: #92400e; font-size: 15px; }}
+                .actions ul {{ color: #78350f; padding-left: 20px; }}
                 .actions li {{ margin: 6px 0; }}
-                .button {{ display: block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px auto; text-align: center; max-width: 250px; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+                .button {{ display: block; background: #ef4444; color: white; }}
+                .button {{ padding: 14px 32px; text-decoration: none; }}
+                .footer {{ margin-top: 32px; padding-top: 24px; color: #94a3b8; }}
             </style>
         </head>
         <body>
@@ -795,7 +901,9 @@ class EmailService:
                     </div>
                     <div class="detail-row">
                         <span class="label">Current Status</span>
-                        <span class="value">{current_status.replace("_", " ").title()}</span>
+                        <span class="value">
+                            {current_status.replace("_", " ").title()}
+                        </span>
                     </div>
                     <div class="detail-row">
                         <span class="label">Days Overdue</span>
@@ -811,8 +919,11 @@ class EmailService:
                         <li>Determine root cause and resolution timeline</li>
                     </ul>
                 </div>
-                <a href="http://localhost:5173/backoffice/settlements" class="button">Review in Backoffice</a>
-                <p style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">This is an automated alert from the Settlement Processor</p>
+                <a href="http://localhost:5173/backoffice/settlements"
+                   class="button">Review in Backoffice</a>
+                <p style="color: #64748b; font-size: 13px; text-align: center;">
+                    This is an automated alert from the Settlement Processor
+                </p>
                 <div class="footer">
                     <p>Nihao Group Ltd - Carbon Certificate Trading</p>
                     <p>System Administration</p>
@@ -832,7 +943,7 @@ class EmailService:
         from_email: Optional[str] = None,
         mail_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """Internal method to send email via Resend, SMTP (from config), or log in dev mode."""
+        """Send email via Resend, SMTP (from config), or log in dev mode."""
         from_addr = from_email or self.from_email
 
         if mail_config and mail_config.get("provider") == "smtp":
@@ -840,14 +951,15 @@ class EmailService:
 
         api_key = self.api_key
         if mail_config and mail_config.get("provider") == "resend":
-            if not mail_config.get("use_env_credentials") and mail_config.get("resend_api_key"):
+            use_env = mail_config.get("use_env_credentials")
+            has_key = mail_config.get("resend_api_key")
+            if not use_env and has_key:
                 api_key = mail_config["resend_api_key"]
             else:
                 api_key = settings.RESEND_API_KEY
 
         if not api_key:
             logger.info(f"[DEV MODE] Email would be sent to {to}")
-            logger.info(f"[DEV MODE] Subject: {subject}")
             return True
 
         try:

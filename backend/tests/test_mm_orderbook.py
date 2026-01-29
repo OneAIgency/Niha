@@ -19,12 +19,12 @@ from uuid import UUID
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from app.core.security import hash_password
-from app.models.models import (
+from app.core.security import hash_password  # noqa: E402
+from app.models.models import (  # noqa: E402
     CertificateType,
     MarketMakerClient,
     MarketMakerType,
@@ -34,8 +34,8 @@ from app.models.models import (
     User,
     UserRole,
 )
-from app.services.market_maker_service import MarketMakerService
-from app.services.order_matching import get_real_orderbook
+from app.services.market_maker_service import MarketMakerService  # noqa: E402
+from app.services.order_matching import get_real_orderbook  # noqa: E402
 
 
 async def create_admin_user(session: AsyncSession) -> UUID:
@@ -122,9 +122,9 @@ async def create_test_orders(
         )
         session.add(order)
         orders.append(order)
-        print(
-            f"✓ Created order #{i}: BUY {order_data['quantity']} CEA @ €{order_data['price']}"
-        )
+        qty = order_data['quantity']
+        price = order_data['price']
+        print(f"✓ Created order #{i}: BUY {qty} CEA @ {price}")
 
     await session.flush()
     print(f"\n✓ Total orders created: {len(orders)}")
@@ -155,8 +155,10 @@ async def verify_orderbook(session: AsyncSession, mm_id: UUID):
         )
         print(f"  {'-' * 10}-+-{'-' * 10}-+-{'-' * 6}-+-{'-' * 12}")
         for bid in orderbook["bids"][:5]:
+            cum = bid['cumulative_quantity']
             print(
-                f"  €{bid['price']:>9.2f} | {bid['quantity']:>10.2f} | {bid['order_count']:>6} | {bid['cumulative_quantity']:>12.2f}"
+                f"  {bid['price']:>9.2f} | {bid['quantity']:>10.2f} | "
+                f"{bid['order_count']:>6} | {cum:>12.2f}"
             )
 
     # Verify MM orders are included

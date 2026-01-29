@@ -17,11 +17,11 @@ from uuid import uuid4
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from app.models.models import (
+from app.models.models import (  # noqa: E402
     CertificateType,
     MarketMakerType,
     Order,
@@ -31,8 +31,8 @@ from app.models.models import (
     User,
     UserRole,
 )
-from app.services.market_maker_service import MarketMakerService
-from app.services.order_matching import get_real_orderbook
+from app.services.market_maker_service import MarketMakerService  # noqa: E402
+from app.services.order_matching import get_real_orderbook  # noqa: E402
 
 
 async def main():
@@ -142,8 +142,8 @@ async def main():
             print("TEST 4: Making deposit of cash (EUR)")
             print("=" * 70)
 
-            # Note: EUR balance is stored directly on MarketMakerClient, not via transactions
-            # So we'll verify the initial balance was set correctly
+            # EUR balance stored on MarketMakerClient, not via transactions
+            # Verify initial balance was set correctly
             balances2 = await MarketMakerService.get_balances(
                 db=session, market_maker_id=mm2.id
             )
@@ -170,9 +170,8 @@ async def main():
             if balances1["CEA"]["total"] == expected_cea:
                 print(f"  ✓ CEA balance is correct: {expected_cea}")
             else:
-                print(
-                    f"  ✗ CEA balance mismatch. Expected: {expected_cea}, Got: {balances1['CEA']['total']}"
-                )
+                actual = balances1['CEA']['total']
+                print(f"  ✗ CEA mismatch. Expected: {expected_cea}, Got: {actual}")
 
             # Test 6: Place orders and verify they appear in order book
             print("\n" + "=" * 70)
@@ -212,12 +211,8 @@ async def main():
             await session.refresh(order2)
 
             print("✓ Created orders:")
-            print(
-                f"  Order 1 (SELL): {order1.quantity} CEA @ €{order1.price} (MM: {mm1.name})"
-            )
-            print(
-                f"  Order 2 (BUY): {order2.quantity} CEA @ €{order2.price} (MM: {mm2.name})"
-            )
+            print(f"  Order 1 (SELL): {order1.quantity} CEA @ {order1.price}")
+            print(f"  Order 2 (BUY): {order2.quantity} CEA @ {order2.price}")
 
             # Test 7: Verify orders appear in order book
             print("\n" + "=" * 70)
@@ -255,13 +250,9 @@ async def main():
                     print(f"  Order Count: {bid['order_count']}")
 
             if not order1_found:
-                print(
-                    f"\n✗ WARNING: Order 1 (SELL @ €{order1.price}) NOT FOUND in order book"
-                )
+                print(f"\n✗ WARNING: Order 1 (SELL @ {order1.price}) NOT FOUND")
             if not order2_found:
-                print(
-                    f"\n✗ WARNING: Order 2 (BUY @ €{order2.price}) NOT FOUND in order book"
-                )
+                print(f"\n✗ WARNING: Order 2 (BUY @ {order2.price}) NOT FOUND")
 
             # Test 8: Verify locked balance
             print("\n" + "=" * 70)
@@ -279,9 +270,8 @@ async def main():
             if balances1_after["CEA"]["locked"] == Decimal("1000"):
                 print("  ✓ Locked balance is correct: 1000 CEA")
             else:
-                print(
-                    f"  ✗ Locked balance mismatch. Expected: 1000, Got: {balances1_after['CEA']['locked']}"
-                )
+                locked = balances1_after['CEA']['locked']
+                print(f"  ✗ Locked balance mismatch. Expected: 1000, Got: {locked}")
 
             # Final Summary
             print("\n" + "=" * 70)
