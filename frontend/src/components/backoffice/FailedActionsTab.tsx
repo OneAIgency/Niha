@@ -6,6 +6,7 @@ import { getFailedActions } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 interface TicketLog {
+  [key: string]: unknown;
   id: string;
   ticket_id: string;
   timestamp: string;
@@ -76,7 +77,7 @@ export function FailedActionsTab() {
       width: '140px',
       render: (value) => (
         <code className="text-xs font-mono text-red-900 dark:text-red-100 font-semibold">
-          {value}
+          {String(value)}
         </code>
       ),
     },
@@ -86,7 +87,7 @@ export function FailedActionsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs text-red-900 dark:text-red-100">
-          {new Date(value).toLocaleString()}
+          {new Date(String(value)).toLocaleString()}
         </span>
       ),
     },
@@ -98,7 +99,7 @@ export function FailedActionsTab() {
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
           <span className="text-xs font-medium text-red-700 dark:text-red-300">
-            {value}
+            {String(value)}
           </span>
         </div>
       ),
@@ -109,7 +110,7 @@ export function FailedActionsTab() {
       width: '120px',
       render: (value) => (
         <span className="text-xs text-red-600 dark:text-red-400">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -131,7 +132,7 @@ export function FailedActionsTab() {
       render: (value) =>
         value ? (
           <code className="text-xs font-mono text-red-600 dark:text-red-400">
-            {value.substring(0, 8)}...
+            {String(value).substring(0, 8)}...
           </code>
         ) : (
           <span className="text-xs text-red-400 dark:text-red-600">—</span>
@@ -144,7 +145,7 @@ export function FailedActionsTab() {
       render: (value) =>
         value ? (
           <code className="text-xs font-mono text-red-600 dark:text-red-400">
-            {value.substring(0, 8)}...
+            {String(value).substring(0, 8)}...
           </code>
         ) : (
           <span className="text-xs text-red-400 dark:text-red-600">—</span>

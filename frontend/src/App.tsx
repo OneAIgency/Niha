@@ -21,7 +21,7 @@ class BackofficeErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    logger.error('[BackofficeErrorBoundary]', error, errorInfo.componentStack);
+    logger.error('[BackofficeErrorBoundary]', { error, componentStack: errorInfo.componentStack });
   }
 
   render() {

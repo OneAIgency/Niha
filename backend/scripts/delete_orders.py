@@ -25,7 +25,12 @@ from sqlalchemy import delete, select
 sys.path.insert(0, ".")
 
 from app.core.database import AsyncSessionLocal, engine  # noqa: E402
-from app.models.models import CashMarketTrade, MarketType, Order, SwapRequest  # noqa: E402
+from app.models.models import (  # noqa: E402
+    CashMarketTrade,
+    MarketType,
+    Order,
+    SwapRequest,
+)
 
 
 async def delete_all_orders():

@@ -6,6 +6,7 @@ import { getTickets } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 interface TicketLog {
+  [key: string]: unknown;
   id: string;
   ticket_id: string;
   timestamp: string;
@@ -88,7 +89,7 @@ export function AllTicketsTab() {
       width: '140px',
       render: (value) => (
         <code className="text-xs font-mono text-navy-900 dark:text-white">
-          {value}
+          {String(value)}
         </code>
       ),
     },
@@ -98,7 +99,7 @@ export function AllTicketsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs">
-          {new Date(value).toLocaleString()}
+          {new Date(String(value)).toLocaleString()}
         </span>
       ),
     },
@@ -108,7 +109,7 @@ export function AllTicketsTab() {
       width: '180px',
       render: (value) => (
         <span className="text-xs font-medium text-navy-700 dark:text-navy-300">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -118,7 +119,7 @@ export function AllTicketsTab() {
       width: '120px',
       render: (value) => (
         <span className="text-xs text-navy-600 dark:text-navy-400">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -135,7 +136,7 @@ export function AllTicketsTab() {
               : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}
         >
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -146,7 +147,7 @@ export function AllTicketsTab() {
       render: (value) =>
         value ? (
           <code className="text-xs font-mono text-navy-600 dark:text-navy-400">
-            {value.substring(0, 8)}...
+            {String(value).substring(0, 8)}...
           </code>
         ) : (
           <span className="text-xs text-navy-400 dark:text-navy-600">—</span>
@@ -159,7 +160,7 @@ export function AllTicketsTab() {
       render: (value) =>
         value ? (
           <code className="text-xs font-mono text-purple-600 dark:text-purple-400">
-            {value.substring(0, 8)}...
+            {String(value).substring(0, 8)}...
           </code>
         ) : (
           <span className="text-xs text-navy-400 dark:text-navy-600">—</span>
