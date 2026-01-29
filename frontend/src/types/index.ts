@@ -670,6 +670,7 @@ export interface MarketMaker {
   total_orders: number;
   created_at: string;
   ticket_id?: string;
+  [key: string]: unknown;  // Index signature for DataTable compatibility
 }
 
 export interface MarketMakerTypeInfo {

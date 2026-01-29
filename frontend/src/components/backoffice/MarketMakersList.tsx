@@ -21,7 +21,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       width: '20%',
       render: (value, row) => (
         <div>
-          <div className="font-medium text-navy-900 dark:text-white">{value}</div>
+          <div className="font-medium text-navy-900 dark:text-white">{String(value)}</div>
           {row.description && (
             <div className="text-xs text-navy-500 dark:text-navy-400">{row.description}</div>
           )}
@@ -126,7 +126,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
         <div className="flex items-center justify-center gap-2">
           <Activity className="w-4 h-4 text-navy-400" />
           <span className="font-semibold text-navy-900 dark:text-white">
-            {value || 0}
+            {(value as number) || 0}
           </span>
         </div>
       ),
@@ -137,7 +137,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       width: '10%',
       render: (value) => (
         <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-2">
-          {value || '-'}
+          {(value as string) || '-'}
         </span>
       ),
     },

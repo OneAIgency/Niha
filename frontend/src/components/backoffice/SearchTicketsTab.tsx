@@ -6,6 +6,7 @@ import { getTickets } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 interface TicketLog {
+  [key: string]: unknown;
   id: string;
   ticket_id: string;
   timestamp: string;
@@ -104,7 +105,7 @@ export function SearchTicketsTab() {
       width: '140px',
       render: (value) => (
         <code className="text-xs font-mono text-navy-900 dark:text-white">
-          {value}
+          {String(value)}
         </code>
       ),
     },
@@ -114,7 +115,7 @@ export function SearchTicketsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs">
-          {new Date(value).toLocaleString()}
+          {new Date(String(value)).toLocaleString()}
         </span>
       ),
     },
@@ -124,7 +125,7 @@ export function SearchTicketsTab() {
       width: '180px',
       render: (value) => (
         <span className="text-xs font-medium text-navy-700 dark:text-navy-300">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -134,7 +135,7 @@ export function SearchTicketsTab() {
       width: '120px',
       render: (value) => (
         <span className="text-xs text-navy-600 dark:text-navy-400">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -146,12 +147,12 @@ export function SearchTicketsTab() {
       render: (value) => (
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            value === 'SUCCESS'
+            String(value) === 'SUCCESS'
               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
               : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}
         >
-          {value}
+          {String(value)}
         </span>
       ),
     },

@@ -37,6 +37,7 @@ interface SampleData {
   quantity: number;
   price: number;
   status: 'open' | 'filled' | 'cancelled';
+  [key: string]: unknown;
 }
 
 const sampleTableData: SampleData[] = [
@@ -56,13 +57,13 @@ const tableColumns: Column<SampleData>[] = [
     key: 'quantity',
     header: 'Quantity',
     align: 'right',
-    render: (value) => <span className="font-mono">{value.toLocaleString()}</span>,
+    render: (value) => <span className="font-mono">{typeof value === 'number' ? value.toLocaleString() : String(value)}</span>,
   },
   {
     key: 'price',
     header: 'Price',
     align: 'right',
-    render: (value) => <span className="font-mono">${value.toFixed(2)}</span>,
+    render: (value) => <span className="font-mono">${typeof value === 'number' ? value.toFixed(2) : String(value)}</span>,
   },
   {
     key: 'status',
@@ -75,7 +76,7 @@ const tableColumns: Column<SampleData>[] = [
         value === 'open' && 'status-pending',
         value === 'cancelled' && 'status-cancelled'
       )}>
-        {value}
+        {String(value)}
       </span>
     ),
   },

@@ -13,7 +13,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     first_name: 'Test',
     last_name: 'User',
     role: 'PENDING',
-    entity_id: null,
+    entity_id: undefined,
     ...overrides,
   };
 }

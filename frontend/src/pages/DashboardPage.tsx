@@ -79,6 +79,7 @@ interface Transaction {
   amount: number | null;
   status: 'pending' | 'completed' | 'cancelled';
   ref: string;
+  [key: string]: unknown;
 }
 
 // Transaction columns
@@ -88,7 +89,7 @@ const transactionColumns: Column<Transaction>[] = [
     header: 'Date',
     width: '140px',
     cellClassName: 'text-navy-400 font-mono text-xs',
-    render: (value) => value,
+    render: (value) => String(value ?? ''),
   },
   {
     key: 'type',
@@ -103,9 +104,10 @@ const transactionColumns: Column<Transaction>[] = [
         WITHDRAW: 'text-orange-400 bg-orange-500/20',
         SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
       };
+      const typeKey = typeof value === 'string' ? value : '';
       return (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[value] || "text-navy-400 bg-navy-400/20"}`}>
-          {value}
+        <span className={`px-2 py-1 rounded text-xs font-medium ${colors[typeKey] || "text-navy-400 bg-navy-400/20"}`}>
+          {String(value ?? '')}
         </span>
       );
     },
@@ -115,7 +117,7 @@ const transactionColumns: Column<Transaction>[] = [
     header: 'Description',
     render: (value, row) => (
       <div>
-        <div className="text-white font-medium">{value}</div>
+        <div className="text-white font-medium">{String(value ?? '')}</div>
         <div className="text-navy-500 text-xs">{row.details}</div>
       </div>
     ),
@@ -126,11 +128,12 @@ const transactionColumns: Column<Transaction>[] = [
     align: 'right',
     cellClassName: 'font-mono',
     render: (value) => {
-      if (value === null) return <span className="text-navy-500">—</span>;
-      const isPositive = value > 0;
+      if (value === null || value === undefined) return <span className="text-navy-500">—</span>;
+      const numValue = typeof value === 'number' ? value : 0;
+      const isPositive = numValue > 0;
       return (
         <span className={isPositive ? 'text-emerald-400' : 'text-white'}>
-          {isPositive ? '+' : ''}€{Math.abs(value).toLocaleString()}
+          {isPositive ? '+' : ''}€{Math.abs(numValue).toLocaleString()}
         </span>
       );
     },

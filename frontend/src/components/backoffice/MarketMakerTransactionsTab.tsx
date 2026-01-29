@@ -25,6 +25,7 @@ interface Transaction {
   notes?: string;
   created_at: string;
   created_by_email?: string;
+  [key: string]: unknown;
 }
 
 export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransactionsTabProps) {
@@ -83,7 +84,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       width: '15%',
       render: (value) => (
         <span className="text-sm text-navy-600 dark:text-navy-300">
-          {formatRelativeTime(value)}
+          {formatRelativeTime(String(value))}
         </span>
       ),
     },
@@ -142,7 +143,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
           )}
         >
           {row.transaction_type === 'deposit' ? '+' : '-'}
-          {formatQuantity(value)}
+          {formatQuantity(Number(value))}
         </span>
       ),
     },
@@ -152,7 +153,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       width: '15%',
       align: 'right',
       render: (value) => (
-        <span className="font-mono text-navy-900 dark:text-white">{formatQuantity(value)}</span>
+        <span className="font-mono text-navy-900 dark:text-white">{formatQuantity(Number(value))}</span>
       ),
     },
     {
@@ -160,7 +161,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       header: 'Notes',
       width: '25%',
       render: (value) => (
-        <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-1">{value || '-'}</span>
+        <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-1">{value ? String(value) : '-'}</span>
       ),
     },
   ];

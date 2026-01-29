@@ -174,7 +174,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       col.cellClassName
                     )}
                   >
-                    {col.render ? col.render(value, row, rowIndex) : value}
+                    {col.render
+                      ? col.render(value as T[keyof T], row, rowIndex)
+                      : (value !== null && value !== undefined ? String(value) : '')}
                   </td>
                 );
               })}

@@ -33,7 +33,7 @@ describe('ContactRequestsTab', () => {
     onReject,
     onDelete,
     onOpenNDA,
-    onIpLookup: undefined,
+    onIpLookup: vi.fn(),
     actionLoading: null as string | null,
   };
 

@@ -23,6 +23,7 @@ interface TicketLog {
   after_state?: Record<string, unknown>;
   related_ticket_ids: string[];
   tags: string[];
+  [key: string]: unknown;
 }
 
 export function MarketMakerActionsTab() {
@@ -76,7 +77,7 @@ export function MarketMakerActionsTab() {
       width: '140px',
       render: (value) => (
         <code className="text-xs font-mono text-navy-900 dark:text-white">
-          {value}
+          {String(value)}
         </code>
       ),
     },
@@ -86,7 +87,7 @@ export function MarketMakerActionsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs">
-          {new Date(value).toLocaleString()}
+          {new Date(String(value)).toLocaleString()}
         </span>
       ),
     },
@@ -96,7 +97,7 @@ export function MarketMakerActionsTab() {
       width: '200px',
       render: (value) => (
         <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -106,7 +107,7 @@ export function MarketMakerActionsTab() {
       width: '120px',
       render: (value) => (
         <span className="text-xs text-navy-600 dark:text-navy-400">
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -118,12 +119,12 @@ export function MarketMakerActionsTab() {
       render: (value) => (
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            value === 'SUCCESS'
+            String(value) === 'SUCCESS'
               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
               : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           }`}
         >
-          {value}
+          {String(value)}
         </span>
       ),
     },
@@ -135,7 +136,7 @@ export function MarketMakerActionsTab() {
         <div className="flex items-center gap-2">
           <Bot className="w-3 h-3 text-purple-500" />
           <code className="text-xs font-mono text-purple-600 dark:text-purple-400">
-            {value ? value.substring(0, 8) + '...' : '—'}
+            {value ? String(value).substring(0, 8) + '...' : '—'}
           </code>
         </div>
       ),
@@ -147,7 +148,7 @@ export function MarketMakerActionsTab() {
       render: (value) =>
         value ? (
           <code className="text-xs font-mono text-navy-600 dark:text-navy-400">
-            {value.substring(0, 8)}...
+            {String(value).substring(0, 8)}...
           </code>
         ) : (
           <span className="text-xs text-navy-400 dark:text-navy-600">—</span>
