@@ -24,7 +24,7 @@ import {
   Ban,
   Eye,
 } from 'lucide-react';
-import { Button, Card, Badge } from '../common';
+import { Button, Card, Badge, ClientStatusBadge } from '../common';
 import { formatCurrency, formatRelativeTime } from '../../utils';
 import { backofficeApi } from '../../services/api';
 import type {
@@ -354,7 +354,7 @@ export function AMLDepositsTab() {
                         <h4 className="font-semibold text-navy-900 dark:text-white">
                           {deposit.entity_name || 'Unknown Entity'}
                         </h4>
-                        <Badge variant="warning">PENDING</Badge>
+                        <ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                         <div>

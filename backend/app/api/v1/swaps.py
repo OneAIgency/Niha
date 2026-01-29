@@ -1,8 +1,10 @@
 from enum import Enum
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from ...core.security import get_swap_user
+from ...models.models import User
 from ...services.price_scraper import price_scraper
 from ...services.simulation import simulation_engine
 
@@ -22,9 +24,10 @@ async def get_available_swaps(
     max_quantity: Optional[float] = None,
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=50),  # noqa: B008
+    current_user: User = Depends(get_swap_user),  # noqa: B008
 ):
     """
-    Get available swap requests in the marketplace.
+    Get available swap requests in the marketplace. SWAP+ or ADMIN only (0010 §8).
     """
     swaps = simulation_engine.generate_swap_requests(count=30)
 
@@ -61,9 +64,11 @@ async def get_available_swaps(
 
 
 @router.get("/rate")
-async def get_current_swap_rate():
+async def get_current_swap_rate(
+    current_user: User = Depends(get_swap_user),  # noqa: B008
+):
     """
-    Get current swap rate between EUA and CEA.
+    Get current swap rate between EUA and CEA. SWAP+ or ADMIN only (0010 §8).
     Returns how many CEA you get for 1 EUA.
     """
     prices = await price_scraper.get_current_prices()
@@ -90,18 +95,23 @@ async def get_current_swap_rate():
 
 
 @router.get("/my")
-async def get_my_swaps():
+async def get_my_swaps(
+    current_user: User = Depends(get_swap_user),  # noqa: B008
+):
     """
-    Get current user's swap requests.
-    Mock implementation since auth user context involves dependency injection 
-    which is not fully visible here. Returning empty list for now to fix 404.
+    Get current user's swap requests. SWAP+ or ADMIN only (0010 §8).
+    Mock implementation; returns empty list until swap requests are persisted.
     """
     return []
 
 @router.get("/calculator")
-async def calculate_swap(from_type: str, quantity: float = Query(..., gt=0)):  # noqa: B008
+async def calculate_swap(
+    from_type: str,
+    quantity: float = Query(..., gt=0),  # noqa: B008
+    current_user: User = Depends(get_swap_user),  # noqa: B008
+):
     """
-    Calculate swap output for a given input.
+    Calculate swap output for a given input. SWAP+ or ADMIN only (0010 §8).
     """
     prices = await price_scraper.get_current_prices()
 
@@ -139,9 +149,11 @@ async def calculate_swap(from_type: str, quantity: float = Query(..., gt=0)):  #
 
 
 @router.get("/stats")
-async def get_swap_stats():
+async def get_swap_stats(
+    current_user: User = Depends(get_swap_user),  # noqa: B008
+):
     """
-    Get swap market statistics.
+    Get swap market statistics. SWAP+ or ADMIN only (0010 §8).
     """
     swaps = simulation_engine.generate_swap_requests()
     prices = await price_scraper.get_current_prices()

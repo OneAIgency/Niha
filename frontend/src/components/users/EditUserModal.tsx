@@ -69,10 +69,6 @@ export function EditUserModal({
               'w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl',
               user.role === 'ADMIN'
                 ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                : user.role === 'FUNDED'
-                ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                : user.role === 'APPROVED'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-600'
                 : 'bg-gradient-to-br from-amber-500 to-amber-600'
             )}>
               {getInitials(user.first_name, user.last_name, user.email)}
@@ -110,9 +106,17 @@ export function EditUserModal({
               onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
               className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
             >
-              <option value="PENDING">Pending</option>
+              <option value="NDA">NDA</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="KYC">KYC</option>
               <option value="APPROVED">Approved</option>
-              <option value="FUNDED">Funded</option>
+              <option value="FUNDING">Funding</option>
+              <option value="AML">AML</option>
+              <option value="CEA">CEA</option>
+              <option value="CEA_SETTLE">CEA Settle</option>
+              <option value="SWAP">Swap</option>
+              <option value="EUA_SETTLE">EUA Settle</option>
+              <option value="EUA">EUA</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>

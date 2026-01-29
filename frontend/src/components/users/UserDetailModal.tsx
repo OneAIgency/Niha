@@ -65,12 +65,20 @@ function getRoleBadgeVariant(role: UserRole) {
   switch (role) {
     case 'ADMIN':
       return 'default';
-    case 'FUNDED':
+    case 'EUA':
       return 'success';
+    case 'NDA':
+    case 'KYC':
     case 'APPROVED':
-      return 'info';
-    case 'PENDING':
+    case 'FUNDING':
+    case 'AML':
+    case 'CEA':
+    case 'CEA_SETTLE':
+    case 'SWAP':
+    case 'EUA_SETTLE':
       return 'warning';
+    case 'REJECTED':
+      return 'danger';
     default:
       return 'default';
   }
@@ -124,13 +132,9 @@ export function UserDetailModal({
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl',
-                  user.role === 'ADMIN'
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                    : user.role === 'FUNDED'
-                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                    : user.role === 'APPROVED'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                    : 'bg-gradient-to-br from-amber-500 to-amber-600'
+              user.role === 'ADMIN'
+                ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                : 'bg-gradient-to-br from-amber-500 to-amber-600'
                 )}>
                   {getInitials(user.first_name, user.last_name, user.email)}
                 </div>
@@ -235,7 +239,7 @@ function UserInfoTab({
         <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
           <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Status</p>
           <Badge variant={user.is_active ? 'success' : 'danger'}>
-            {user.is_active ? 'Active' : 'Inactive'}
+            {user.is_active ? 'Active' : 'DISABLED'}
           </Badge>
         </div>
         <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
@@ -592,14 +596,16 @@ function DepositsTab({
       </div>
 
       {/* Role Info */}
-      {user.role === 'APPROVED' && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+      {(user.role === 'NDA' || user.role === 'KYC') && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-navy-900 dark:text-white">User is APPROVED but not yet FUNDED</p>
+              <p className="font-medium text-navy-900 dark:text-white">
+                User has {user.role} status (under review)
+              </p>
               <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
-                Confirm a deposit to upgrade this user to FUNDED status, allowing them to trade.
+                {user.role === 'NDA' ? 'Approve to create user (KYC).' : 'Approve KYC to grant funding access.'}
               </p>
             </div>
           </div>

@@ -35,6 +35,15 @@ def create_error_response(
     return HTTPException(status_code=status_code, detail=error_detail)
 
 
+def _collect_error_text(e: Exception) -> str:
+    """Build lowercase error text from exception and optional orig/cause."""
+    parts = [str(e)]
+    orig = getattr(e, "orig", None) or getattr(e, "__cause__", None)
+    if orig is not None and orig is not e:
+        parts.append(str(orig))
+    return " ".join(parts).lower()
+
+
 def handle_database_error(
     e: Exception, operation: str, logger_instance: Optional[logging.Logger] = None
 ) -> HTTPException:
@@ -52,36 +61,51 @@ def handle_database_error(
     log = logger_instance or logger
     log.error(f"Database error during {operation}: {e}", exc_info=True)
 
-    # Check for common database errors
-    error_msg = str(e).lower()
-    if "unique constraint" in error_msg or "duplicate key" in error_msg:
+    error_msg = _collect_error_text(e)
+    hint = str(e).strip()[:400]
+
+    if (
+        "unique constraint" in error_msg
+        or "duplicate key" in error_msg
+        or "uniqueviolation" in error_msg
+    ):
         return create_error_response(
             status_code=status.HTTP_409_CONFLICT,
             error_code="DUPLICATE_ENTRY",
             message="A record with this information already exists",
             details={"operation": operation},
         )
-    elif "foreign key constraint" in error_msg:
+    if "foreign key constraint" in error_msg or "foreign key" in error_msg:
         return create_error_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             error_code="INVALID_REFERENCE",
             message="Referenced record does not exist",
             details={"operation": operation},
         )
-    elif "not null constraint" in error_msg:
+    if "not null constraint" in error_msg or "not null" in error_msg:
         return create_error_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             error_code="MISSING_REQUIRED_FIELD",
             message="Required field is missing",
             details={"operation": operation},
         )
-    else:
+    if "invalid input value for enum" in error_msg:
         return create_error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="DATABASE_ERROR",
-            message=f"An error occurred while {operation}",
-            details={"operation": operation},
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="INVALID_ENUM",
+            message=(
+                "Invalid enum value (e.g. status or role). "
+                "Ensure DB migrations are applied (contactstatus/userrole include KYC, etc.). "
+                "Run: docker compose exec backend alembic upgrade head"
+            ),
+            details={"operation": operation, "hint": hint},
         )
+    return create_error_response(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        error_code="DATABASE_ERROR",
+        message=f"An error occurred while {operation}",
+        details={"operation": operation, "hint": hint},
+    )
 
 
 # Common error codes

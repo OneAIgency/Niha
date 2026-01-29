@@ -28,12 +28,7 @@ interface SubSubHeaderProps {
  */
 export function SubSubHeader({ left, children, className }: SubSubHeaderProps) {
   return (
-    <div
-      className={cn(
-        'flex items-center bg-navy-900/80 border-b border-navy-700 px-6 py-3 min-h-[3rem]',
-        className
-      )}
-    >
+    <div className={cn('subsubheader-bar', className)}>
       <div
         className={cn(
           'max-w-7xl w-full mx-auto flex flex-wrap items-center gap-4 text-sm',

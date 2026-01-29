@@ -35,11 +35,19 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class DocumentType(str, enum.Enum):
@@ -75,10 +83,10 @@ class ScrapeLibrary(str, enum.Enum):
 
 
 class ContactStatus(str, enum.Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    ENROLLED = "enrolled"
-    REJECTED = "rejected"
+    """Same values as UserRole where applicable; NDA, REJECTED, KYC for contact requests."""
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
 
 
 class CertificateType(str, enum.Enum):
@@ -223,7 +231,7 @@ class User(Base):
     last_name = Column(String(100))
     position = Column(String(100))
     phone = Column(String(50), nullable=True)
-    role = Column(SQLEnum(UserRole), default=UserRole.PENDING)
+    role = Column(SQLEnum(UserRole), default=UserRole.NDA)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     invitation_token = Column(String(100), nullable=True)
@@ -337,7 +345,7 @@ class ContactRequest(Base):
     nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
-    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW)
+    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

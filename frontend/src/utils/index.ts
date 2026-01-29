@@ -195,3 +195,6 @@ export { getPostLoginRedirect } from './redirect';
 
 // Export user utilities
 export { formatUserName, getUserInitials } from './userUtils';
+
+// Export role badge helpers (client status / user_role)
+export { clientStatusVariant, type ClientStatusVariant } from './roleBadge';

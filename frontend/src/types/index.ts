@@ -76,7 +76,20 @@ export interface SwapCalculation {
 }
 
 // User Types
-export type UserRole = 'ADMIN' | 'PENDING' | 'APPROVED' | 'FUNDED';
+/** Full onboarding flow: NDA → KYC → … → EUA. Unified with contact request status where applicable. */
+export type UserRole =
+  | 'ADMIN'
+  | 'NDA'
+  | 'REJECTED'
+  | 'KYC'
+  | 'APPROVED'
+  | 'FUNDING'
+  | 'AML'
+  | 'CEA'
+  | 'CEA_SETTLE'
+  | 'SWAP'
+  | 'EUA_SETTLE'
+  | 'EUA';
 
 export interface User {
   id: string;
@@ -119,7 +132,8 @@ export interface KYCDocument {
   entity_id?: string;
   document_type: KYCDocumentType;
   file_name: string;
-  file_path: string;
+  /** Server path; not returned by API in responses for security */
+  file_path?: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_at?: string;
   reviewed_by?: string;
@@ -466,6 +480,9 @@ export interface Deposit {
 
   // Status
   status: DepositStatus;
+  /** Reporting user's role (client status); FUNDING when announced. API returns snake_case; interceptor may camelCase. */
+  user_role?: string;
+  userRole?: string;
   aml_status?: AMLStatus;
   hold_type?: HoldType;
   hold_days_required?: number;

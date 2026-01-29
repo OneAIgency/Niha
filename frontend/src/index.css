@@ -116,20 +116,29 @@
   /* ========================================
      LAYOUT COMPONENTS
      ======================================== */
-  .page-container {
-    @apply min-h-screen bg-navy-50 dark:bg-navy-900;
+  .page-bg {
+    min-height: 100vh;
+    background-color: var(--page-bg-bg);
   }
 
   .page-container-dark {
-    @apply min-h-screen bg-navy-950;
+    min-height: 100vh;
+    background-color: var(--page-container-dark-bg);
   }
 
-  .content-container {
+  .page-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
   .content-container-narrow {
     @apply max-w-6xl mx-auto px-6;
+  }
+
+  .content_wrapper {
+    background-color: var(--content-wrapper-bg);
+    border: 1px solid var(--content-wrapper-border);
+    border-radius: var(--content-wrapper-radius);
+    padding: var(--content-wrapper-padding);
   }
 
   .section-spacing {

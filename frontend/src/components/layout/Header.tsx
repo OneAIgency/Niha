@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
@@ -28,9 +28,8 @@ export function Header() {
 
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
-  const isAdmin = user?.role === 'ADMIN';
-  const isFunded = user?.role === 'FUNDED';
-  const isApproved = user?.role === 'APPROVED';
+  const role = user?.role ?? null;
+  const isAdmin = role === 'ADMIN';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,41 +53,26 @@ export function Header() {
     navigate('/');
   };
 
-  // Build navigation links based on user role
+  // Build navigation links based on user role (0010 flow)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
-      return [
-        { href: '/contact', label: 'Contact' },
-      ];
+      return [{ href: '/contact', label: 'Contact' }];
     }
+    if (!role) return [];
 
-    // APPROVED users - only see Funding
-    if (isApproved) {
-      return [
-        { href: '/funding', label: 'Funding' },
-      ];
-    }
+    const links: { href: string; label: string }[] = [];
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN'].includes(role);
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
+    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
+    const canDashboard = ['EUA', 'ADMIN'].includes(role);
 
-    // FUNDED users - Dashboard and Cash Market (no Swap)
-    if (isFunded) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-      ];
-    }
+    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard' });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding' });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market' });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap Center' });
 
-    // ADMIN users - full access including Swap
-    if (isAdmin) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-        { href: '/swap', label: 'Swap Center' },
-      ];
-    }
-
-    // Default (PENDING or unknown) - minimal navigation
-    return [];
-  }, [isAuthenticated, isApproved, isFunded, isAdmin]);
+    return links;
+  }, [isAuthenticated, role]);
 
   return (
     <header
@@ -237,6 +221,18 @@ export function Header() {
                             >
                               <Settings className="w-4 h-4" />
                               Settings
+                            </button>
+                            <button
+                              onClick={() => handleMenuItemClick('/theme')}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                                isDark
+                                  ? 'text-navy-200 hover:bg-navy-700'
+                                  : 'text-navy-700 hover:bg-navy-50'
+                              )}
+                            >
+                              <Palette className="w-4 h-4" />
+                              Theme
                             </button>
                             <button
                               onClick={() => handleMenuItemClick('/backoffice')}

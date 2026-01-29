@@ -47,10 +47,18 @@ async def init_db():
 
 
 async def create_seed_users():
-    """Create default admin and test users if they don't exist"""
+    """Create default admin, test users, and NDA contact request test@test.ro"""
     import os
 
-    from ..models.models import Entity, Jurisdiction, KYCStatus, User, UserRole
+    from ..models.models import (
+        ContactRequest,
+        ContactStatus,
+        Entity,
+        Jurisdiction,
+        KYCStatus,
+        User,
+        UserRole,
+    )
     from .security import hash_password
 
     # Get passwords from environment variables with fallback to defaults for development
@@ -104,7 +112,7 @@ async def create_seed_users():
             "password": test_password,
             "first_name": "Test",
             "last_name": "User",
-            "role": UserRole.APPROVED,  # APPROVED so we can test deposit -> FUNDED flow
+            "role": UserRole.NDA,
             "is_active": True,
             "must_change_password": False,
             "entity_name": "EU Carbon Trading",
@@ -167,5 +175,23 @@ async def create_seed_users():
                     logger.info(f"Updated seed user password: {user_data['email']}")
                 else:
                     logger.info(f"Seed user already exists: {user_data['email']}")
+
+        # Seed NDA contact request for test@test.ro (appears in onboarding/requests and users)
+        result = await db.execute(
+            select(ContactRequest).where(
+                ContactRequest.contact_email == "test@test.ro"
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            contact = ContactRequest(
+                entity_name="Test Entity",
+                contact_email="test@test.ro",
+                contact_name="Test Contact",
+                position="Tester",
+                request_type="nda",
+                status=ContactStatus.NDA,
+            )
+            db.add(contact)
+            logger.info("Created seed contact request: test@test.ro (NDA)")
 
         await db.commit()

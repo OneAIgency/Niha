@@ -17,6 +17,8 @@ interface SubheaderProps {
   to?: string;
   /** Icon container background color class (default: bg-emerald-500/20) */
   iconBg?: string;
+  /** When true, bar stays fixed at top on scroll (use in scrollable page layouts) */
+  sticky?: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ export function Subheader({
   className,
   to,
   iconBg = 'bg-emerald-500/20',
+  sticky = false,
 }: SubheaderProps) {
   const content = (
     <>
@@ -62,7 +65,13 @@ export function Subheader({
   );
 
   return (
-    <div className={cn('bg-navy-800 border-b border-navy-700 px-6 py-4', className)}>
+    <div
+      className={cn(
+        'subheader-bar',
+        sticky && 'page-section-header-sticky',
+        className
+      )}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Left side: Icon, Title, Description */}

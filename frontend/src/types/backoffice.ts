@@ -47,6 +47,7 @@ export interface PendingDepositResponse {
   entity_id: string;
   entity_name?: string;
   user_email?: string;
+  user_role?: string;  // Reporting user's role (client status); FUNDING when announced
   reported_amount?: number | null;
   reported_currency?: string | null;
   wire_reference?: string | null;
@@ -118,6 +119,7 @@ export interface PendingDeposit {
   entity_id: string;
   entity_name: string;
   user_email: string;
+  user_role?: string;  // Reporting user's role (client status); FUNDING when announced
   reported_amount: number | null;
   reported_currency: string | null;
   wire_reference: string | null;

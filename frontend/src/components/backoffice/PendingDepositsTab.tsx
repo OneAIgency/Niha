@@ -20,7 +20,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Banknote, Clock, CheckCircle, XCircle, DollarSign, X, AlertCircle } from 'lucide-react';
-import { Button, Card, Badge } from '../common';
+import { Button, Card, ClientStatusBadge } from '../common';
 import { formatCurrency, formatRelativeTime, cn } from '../../utils';
 import type { PendingDeposit } from '../../types/backoffice';
 
@@ -109,7 +109,7 @@ export function PendingDepositsTab({
                         <h3 className="font-semibold text-navy-900 dark:text-white">
                           {deposit.entity_name}
                         </h3>
-                        <Badge variant="warning">PENDING</Badge>
+                        <ClientStatusBadge role={deposit.user_role} />
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
