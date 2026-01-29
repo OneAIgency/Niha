@@ -40,10 +40,10 @@ router = APIRouter(prefix="/market-makers", tags=["Market Makers"])
 @router.get("", response_model=List[MarketMakerResponse])
 async def list_market_makers(
     is_active: Optional[bool] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     List all Market Maker clients with current balances and stats.
@@ -112,8 +112,8 @@ async def list_market_makers(
 async def create_market_maker(
     request: Request,
     data: MarketMakerCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create new Market Maker client.
@@ -161,7 +161,10 @@ async def create_market_maker(
         if invalid_certs:
             raise HTTPException(
                 status_code=400,
-                detail=f"CEA_CASH_SELLER can only have CEA balance, found: {invalid_certs}",
+                detail=(
+                    f"CEA_CASH_SELLER can only have CEA balance, "
+                    f"found: {invalid_certs}"
+                ),
             )
         if "EUA" in data.initial_balances:
             raise HTTPException(
@@ -192,7 +195,10 @@ async def create_market_maker(
         if invalid_certs:
             raise HTTPException(
                 status_code=400,
-                detail=f"SWAP_MAKER can only have CEA and EUA balances, found: {invalid_certs}",
+                detail=(
+                    f"SWAP_MAKER can only have CEA and EUA balances, "
+                    f"found: {invalid_certs}"
+                ),
             )
     else:
         raise HTTPException(
@@ -212,7 +218,10 @@ async def create_market_maker(
     )
 
     logger.info(
-        f"Admin {admin_user.email} created Market Maker {mm_client.name} (ID: {mm_client.id})"
+        "Admin %s created Market Maker %s (ID: %s)",
+        admin_user.email,
+        mm_client.name,
+        mm_client.id,
     )
 
     return {
@@ -225,8 +234,8 @@ async def create_market_maker(
 @router.get("/{market_maker_id}", response_model=MarketMakerResponse)
 async def get_market_maker(
     market_maker_id: UUID,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get Market Maker details by ID.
@@ -281,8 +290,8 @@ async def get_market_maker(
 async def update_market_maker(
     market_maker_id: UUID,
     data: MarketMakerUpdate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update Market Maker details.
@@ -341,8 +350,8 @@ async def update_market_maker(
 @router.delete("/{market_maker_id}", response_model=dict)
 async def delete_market_maker(
     market_maker_id: UUID,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Soft delete Market Maker (set is_active = False).
@@ -376,7 +385,10 @@ async def delete_market_maker(
     if open_orders_count > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot deactivate Market Maker with {open_orders_count} open orders. Cancel orders first.",
+            detail=(
+                f"Cannot deactivate Market Maker with {open_orders_count} "
+                f"open orders. Cancel orders first."
+            ),
         )
 
     # Capture before state
@@ -424,8 +436,8 @@ async def delete_market_maker(
 @router.get("/{market_maker_id}/balances", response_model=dict)
 async def get_market_maker_balances(
     market_maker_id: UUID,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get current balances for Market Maker.
@@ -462,10 +474,10 @@ async def list_market_maker_transactions(
     market_maker_id: UUID,
     certificate_type: Optional[str] = None,
     transaction_type: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=100),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(50, ge=1, le=100),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     List all transactions for a Market Maker.
@@ -491,19 +503,19 @@ async def list_market_maker_transactions(
         try:
             cert_type_enum = CertificateType(certificate_type)
             query = query.where(AssetTransaction.certificate_type == cert_type_enum)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
-            )
+            ) from e
 
     if transaction_type:
         try:
             trans_type_enum = TransactionType(transaction_type)
             query = query.where(AssetTransaction.transaction_type == trans_type_enum)
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail=f"Invalid transaction_type: {transaction_type}"
-            )
+            ) from e
 
     # Pagination
     offset = (page - 1) * per_page
@@ -533,8 +545,8 @@ async def list_market_maker_transactions(
 async def create_market_maker_transaction(
     market_maker_id: UUID,
     data: AssetTransactionCreate,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Create asset transaction (deposit/withdrawal) for Market Maker.
@@ -559,18 +571,18 @@ async def create_market_maker_transaction(
     # Validate certificate type
     try:
         cert_type = CertificateType(data.certificate_type)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid certificate_type: {data.certificate_type}"
-        )
+        ) from e
 
     # Validate transaction type
     try:
         trans_type = TransactionType(data.transaction_type)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid transaction_type: {data.transaction_type}"
-        )
+        ) from e
 
     # Calculate amount (negative for withdrawals)
     amount = data.amount if trans_type == TransactionType.DEPOSIT else -data.amount
@@ -587,7 +599,10 @@ async def create_market_maker_transaction(
         if not has_sufficient:
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient available balance for {cert_type.value} withdrawal",
+                detail=(
+                    f"Insufficient available balance for "
+                    f"{cert_type.value} withdrawal"
+                ),
             )
 
     # Create transaction
@@ -610,5 +625,8 @@ async def create_market_maker_transaction(
         "transaction_id": str(transaction.id),
         "ticket_id": ticket_id,
         "balance_after": float(transaction.balance_after),
-        "message": f"{trans_type.value.title()} of {data.amount} {cert_type.value} completed successfully",
+        "message": (
+            f"{trans_type.value.title()} of {data.amount} {cert_type.value} "
+            f"completed successfully"
+        ),
     }

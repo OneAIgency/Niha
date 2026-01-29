@@ -258,7 +258,10 @@ class SettlementMonitoring:
                     settlement_id=str(settlement.id),
                     batch_reference=settlement.batch_reference,
                     alert_type="CRITICALLY_OVERDUE",
-                    message=f"Settlement {days_overdue} days overdue - urgent review required",
+                    message=(
+                        f"Settlement {days_overdue} days overdue - "
+                        f"urgent review required"
+                    ),
                     entity_name=entity.name,
                     days_overdue=days_overdue,
                     total_value_eur=settlement.total_value_eur,
@@ -322,7 +325,10 @@ class SettlementMonitoring:
                     settlement_id=str(settlement.id),
                     batch_reference=settlement.batch_reference,
                     alert_type="STUCK_IN_STATUS",
-                    message=f"Settlement stuck in {settlement.status.value} for {int(hours_stuck)} hours",
+                    message=(
+                        f"Settlement stuck in {settlement.status.value} "
+                        f"for {int(hours_stuck)} hours"
+                    ),
                     entity_name=entity.name,
                     total_value_eur=settlement.total_value_eur,
                 )
@@ -441,7 +447,8 @@ class SettlementMonitoring:
                 Batch: {alert.batch_reference}<br>
                 Entity: {alert.entity_name}<br>
                 {alert.message}<br>
-                {f"Value: €{alert.total_value_eur:,.2f}" if alert.total_value_eur else ""}
+                {f"Value: EUR {alert.total_value_eur:,.2f}"
+                if alert.total_value_eur else ""}
             </li>
             """
         alert_html += "</ul>"
@@ -452,7 +459,10 @@ class SettlementMonitoring:
             try:
                 await email_service._send_email(
                     to_email=admin.email,
-                    subject=f"[NIHA] Settlement System Alert - {len(critical_alerts)} Issue(s)",
+                    subject=(
+                        f"[NIHA] Settlement System Alert - "
+                        f"{len(critical_alerts)} Issue(s)"
+                    ),
                     html_content=alert_html,
                 )
                 logger.info(f"Sent settlement alerts to {admin.email}")

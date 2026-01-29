@@ -29,21 +29,25 @@ router = APIRouter(prefix="/settlement", tags=["Settlement"])
 
 @router.get("/pending")
 async def get_my_pending_settlements(
-    settlement_type: Optional[SettlementType] = Query(
+    settlement_type: Optional[SettlementType] = Query(  # noqa: B008
         None, description="Filter by settlement type (CEA_PURCHASE, SWAP_CEA_TO_EUA)"
     ),
-    status_filter: Optional[SettlementStatus] = Query(
+    status_filter: Optional[SettlementStatus] = Query(  # noqa: B008
         None,
-        description="Filter by status (PENDING, TRANSFER_INITIATED, IN_TRANSIT, AT_CUSTODY, SETTLED, FAILED)",
+        description=(
+            "Filter by status (PENDING, TRANSFER_INITIATED, "
+            "IN_TRANSIT, AT_CUSTODY, SETTLED, FAILED)"
+        ),
     ),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get pending settlements for the current user's entity.
 
-    Returns list of settlement batches with their current status and progress percentage.
-    Settlements represent T+N external registry transfers for CEA purchases and swaps.
+    Returns list of settlement batches with their current status and progress
+    percentage. Settlements represent T+N external registry transfers for
+    CEA purchases and swaps.
 
     **Query Parameters:**
     - `settlement_type` (optional): Filter by CEA_PURCHASE or SWAP_CEA_TO_EUA
@@ -74,7 +78,8 @@ async def get_my_pending_settlements(
     ```
 
     **Status Progression:**
-    - PENDING (0%) → TRANSFER_INITIATED (25%) → IN_TRANSIT (50%) → AT_CUSTODY (75%) → SETTLED (100%)
+    - PENDING (0%) -> TRANSFER_INITIATED (25%) -> IN_TRANSIT (50%)
+      -> AT_CUSTODY (75%) -> SETTLED (100%)
     """
     if not current_user.entity_id:
         return {"data": [], "count": 0}
@@ -99,7 +104,9 @@ async def get_my_pending_settlements(
                 "quantity": float(settlement.quantity),
                 "price": float(settlement.price),
                 "total_value_eur": float(settlement.total_value_eur),
-                "expected_settlement_date": settlement.expected_settlement_date.isoformat(),
+                "expected_settlement_date": (
+                    settlement.expected_settlement_date.isoformat()
+                ),
                 "actual_settlement_date": settlement.actual_settlement_date.isoformat()
                 if settlement.actual_settlement_date
                 else None,
@@ -115,14 +122,15 @@ async def get_my_pending_settlements(
 @router.get("/{settlement_batch_id}")
 async def get_settlement_details(
     settlement_batch_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get detailed information about a specific settlement batch.
 
     Includes full settlement details with complete status history timeline.
-    Each timeline entry shows status change, timestamp, notes, and user who made the change.
+    Each timeline entry shows status change, timestamp, notes, and user who
+    made the change.
 
     **Path Parameters:**
     - `settlement_batch_id` (UUID): The unique ID of the settlement batch
@@ -188,7 +196,7 @@ async def get_settlement_details(
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
@@ -238,14 +246,15 @@ async def get_settlement_details(
 @router.get("/{settlement_batch_id}/timeline")
 async def get_settlement_timeline_endpoint(
     settlement_batch_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get settlement timeline with all status changes.
 
-    Returns chronological list of all status updates for a specific settlement batch.
-    This is a lightweight endpoint that returns only timeline data without full settlement details.
+    Returns chronological list of all status updates for a specific settlement
+    batch. This is a lightweight endpoint that returns only timeline data
+    without full settlement details.
 
     **Path Parameters:**
     - `settlement_batch_id` (UUID): The unique ID of the settlement batch
@@ -306,7 +315,7 @@ async def get_settlement_timeline_endpoint(
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
@@ -338,7 +347,7 @@ async def get_settlement_timeline_endpoint(
 
 @router.get("/monitoring/metrics")
 async def get_settlement_metrics(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get settlement system health metrics (Admin only).
@@ -390,7 +399,7 @@ async def get_settlement_metrics(
 
 @router.get("/monitoring/alerts")
 async def get_settlement_alerts(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get active settlement alerts (Admin only).
@@ -459,7 +468,7 @@ async def get_settlement_alerts(
 
 @router.get("/monitoring/report")
 async def get_daily_report(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get daily settlement system report (Admin only).

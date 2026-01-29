@@ -10,14 +10,16 @@ All deposit management routes with AML hold support.
 
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
-from ...core.security import get_admin_user, get_approved_user, get_current_user
+from ...core.security import get_admin_user, get_approved_user
 from ...models.models import Currency, DepositStatus, User, UserRole
 from ...schemas.schemas import MessageResponse
 from ...services import deposit_service
@@ -28,10 +30,6 @@ router = APIRouter(prefix="/deposits", tags=["Deposits"])
 
 
 # ============== Pydantic Models for API ==============
-
-from enum import Enum
-
-from pydantic import BaseModel, Field
 
 
 class CurrencyEnum(str, Enum):
@@ -273,7 +271,7 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
 
 
 @router.get("/wire-instructions", response_model=WireInstructionsResponse)
-async def get_wire_instructions(current_user: User = Depends(get_approved_user)):
+async def get_wire_instructions(current_user: User = Depends(get_approved_user)):  # noqa: B008
     """
     Get wire transfer instructions for the client.
     APPROVED, FUNDED, or ADMIN only (PENDING cannot access).
@@ -284,8 +282,8 @@ async def get_wire_instructions(current_user: User = Depends(get_approved_user))
 @router.post("/announce", response_model=DepositDetailResponse)
 async def announce_deposit(
     request: AnnounceDepositRequest,
-    current_user: User = Depends(get_approved_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_approved_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Announce a wire transfer deposit.
@@ -330,10 +328,10 @@ async def announce_deposit(
 @router.get("/my-deposits", response_model=DepositListResponse)
 async def get_my_deposits(
     status: Optional[DepositStatusEnum] = None,
-    limit: int = Query(default=20, le=100),
-    offset: int = Query(default=0, ge=0),
-    current_user: User = Depends(get_approved_user),
-    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=20, le=100),  # noqa: B008
+    offset: int = Query(default=0, ge=0),  # noqa: B008
+    current_user: User = Depends(get_approved_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get deposits for the current user's entity. APPROVED, FUNDED, or ADMIN only.
@@ -366,9 +364,9 @@ async def get_my_deposits(
 
 @router.get("/preview-hold", response_model=HoldCalculationResponse)
 async def preview_hold_period(
-    amount: Decimal = Query(..., gt=0),
-    current_user: User = Depends(get_approved_user),
-    db: AsyncSession = Depends(get_db),
+    amount: Decimal = Query(..., gt=0),  # noqa: B008
+    current_user: User = Depends(get_approved_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Preview the hold period for a potential deposit.
@@ -407,10 +405,10 @@ async def preview_hold_period(
 
 @router.get("/pending", response_model=DepositListResponse)
 async def get_pending_deposits(
-    limit: int = Query(default=50, le=200),
-    offset: int = Query(default=0, ge=0),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=50, le=200),  # noqa: B008
+    offset: int = Query(default=0, ge=0),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get all pending deposits awaiting confirmation.
@@ -433,11 +431,11 @@ async def get_pending_deposits(
 
 @router.get("/on-hold", response_model=DepositListResponse)
 async def get_on_hold_deposits(
-    include_expired: bool = Query(default=False),
-    limit: int = Query(default=50, le=200),
-    offset: int = Query(default=0, ge=0),
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    include_expired: bool = Query(default=False),  # noqa: B008
+    limit: int = Query(default=50, le=200),  # noqa: B008
+    offset: int = Query(default=0, ge=0),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get deposits currently on AML hold.
@@ -461,8 +459,8 @@ async def get_on_hold_deposits(
 @router.get("/stats", response_model=DepositStatsResponse)
 async def get_deposit_stats(
     entity_id: Optional[str] = None,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get deposit statistics for dashboard.
@@ -476,8 +474,8 @@ async def get_deposit_stats(
 @router.get("/{deposit_id}", response_model=DepositDetailResponse)
 async def get_deposit(
     deposit_id: str,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get detailed deposit information.
@@ -495,8 +493,8 @@ async def get_deposit(
 async def confirm_deposit(
     deposit_id: str,
     request: ConfirmDepositRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Confirm receipt of wire transfer and start AML hold.
@@ -537,18 +535,18 @@ async def confirm_deposit(
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
 
-    except DepositNotFoundError:
-        raise HTTPException(status_code=404, detail="Deposit not found")
+    except DepositNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{deposit_id}/clear", response_model=DepositDetailResponse)
 async def clear_deposit(
     deposit_id: str,
     request: ClearDepositRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Clear deposit and credit funds to entity balance.
@@ -608,18 +606,18 @@ async def clear_deposit(
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
 
-    except DepositNotFoundError:
-        raise HTTPException(status_code=404, detail="Deposit not found")
+    except DepositNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/{deposit_id}/reject", response_model=DepositDetailResponse)
 async def reject_deposit(
     deposit_id: str,
     request: RejectDepositRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Reject a deposit for AML or other reasons.
@@ -650,15 +648,15 @@ async def reject_deposit(
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
 
-    except DepositNotFoundError:
-        raise HTTPException(status_code=404, detail="Deposit not found")
+    except DepositNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/process-expired-holds", response_model=MessageResponse)
 async def process_expired_holds(
-    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    admin_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Manually trigger processing of expired holds.

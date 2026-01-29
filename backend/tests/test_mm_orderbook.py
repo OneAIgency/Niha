@@ -122,9 +122,9 @@ async def create_test_orders(
         )
         session.add(order)
         orders.append(order)
-        print(
-            f"✓ Created order #{i}: BUY {order_data['quantity']} CEA @ €{order_data['price']}"
-        )
+        qty = order_data['quantity']
+        price = order_data['price']
+        print(f"✓ Created order #{i}: BUY {qty} CEA @ {price}")
 
     await session.flush()
     print(f"\n✓ Total orders created: {len(orders)}")
@@ -155,8 +155,10 @@ async def verify_orderbook(session: AsyncSession, mm_id: UUID):
         )
         print(f"  {'-' * 10}-+-{'-' * 10}-+-{'-' * 6}-+-{'-' * 12}")
         for bid in orderbook["bids"][:5]:
+            cum = bid['cumulative_quantity']
             print(
-                f"  €{bid['price']:>9.2f} | {bid['quantity']:>10.2f} | {bid['order_count']:>6} | {bid['cumulative_quantity']:>12.2f}"
+                f"  {bid['price']:>9.2f} | {bid['quantity']:>10.2f} | "
+                f"{bid['order_count']:>6} | {cum:>12.2f}"
             )
 
     # Verify MM orders are included

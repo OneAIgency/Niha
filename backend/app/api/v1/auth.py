@@ -32,7 +32,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/magic-link", response_model=MessageResponse)
 async def request_magic_link(
-    request: MagicLinkRequest, db: AsyncSession = Depends(get_db)
+    request: MagicLinkRequest, db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Request a magic link for passwordless authentication.
@@ -68,7 +68,7 @@ async def request_magic_link(
 async def verify_magic_link(
     verify_request: MagicLinkVerify,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Verify magic link token and return JWT access token.
@@ -147,7 +147,7 @@ async def verify_magic_link(
 async def password_login(
     login_request: PasswordLoginRequest,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Login with email and password.
@@ -172,7 +172,8 @@ async def password_login(
         db.add(auth_attempt)
         await db.commit()
         logger.info(
-            f"Auth attempt: email={email}, success={success}, ip={ip_address}, reason={failure_reason}"
+            f"Auth attempt: email={email}, success={success}, "
+            f"ip={ip_address}, reason={failure_reason}"
         )
 
     # Find user
@@ -223,7 +224,7 @@ async def logout():
 
 
 @router.get("/validate-invitation/{token}")
-async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_db)):
+async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
     Check if invitation token is valid.
     Returns user info if valid for the setup password page.
@@ -247,7 +248,7 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
 
 @router.post("/setup-password", response_model=TokenResponse)
 async def setup_password_from_invitation(
-    token: str, password: str, confirm_password: str, db: AsyncSession = Depends(get_db)
+    token: str, password: str, confirm_password: str, db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Set password from invitation link.
@@ -309,8 +310,8 @@ async def setup_password_from_invitation(
 
 
 async def get_current_user(
-    token: str = Depends(lambda: None),  # Would come from header
-    db: AsyncSession = Depends(get_db),
+    token: str = Depends(lambda: None),  # Would come from header  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> User:
     """
     Dependency to get current authenticated user from JWT token.

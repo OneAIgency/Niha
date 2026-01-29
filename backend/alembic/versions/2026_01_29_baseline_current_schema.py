@@ -13,7 +13,6 @@ Create Date: 2026-01-29
 
 """
 
-from alembic import op
 
 revision = "2026_01_29_baseline"
 down_revision = None

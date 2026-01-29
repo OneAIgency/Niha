@@ -1106,10 +1106,14 @@ class MailConfig(Base):
     __tablename__ = "mail_config"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    provider = Column(SQLEnum(MailProvider), nullable=False, default=MailProvider.RESEND)
-    use_env_credentials = Column(Boolean, default=True)  # Use RESEND_API_KEY / SMTP from env
+    provider = Column(
+        SQLEnum(MailProvider), nullable=False, default=MailProvider.RESEND
+    )
+    # Use RESEND_API_KEY / SMTP from env
+    use_env_credentials = Column(Boolean, default=True)
     from_email = Column(String(255), nullable=False)
-    resend_api_key = Column(String(500), nullable=True)  # Used when use_env_credentials=False
+    # Used when use_env_credentials=False
+    resend_api_key = Column(String(500), nullable=True)
     smtp_host = Column(String(255), nullable=True)
     smtp_port = Column(Integer, nullable=True)
     smtp_use_tls = Column(Boolean, default=True)
@@ -1119,7 +1123,9 @@ class MailConfig(Base):
     invitation_body_html = Column(Text, nullable=True)
     invitation_link_base_url = Column(String(500), nullable=True)
     invitation_token_expiry_days = Column(Integer, default=7)
-    verification_method = Column(String(50), nullable=True)  # Placeholder: magic_link, password_only
-    auth_method = Column(String(50), nullable=True)  # Placeholder for auth options
+    # Placeholder: magic_link, password_only
+    verification_method = Column(String(50), nullable=True)
+    # Placeholder for auth options
+    auth_method = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

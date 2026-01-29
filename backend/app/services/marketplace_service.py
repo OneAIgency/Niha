@@ -1,22 +1,20 @@
 import logging
 import uuid
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import Optional
 
-from sqlalchemy import select, and_, desc, func
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..models.models import (
+    AssetType,
     Certificate,
     CertificateStatus,
     CertificateType,
-    Entity,
-    EntityHolding,
-    AssetType,
     Trade,
-    TradeType,
     TradeStatus,
+    TradeType,
     TransactionType,
 )
 from ..services.balance_utils import update_entity_balance
@@ -104,8 +102,8 @@ class MarketplaceService:
             amount=-quantity, # Negative to deduct
             transaction_type=TransactionType.TRADE_SELL,
             created_by=entity_id, # Assuming system or user action
-            reference=f"listing_lock",
-            notes=f"Locked for listing {quantity} {certificate_type.value} @ {unit_price}"
+            reference="listing_lock",
+            notes=f"Locked for listing {quantity} {certificate_type.value}"
         )
 
         # 2. Create Certificate Record
@@ -133,7 +131,7 @@ class MarketplaceService:
         """
         Execute purchase of a listing.
         Transfers EUR from Buyer to Seller.
-        Transfers Asset to Buyer (virtually - by marking cert sold? OR creating new holding?)
+        Transfers Asset to Buyer (by marking cert sold or creating holding).
         
         Model decision: 
         - Seller's asset was already deducted from Holding when listed.

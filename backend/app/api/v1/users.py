@@ -38,7 +38,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_profile(current_user: User = Depends(get_current_user)):
+async def get_profile(current_user: User = Depends(get_current_user)):  # noqa: B008
     """
     Get current user's profile information.
     """
@@ -48,8 +48,8 @@ async def get_profile(current_user: User = Depends(get_current_user)):
 @router.put("/me", response_model=UserResponse)
 async def update_profile(
     update: UserProfileUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Update current user's profile information.
@@ -87,8 +87,8 @@ async def update_profile(
 @router.put("/me/password", response_model=MessageResponse)
 async def change_password(
     password_data: PasswordChange,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Change current user's password.
@@ -130,10 +130,10 @@ async def change_password(
 
 @router.get("/me/activity")
 async def get_my_activity(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Get current user's activity log.
@@ -172,7 +172,7 @@ async def get_my_activity(
 
 @router.get("/me/sessions")
 async def get_my_sessions(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's session history.
@@ -196,7 +196,7 @@ async def get_my_sessions(
 
 @router.get("/me/entity")
 async def get_my_entity(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's associated entity information.
@@ -237,8 +237,8 @@ async def get_my_entity(
 @router.post("/me/deposits/report", response_model=MessageResponse)
 async def report_deposit(
     deposit_data: UserDepositReport,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Report a wire transfer deposit (APPROVED users only).
@@ -248,7 +248,10 @@ async def report_deposit(
     if current_user.role != UserRole.APPROVED:
         raise HTTPException(
             status_code=403,
-            detail="Only APPROVED users can report deposits. Complete KYC verification first.",
+            detail=(
+                "Only APPROVED users can report deposits. "
+                "Complete KYC verification first."
+            ),
         )
 
     if not current_user.entity_id:
@@ -258,7 +261,8 @@ async def report_deposit(
         )
 
     # Generate bank reference
-    bank_ref = f"DEP-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}"
+    chars = string.ascii_uppercase + string.digits
+    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
 
     # Create pending deposit
     deposit = Deposit(
@@ -275,13 +279,16 @@ async def report_deposit(
     await db.commit()
 
     return MessageResponse(
-        message=f"Deposit of {deposit_data.amount} {deposit_data.currency.value} reported. Reference: {bank_ref}. Awaiting confirmation."
+        message=(
+            f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
+            f"reported. Reference: {bank_ref}. Awaiting confirmation."
+        )
     )
 
 
 @router.get("/me/deposits")
 async def get_my_deposits(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's entity deposits.
@@ -324,7 +331,7 @@ async def get_my_deposits(
 
 @router.get("/me/entity/balance")
 async def get_my_entity_balance(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's entity balance.
@@ -366,7 +373,7 @@ async def get_my_entity_balance(
 
 @router.get("/me/entity/assets")
 async def get_my_entity_assets(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
     Get current user's entity asset holdings (EUR, CEA, EUA).
@@ -417,7 +424,7 @@ async def get_my_entity_assets(
 
 
 @router.get("/me/funding-instructions")
-async def get_funding_instructions(current_user: User = Depends(get_current_user)):
+async def get_funding_instructions(current_user: User = Depends(get_current_user)):  # noqa: B008
     """
     Get wire transfer instructions for funding.
     """
@@ -426,7 +433,10 @@ async def get_funding_instructions(current_user: User = Depends(get_current_user
         "account_name": "Nihao Carbon Trading Ltd",
         "iban": "LU12 3456 7890 1234 5678",
         "swift_bic": "NIHALU2X",
-        "reference_instructions": "Please include your entity name and the reference number provided after reporting your deposit.",
+        "reference_instructions": (
+            "Please include your entity name and the reference number "
+            "provided after reporting your deposit."
+        ),
         "supported_currencies": ["EUR", "USD", "CNY", "HKD"],
         "processing_time": "1-3 business days after funds arrive",
     }

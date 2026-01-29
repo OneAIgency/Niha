@@ -36,7 +36,8 @@ class InsufficientAssetsError(Exception):
         self.available = available
         self.shortfall = required - available
         super().__init__(
-            f"Insufficient {asset_type}: need {required}, have {available}, short {self.shortfall}"
+            f"Insufficient {asset_type}: need {required}, have {available}, "
+            f"short {self.shortfall}"
         )
 
 
@@ -82,7 +83,7 @@ class LiquidityService:
             .where(
                 and_(
                     MarketMakerClient.mm_type == MarketMakerType.CASH_BUYER,
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.eur_balance > 0,
                 )
             )
@@ -115,14 +116,14 @@ class LiquidityService:
         """
         # NOTE: This method has a known N+1 query issue. It fetches all asset holder MMs
         # in one query, then separately queries balances for each MM. This results in
-        # 1 + (N × 5) queries where N is the number of asset holders.
-        # Future optimization: Refactor balance calculation to use joins for bulk retrieval.
+        # 1 + (N x 5) queries where N is the number of asset holders.
+        # Future: Refactor balance calculation to use joins for bulk retrieval.
 
         result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
                     MarketMakerClient.mm_type == MarketMakerType.CEA_CASH_SELLER,
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                 )
             )
         )
@@ -238,7 +239,7 @@ class LiquidityService:
                 - certificate_type (str): Certificate type value
                 - bid_plan (dict): BID order allocation plan with mms and price_levels
                 - ask_plan (dict): ASK order allocation plan with mms and price_levels
-                - missing_assets (list|None): List of missing asset details if insufficient
+                - missing_assets (list|None): List of missing asset details
                 - suggested_actions (list): Recommended actions if can't execute
                 - total_orders_count (int): Total orders to be created
                 - estimated_spread (float): Expected spread percentage
@@ -443,7 +444,8 @@ class LiquidityService:
             raise ValueError("No active liquidity providers available for BID orders")
         if not ah_data or len(ah_data) == 0:
             raise ValueError(
-                f"No active asset holders available for ASK orders with {certificate_type.value}"
+                f"No active asset holders available for ASK orders "
+                f"with {certificate_type.value}"
             )
 
         # Step 4: Create BID orders across liquidity providers

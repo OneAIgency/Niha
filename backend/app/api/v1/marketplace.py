@@ -26,8 +26,8 @@ async def get_cea_marketplace(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     vintage_year: Optional[int] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
 ):
     """
     Get CEA marketplace listings with filtering and sorting.
@@ -82,8 +82,8 @@ async def get_eua_marketplace(
     sort_by: SortBy = SortBy.DATE_DESC,
     min_quantity: Optional[float] = None,
     max_quantity: Optional[float] = None,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
 ):
     """
     Get EUA marketplace listings.

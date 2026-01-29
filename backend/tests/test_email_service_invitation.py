@@ -1,21 +1,23 @@
 """Tests for email_service send_invitation with mail_config."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.services.email_service import EmailService
 
 
 @pytest.mark.asyncio
 async def test_send_invitation_uses_mail_config_from_email_and_base_url():
-    """When mail_config is provided, send_invitation uses from_email and invitation_link_base_url."""
+    """Test send_invitation uses mail_config from_email and base_url."""
     service = EmailService()
     mail_config = {
         "from_email": "invites@custom.example.com",
         "invitation_link_base_url": "https://app.example.com",
         "invitation_subject": "You are invited",
     }
-    with patch.object(service, "_send_email", new_callable=AsyncMock, return_value=True) as mock_send:
+    mock_send = AsyncMock(return_value=True)
+    with patch.object(service, "_send_email", mock_send):
         result = await service.send_invitation(
             "user@test.com",
             "Jane",
@@ -42,12 +44,10 @@ async def test_send_invitation_with_custom_body_template():
         "from_email": "noreply@test.com",
         "invitation_body_html": "Hi {{first_name}}, click {{setup_url}} to continue.",
     }
-    with patch.object(service, "_send_email", new_callable=AsyncMock, return_value=True) as mock_send:
+    mock_send = AsyncMock(return_value=True)
+    with patch.object(service, "_send_email", mock_send):
         await service.send_invitation(
-            "u@test.com",
-            "Bob",
-            "tok",
-            mail_config=mail_config,
+            "u@test.com", "Bob", "tok", mail_config=mail_config
         )
     call_args = mock_send.call_args[0]
     html = call_args[2]
@@ -57,10 +57,13 @@ async def test_send_invitation_with_custom_body_template():
 
 @pytest.mark.asyncio
 async def test_send_invitation_without_mail_config_uses_defaults():
-    """When mail_config is None, send_invitation uses default subject and env from_email."""
+    """Test send_invitation uses defaults when mail_config is None."""
     service = EmailService()
-    with patch.object(service, "_send_email", new_callable=AsyncMock, return_value=True) as mock_send:
-        await service.send_invitation("u@test.com", "Alice", "token456", mail_config=None)
+    mock_send = AsyncMock(return_value=True)
+    with patch.object(service, "_send_email", mock_send):
+        await service.send_invitation(
+            "u@test.com", "Alice", "token456", mail_config=None
+        )
     mock_send.assert_called_once()
     call_args = mock_send.call_args
     assert call_args[1].get("from_email") is None

@@ -354,9 +354,13 @@ async def clear_deposit(
 
     await db.flush()
 
+    currency_val = deposit.currency.value if deposit.currency else "N/A"
     logger.info(
-        f"Deposit cleared: {deposit.id} - {deposit.amount} {deposit.currency.value if deposit.currency else 'N/A'} - "
-        f"Entity {deposit.entity_id}"
+        "Deposit cleared: %s - %s %s - Entity %s",
+        deposit.id,
+        deposit.amount,
+        currency_val,
+        deposit.entity_id,
     )
 
     return deposit
@@ -485,7 +489,7 @@ async def get_on_hold_deposits(
         # Only show holds that haven't expired yet
         query = query.where(
             or_(
-                Deposit.hold_expires_at == None,
+                Deposit.hold_expires_at.is_(None),
                 Deposit.hold_expires_at > datetime.utcnow(),
             )
         )
@@ -506,7 +510,7 @@ async def get_expired_holds(db: AsyncSession) -> List[Deposit]:
         .where(
             and_(
                 Deposit.status == DepositStatus.ON_HOLD,
-                Deposit.hold_expires_at != None,
+                Deposit.hold_expires_at.isnot(None),
                 Deposit.hold_expires_at <= now,
             )
         )

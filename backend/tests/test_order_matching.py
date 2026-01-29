@@ -324,8 +324,8 @@ async def test_get_real_orderbook_excludes_partially_filled_zero_remaining(
         side=OrderSide.SELL,
         price=Decimal("12.50"),
         quantity=Decimal("1000"),
-        filled_quantity=Decimal("1000"),  # Fully filled, zero remaining
-        status=OrderStatus.PARTIALLY_FILLED,  # Still PARTIALLY_FILLED but zero remaining
+        filled_quantity=Decimal("1000"),  # Fully filled
+        status=OrderStatus.PARTIALLY_FILLED,  # Zero remaining
     )
     db_session.add(zero_remaining_order)
 

@@ -326,7 +326,7 @@ async def preview_buy_order(
         cost_eur = qty_to_buy * order_price_eur
 
         # Get seller/MM code for display (fetch lazily only when needed)
-        # For now, use order ID as code - callers can fetch seller/MM info separately if needed
+        # For now, use order ID - callers can fetch seller/MM info separately
         seller_code = (
             str(order.seller_id) if order.seller_id else str(order.market_maker_id)
         )
@@ -384,7 +384,10 @@ async def preview_buy_order(
                 total_cost_net=total_cost_net,
                 net_price_per_unit=net_price_per_unit,
                 can_execute=False,
-                execution_message=f"All-or-none: Only {total_quantity:.2f} of {quantity:.2f} CEA available",
+                execution_message=(
+                    f"All-or-none: Only {total_quantity:.2f} of "
+                    f"{quantity:.2f} CEA available"
+                ),
                 partial_fill=True,
             )
 
@@ -397,7 +400,10 @@ async def preview_buy_order(
     )
 
     if total_cost_net > available_eur:
-        execution_message = f"Insufficient balance: need {total_cost_net:.2f} EUR, have {available_eur:.2f} EUR"
+        execution_message = (
+            f"Insufficient balance: need {total_cost_net:.2f} EUR, "
+            f"have {available_eur:.2f} EUR"
+        )
         can_execute = False
 
     return OrderPreviewResult(
@@ -547,7 +553,10 @@ async def execute_market_buy_order(
         transaction_type=TransactionType.TRADE_BUY,
         created_by=user_id,
         reference=str(buy_order.id),
-        notes=f"Market buy {preview.total_quantity:.2f} CEA @ avg {preview.weighted_avg_price:.4f} EUR/CEA",
+        notes=(
+            f"Market buy {preview.total_quantity:.2f} CEA @ avg "
+            f"{preview.weighted_avg_price:.4f} EUR/CEA"
+        ),
     )
 
     # Create settlement batch for CEA delivery (T+3)
@@ -571,7 +580,13 @@ async def execute_market_buy_order(
     return OrderExecutionResult(
         success=True,
         order_id=buy_order.id,
-        message=f"Successfully purchased {preview.total_quantity:.2f} CEA from {len(preview.fills)} sellers. Settlement {settlement.batch_reference} created - CEA will be delivered on {settlement.expected_settlement_date.strftime('%Y-%m-%d')} (T+3)",
+        message=(
+            f"Successfully purchased {preview.total_quantity:.2f} CEA from "
+            f"{len(preview.fills)} sellers. Settlement "
+            f"{settlement.batch_reference} created - CEA will be delivered "
+            f"on {settlement.expected_settlement_date.strftime('%Y-%m-%d')} "
+            f"(T+3)"
+        ),
         fills=preview.fills,
         total_quantity=preview.total_quantity,
         total_cost_gross=preview.total_cost_gross,
@@ -625,7 +640,7 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
 
     # Aggregate asks by price level
     ask_levels = {}
-    for order, seller in sell_orders:
+    for order, _seller in sell_orders:
         remaining = float(order.quantity) - float(order.filled_quantity)
         if remaining <= 0:
             continue
@@ -641,7 +656,7 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
 
     # Aggregate bids by price level
     bid_levels = {}
-    for order, entity in buy_orders:
+    for order, _entity in buy_orders:
         remaining = float(order.quantity) - float(order.filled_quantity)
         if remaining <= 0:
             continue

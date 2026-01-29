@@ -134,7 +134,7 @@ def upgrade() -> None:
         "cash_market_trades",
         type_="foreignkey",
     )
-    # Note: cash_market_trades_ai_client_id_fkey and ai_client_id column already dropped above
+    # Note: ai_client_id_fkey and ai_client_id column already dropped above
     op.drop_constraint(
         "cash_market_trades_seller_entity_id_fkey",
         "cash_market_trades",
@@ -219,7 +219,7 @@ def upgrade() -> None:
     op.drop_column("market_maker_clients", "market_maker_type")
     op.drop_column("market_maker_clients", "total_orders")
     op.drop_column("market_maker_clients", "total_volume_traded")
-    # Note: idx_orders_ai_client_id was already dropped when we dropped the ai_client_id column
+    # Note: idx_orders_ai_client_id was already dropped when we dropped the column
     # op.drop_index('idx_orders_ai_client_id', table_name='orders')
     op.execute("DROP INDEX IF EXISTS idx_orders_market_maker")
     op.execute("DROP INDEX IF EXISTS idx_orders_seller_id")

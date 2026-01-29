@@ -251,7 +251,7 @@ async def test_get_pending_settlements(db_session, test_admin_user):
     )
 
     # Mark one as SETTLED (should not appear in pending)
-    # Progress through states: PENDING -> TRANSFER_INITIATED -> IN_TRANSIT -> AT_CUSTODY -> SETTLED
+    # Progress: PENDING -> TRANSFER_INITIATED -> IN_TRANSIT -> AT_CUSTODY -> SETTLED
     await SettlementService.update_settlement_status(
         db=db_session,
         settlement_id=settlement2.id,
