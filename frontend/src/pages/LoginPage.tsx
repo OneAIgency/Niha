@@ -393,13 +393,18 @@ export function LoginPage() {
     try {
       const response = await authApi.loginWithPassword(sanitizedEmail, password);
       // Backend returns accessToken (camelCase), not access_token (snake_case)
-      const { accessToken, access_token, user: loggedInUser } = response as any;
+      const { accessToken, access_token, user: loggedInUser } = response as {
+        accessToken?: string;
+        access_token?: string;
+        user: Parameters<typeof setAuth>[0];
+      };
       const token = accessToken || access_token; // Support both formats
-      setAuth(loggedInUser, token);
+      setAuth(loggedInUser, token!);
       // AuthGuard in App.tsx will detect the auth change and redirect automatically
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[LoginPage] Login failed:', err);
-      setError(err.message || err.response?.data?.detail || 'Invalid credentials');
+      const error = err as { message?: string; response?: { data?: { detail?: string } } };
+      setError(error.message || error.response?.data?.detail || 'Invalid credentials');
     } finally {
       setLoading(false);
       isSubmittingRef.current = false;

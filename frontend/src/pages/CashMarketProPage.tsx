@@ -685,7 +685,7 @@ export function CashMarketProPage() {
         <div className="flex items-center gap-6 text-[11px]">
           {/* Last Price */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Last</span>
+            <span className="text-navy-400">Last</span>
             <span className="font-bold font-mono text-white text-lg">
               €{formatNumber(orderBook.last_price, 3)}
             </span>
@@ -693,7 +693,7 @@ export function CashMarketProPage() {
 
           {/* 24h Change */}
           <div className="flex items-center gap-1">
-            <span className="text-slate-400">24h</span>
+            <span className="text-navy-400">24h</span>
             <span className={`flex items-center font-semibold ${
               orderBook.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
             }`}>
@@ -708,19 +708,19 @@ export function CashMarketProPage() {
 
           {/* High */}
           <div>
-            <span className="text-slate-400 mr-1">High</span>
+            <span className="text-navy-400 mr-1">High</span>
             <span className="font-mono text-emerald-400">€{formatNumber(orderBook.high_24h, 2)}</span>
           </div>
 
           {/* Low */}
           <div>
-            <span className="text-slate-400 mr-1">Low</span>
+            <span className="text-navy-400 mr-1">Low</span>
             <span className="font-mono text-red-400">€{formatNumber(orderBook.low_24h, 2)}</span>
           </div>
 
           {/* Volume */}
           <div>
-            <span className="text-slate-400 mr-1">Vol</span>
+            <span className="text-navy-400 mr-1">Vol</span>
             <span className="font-semibold text-white font-mono">
               {formatVolume(orderBook.volume_24h)}
             </span>
@@ -731,7 +731,7 @@ export function CashMarketProPage() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={refreshData}
-            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+            className="p-2 rounded-lg hover:bg-navy-700 text-navy-400"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </motion.button>

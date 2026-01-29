@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, Prices, MarketStats, ContactRequestResponse } from '../types';
+import type { User, Prices, ContactRequestResponse } from '../types';
 import { TOKEN_KEY } from '../constants/auth';
 import { logger } from '../utils/logger';
 
@@ -108,21 +108,6 @@ export const usePricesStore = create<PricesState>((set) => ({
     set({ prices, loading: false, lastUpdated: new Date(), error: null }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error, loading: false }),
-}));
-
-// Market Stats Store
-interface MarketState {
-  stats: MarketStats | null;
-  loading: boolean;
-  setStats: (stats: MarketStats) => void;
-  setLoading: (loading: boolean) => void;
-}
-
-export const useMarketStore = create<MarketState>((set) => ({
-  stats: null,
-  loading: true,
-  setStats: (stats) => set({ stats, loading: false }),
-  setLoading: (loading) => set({ loading }),
 }));
 
 // UI Store

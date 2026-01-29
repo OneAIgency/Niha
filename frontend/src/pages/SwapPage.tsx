@@ -20,8 +20,16 @@ export function SwapPage() {
   const { user } = useAuthStore();
   const [swaps, setSwaps] = useState<SwapRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [swapStats, setSwapStats] = useState<any>(null);
-  const [swapRate, setSwapRate] = useState<any>(null);
+  const [swapStats, setSwapStats] = useState<{
+    open_swaps?: number;
+    matched_today?: number;
+    eua_to_cea_requests?: number;
+    cea_to_eua_requests?: number;
+  } | null>(null);
+  const [swapRate, setSwapRate] = useState<{
+    eua_to_cea?: number;
+    cea_to_eua?: number;
+  } | null>(null);
 
   // Calculator state
   const [calcFromType, setCalcFromType] = useState<'EUA' | 'CEA'>('EUA');
@@ -239,7 +247,7 @@ export function SwapPage() {
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-emerald-200 dark:border-emerald-800">
-                      <span className="font-medium text-navy-900 dark:text-white">You'll Receive</span>
+                      <span className="font-medium text-navy-900 dark:text-white">You&apos;ll Receive</span>
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         {formatQuantity(calcResult.output.quantity)}{' '}
                         {calcFromType === 'EUA' ? 'CEA' : 'EUA'}

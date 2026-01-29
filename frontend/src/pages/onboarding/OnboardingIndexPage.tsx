@@ -16,6 +16,51 @@ import {
 } from 'lucide-react';
 import { OnboardingLayout, colors } from '@/components/onboarding';
 
+// Color mapping for section cards
+const cardColorMap: Record<string, {
+  gradient: string;
+  text: string;
+  bg: string;
+  bgLight: string;
+}> = {
+  blue: {
+    gradient: 'bg-gradient-to-br from-blue-500 to-blue-800',
+    text: 'text-blue-500',
+    bg: 'bg-blue-500',
+    bgLight: 'bg-blue-500/20',
+  },
+  teal: {
+    gradient: 'bg-gradient-to-br from-teal-500 to-blue-800',
+    text: 'text-teal-500',
+    bg: 'bg-teal-500',
+    bgLight: 'bg-teal-500/20',
+  },
+  red: {
+    gradient: 'bg-gradient-to-br from-red-600 to-orange-500',
+    text: 'text-red-500',
+    bg: 'bg-red-500',
+    bgLight: 'bg-red-500/20',
+  },
+  blueViolet: {
+    gradient: 'bg-gradient-to-br from-blue-500 to-violet-500',
+    text: 'text-blue-500',
+    bg: 'bg-blue-500',
+    bgLight: 'bg-blue-500/20',
+  },
+  green: {
+    gradient: 'bg-gradient-to-br from-green-600 to-teal-500',
+    text: 'text-green-500',
+    bg: 'bg-green-500',
+    bgLight: 'bg-green-500/20',
+  },
+  violet: {
+    gradient: 'bg-gradient-to-br from-violet-500 to-indigo-500',
+    text: 'text-violet-500',
+    bg: 'bg-violet-500',
+    bgLight: 'bg-violet-500/20',
+  },
+};
+
 // Navigation cards for the 5 sections
 const sectionCards = [
   {
@@ -24,7 +69,7 @@ const sectionCards = [
     title: 'Market Overview',
     subtitle: 'EU ETS vs China ETS Comparison',
     icon: TrendingUp,
-    gradient: ['#3b82f6', '#1e40af'],
+    colorKey: 'blue',
     stats: [
       { label: 'EU ETS Coverage', value: '1.6B tonnes' },
       { label: 'China ETS Coverage', value: '4.5B tonnes' },
@@ -44,7 +89,7 @@ const sectionCards = [
     title: 'About Nihao Group',
     subtitle: 'Your Bridge Between Markets',
     icon: Building2,
-    gradient: ['#0d9488', '#1e40af'],
+    colorKey: 'teal',
     stats: [
       { label: 'Headquarters', value: 'Hong Kong' },
       { label: 'Market Access', value: 'EU + China' },
@@ -64,7 +109,7 @@ const sectionCards = [
     title: 'For CEA Holders',
     subtitle: 'Non-EU Entities with Chinese Allowances',
     icon: Factory,
-    gradient: ['#dc2626', '#f97316'],
+    colorKey: 'red',
     stats: [
       { label: 'Value Improvement', value: '8-25%' },
       { label: 'Entity Categories', value: '5 Types' },
@@ -84,7 +129,7 @@ const sectionCards = [
     title: 'For EUA Holders',
     subtitle: 'Non-EU Entities with European Allowances',
     icon: Globe,
-    gradient: ['#3b82f6', '#8b5cf6'],
+    colorKey: 'blueViolet',
     stats: [
       { label: 'Swap Advantage', value: '10-22%' },
       { label: 'Entity Categories', value: '5 Types' },
@@ -104,7 +149,7 @@ const sectionCards = [
     title: 'For EU Entities',
     subtitle: 'Complete Platform Workflow',
     icon: FileText,
-    gradient: ['#16a34a', '#0d9488'],
+    colorKey: 'green',
     stats: [
       { label: 'Total Benefit', value: '15-25%' },
       { label: 'Workflow Steps', value: '7 Steps' },
@@ -124,7 +169,7 @@ const sectionCards = [
     title: 'Strategic Advantages',
     subtitle: 'Why Choose Nihao Marketplace',
     icon: Target,
-    gradient: ['#8b5cf6', '#6366f1'],
+    colorKey: 'violet',
     stats: [
       { label: 'Cost Savings', value: '30-75%' },
       { label: 'Time Savings', value: '60%' },
@@ -206,7 +251,7 @@ export default function OnboardingIndexPage() {
             </span>
           </h2>
           <p className="text-xl max-w-3xl mx-auto mb-8" style={{ color: colors.textSecondary }}>
-            Your gateway to the world's two largest carbon markets. We bridge the EU ETS and China ETS through innovative bilateral trading solutions, delivering 15-25% value improvement to our clients.
+            Your gateway to the world&apos;s two largest carbon markets. We bridge the EU ETS and China ETS through innovative bilateral trading solutions, delivering 15-25% value improvement to our clients.
           </p>
           <div className="flex justify-center gap-4">
             <Link
@@ -264,6 +309,7 @@ export default function OnboardingIndexPage() {
         <div className="grid gap-6">
           {sectionCards.map((card, i) => {
             const Icon = card.icon;
+            const colorClasses = cardColorMap[card.colorKey];
             return (
               <motion.div
                 key={card.id}
@@ -273,43 +319,37 @@ export default function OnboardingIndexPage() {
               >
                 <Link
                   to={card.path}
-                  className="block rounded-2xl p-6 transition-all hover:scale-[1.01]"
-                  style={{
-                    backgroundColor: colors.bgCard,
-                    border: `1px solid ${colors.border}`,
-                  }}
+                  className="block rounded-2xl p-6 transition-all hover:scale-[1.01] bg-navy-800 border border-navy-600"
                 >
                   <div className="flex flex-col lg:flex-row gap-6">
                     {/* Left: Icon and Title */}
                     <div className="flex items-start gap-4 lg:w-1/3">
                       <div
-                        className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `linear-gradient(135deg, ${card.gradient[0]} 0%, ${card.gradient[1]} 100%)` }}
+                        className={`w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 ${colorClasses.gradient}`}
                       >
                         <Icon className="w-8 h-8 text-white" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span
-                            className="text-xs font-bold px-2 py-1 rounded-full"
-                            style={{ backgroundColor: `${card.gradient[0]}30`, color: card.gradient[0] }}
+                            className={`text-xs font-bold px-2 py-1 rounded-full ${colorClasses.bgLight} ${colorClasses.text}`}
                           >
                             Section {card.id}
                           </span>
                         </div>
-                        <h4 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+                        <h4 className="text-xl font-bold text-white">
                           {card.title}
                         </h4>
-                        <p className="text-sm" style={{ color: colors.textSecondary }}>
+                        <p className="text-sm text-navy-400">
                           {card.subtitle}
                         </p>
                         <div className="flex gap-4 mt-3">
                           {card.stats.map((stat, j) => (
                             <div key={j}>
-                              <div className="text-lg font-bold" style={{ color: card.gradient[0] }}>
+                              <div className={`text-lg font-bold ${colorClasses.text}`}>
                                 {stat.value}
                               </div>
-                              <div className="text-xs" style={{ color: colors.textMuted }}>
+                              <div className="text-xs text-navy-500">
                                 {stat.label}
                               </div>
                             </div>
@@ -331,10 +371,9 @@ export default function OnboardingIndexPage() {
                         {card.highlights.map((highlight, j) => (
                           <div
                             key={j}
-                            className="flex items-center gap-2 text-sm"
-                            style={{ color: colors.textSecondary }}
+                            className="flex items-center gap-2 text-sm text-navy-400"
                           >
-                            <ChevronRight className="w-4 h-4" style={{ color: card.gradient[0] }} />
+                            <ChevronRight className={`w-4 h-4 ${colorClasses.text}`} />
                             {highlight}
                           </div>
                         ))}
@@ -344,10 +383,9 @@ export default function OnboardingIndexPage() {
                     {/* Arrow */}
                     <div className="flex items-center">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
-                        style={{ backgroundColor: `${card.gradient[0]}20` }}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${colorClasses.bgLight}`}
                       >
-                        <ArrowRight className="w-6 h-6" style={{ color: card.gradient[0] }} />
+                        <ArrowRight className={`w-6 h-6 ${colorClasses.text}`} />
                       </div>
                     </div>
                   </div>

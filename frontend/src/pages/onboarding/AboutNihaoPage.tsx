@@ -22,6 +22,15 @@ import {
 } from 'lucide-react';
 import { OnboardingLayout, colors } from '@/components/onboarding';
 
+// Color mapping helper for service offerings
+const serviceColorMap: Record<string, { bg: string; border: string; text: string }> = {
+  blue: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-500' },
+  violet: { bg: 'bg-violet-500', border: 'border-violet-500', text: 'text-violet-500' },
+  emerald: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-emerald-500' },
+  amber: { bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-amber-500' },
+  pink: { bg: 'bg-pink-500', border: 'border-pink-500', text: 'text-pink-500' },
+};
+
 // Part 1: Company Overview Data
 const companyOverview = {
   entity: {
@@ -203,7 +212,7 @@ const serviceOfferings = [
     id: 1,
     title: 'Market Intelligence and Data Services',
     icon: BarChart3,
-    color: '#3b82f6',
+    colorKey: 'blue',
     services: [
       'CEA/EUA price analysis and forecasting',
       'Market participant identification',
@@ -216,7 +225,7 @@ const serviceOfferings = [
     id: 2,
     title: 'Transaction Facilitation Services',
     icon: Briefcase,
-    color: '#8b5cf6',
+    colorKey: 'violet',
     services: [
       'Deal negotiation support',
       'Contract structuring and drafting',
@@ -229,7 +238,7 @@ const serviceOfferings = [
     id: 3,
     title: 'Post-Trade Services',
     icon: FileText,
-    color: '#10b981',
+    colorKey: 'emerald',
     services: [
       'Custody and settlement',
       'Regulatory reporting (if required)',
@@ -242,7 +251,7 @@ const serviceOfferings = [
     id: 4,
     title: 'Risk Management Services',
     icon: Shield,
-    color: '#f59e0b',
+    colorKey: 'amber',
     services: [
       'Counterparty risk assessment',
       'Regulatory risk evaluation',
@@ -255,7 +264,7 @@ const serviceOfferings = [
     id: 5,
     title: 'Regulatory Compliance Services',
     icon: Scale,
-    color: '#ec4899',
+    colorKey: 'pink',
     services: [
       'KYC/AML documentation',
       'Ongoing monitoring',
@@ -565,7 +574,7 @@ export default function AboutNihaoPage() {
             <h3 className="text-xl font-bold">Executive Summary</h3>
           </div>
           <p className="text-lg mb-6" style={{ color: colors.textSecondary }}>
-            Nihao Group Hong Kong represents a <strong style={{ color: colors.textPrimary }}>strategic intermediary</strong> positioned at the intersection of European and Chinese carbon markets, leveraging Hong Kong's unique role as a gateway between Western financial markets and mainland China. The business model depends on continued market inefficiencies between exchange-traded carbon markets and private bilateral deals.
+            Nihao Group Hong Kong represents a <strong style={{ color: colors.textPrimary }}>strategic intermediary</strong> positioned at the intersection of European and Chinese carbon markets, leveraging Hong Kong&apos;s unique role as a gateway between Western financial markets and mainland China. The business model depends on continued market inefficiencies between exchange-traded carbon markets and private bilateral deals.
           </p>
           <div className="grid md:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
@@ -716,7 +725,7 @@ export default function AboutNihaoPage() {
               </ul>
             </div>
             <div className="rounded-xl p-5" style={{ backgroundColor: `${colors.success}10`, border: `1px solid ${colors.success}` }}>
-              <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Nihao's Solution</h5>
+              <h5 className="font-semibold mb-3" style={{ color: colors.success }}>Nihao&apos;s Solution</h5>
               <ul className="space-y-2">
                 {companyOverview.competitiveGap.nihaoSolution.map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm" style={{ color: colors.textSecondary }}>
@@ -830,7 +839,7 @@ export default function AboutNihaoPage() {
               </ul>
             </div>
             <div className="rounded-xl p-5" style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}` }}>
-              <h5 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#ec4899' }}>
+              <h5 className="font-semibold mb-3 flex items-center gap-2 text-pink-500">
                 <Database className="w-5 h-5" />
                 Technology Infrastructure
               </h5>
@@ -868,16 +877,16 @@ export default function AboutNihaoPage() {
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
             {serviceOfferings.map((service, i) => {
               const Icon = service.icon;
+              const colorClasses = serviceColorMap[service.colorKey];
               return (
                 <button
                   key={i}
                   onClick={() => setActiveService(i)}
-                  className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl transition-all"
-                  style={{
-                    backgroundColor: activeService === i ? service.color : colors.bgCard,
-                    border: activeService === i ? `2px solid ${service.color}` : `1px solid ${colors.border}`,
-                    color: activeService === i ? 'white' : colors.textSecondary,
-                  }}
+                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl transition-all border-2 ${
+                    activeService === i
+                      ? `${colorClasses.bg} ${colorClasses.border} text-white`
+                      : 'bg-navy-800 border-navy-600 text-navy-400'
+                  }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium text-sm">{service.title.split(' ')[0]}</span>
@@ -886,37 +895,39 @@ export default function AboutNihaoPage() {
             })}
           </div>
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeService}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="rounded-xl p-6"
-              style={{ backgroundColor: colors.bgCard, border: `2px solid ${serviceOfferings[activeService].color}` }}
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: serviceOfferings[activeService].color }}
+            {(() => {
+              const activeOffer = serviceOfferings[activeService];
+              const activeColorClasses = serviceColorMap[activeOffer.colorKey];
+              const ActiveIcon = activeOffer.icon;
+              return (
+                <motion.div
+                  key={activeService}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className={`rounded-xl p-6 bg-navy-800 border-2 ${activeColorClasses.border}`}
                 >
-                  {(() => {
-                    const Icon = serviceOfferings[activeService].icon;
-                    return <Icon className="w-6 h-6 text-white" />;
-                  })()}
-                </div>
-                <h5 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
-                  {serviceOfferings[activeService].title}
-                </h5>
-              </div>
-              <div className="grid md:grid-cols-2 gap-3">
-                {serviceOfferings[activeService].services.map((service, i) => (
-                  <div key={i} className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: colors.bgCardHover }}>
-                    <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: colors.success }} />
-                    <span style={{ color: colors.textSecondary }}>{service}</span>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${activeColorClasses.bg}`}
+                    >
+                      <ActiveIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <h5 className="text-xl font-bold text-white">
+                      {activeOffer.title}
+                    </h5>
                   </div>
-                ))}
-              </div>
-            </motion.div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {activeOffer.services.map((service, i) => (
+                      <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-navy-700">
+                        <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0 text-emerald-500" />
+                        <span className="text-navy-300">{service}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })()}
           </AnimatePresence>
         </div>
 
@@ -971,8 +982,7 @@ export default function AboutNihaoPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold"
-            style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-gradient-to-br from-violet-500 to-pink-500"
           >
             4
           </div>
@@ -1080,7 +1090,7 @@ export default function AboutNihaoPage() {
                   <th className="p-3 text-left text-sm font-semibold" style={{ color: colors.primaryLight }}>🇭🇰 Hong Kong</th>
                   <th className="p-3 text-left text-sm font-semibold" style={{ color: colors.secondaryLight }}>🇪🇺 EU</th>
                   <th className="p-3 text-left text-sm font-semibold" style={{ color: colors.accent }}>🇸🇬 Singapore</th>
-                  <th className="p-3 text-left text-sm font-semibold" style={{ color: '#ec4899' }}>🇬🇧 UK</th>
+                  <th className="p-3 text-left text-sm font-semibold text-pink-500">🇬🇧 UK</th>
                 </tr>
               </thead>
               <tbody>
@@ -1238,8 +1248,7 @@ export default function AboutNihaoPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold"
-            style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-gradient-to-br from-violet-500 to-blue-500"
           >
             8
           </div>
@@ -1292,7 +1301,7 @@ export default function AboutNihaoPage() {
         <h3 className="text-2xl font-bold mb-4">Conclusion</h3>
         <p className="text-lg mb-6 max-w-4xl mx-auto" style={{ color: colors.textSecondary }}>
           Nihao Group Hong Kong represents a strategically positioned intermediary leveraging:
-          <strong style={{ color: colors.textPrimary }}> Geographic advantage</strong> (Hong Kong's position between China and Europe),
+          <strong style={{ color: colors.textPrimary }}> Geographic advantage</strong> (Hong Kong&apos;s position between China and Europe),
           <strong style={{ color: colors.textPrimary }}> Regulatory advantage</strong> (compliant OTC market operation),
           <strong style={{ color: colors.textPrimary }}> Market knowledge advantage</strong> (deep understanding of both markets),
           <strong style={{ color: colors.textPrimary }}> Technology platform advantage</strong> (proprietary matching and compliance), and
@@ -1320,8 +1329,7 @@ export default function AboutNihaoPage() {
         </Link>
         <Link
           to="/onboarding/cea-holders"
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
-          style={{ background: `linear-gradient(135deg, ${colors.danger} 0%, #f97316 100%)` }}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-red-600 to-orange-500"
         >
           Next: For CEA Holders
           <ArrowRight className="w-5 h-5" />

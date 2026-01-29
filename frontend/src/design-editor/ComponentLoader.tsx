@@ -3,13 +3,13 @@ import type { ComponentMetadata } from '../tools/component-registry';
 
 interface ComponentLoaderProps {
   metadata: ComponentMetadata;
-  props?: Record<string, any>;
+  props?: Record<string, unknown>;
 }
 
 /**
  * Dynamically loads a component using React.lazy
  */
-export function loadComponent(metadata: ComponentMetadata): ComponentType<any> {
+export function loadComponent(metadata: ComponentMetadata): ComponentType<Record<string, unknown>> {
   // Convert importPath to dynamic import
   // Example: "components/common/Button" -> "../components/common/Button"
   const importPath = `../${metadata.importPath}`;

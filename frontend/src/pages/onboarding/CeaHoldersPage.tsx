@@ -22,6 +22,15 @@ import {
 } from 'lucide-react';
 import { OnboardingLayout, colors } from '@/components/onboarding';
 
+// Color mapping helper for CEA holder categories
+const ceaColorMap: Record<string, { bg: string; border: string; text: string; bgLight: string }> = {
+  red: { bg: 'bg-red-500', border: 'border-red-500', text: 'text-red-500', bgLight: 'bg-red-500/20' },
+  orange: { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-orange-500', bgLight: 'bg-orange-500/20' },
+  violet: { bg: 'bg-violet-500', border: 'border-violet-500', text: 'text-violet-500', bgLight: 'bg-violet-500/20' },
+  emerald: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-emerald-500', bgLight: 'bg-emerald-500/20' },
+  indigo: { bg: 'bg-indigo-500', border: 'border-indigo-500', text: 'text-indigo-500', bgLight: 'bg-indigo-500/20' },
+};
+
 // Part 1: Five Categories of Non-EU Entities Holding CEA
 const ceaHolderCategories = [
   {
@@ -30,7 +39,7 @@ const ceaHolderCategories = [
     title: 'Chinese Domestic Industrial Facilities',
     tag: 'Covered Entities',
     description: 'Industrial manufacturing facilities mandated in China\'s national ETS under MEE regulations',
-    color: '#ef4444',
+    colorKey: 'red',
     subCategories: [
       {
         name: 'Power Generation Facilities',
@@ -93,7 +102,7 @@ const ceaHolderCategories = [
     title: 'Chinese Trading Companies and Financial Intermediaries',
     tag: 'Non-Regulated Brokers',
     description: 'Financial intermediaries trading CEA for profit opportunities, not as direct ETS participants',
-    color: '#f97316',
+    colorKey: 'orange',
     subCategories: [
       {
         name: 'Carbon Trading Brokers',
@@ -152,7 +161,7 @@ const ceaHolderCategories = [
     title: 'Chinese Affiliated Trading Operations',
     tag: 'Subsidiaries of Manufacturing Groups',
     description: 'Trading subsidiaries optimizing carbon allowance portfolios across group companies',
-    color: '#8b5cf6',
+    colorKey: 'violet',
     subCategories: [
       {
         name: 'Conglomerate Trading Arms',
@@ -202,7 +211,7 @@ const ceaHolderCategories = [
     title: 'Chinese Export-Oriented Manufacturers',
     tag: 'Carbon Efficiency Leaders',
     description: 'Manufacturing companies generating CEA surplus due to advanced production efficiency',
-    color: '#10b981',
+    colorKey: 'emerald',
     subCategories: [
       {
         name: 'Export-Focused Industrial Manufacturers',
@@ -255,7 +264,7 @@ const ceaHolderCategories = [
     title: 'Chinese Government-Linked Entities and SOE Holdings',
     tag: 'Policy & Strategic Reserves',
     description: 'Government-controlled organizations holding CEA for policy purposes or strategic reserves',
-    color: '#6366f1',
+    colorKey: 'indigo',
     subCategories: [
       {
         name: 'Environmental Ministry Reserve Holdings',
@@ -670,8 +679,7 @@ export default function CeaHoldersPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold"
-            style={{ background: `linear-gradient(135deg, ${colors.danger} 0%, #f97316 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-gradient-to-br from-red-600 to-orange-500"
           >
             1
           </div>
@@ -685,16 +693,16 @@ export default function CeaHoldersPage() {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {ceaHolderCategories.map((cat, i) => {
             const Icon = cat.icon;
+            const colorClasses = ceaColorMap[cat.colorKey];
             return (
               <button
                 key={i}
                 onClick={() => setActiveCategory(i)}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl transition-all"
-                style={{
-                  backgroundColor: activeCategory === i ? cat.color : colors.bgCard,
-                  border: activeCategory === i ? `2px solid ${cat.color}` : `1px solid ${colors.border}`,
-                  color: activeCategory === i ? 'white' : colors.textSecondary,
-                }}
+                className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl transition-all border-2 ${
+                  activeCategory === i
+                    ? `${colorClasses.bg} ${colorClasses.border} text-white`
+                    : 'bg-navy-800 border-navy-600 text-navy-400'
+                }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium text-sm whitespace-nowrap">Category {cat.id}</span>
@@ -705,62 +713,61 @@ export default function CeaHoldersPage() {
 
         {/* Active Category Detail */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeCategory}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="rounded-2xl p-6"
-            style={{ backgroundColor: colors.bgCard, border: `2px solid ${ceaHolderCategories[activeCategory].color}` }}
-          >
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: ceaHolderCategories[activeCategory].color }}
-                >
-                  {(() => {
-                    const Icon = ceaHolderCategories[activeCategory].icon;
-                    return <Icon className="w-8 h-8 text-white" />;
-                  })()}
+          {(() => {
+            const activeCat = ceaHolderCategories[activeCategory];
+            const activeColorClasses = ceaColorMap[activeCat.colorKey];
+            const ActiveIcon = activeCat.icon;
+            return (
+              <motion.div
+                key={activeCategory}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className={`rounded-2xl p-6 bg-navy-800 border-2 ${activeColorClasses.border}`}
+              >
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-16 h-16 rounded-xl flex items-center justify-center ${activeColorClasses.bg}`}
+                    >
+                      <ActiveIcon className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white">
+                        {activeCat.title}
+                      </h4>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${activeColorClasses.bgLight} ${activeColorClasses.text}`}
+                      >
+                        {activeCat.tag}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-extrabold text-emerald-500">
+                      {activeCat.advantage}
+                    </div>
+                    <div className="text-sm text-navy-400">Total Value Improvement</div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
-                    {ceaHolderCategories[activeCategory].title}
-                  </h4>
-                  <span
-                    className="inline-block px-3 py-1 rounded-full text-sm font-medium mt-2"
-                    style={{ backgroundColor: `${ceaHolderCategories[activeCategory].color}30`, color: ceaHolderCategories[activeCategory].color }}
-                  >
-                    {ceaHolderCategories[activeCategory].tag}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-extrabold" style={{ color: colors.success }}>
-                  {ceaHolderCategories[activeCategory].advantage}
-                </div>
-                <div className="text-sm" style={{ color: colors.textSecondary }}>Total Value Improvement</div>
-              </div>
-            </div>
 
-            <p className="mb-6" style={{ color: colors.textSecondary }}>
-              {ceaHolderCategories[activeCategory].description}
-            </p>
+                <p className="mb-6 text-navy-300">
+                  {activeCat.description}
+                </p>
 
-            {/* Sub-Categories */}
-            <div className="mb-6">
-              <h5 className="font-semibold mb-4" style={{ color: colors.textPrimary }}>Sub-Categories</h5>
-              <div className="grid lg:grid-cols-2 gap-4">
-                {ceaHolderCategories[activeCategory].subCategories.map((sub, i) => (
-                  <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                    <h6 className="font-semibold mb-2" style={{ color: ceaHolderCategories[activeCategory].color }}>
-                      {sub.name}
-                    </h6>
+                {/* Sub-Categories */}
+                <div className="mb-6">
+                  <h5 className="font-semibold mb-4 text-white">Sub-Categories</h5>
+                  <div className="grid lg:grid-cols-2 gap-4">
+                    {activeCat.subCategories.map((sub, i) => (
+                      <div key={i} className="p-4 rounded-xl bg-navy-700">
+                        <h6 className={`font-semibold mb-2 ${activeColorClasses.text}`}>
+                          {sub.name}
+                        </h6>
                     <ul className="space-y-1">
                       {sub.details.map((detail, j) => (
-                        <li key={j} className="flex items-start gap-2 text-sm" style={{ color: colors.textSecondary }}>
-                          <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: colors.textMuted }} />
+                        <li key={j} className="flex items-start gap-2 text-sm text-navy-300">
+                          <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0 text-navy-500" />
                           {detail}
                         </li>
                       ))}
@@ -770,32 +777,34 @@ export default function CeaHoldersPage() {
               </div>
             </div>
 
-            {/* Organizational Structure & Holdings Profile */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h6 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primaryLight }}>
-                  <Building2 className="w-4 h-4" />
-                  Organizational Structure
-                </h6>
-                <ul className="space-y-2">
-                  {ceaHolderCategories[activeCategory].organizationalStructure.map((item, i) => (
-                    <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="p-4 rounded-xl" style={{ backgroundColor: colors.bgCardHover }}>
-                <h6 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.accent }}>
-                  <BarChart3 className="w-4 h-4" />
-                  CEA Holdings Profile
-                </h6>
-                <ul className="space-y-2">
-                  {ceaHolderCategories[activeCategory].holdingsProfile.map((item, i) => (
-                    <li key={i} className="text-sm" style={{ color: colors.textSecondary }}>• {item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </motion.div>
+                {/* Organizational Structure & Holdings Profile */}
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <div className="p-4 rounded-xl bg-navy-700">
+                    <h6 className="font-semibold mb-3 flex items-center gap-2 text-teal-400">
+                      <Building2 className="w-4 h-4" />
+                      Organizational Structure
+                    </h6>
+                    <ul className="space-y-2">
+                      {activeCat.organizationalStructure.map((item, i) => (
+                        <li key={i} className="text-sm text-navy-300">- {item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="p-4 rounded-xl bg-navy-700">
+                    <h6 className="font-semibold mb-3 flex items-center gap-2 text-amber-400">
+                      <BarChart3 className="w-4 h-4" />
+                      CEA Holdings Profile
+                    </h6>
+                    <ul className="space-y-2">
+                      {activeCat.holdingsProfile.map((item, i) => (
+                        <li key={i} className="text-sm text-navy-300">- {item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
       </section>
 
@@ -1347,8 +1356,7 @@ export default function CeaHoldersPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold"
-            style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-gradient-to-br from-violet-500 to-blue-500"
           >
             3
           </div>
@@ -1482,8 +1490,7 @@ export default function CeaHoldersPage() {
         </p>
         <Link
           to="/onboarding/eua-holders"
-          className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105"
-          style={{ background: `linear-gradient(135deg, ${colors.secondaryLight} 0%, #8b5cf6 100%)` }}
+          className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-blue-500 to-violet-500"
         >
           Explore EUA Holder Advantages
           <ArrowRight className="w-5 h-5" />
@@ -1491,19 +1498,17 @@ export default function CeaHoldersPage() {
       </section>
 
       {/* Navigation */}
-      <div className="flex justify-between items-center pt-8" style={{ borderTop: `1px solid ${colors.border}` }}>
+      <div className="flex justify-between items-center pt-8 border-t border-navy-600">
         <Link
           to="/onboarding/about-nihao"
-          className="flex items-center gap-2 text-sm hover:underline"
-          style={{ color: colors.textSecondary }}
+          className="flex items-center gap-2 text-sm hover:underline text-navy-400"
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           Back to About Nihao
         </Link>
         <Link
           to="/onboarding/eua-holders"
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
-          style={{ background: `linear-gradient(135deg, ${colors.secondaryLight} 0%, #8b5cf6 100%)` }}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-blue-500 to-violet-500"
         >
           Next: For EUA Holders
           <ArrowRight className="w-5 h-5" />

@@ -313,7 +313,7 @@ function UserInfoTab({
             <Key className="w-5 h-5 text-amber-600" />
             <div>
               <p className="font-medium text-navy-900 dark:text-white">Password Management</p>
-              <p className="text-sm text-navy-500 dark:text-navy-400">Reset user's password</p>
+              <p className="text-sm text-navy-500 dark:text-navy-400">Reset user&apos;s password</p>
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={onShowPasswordReset}>

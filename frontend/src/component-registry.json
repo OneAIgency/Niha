@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-01-28T17:07:56.722Z",
+  "generatedAt": "2026-01-29T04:10:18.618Z",
   "components": [
     {
       "name": "AMLDepositsTab",
@@ -123,6 +123,45 @@
         }
       ],
       "description": ""
+    },
+    {
+      "name": "ContactRequestViewModal",
+      "category": "backoffice",
+      "path": "src/components/backoffice/ContactRequestViewModal.tsx",
+      "importPath": "components/backoffice/ContactRequestViewModal",
+      "props": [
+        {
+          "name": "request",
+          "type": "ContactRequest | null",
+          "optional": false
+        },
+        {
+          "name": "isOpen",
+          "type": "boolean",
+          "optional": false
+        },
+        {
+          "name": "onClose",
+          "type": "() => void",
+          "optional": false
+        },
+        {
+          "name": "onOpenNDA",
+          "type": "(requestId: string) => Promise<void>",
+          "optional": false
+        },
+        {
+          "name": "onIpLookup",
+          "type": "(ip: string) => void",
+          "optional": true
+        },
+        {
+          "name": "openNDALoading",
+          "type": "boolean",
+          "optional": true
+        }
+      ],
+      "description": "Modal that shows all contact request form data and a button to open the attached NDA PDF in a new tab."
     },
     {
       "name": "ContactRequestsTab",
@@ -1832,6 +1871,35 @@
         }
       ],
       "description": "Subheader Component"
+    },
+    {
+      "name": "SubheaderNavButton",
+      "category": "common",
+      "path": "src/components/common/SubheaderNavButton.tsx",
+      "importPath": "components/common/SubheaderNavButton",
+      "props": [
+        {
+          "name": "to",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "optional": false
+        },
+        {
+          "name": "icon",
+          "type": "React.ReactNode",
+          "optional": false
+        },
+        {
+          "name": "isActive",
+          "type": "boolean",
+          "optional": false
+        }
+      ],
+      "description": "Nav button for subheader: icon-only by default, label on hover."
     },
     {
       "name": "Tabs",

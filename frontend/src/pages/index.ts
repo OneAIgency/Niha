@@ -1,7 +1,5 @@
-export { LandingPage } from './LandingPage';
 export { ContactPage } from './ContactPage';
 export { LoginPage } from './LoginPage';
-export { MarketplacePage } from './MarketplacePage';
 export { CashMarketPage } from './CashMarketPage';
 export { CashMarketProPage } from './CashMarketProPage';
 export { SwapPage } from './SwapPage';
@@ -14,7 +12,6 @@ export { BackofficeOnboardingPage } from './BackofficeOnboardingPage';
 export { FundingPage } from './FundingPage';
 export { SetupPasswordPage } from './SetupPasswordPage';
 export { default as Onboarding1Page } from './Onboarding1Page';
-export { default as OnboardingPage } from './OnboardingPage';
 export { LearnMorePage } from './LearnMorePage';
 export { ComponentShowcasePage } from './ComponentShowcasePage';
 export { DesignSystemPage } from './DesignSystemPage';

@@ -31,11 +31,18 @@ module.exports = {
     'react/jsx-no-duplicate-props': 'error',
     // React is in scope with new JSX transform, so we can disable this
     'react/react-in-jsx-scope': 'off',
+    // Disable prop-types validation - TypeScript handles this
+    'react/prop-types': 'off',
+    // Allow underscore-prefixed variables to be unused (intentional pattern)
+    '@typescript-eslint/no-unused-vars': ['error', {
+      argsIgnorePattern: '^_',
+      varsIgnorePattern: '^_'
+    }],
     // Design system color enforcement
     'no-restricted-syntax': [
       'error',
       {
-        selector: 'Literal[value=/slate-/]',
+        selector: 'Literal[value=/(?<!tran)slate-/]',
         message: 'Hardcoded slate-* colors not allowed. Use navy-* from design system instead. See docs/DESIGN_TOKENS_MIGRATION.md'
       },
       {

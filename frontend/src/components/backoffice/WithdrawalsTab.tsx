@@ -533,7 +533,7 @@ export const WithdrawalsTab: React.FC = () => {
                 <strong>Entity:</strong> {selectedWithdrawal.entity_name}
               </p>
               <p className="text-sm text-red-400 font-medium mt-2">
-                Funds will be refunded to the entity's balance.
+                Funds will be refunded to the entity&apos;s balance.
               </p>
             </div>
             <div className="mb-4">

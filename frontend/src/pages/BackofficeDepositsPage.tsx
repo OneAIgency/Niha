@@ -102,15 +102,15 @@ export function BackofficeDepositsPage() {
             <div className="space-y-6">
                 <Card title={filter === 'pending' ? 'Pending Wire Transfers' : 'Active AML Holds'}>
                     {loading ? (
-                        <div className="p-8 text-center text-gray-400">Loading deposits...</div>
+                        <div className="p-8 text-center text-navy-400">Loading deposits...</div>
                     ) : deposits.length === 0 ? (
-                        <div className="p-8 text-center text-gray-400">
+                        <div className="p-8 text-center text-navy-400">
                             No {filter === 'pending' ? 'pending deposits' : 'active holds'} found.
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="text-gray-400 border-b border-navy-700">
+                                <thead className="text-navy-400 border-b border-navy-700">
                                     <tr>
                                         <th className="pb-3 pl-4">Date</th>
                                         <th className="pb-3">Entity / User</th>
@@ -123,15 +123,15 @@ export function BackofficeDepositsPage() {
                                 <tbody className="divide-y divide-navy-800">
                                     {deposits.map((d) => (
                                         <tr key={d.id} className="hover:bg-navy-800/50">
-                                            <td className="py-4 pl-4 text-gray-300">
+                                            <td className="py-4 pl-4 text-navy-300">
                                                 {new Date(d.reported_at).toLocaleDateString()}
-                                                <div className="text-xs text-gray-500">
+                                                <div className="text-xs text-navy-500">
                                                     {new Date(d.reported_at).toLocaleTimeString()}
                                                 </div>
                                             </td>
                                             <td className="py-4 text-white font-medium">
                                                 {d.entity_name}
-                                                <div className="text-xs text-gray-400">{d.user_email}</div>
+                                                <div className="text-xs text-navy-400">{d.user_email}</div>
                                             </td>
                                             <td className="py-4 text-white">
                                                 {d.amount?.toLocaleString('en-US', { style: 'currency', currency: d.currency || 'EUR' })}
@@ -141,7 +141,7 @@ export function BackofficeDepositsPage() {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="py-4 text-gray-300">
+                                            <td className="py-4 text-navy-300">
                                                 {d.source_bank || 'N/A'}
                                                 {d.wire_reference && (
                                                     <div className="text-xs text-blue-400 font-mono">Ref: {d.wire_reference}</div>
@@ -158,7 +158,7 @@ export function BackofficeDepositsPage() {
                                                     {d.status.toUpperCase().replace('_', ' ')}
                                                 </Badge>
                                                 {d.hold_expires_at && (
-                                                    <div className="mt-1 text-xs text-gray-400 flex items-center gap-1">
+                                                    <div className="mt-1 text-xs text-navy-400 flex items-center gap-1">
                                                         <Clock className="w-3 h-3" />
                                                         Expires: {new Date(d.hold_expires_at).toLocaleDateString()}
                                                     </div>

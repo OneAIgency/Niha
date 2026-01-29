@@ -1234,7 +1234,7 @@ const SwapAdvantages = () => {
             <ul className="text-sm space-y-2 text-navy-200">
               <li>• Establish credibility in Chinese carbon market</li>
               <li>• Build relationships for future transactions</li>
-              <li>• Position for China's carbon market growth (estimated to reach EU ETS size within 10 years)</li>
+              <li>• Position for China&apos;s carbon market growth (estimated to reach EU ETS size within 10 years)</li>
               <li className="font-medium text-emerald-500 dark:text-emerald-400">Estimated strategic option value: 1-3% of portfolio value annually</li>
             </ul>
           </div>
@@ -1253,7 +1253,7 @@ const SwapAdvantages = () => {
               <li>• Participation in innovative carbon market solutions</li>
               <li>• ESG alignment through voluntary carbon management</li>
               <li>• Positioning as international carbon market participant</li>
-              <li>• Storytelling advantage: "Active participant in global carbon markets"</li>
+              <li>• Storytelling advantage: &quot;Active participant in global carbon markets&quot;</li>
             </ul>
           </div>
 
@@ -1357,7 +1357,7 @@ const QuantifiedAdvantages = () => { const summaryData = [
       currency: '1-2%',
       strategic: '1-2%',
       total: '13-22%',
-      color: "#10b981",
+      colorKey: "emerald",
      },
     { category: 'Non-EU Financial Firms',
       priceArbitrage: '12-18%',
@@ -1366,7 +1366,7 @@ const QuantifiedAdvantages = () => { const summaryData = [
       currency: '2-3%',
       strategic: '1-2%',
       total: '20-34%',
-      color: "#3b82f6",
+      colorKey: "blue",
      },
     { category: 'Trading Companies',
       priceArbitrage: '10-15%',
@@ -1375,7 +1375,7 @@ const QuantifiedAdvantages = () => { const summaryData = [
       currency: '1-2%',
       strategic: '2-3%',
       total: '17-28%',
-      color: "#8b5cf6",
+      colorKey: "violet",
      },
     { category: 'Gov-Linked Entities',
       priceArbitrage: '6-10%',
@@ -1384,7 +1384,7 @@ const QuantifiedAdvantages = () => { const summaryData = [
       currency: '0.5-1.5%',
       strategic: '2-4%',
       total: '10.5-20.5%',
-      color: "#10b981",
+      colorKey: "emerald",
      },
     { category: 'Infrastructure/Services',
       priceArbitrage: '8-12%',
@@ -1393,7 +1393,7 @@ const QuantifiedAdvantages = () => { const summaryData = [
       currency: '1-2%',
       strategic: '1-2%',
       total: '12-21%',
-      color: "#ef4444",
+      colorKey: "red",
      },
   ];
 
@@ -1463,9 +1463,10 @@ const QuantifiedAdvantages = () => { const summaryData = [
                   className={`${idx % 2 === 0 ? 'bg-navy-800' : 'bg-navy-700'} border-t border-navy-600`}
                 >
                   <td className={`px-3 py-2 font-medium ${
-                    row.color === '#10b981' ? 'text-emerald-500' :
-                    row.color === '#3b82f6' ? 'text-blue-500' :
-                    row.color === '#8b5cf6' ? 'text-violet-500' :
+                    row.colorKey === 'emerald' ? 'text-emerald-500' :
+                    row.colorKey === 'blue' ? 'text-blue-500' :
+                    row.colorKey === 'violet' ? 'text-violet-500' :
+                    row.colorKey === 'red' ? 'text-red-500' :
                     'text-white'
                   }`}>{row.category}</td>
                   <td className="px-3 py-2 text-center text-navy-200">{row.priceArbitrage}</td>
@@ -1627,7 +1628,7 @@ const ImplementationFramework = () => {
           Multi-Step Swap Process
         </h4>
         <p className="text-sm text-navy-200">
-          Complete framework for executing EUA-to-CEA swaps through Nihao's platform
+          Complete framework for executing EUA-to-CEA swaps through Nihao&apos;s platform
         </p>
       </div>
 
@@ -1672,7 +1673,7 @@ const RiskMitigation = () => { const risks = [
     {
       title: 'Counterparty Credit Risk',
       icon: Users,
-      color: "#ef4444",
+      colorKey: "red",
       mitigations: [
         'Nihao pre-qualification of all CEA providers',
         'Full upfront payment eliminates settlement risk',
@@ -1683,7 +1684,7 @@ const RiskMitigation = () => { const risks = [
      },
     { title: 'Regulatory Risk',
       icon: Shield,
-      color: "#3b82f6",
+      colorKey: "blue",
       mitigations: [
         'Full documentation compliance with both jurisdictions',
         'Proper tax reporting in both EU and relevant jurisdictions',
@@ -1693,7 +1694,7 @@ const RiskMitigation = () => { const risks = [
      },
     { title: 'Market Risk',
       icon: TrendingUp,
-      color: "#8b5cf6",
+      colorKey: "violet",
       mitigations: [
         'Forward pricing locks in agreed rates',
         'Hedging options available if prices move adversely',
@@ -1721,32 +1722,32 @@ const RiskMitigation = () => { const risks = [
             <div
                 key={risk.title}
                 className={`p-4 rounded-lg border bg-navy-800 ${
-                risk.color === '#ef4444' ? 'border-red-500' :
-                risk.color === '#3b82f6' ? 'border-blue-500' :
-                risk.color === '#8b5cf6' ? 'border-violet-500' :
+                risk.colorKey === 'red' ? 'border-red-500' :
+                risk.colorKey === 'blue' ? 'border-blue-500' :
+                risk.colorKey === 'violet' ? 'border-violet-500' :
                 'border-navy-600'
               }`}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    risk.color === '#ef4444' ? 'bg-red-500/20' :
-                    risk.color === '#3b82f6' ? 'bg-blue-500/20' :
-                    risk.color === '#8b5cf6' ? 'bg-violet-500/20' :
-                    'bg-slate-500/20'
+                    risk.colorKey === 'red' ? 'bg-red-500/20' :
+                    risk.colorKey === 'blue' ? 'bg-blue-500/20' :
+                    risk.colorKey === 'violet' ? 'bg-violet-500/20' :
+                    'bg-navy-500/20'
                   }`}
                 >
                   <Icon className={`w-5 h-5 ${
-                    risk.color === '#ef4444' ? 'text-red-500' :
-                    risk.color === '#3b82f6' ? 'text-blue-500' :
-                    risk.color === '#8b5cf6' ? 'text-violet-500' :
-                    'text-slate-400'
+                    risk.colorKey === 'red' ? 'text-red-500' :
+                    risk.colorKey === 'blue' ? 'text-blue-500' :
+                    risk.colorKey === 'violet' ? 'text-violet-500' :
+                    'text-navy-400'
                   }`} />
                 </div>
                 <h5 className={`font-semibold ${
-                  risk.color === '#ef4444' ? 'text-red-500' :
-                  risk.color === '#3b82f6' ? 'text-blue-500' :
-                  risk.color === '#8b5cf6' ? 'text-violet-500' :
+                  risk.colorKey === 'red' ? 'text-red-500' :
+                  risk.colorKey === 'blue' ? 'text-blue-500' :
+                  risk.colorKey === 'violet' ? 'text-violet-500' :
                   'text-white'
                 }`}>{risk.title}</h5>
               </div>

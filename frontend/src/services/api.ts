@@ -374,7 +374,7 @@ export const pricesApi = {
 // Backoffice Realtime Types
 export interface BackofficeWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted';
-  data?: any;
+  data?: Record<string, unknown>;
   message?: string;
   timestamp: string;
 }
@@ -907,15 +907,6 @@ export const adminApi = {
 
   updateMailSettings: async (payload: MailSettingsUpdate): Promise<{ message: string; success: boolean }> => {
     const { data } = await api.put('/admin/settings/mail', payload);
-    return data;
-  },
-
-  // Market Overview
-  getMarketOverview: async (): Promise<{
-    top_20_cea_value_usd: number;
-    top_20_swap_value_usd: number;
-  }> => {
-    const { data } = await api.get('/admin/market-overview');
     return data;
   },
 };
@@ -1600,9 +1591,6 @@ export const getTickets = (params?: {
   limit?: number;
   offset?: number;
 }) => api.get('/admin/logging/tickets', { params });
-
-export const getTicket = (ticketId: string) =>
-  api.get(`/admin/logging/tickets/${ticketId}`);
 
 export const getLoggingStats = (params?: {
   date_from?: string;

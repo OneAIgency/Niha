@@ -39,7 +39,7 @@ export function BooleanControl({ label, value, optional, onChange }: BooleanCont
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
-            // eslint-disable-next-line no-restricted-syntax
+             
             isChecked ? 'translate-x-5' : 'translate-x-0.5'
           }`}
         />

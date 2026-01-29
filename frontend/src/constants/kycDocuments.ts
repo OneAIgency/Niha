@@ -75,19 +75,19 @@ export const documentCategories = [
     id: 'company' as const,
     name: 'Company Documents',
     icon: Building2,
-    color: '#3b82f6',
+    color: 'var(--color-eua)',
   },
   {
     id: 'representative' as const,
     name: 'Representative Documents',
     icon: User,
-    color: '#8b5cf6',
+    color: 'var(--color-violet)',
   },
   {
     id: 'optional' as const,
     name: 'Optional Documents',
     icon: Leaf,
-    color: '#10b981',
+    color: 'var(--color-primary)',
   },
 ];
 

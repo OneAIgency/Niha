@@ -55,7 +55,7 @@ export const Typography = forwardRef<HTMLElement, TypographyProps>(
 
     return (
       <Component
-        ref={ref as any}
+        ref={ref as React.Ref<HTMLElement>}
         className={cn(
           variantStyles[variant],
           color !== 'default' && colorStyles[color],

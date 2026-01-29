@@ -16,6 +16,14 @@ import {
 } from 'lucide-react';
 import { OnboardingLayout, colors, LivePriceComparison } from '@/components/onboarding';
 
+// Color mapping helper for EU ETS phases
+const phaseColorMap: Record<string, { bg: string; border: string; text: string }> = {
+  indigo: { bg: 'bg-indigo-500', border: 'border-indigo-500', text: 'text-indigo-500' },
+  violet: { bg: 'bg-violet-500', border: 'border-violet-500', text: 'text-violet-500' },
+  purple: { bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-purple-500' },
+  fuchsia: { bg: 'bg-fuchsia-500', border: 'border-fuchsia-500', text: 'text-fuchsia-500' },
+};
+
 // EU ETS Phase Data
 const euEtsPhases = [
   {
@@ -30,7 +38,7 @@ const euEtsPhases = [
       'Price collapsed to near zero in 2007 due to over-allocation',
       'No banking between Phase 1 and 2',
     ],
-    color: '#6366f1',
+    colorKey: 'indigo',
   },
   {
     phase: 'Phase 2',
@@ -45,7 +53,7 @@ const euEtsPhases = [
       'Prices fell to €6-7/t by 2012',
       'Emergence of surplus allowances',
     ],
-    color: '#8b5cf6',
+    colorKey: 'violet',
   },
   {
     phase: 'Phase 3',
@@ -60,7 +68,7 @@ const euEtsPhases = [
       'Linear reduction factor of 1.74%/year',
       'Prices recovered from €3 (2013) to €25 (2019)',
     ],
-    color: '#a855f7',
+    colorKey: 'purple',
   },
   {
     phase: 'Phase 4',
@@ -76,7 +84,7 @@ const euEtsPhases = [
       'Prices reached all-time high of €100+ in 2023',
       'Target: 62% reduction vs 2005 by 2030',
     ],
-    color: '#c026d3',
+    colorKey: 'fuchsia',
   },
 ];
 
@@ -413,7 +421,7 @@ export default function MarketOverviewPage() {
             <h3 className="text-xl font-bold">The Global Carbon Market Landscape</h3>
           </div>
           <p className="text-lg mb-6" style={{ color: colors.textSecondary }}>
-            The European Union Emissions Trading System (EU ETS) and China's national carbon market together cover over <strong style={{ color: colors.textPrimary }}>6.1 billion tonnes of CO2</strong> emissions annually, representing the world's two largest carbon markets. Despite their scale, fundamental differences in market design, pricing, and accessibility create significant arbitrage opportunities for sophisticated participants.
+            The European Union Emissions Trading System (EU ETS) and China&apos;s national carbon market together cover over <strong style={{ color: colors.textPrimary }}>6.1 billion tonnes of CO2</strong> emissions annually, representing the world&apos;s two largest carbon markets. Despite their scale, fundamental differences in market design, pricing, and accessibility create significant arbitrage opportunities for sophisticated participants.
           </p>
           <LivePriceComparison />
         </div>
@@ -430,7 +438,7 @@ export default function MarketOverviewPage() {
           </div>
           <div>
             <h3 className="text-2xl font-bold">Historical Development</h3>
-            <p style={{ color: colors.textSecondary }}>Evolution of the world's two largest carbon markets</p>
+            <p style={{ color: colors.textSecondary }}>Evolution of the world&apos;s two largest carbon markets</p>
           </div>
         </div>
 
@@ -442,58 +450,64 @@ export default function MarketOverviewPage() {
 
           {/* Phase Timeline */}
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {euEtsPhases.map((phase, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveEuPhase(i)}
-                className="flex-shrink-0 px-4 py-3 rounded-xl transition-all"
-                style={{
-                  backgroundColor: activeEuPhase === i ? phase.color : colors.bgCard,
-                  border: activeEuPhase === i ? `2px solid ${phase.color}` : `1px solid ${colors.border}`,
-                  color: activeEuPhase === i ? 'white' : colors.textSecondary,
-                }}
-              >
-                <div className="font-bold">{phase.phase}</div>
-                <div className="text-xs">{phase.period}</div>
-              </button>
-            ))}
+            {euEtsPhases.map((phase, i) => {
+              const colorClasses = phaseColorMap[phase.colorKey];
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveEuPhase(i)}
+                  className={`flex-shrink-0 px-4 py-3 rounded-xl transition-all border-2 ${
+                    activeEuPhase === i
+                      ? `${colorClasses.bg} ${colorClasses.border} text-white`
+                      : 'bg-navy-800 border-navy-600 text-navy-400'
+                  }`}
+                >
+                  <div className="font-bold">{phase.phase}</div>
+                  <div className="text-xs">{phase.period}</div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Active Phase Detail */}
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeEuPhase}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="rounded-2xl p-6"
-              style={{ backgroundColor: colors.bgCard, border: `2px solid ${euEtsPhases[activeEuPhase].color}` }}
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-xl"
-                  style={{ backgroundColor: euEtsPhases[activeEuPhase].color, color: 'white' }}
+            {(() => {
+              const activePhase = euEtsPhases[activeEuPhase];
+              const activeColorClasses = phaseColorMap[activePhase.colorKey];
+              return (
+                <motion.div
+                  key={activeEuPhase}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className={`rounded-2xl p-6 bg-navy-800 border-2 ${activeColorClasses.border}`}
                 >
-                  {euEtsPhases[activeEuPhase].phase.split(' ')[1]}
-                </div>
-                <div>
-                  <h5 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
-                    {euEtsPhases[activeEuPhase].title}
-                  </h5>
-                  <p style={{ color: colors.textSecondary }}>
-                    {euEtsPhases[activeEuPhase].period} • {euEtsPhases[activeEuPhase].description}
-                  </p>
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                {euEtsPhases[activeEuPhase].details.map((detail, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: colors.bgCardHover }}>
-                    <ChevronRight className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: euEtsPhases[activeEuPhase].color }} />
-                    <span style={{ color: colors.textSecondary }}>{detail}</span>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div
+                      className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-xl text-white ${activeColorClasses.bg}`}
+                    >
+                      {activePhase.phase.split(' ')[1]}
+                    </div>
+                    <div>
+                      <h5 className="text-xl font-bold text-white">
+                        {activePhase.title}
+                      </h5>
+                      <p className="text-navy-300">
+                        {activePhase.period} - {activePhase.description}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </motion.div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {activePhase.details.map((detail, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-navy-700">
+                        <ChevronRight className={`w-5 h-5 mt-0.5 flex-shrink-0 ${activeColorClasses.text}`} />
+                        <span className="text-navy-300">{detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })()}
           </AnimatePresence>
         </div>
 
@@ -750,8 +764,7 @@ export default function MarketOverviewPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-pink-500"
           >
             <Scale className="w-6 h-6 text-white" />
           </div>
@@ -926,8 +939,7 @@ export default function MarketOverviewPage() {
       <section className="mb-16">
         <div className="flex items-center gap-4 mb-8">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, #f97316 0%, #dc2626 100%)` }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600"
           >
             <Info className="w-6 h-6 text-white" />
           </div>
