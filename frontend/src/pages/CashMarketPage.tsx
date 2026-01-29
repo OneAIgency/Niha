@@ -96,7 +96,7 @@ export function CashMarketPage() {
           await fetchData();
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting order:', error);
       // You could add a toast notification here
       throw error; // Re-throw to let the modal handle the error
@@ -146,7 +146,7 @@ export function CashMarketPage() {
         <div className="flex items-center gap-4 text-[11px]">
           {/* Last Price */}
           <div>
-            <span className="text-slate-400 mr-1 text-[10px]">Last</span>
+            <span className="text-navy-400 mr-1 text-[10px]">Last</span>
             <span className="font-bold font-mono text-white text-sm">
               €{formatNumber(orderBook?.last_price)}
             </span>
@@ -154,7 +154,7 @@ export function CashMarketPage() {
 
           {/* 24h Change */}
           <div className="flex items-center gap-1">
-            <span className="text-slate-400 text-[10px]">24h</span>
+            <span className="text-navy-400 text-[10px]">24h</span>
             {orderBook && (
               <span className={`flex items-center font-semibold ${
                 orderBook.change_24h >= 0
@@ -173,8 +173,8 @@ export function CashMarketPage() {
 
           {/* Volume */}
           <div>
-            <span className="text-slate-400 mr-1 text-[10px]">Vol</span>
-            <span className="font-semibold text-slate-300 font-mono">
+            <span className="text-navy-400 mr-1 text-[10px]">Vol</span>
+            <span className="font-semibold text-navy-300 font-mono">
               {orderBook ? formatVolume(orderBook.volume_24h) : '-'}
             </span>
           </div>
@@ -184,7 +184,7 @@ export function CashMarketPage() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={fetchData}
-            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400"
+            className="p-1.5 rounded-lg hover:bg-navy-700 text-navy-400"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           </motion.button>

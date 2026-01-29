@@ -32,7 +32,7 @@ export function LearnMorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-navy-800 via-navy-700 to-navy-800 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-navy-900 via-navy-800 to-navy-900 text-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-navy-800/80 backdrop-blur-lg border-b border-navy-600/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -655,7 +655,7 @@ export function LearnMorePage() {
                 <p className="text-navy-300 mb-6">
                   To participate in carbon certificate trading through Nihao Group, your company must complete
                   KYC verification for Union Registry account access. All partners need active accounts in the
-                  EU's centralized electronic database for emissions certificates.
+                  EU&apos;s centralized electronic database for emissions certificates.
                 </p>
 
                 <div className="grid md:grid-cols-2 gap-8">

@@ -78,9 +78,10 @@ export function ProfilePage() {
         if (entityData) {
           setEntity(entityData);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load profile data:', err);
-        setError(err.response?.data?.detail || 'Failed to load profile data');
+        const error = err as { response?: { data?: { detail?: string } } };
+        setError(error.response?.data?.detail || 'Failed to load profile data');
       } finally {
         setIsLoading(false);
       }
@@ -125,9 +126,10 @@ export function ProfilePage() {
       setIsEditing(false);
       // Auto-dismiss success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update profile:', err);
-      setError(err.response?.data?.detail || 'Failed to update profile');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to update profile');
     } finally {
       setIsSaving(false);
     }
@@ -147,7 +149,7 @@ export function ProfilePage() {
     if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
     if (!/[0-9]/.test(password)) errors.push('At least one number');
     // Special characters must match backend: !@#$%^&*()_+-=[]{}|;:,.<>?
-    if (!/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password)) {
       errors.push('At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
     }
     return errors;
@@ -189,9 +191,10 @@ export function ProfilePage() {
       setPasswordErrors([]);
       // Auto-dismiss success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to change password:', err);
-      const errorMessage = err.response?.data?.detail || 'Failed to change password';
+      const error = err as { response?: { data?: { detail?: string } } };
+      const errorMessage = error.response?.data?.detail || 'Failed to change password';
       // Show current password errors inline with password fields
       if (errorMessage.toLowerCase().includes('current password') || 
           errorMessage.toLowerCase().includes('incorrect')) {

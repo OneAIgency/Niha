@@ -156,7 +156,7 @@ const PlatformWorkflow = () => {
               <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
                 <li>• Amount range: €100,000 - €50,000,000+ (no maximum)</li>
                 <li>• Typical amounts: €500,000 - €10,000,000 for active traders</li>
-                <li>• Transfer to Nihao's Hong Kong client account</li>
+                <li>• Transfer to Nihao&apos;s Hong Kong client account</li>
               </ul>
             </div>
             <div className="p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
@@ -168,7 +168,7 @@ const PlatformWorkflow = () => {
                 <li>• Beneficiary: Nihao Group Hong Kong Limited (Client Account)</li>
                 <li>• Bank: HSBC or Citibank Hong Kong</li>
                 <li>• SWIFT code for international settlement</li>
-                <li>• Purpose code: "CEA/EUA Trading Account"</li>
+                <li>• Purpose code: &quot;CEA/EUA Trading Account&quot;</li>
               </ul>
             </div>
           </div>
@@ -349,7 +349,7 @@ const PlatformWorkflow = () => {
               <h6 className="font-medium text-sm mb-2" style={{ color: colors.primary }}>Type A: Fixed-Ratio Swaps</h6>
               <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
                 <li>• Offered by: Financial traders, multinationals</li>
-                <li>• Example: "1,000,000 EUA for 11,000,000 CEA"</li>
+                <li>• Example: &quot;1,000,000 EUA for 11,000,000 CEA&quot;</li>
                 <li>• Timing: 15-30 days</li>
                 <li>• Volume: 100,000-10,000,000 tonnes</li>
               </ul>
@@ -366,7 +366,7 @@ const PlatformWorkflow = () => {
               <h6 className="font-medium text-sm mb-2" style={{ color: colors.accent }}>Type C: Premium/Discount Swaps</h6>
               <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
                 <li>• Fixed premium or discount to market price</li>
-                <li>• Example: "EUA at 2% discount to settlement date price"</li>
+                <li>• Example: &quot;EUA at 2% discount to settlement date price&quot;</li>
                 <li>• Price certainty with market flexibility</li>
                 <li>• Timing: 15-30 days</li>
               </ul>
@@ -1459,7 +1459,7 @@ const EuEntitiesPage: React.FC = () => {
           Executive Summary
         </h3>
         <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
-          This document provides a comprehensive analysis of the economic, operational, and strategic advantages that EU-based entities realize by utilizing Nihao Group's platform to acquire European Union Allowances (EUA) through a structured private marketplace workflow rather than purchasing directly from public exchanges.
+          This document provides a comprehensive analysis of the economic, operational, and strategic advantages that EU-based entities realize by utilizing Nihao Group&apos;s platform to acquire European Union Allowances (EUA) through a structured private marketplace workflow rather than purchasing directly from public exchanges.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>

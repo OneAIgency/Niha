@@ -7,7 +7,7 @@ export interface Column<T> {
   header: string;
   align?: 'left' | 'center' | 'right';
   width?: string;
-  render?: (value: any, row: T, index: number) => ReactNode;
+  render?: (value: T[keyof T], row: T, index: number) => ReactNode;
   headerClassName?: string;
   cellClassName?: string;
 }
@@ -26,7 +26,7 @@ export interface DataTableProps<T> {
   getRowClassName?: (row: T, index: number) => string;
 }
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   variant = 'default',
@@ -50,9 +50,14 @@ export function DataTable<T extends Record<string, any>>({
     return String(row[rowKey]);
   };
 
-  const getValue = (row: T, key: keyof T | string): any => {
+  const getValue = (row: T, key: keyof T | string): T[keyof T] | undefined => {
     if (typeof key === 'string' && key.includes('.')) {
-      return key.split('.').reduce((obj: any, k) => obj?.[k], row);
+      return key.split('.').reduce((obj: Record<string, unknown> | undefined, k) => {
+        if (obj && typeof obj === 'object' && k in obj) {
+          return obj[k] as Record<string, unknown> | undefined;
+        }
+        return undefined;
+      }, row as unknown as Record<string, unknown>) as T[keyof T] | undefined;
     }
     return row[key as keyof T];
   };

@@ -7,7 +7,7 @@ type Viewport = 'desktop' | 'tablet' | 'mobile';
 
 interface LiveCanvasProps {
   component: ComponentMetadata | null;
-  componentProps: Record<string, any>;
+  componentProps: Record<string, unknown>;
 }
 
 const VIEWPORT_SIZES = {

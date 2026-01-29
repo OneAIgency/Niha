@@ -106,7 +106,7 @@ export function AMLDepositsTab() {
       setError(null);
       const request: ConfirmDepositRequest = {
         actual_amount: amount,
-        actual_currency: confirmCurrency as any,
+        actual_currency: confirmCurrency as 'EUR' | 'USD' | 'CNY' | 'HKD',
         wire_reference: wireReference || undefined,
         admin_notes: adminNotes || undefined,
       };
@@ -114,8 +114,9 @@ export function AMLDepositsTab() {
       setConfirmModal(null);
       resetForm();
       await fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to confirm deposit');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to confirm deposit');
     } finally {
       setActionLoading(null);
     }
@@ -135,8 +136,9 @@ export function AMLDepositsTab() {
       setClearModal(null);
       resetForm();
       await fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to clear deposit');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to clear deposit');
     } finally {
       setActionLoading(null);
     }
@@ -156,8 +158,9 @@ export function AMLDepositsTab() {
       setRejectModal(null);
       resetForm();
       await fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reject deposit');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to reject deposit');
     } finally {
       setActionLoading(null);
     }

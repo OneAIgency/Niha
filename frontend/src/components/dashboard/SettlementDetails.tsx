@@ -35,9 +35,10 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
       setError(null);
       const details = await settlementApi.getSettlementDetails(settlementId);
       setSettlement(details);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch settlement details:', err);
-      setError(err.response?.data?.detail || 'Failed to load settlement details');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to load settlement details');
     } finally {
       setLoading(false);
     }

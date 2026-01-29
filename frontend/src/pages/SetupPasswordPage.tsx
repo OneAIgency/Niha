@@ -28,7 +28,7 @@ export function SetupPasswordPage() {
   // Password validation
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
   const isValidPassword = hasMinLength && hasUppercase && hasSpecialChar && passwordsMatch;
 
@@ -44,9 +44,10 @@ export function SetupPasswordPage() {
         const data = await authApi.validateInvitation(token);
         setTokenValid(true);
         setUserInfo(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setTokenValid(false);
-        if (err.response?.status === 410) {
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status === 410) {
           setError('This invitation link has expired. Please contact the administrator for a new invitation.');
         } else {
           setError('This invitation link is invalid. Please contact the administrator.');
@@ -85,9 +86,10 @@ export function SetupPasswordPage() {
       setAuth(user, access_token);
       logger.debug('[SetupPasswordPage] Auth set, navigation will be handled by LoginRoute guard');
       // Note: Removed navigate('/onboarding') call - LoginRoute will redirect based on user role
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('[SetupPasswordPage] Password setup failed:', err);
-      setError(err.response?.data?.detail || 'Failed to set password. Please try again.');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to set password. Please try again.');
     } finally {
       setLoading(false);
     }

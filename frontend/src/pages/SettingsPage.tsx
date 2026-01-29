@@ -51,7 +51,7 @@ export function SettingsPage() {
   });
 
   // Mail & Auth settings
-  const [mailSettings, setMailSettings] = useState<MailSettings | null>(null);
+  const [_mailSettings, setMailSettings] = useState<MailSettings | null>(null);
   const [mailSaving, setMailSaving] = useState(false);
   const [mailSavedSuccess, setMailSavedSuccess] = useState(false);
   const [mailForm, setMailForm] = useState<MailSettingsUpdate & { from_email: string }>({
@@ -92,7 +92,6 @@ export function SettingsPage() {
         invitation_token_expiry_days: mailData.invitation_token_expiry_days ?? 7,
         verification_method: mailData.verification_method ?? undefined,
         auth_method: mailData.auth_method ?? undefined,
-        from_email: mailData.from_email ?? '',
       });
     } catch (e) {
       console.error('Failed to load settings data:', e);
@@ -361,7 +360,7 @@ export function SettingsPage() {
                     {sources.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
-                          No scraping sources configured. Click "Add Source" to create one.
+                          No scraping sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
                     ) : (

@@ -26,12 +26,12 @@ export function EuaScrapped({ priceData, className = '' }: EuaScrappedProps) {
   const isPositive = priceData.change_24h >= 0;
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg ${className}`}>
+    <div className={`flex items-center gap-3 px-4 py-2 bg-navy-700/50 rounded-lg ${className}`}>
       <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
         <Wind className="w-4 h-4 text-blue-400" />
       </div>
       <div>
-        <div className="text-xs text-slate-400">EUA Price</div>
+        <div className="text-xs text-navy-400">EUA Price</div>
         <div className="flex items-center gap-2">
           <span className="font-bold font-mono text-white">
             €{priceData.price.toFixed(2)}

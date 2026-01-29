@@ -183,7 +183,7 @@
   }
 
   .table-container-dark {
-    @apply bg-slate-900/50 rounded-xl overflow-hidden;
+    @apply bg-navy-800/50 rounded-xl overflow-hidden;
   }
 
   .table-header {
@@ -203,7 +203,7 @@
   }
 
   .table-row-dark {
-    @apply border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors;
+    @apply border-b border-navy-700/30 hover:bg-navy-700/30 transition-colors;
   }
 
   .table-cell {
@@ -273,11 +273,11 @@
   }
 
   .tab-button-active {
-    @apply bg-slate-800 text-white;
+    @apply bg-navy-700 text-white;
   }
 
   .tab-button-inactive {
-    @apply text-slate-500 hover:text-slate-300;
+    @apply text-navy-400 hover:text-navy-300;
   }
 
   .tab-toggle {
@@ -398,11 +398,11 @@
      PROGRESS COMPONENTS
      ======================================== */
   .progress-track {
-    @apply h-1 bg-slate-800 rounded-full overflow-hidden;
+    @apply h-1 bg-navy-700 rounded-full overflow-hidden;
   }
 
   .progress-track-light {
-    @apply h-1 bg-navy-200 dark:bg-slate-800 rounded-full overflow-hidden;
+    @apply h-1 bg-navy-200 dark:bg-navy-700 rounded-full overflow-hidden;
   }
 
   .progress-fill {

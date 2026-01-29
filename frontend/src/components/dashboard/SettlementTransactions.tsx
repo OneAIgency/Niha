@@ -35,9 +35,10 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
       setError(null);
       const response = await settlementApi.getPendingSettlements();
       setSettlements(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch settlements:', err);
-      setError(err.response?.data?.detail || 'Failed to load pending transactions');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to load pending transactions');
     } finally {
       setLoading(false);
     }

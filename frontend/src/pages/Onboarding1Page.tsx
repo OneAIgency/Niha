@@ -635,7 +635,7 @@ const DocumentCard = ({
       className={`p-4 rounded-xl border transition-all cursor-pointer hover:border-opacity-100 bg-navy-700 ${
         doc.uploaded ? 'border-emerald-500 border-solid' : `border-dashed`
       }`}
-      style={{ borderColor: doc.uploaded ? undefined : color.includes('blue') ? '#3b82f6' : '#a855f7' }}
+      style={{ borderColor: doc.uploaded ? undefined : color.includes('blue') ? 'var(--color-eua)' : 'var(--color-violet)' }}
       onClick={handleClick}
     >
       <input
@@ -725,12 +725,12 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
         {/* Option A - Sale/Problem */}
         <div
           className="p-6 rounded-xl"
-          style={{ border: "2px solid #475569" }}
+          style={{ border: "2px solid var(--color-border)" }}
         >
           <div className="flex items-center gap-2 mb-4">
             <span
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: "#000000", color: 'white' }}
+              style={{ backgroundColor: "var(--color-background)", color: 'white' }}
             >
               A
             </span>
@@ -784,7 +784,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
         >
           <div
             className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold uppercase"
-            style={{ backgroundColor: "#10b981", color: 'white' }}
+            style={{ backgroundColor: "var(--color-primary)", color: 'white' }}
           >
             RECOMMENDED
           </div>
@@ -792,7 +792,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
           <div className="flex items-center gap-2 mb-4 mt-2">
             <span
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ backgroundColor: "#10b981", color: 'white' }}
+              style={{ backgroundColor: "var(--color-primary)", color: 'white' }}
             >
               B
             </span>
@@ -841,8 +841,8 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
       <div
         className="p-6 rounded-xl mb-8"
         style={{
-          backgroundColor: "#334155",
-          borderLeft: "4px solid #8b5cf6",
+          backgroundColor: "var(--color-surface)",
+          borderLeft: "4px solid var(--color-violet)",
         }}
       >
         <h5 className="font-semibold mb-4 text-lg text-navy-900 dark:text-white">
@@ -881,7 +881,7 @@ const ScenarioDetailPanel = ({ scenario }: { scenario: ScenarioData }) => {
         className="p-6 rounded-xl"
         style={{
           background: `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%)`,
-          border: "1px solid #10b981",
+          border: "1px solid var(--color-primary)",
         }}
       >
         <h5 className="font-semibold mb-6 text-lg text-emerald-300">
@@ -947,13 +947,13 @@ export default function Onboarding1Page() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#000000", color: "#000000" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--color-background)", color: "var(--color-background)" }}>
       {/* Header */}
       <header
         className="sticky top-0 z-40"
         style={{
           background: 'linear-gradient(180deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)',
-          borderBottom: "1px solid #475569",
+          borderBottom: "1px solid var(--color-border)",
           backdropFilter: 'blur(20px)',
         }}
       >
@@ -961,7 +961,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
-              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
+              style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` }}
             >
               N
             </div>
@@ -969,7 +969,7 @@ export default function Onboarding1Page() {
               <h1
                 className="text-xl font-bold"
                 style={{
-                  background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)`,
+                  background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)`,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -989,8 +989,8 @@ export default function Onboarding1Page() {
                   onClick={() => scrollToSection(nav)}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                   style={{
-                    backgroundColor: activeNav === nav ? "#10b981" : "transparent",
-                    color: activeNav === nav ? "white" : "#475569",
+                    backgroundColor: activeNav === nav ? "var(--color-primary)" : "transparent",
+                    color: activeNav === nav ? "white" : "var(--color-border)",
                   }}
                 >
                   {nav.charAt(0).toUpperCase() + nav.slice(1)}
@@ -1022,7 +1022,7 @@ export default function Onboarding1Page() {
             <br />
             <span
               style={{
-                background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)`,
+                background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -1038,20 +1038,20 @@ export default function Onboarding1Page() {
         {/* Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
           { [
-            { icon: '📈', value: 'EUR88/t', label: 'Current EUA Price (January 2026)', color: "#60a5fa"  },
-            { icon: '🇨🇳', value: '63 CNY/t', label: 'Current CEA Price (~EUR8/t)', color: "#8b5cf6"  },
-            { icon: '🔄', value: '1:10', label: 'EUA to CEA Swap Ratio', color: "#d1fae5"  },
-            { icon: '💰', value: '+212%', label: 'CEA Potential Upside 2030', color: "#10b981"  },
+            { icon: '📈', value: 'EUR88/t', label: 'Current EUA Price (January 2026)', color: "var(--color-eua)"  },
+            { icon: '🇨🇳', value: '63 CNY/t', label: 'Current CEA Price (~EUR8/t)', color: "var(--color-violet)"  },
+            { icon: '🔄', value: '1:10', label: 'EUA to CEA Swap Ratio', color: "var(--color-success-bg)"  },
+            { icon: '💰', value: '+212%', label: 'CEA Potential Upside 2030', color: "var(--color-primary)"  },
           ].map((stat, i) => (
             <motion.div
               key={i}
               className="p-6 rounded-2xl text-center transition-all"
-              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-              whileHover={{ y: -4, borderColor: "#10b981" }}
+              style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              whileHover={{ y: -4, borderColor: "var(--color-primary)" }}
             >
               <div
                 className="w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center text-2xl"
-                style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
+                style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` }}
               >
                 {stat.icon}
               </div>
@@ -1070,7 +1070,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
+              style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` }}
             >
               1
             </div>
@@ -1081,14 +1081,14 @@ export default function Onboarding1Page() {
             {/* EUA Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+              style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-blue-400" />
               <div className="flex justify-between items-start mb-6">
                 <div className="text-lg font-semibold">European Union Allowances (EUA)</div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', color: "#60a5fa" }}
+                  style={{ backgroundColor: 'var(--color-eua-bg)', color: "var(--color-eua)" }}
                 >
                   EU ETS
                 </span>
@@ -1098,15 +1098,15 @@ export default function Onboarding1Page() {
                 <span className="text-xl text-navy-600 dark:text-navy-400">/tCO2</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">2030 Projection:</span>
                   <span className="font-semibold">EUR130-150/t</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">Potential Upside:</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">+48-70%</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">EU Gas Correlation:</span>
                   <span className="font-semibold">89% at peak</span>
                 </div>
@@ -1120,14 +1120,14 @@ export default function Onboarding1Page() {
             {/* CEA Card */}
             <div
               className="rounded-2xl p-6 relative overflow-hidden"
-              style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+              style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
               <div className="flex justify-between items-start mb-6">
                 <div className="text-lg font-semibold">Chinese Emission Allowances (CEA)</div>
                 <span
                   className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: "#ef4444" }}
+                  style={{ backgroundColor: 'var(--color-ask-bg)', color: "var(--color-ask)" }}
                 >
                   China ETS
                 </span>
@@ -1137,15 +1137,15 @@ export default function Onboarding1Page() {
                 <span className="text-xl text-navy-600 dark:text-navy-400">/tCO2 (~EUR8)</span>
               </div>
               <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">2030 Projection (with reforms):</span>
                   <span className="font-semibold">200 CNY/t (~EUR25)</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">Potential Upside:</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">+212%</span>
                 </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid #475569" }}>
+                <div className="flex justify-between py-2" style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <span className="text-navy-600 dark:text-navy-400">Upside vs EUA:</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">3-4x higher</span>
                 </div>
@@ -1162,7 +1162,7 @@ export default function Onboarding1Page() {
             className="p-6 rounded-xl text-center"
             style={{
               background: `linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)`,
-              border: "1px solid #10b981",
+              border: "1px solid var(--color-primary)",
             }}
           >
             <strong className="text-emerald-600 dark:text-emerald-400">Key Investment Thesis:</strong>{' '}
@@ -1179,7 +1179,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
+              style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` }}
             >
               2
             </div>
@@ -1191,7 +1191,7 @@ export default function Onboarding1Page() {
           </p>
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-sm font-medium"
-            style={{ backgroundColor: "rgba(139, 92, 246, 0.13)", color: "#8b5cf6" }}
+            style={{ backgroundColor: "var(--color-violet-bg)", color: "var(--color-violet)" }}
           >
             <span className="animate-pulse">👆</span>
             Select a scenario card below to view full analysis
@@ -1204,25 +1204,25 @@ export default function Onboarding1Page() {
                 key={scenario.id}
                 className="p-6 rounded-2xl cursor-pointer transition-all"
                 style={{
-                  backgroundColor: activeScenario === scenario.id ? "transparent" : "#1e293b",
-                  border: `2px solid ${activeScenario === scenario.id ? "#10b981" : "#475569"}`,
+                  backgroundColor: activeScenario === scenario.id ? "transparent" : "var(--color-surface)",
+                  border: `2px solid ${activeScenario === scenario.id ? "var(--color-primary)" : "var(--color-border)"}`,
                   background: activeScenario === scenario.id
-                    ? `linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)`
-                    : "#1e293b",
+                    ? `linear-gradient(135deg, var(--color-primary-bg) 0%, transparent 100%)`
+                    : "var(--color-surface)",
                   opacity: activeScenario === scenario.id ? 1 : 0.5,
                 }}
                 onClick={() => setActiveScenario(scenario.id)}
-                whileHover={{ y: -4, borderColor: "#10b981", opacity: 1 }}
+                whileHover={{ y: -4, borderColor: "var(--color-primary)", opacity: 1 }}
               >
                 <div
                   className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-4"
                   style={{
-                    background: scenario.iconClass === 's1' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
-                                scenario.iconClass === 's2' ? `linear-gradient(135deg, #8b5cf6 0%, #ef4444 100%)` :
-                                scenario.iconClass === 's3' ? `linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)` :
-                                scenario.iconClass === 's4' ? `linear-gradient(135deg, #ef4444 0%, #f97316 100%)` :
-                                scenario.iconClass === 's5' ? `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` :
-                                `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`
+                    background: scenario.iconClass === 's1' ? `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` :
+                                scenario.iconClass === 's2' ? `linear-gradient(135deg, var(--color-violet) 0%, var(--color-error) 100%)` :
+                                scenario.iconClass === 's3' ? `linear-gradient(135deg, var(--color-violet) 0%, var(--color-pink) 100%)` :
+                                scenario.iconClass === 's4' ? `linear-gradient(135deg, var(--color-error) 0%, var(--color-warning) 100%)` :
+                                scenario.iconClass === 's5' ? `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` :
+                                `linear-gradient(135deg, var(--color-indigo) 0%, var(--color-violet) 100%)`
                   }}
                 >
                   {scenario.icon}
@@ -1267,7 +1267,7 @@ export default function Onboarding1Page() {
           <div className="flex items-center gap-4 mb-8">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl"
-              style={{ background: `linear-gradient(135deg, #10b981 0%, #3b82f6 100%)` }}
+              style={{ background: `linear-gradient(135deg, var(--color-primary) 0%, var(--color-eua) 100%)` }}
             >
               3
             </div>
@@ -1276,7 +1276,7 @@ export default function Onboarding1Page() {
 
           <div
             className="rounded-2xl p-6 overflow-x-auto"
-            style={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+            style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             <table className="w-full">
               <thead>
@@ -1290,24 +1290,24 @@ export default function Onboarding1Page() {
               <tbody>
                 {comparisonData.map((row, i) => (
                   <tr key={i} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-semibold" style={{ borderBottom: "1px solid #475569" }}>
+                    <td className="p-4 font-semibold" style={{ borderBottom: "1px solid var(--color-border)" }}>
                       {row.criteria}
                     </td>
-                    <td className="p-4" style={ { borderBottom: "1px solid #475569", color: "#475569"  }}>
+                    <td className="p-4" style={ { borderBottom: "1px solid var(--color-border)", color: "var(--color-border)"  }}>
                       {row.sale}
                     </td>
-                    <td className="p-4" style={ { borderBottom: "1px solid #475569", color: "#475569"  }}>
+                    <td className="p-4" style={ { borderBottom: "1px solid var(--color-border)", color: "var(--color-border)"  }}>
                       {row.swap}
                     </td>
-                    <td className="p-4 text-center" style={{ borderBottom: "1px solid #475569" }}>
+                    <td className="p-4 text-center" style={{ borderBottom: "1px solid var(--color-border)" }}>
                       <span
                         className="px-4 py-1 rounded-full text-xs font-bold uppercase"
                         style={{
-                          backgroundColor: row.winner === 'swap' ? 'rgba(22, 163, 74, 0.2)' :
-                                          row.winner === 'sale' ? 'rgba(59, 130, 246, 0.2)' :
-                                          'rgba(100, 116, 139, 0.2)',
-                          color: row.winner === 'swap' ? "#10b981" :
-                                row.winner === 'sale' ? "#60a5fa" : "#475569",
+                          backgroundColor: row.winner === 'swap' ? 'var(--color-bid-bg)' :
+                                          row.winner === 'sale' ? 'var(--color-eua-bg)' :
+                                          'var(--color-muted)',
+                          color: row.winner === 'swap' ? "var(--color-primary)" :
+                                row.winner === 'sale' ? "var(--color-eua)" : "var(--color-border)",
                         }}
                       >
                         {row.winner === 'swap' ? 'SWAP' : row.winner === 'sale' ? 'SALE' : 'TIE'}
@@ -1322,8 +1322,8 @@ export default function Onboarding1Page() {
           <div
             className="p-6 rounded-xl text-center mt-8"
             style={{
-              background: `linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%)`,
-              border: "1px solid #8b5cf6",
+              background: `linear-gradient(135deg, var(--color-cea-bg) 0%, var(--color-ask-bg) 100%)`,
+              border: "1px solid var(--color-violet)",
             }}
           >
             <strong className="text-violet-500 dark:text-violet-400">Conclusion:</strong>{' '}
@@ -1340,7 +1340,7 @@ export default function Onboarding1Page() {
       {/* Footer */}
       <footer
         className="text-center py-12"
-        style={{ borderTop: "1px solid #475569" }}
+        style={{ borderTop: "1px solid var(--color-border)" }}
       >
         <p className="font-semibold text-navy-600 dark:text-navy-400">
           Nihao Group | Strategic Analysis Report | January 2026

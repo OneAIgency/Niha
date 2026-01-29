@@ -35,9 +35,10 @@ export function PendingSettlements() {
       setError(null);
       const data = await settlementApi.getPendingSettlements();
       setSettlements(data.data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch settlements:', err);
-      setError(err.response?.data?.detail || 'Failed to load settlements');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to load settlements');
     } finally {
       setLoading(false);
     }

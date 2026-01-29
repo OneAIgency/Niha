@@ -39,9 +39,10 @@ export function CreateLiquidityPage() {
       const previewData = await liquidityApi.previewLiquidity(certificateType, bid, ask);
       setPreview(previewData);
       setShowPreviewModal(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Preview error:', err);
-      setError(err.response?.data?.detail || 'Failed to preview liquidity. Please try again.');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to preview liquidity. Please try again.');
     } finally {
       setIsLoadingPreview(false);
     }
@@ -66,9 +67,10 @@ export function CreateLiquidityPage() {
       setBidEur('');
       setAskEur('');
       setPreview(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Creation error:', err);
-      setError(err.response?.data?.detail || 'Failed to create liquidity. Please try again.');
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to create liquidity. Please try again.');
     } finally {
       setIsCreating(false);
     }
