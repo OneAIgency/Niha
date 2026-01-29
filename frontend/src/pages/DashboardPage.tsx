@@ -224,7 +224,7 @@ export function DashboardPage() {
       eua: euaValueEur,
       pending: pendingEuaValueEur,
     };
-  }, [portfolio, prices]);
+  }, [portfolio.cash_total, portfolio.cea_total, portfolio.eua_total, portfolio.eua_pending, prices]);
 
   const portfolioValue = calculatePortfolioValue();
 
@@ -333,6 +333,7 @@ export function DashboardPage() {
     };
     init();
     lastLocationRef.current = location.pathname;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchBalance, fetchOrders, fetchSwaps]);
 
   /**

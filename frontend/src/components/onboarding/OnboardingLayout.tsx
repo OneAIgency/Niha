@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/useStore';
 import KycUploadModal from './KycUploadModal';
 
 /* Design-token references (see design-tokens.css --color-onboarding-*) */
+// eslint-disable-next-line react-refresh/only-export-components
 export const colors = {
   primary: 'var(--color-onboarding-primary)',
   primaryDark: 'var(--color-onboarding-primary-dark)',

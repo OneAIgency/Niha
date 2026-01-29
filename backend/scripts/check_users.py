@@ -11,10 +11,10 @@ import sys
 
 sys.path.insert(0, ".")
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select  # noqa: E402
 
-from app.core.database import AsyncSessionLocal
-from app.models.models import User
+from app.core.database import AsyncSessionLocal  # noqa: E402
+from app.models.models import User  # noqa: E402
 
 
 async def main():

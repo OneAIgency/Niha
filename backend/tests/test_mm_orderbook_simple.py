@@ -13,11 +13,11 @@ from uuid import uuid4
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from app.services.order_matching import get_real_orderbook
+from app.services.order_matching import get_real_orderbook  # noqa: E402
 
 
 async def main():

@@ -19,12 +19,12 @@ from uuid import UUID
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "."))
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from app.core.security import hash_password
-from app.models.models import (
+from app.core.security import hash_password  # noqa: E402
+from app.models.models import (  # noqa: E402
     CertificateType,
     MarketMakerClient,
     MarketMakerType,
@@ -34,8 +34,8 @@ from app.models.models import (
     User,
     UserRole,
 )
-from app.services.market_maker_service import MarketMakerService
-from app.services.order_matching import get_real_orderbook
+from app.services.market_maker_service import MarketMakerService  # noqa: E402
+from app.services.order_matching import get_real_orderbook  # noqa: E402
 
 
 async def create_admin_user(session: AsyncSession) -> UUID:

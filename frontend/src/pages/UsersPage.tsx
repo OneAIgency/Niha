@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -106,11 +106,7 @@ export function UsersPage() {
   const [loadingDeposits, setLoadingDeposits] = useState(false);
   const [depositsError, setDepositsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, [roleFilter, pagination.page]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params: { role?: UserRole; search?: string; page: number; per_page: number } = {
@@ -136,7 +132,11 @@ export function UsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleFilter, pagination.page, searchQuery]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -148,6 +148,7 @@ export function UsersPage() {
       }
     }, 300);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
