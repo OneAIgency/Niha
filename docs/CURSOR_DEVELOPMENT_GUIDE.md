@@ -74,7 +74,7 @@ frontend/src/
 
 **Steps:**
 1. Modify model in `backend/app/models/`
-2. Create migration:
+2. Create migration (set `down_revision = "2026_01_29_baseline"` in the new file if needed):
    ```bash
    docker compose exec backend alembic revision --autogenerate -m "description"
    ```
@@ -83,6 +83,8 @@ frontend/src/
    ```bash
    docker compose exec backend alembic upgrade head
    ```
+
+Current Alembic head is a single baseline (`2026_01_29_baseline`); schema is driven by app startup (`init_db()`). New migrations should use that baseline as `down_revision`.
 
 ---
 

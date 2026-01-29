@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
-from ...core.security import get_admin_user, get_current_user
+from ...core.security import get_admin_user, get_approved_user, get_current_user
 from ...models.models import Currency, DepositStatus, User, UserRole
 from ...schemas.schemas import MessageResponse
 from ...services import deposit_service
@@ -273,10 +273,10 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
 
 
 @router.get("/wire-instructions", response_model=WireInstructionsResponse)
-async def get_wire_instructions(current_user: User = Depends(get_current_user)):
+async def get_wire_instructions(current_user: User = Depends(get_approved_user)):
     """
     Get wire transfer instructions for the client.
-    Available to all authenticated users.
+    APPROVED, FUNDED, or ADMIN only (PENDING cannot access).
     """
     return WireInstructionsResponse()
 
@@ -284,14 +284,14 @@ async def get_wire_instructions(current_user: User = Depends(get_current_user)):
 @router.post("/announce", response_model=DepositDetailResponse)
 async def announce_deposit(
     request: AnnounceDepositRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_approved_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Announce a wire transfer deposit.
 
     Client calls this after initiating a wire transfer to notify
-    the platform of the incoming funds.
+    the platform of the incoming funds. APPROVED, FUNDED, or ADMIN only.
     """
     if not current_user.entity_id:
         raise HTTPException(
@@ -332,11 +332,11 @@ async def get_my_deposits(
     status: Optional[DepositStatusEnum] = None,
     limit: int = Query(default=20, le=100),
     offset: int = Query(default=0, ge=0),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_approved_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get deposits for the current user's entity.
+    Get deposits for the current user's entity. APPROVED, FUNDED, or ADMIN only.
     """
     if not current_user.entity_id:
         return DepositListResponse(deposits=[], total=0, has_more=False)
@@ -367,11 +367,12 @@ async def get_my_deposits(
 @router.get("/preview-hold", response_model=HoldCalculationResponse)
 async def preview_hold_period(
     amount: Decimal = Query(..., gt=0),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_approved_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Preview the hold period for a potential deposit.
+    APPROVED, FUNDED, or ADMIN only.
 
     Helps clients understand how long their funds will be held
     before being available for trading.

@@ -596,6 +596,12 @@ To change the card back look, edit these variables in `design-tokens.css` (in `:
   <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
 </div>
 
+// Settings sections (e.g. Mail & Authentication) use the same card_back / Card pattern per section.
+<div className="card_back">
+  <h2>Mail & Authentication</h2>
+  {/* Form fields: provider, from_email, invitation subject/body, link base URL, token expiry */}
+</div>
+
 // Compact list row (e.g. Contact Requests: Entitate, Nume, Data + actions). Class in index.css.
 <div className="card_contact_request_list">
   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">

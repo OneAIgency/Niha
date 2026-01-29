@@ -56,7 +56,6 @@ async def create_contact_request(
         contact_email=request.contact_email.lower(),
         contact_name=request.contact_name,
         position=request.position,
-        reference=request.reference,
         request_type=request.request_type,
         status=ContactStatus.NEW,
     )
@@ -79,7 +78,6 @@ async def create_contact_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "reference": contact.reference,
                 "request_type": contact.request_type or "join",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
@@ -165,7 +163,6 @@ async def create_nda_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "reference": contact.reference,
                 "request_type": "nda",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,

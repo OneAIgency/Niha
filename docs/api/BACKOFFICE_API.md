@@ -455,7 +455,6 @@ GET /admin/contact-requests
       "contact_email": "user@example.com",
       "contact_name": "John Doe",
       "position": "Director",
-      "reference": null,
       "request_type": "nda",
       "nda_file_name": "signed_nda.pdf",
       "submitter_ip": "192.168.1.1",
@@ -475,7 +474,33 @@ GET /admin/contact-requests
 
 **Notes:**
 - Requires admin authentication.
-- `request_type` is `join` or `nda`. NDA requests include `nda_file_name`; PDF is available via GET `/admin/contact-requests/{request_id}/nda`.
+- `request_type` is `join` or `nda`. NDA requests include `nda_file_name`; the PDF is served by GET `/admin/contact-requests/{request_id}/nda` and the frontend opens it in a new browser tab via `adminApi.openNDAInBrowser`. If the browser blocks the pop-up, the UI shows "Allow pop-ups for this site and try again."
+
+### Get NDA File
+
+Returns the NDA PDF for a contact request. Admin only. The frontend fetches this with auth and opens the blob in a new tab; the backend sends `Content-Disposition: attachment` but the client displays the PDF in-browser.
+
+```http
+GET /admin/contact-requests/{request_id}/nda
+```
+
+**Path Parameters:**
+- `request_id` (string, required): UUID of the contact request
+
+**Response:** `200 OK`
+- **Content-Type:** `application/pdf`
+- **Content-Disposition:** `attachment; filename="{nda_file_name}"`
+- **Body:** Binary PDF content
+
+**Error Responses:**
+- `404 Not Found`: Contact request not found, or no NDA file attached
+
+**Example (frontend):**
+```typescript
+await adminApi.openNDAInBrowser(requestId, request.nda_file_name);
+// Fetches blob, creates object URL, opens in new tab with noopener.
+// Throws Error('POPUP_BLOCKED') if window.open is blocked.
+```
 
 ### Update Contact Request
 
@@ -511,7 +536,7 @@ PUT /admin/contact-requests/{request_id}
 
 ### WebSocket `new_request` Payload
 
-When a new contact or NDA request is submitted, the backoffice WebSocket broadcasts `new_request` with the same shape as one item in GET `/admin/contact-requests` (id, entity_name, contact_email, contact_name, position, reference, request_type, nda_file_name, submitter_ip, status, notes, created_at). Frontend uses this to update the list and badge without refresh.
+When a new contact or NDA request is submitted, the backoffice WebSocket broadcasts `new_request` with the same shape as one item in GET `/admin/contact-requests` (id, entity_name, contact_email, contact_name, position, request_type, nda_file_name, submitter_ip, status, notes, created_at). Frontend uses this to update the list and badge without refresh. The HTTP API and WebSocket layer transform responses to camelCase; the frontend normalizes contact-request payloads back to snake_case in the realtime hook (`useBackofficeRealtime`) so backoffice components receive `entity_name`, `contact_email`, etc.
 
 ---
 

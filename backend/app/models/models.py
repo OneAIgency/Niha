@@ -329,7 +329,6 @@ class ContactRequest(Base):
     contact_email = Column(String(255), nullable=False)
     contact_name = Column(String(255), nullable=True)  # Person's name
     position = Column(String(100))
-    reference = Column(String(255))
     request_type = Column(String(50), default="join")  # 'join' or 'nda'
     nda_file_path = Column(
         String(500), nullable=True
@@ -1091,3 +1090,36 @@ class Withdrawal(Base):
     processed_by_user = relationship("User", foreign_keys=[processed_by])
     completed_by_user = relationship("User", foreign_keys=[completed_by])
     rejected_by_user = relationship("User", foreign_keys=[rejected_by])
+
+
+class MailProvider(str, enum.Enum):
+    RESEND = "resend"
+    SMTP = "smtp"
+
+
+class MailConfig(Base):
+    """
+    Admin-configurable mail and invitation settings (single row).
+    When present, email_service uses this instead of env; otherwise env fallback.
+    """
+
+    __tablename__ = "mail_config"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    provider = Column(SQLEnum(MailProvider), nullable=False, default=MailProvider.RESEND)
+    use_env_credentials = Column(Boolean, default=True)  # Use RESEND_API_KEY / SMTP from env
+    from_email = Column(String(255), nullable=False)
+    resend_api_key = Column(String(500), nullable=True)  # Used when use_env_credentials=False
+    smtp_host = Column(String(255), nullable=True)
+    smtp_port = Column(Integer, nullable=True)
+    smtp_use_tls = Column(Boolean, default=True)
+    smtp_username = Column(String(255), nullable=True)
+    smtp_password = Column(String(500), nullable=True)
+    invitation_subject = Column(String(255), nullable=True)
+    invitation_body_html = Column(Text, nullable=True)
+    invitation_link_base_url = Column(String(500), nullable=True)
+    invitation_token_expiry_days = Column(Integer, default=7)
+    verification_method = Column(String(50), nullable=True)  # Placeholder: magic_link, password_only
+    auth_method = Column(String(50), nullable=True)  # Placeholder for auth options
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -81,7 +81,6 @@ export function BackofficeOnboardingPage() {
     contact_email: r.contact_email,
     contact_name: r.contact_name,
     position: r.position || '',
-    reference: r.reference,
     request_type: r.request_type,
     nda_file_name: r.nda_file_name,
     submitter_ip: r.submitter_ip,
@@ -163,16 +162,20 @@ export function BackofficeOnboardingPage() {
     }
   };
 
-  const handleDownloadNDA = async (requestId: string) => {
-    setActionLoading(`download-${requestId}`);
+  const handleOpenNDA = async (requestId: string) => {
+    setActionLoading(`open-${requestId}`);
     try {
       const request = contactRequests.find(r => r.id === requestId);
       if (request?.nda_file_name) {
-        await adminApi.downloadNDA(requestId, request.nda_file_name);
+        await adminApi.openNDAInBrowser(requestId, request.nda_file_name);
       }
     } catch (err) {
-      logger.error('Failed to download NDA', err);
-      setError('Failed to download NDA file');
+      logger.error('Failed to open NDA', err);
+      setError(
+        err instanceof Error && err.message === 'POPUP_BLOCKED'
+          ? 'Allow pop-ups for this site and try again.'
+          : 'Failed to open NDA file'
+      );
     } finally {
       setActionLoading(null);
     }
@@ -428,7 +431,7 @@ export function BackofficeOnboardingPage() {
           onApprove={handleApproveRequest}
           onReject={handleRejectRequest}
           onDelete={handleDeleteRequest}
-          onDownloadNDA={handleDownloadNDA}
+          onOpenNDA={handleOpenNDA}
           onIpLookup={handleIpLookup}
           actionLoading={actionLoading}
         />

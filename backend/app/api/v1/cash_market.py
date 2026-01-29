@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 
 from ...core.database import get_db
-from ...core.security import get_current_user
+from ...core.security import get_current_user, get_funded_user
 from ...models.models import (
     AssetType,
     CashMarketTrade,
@@ -332,12 +332,13 @@ async def get_market_stats(certificate_type: CertificateType):
 @router.post("/orders", response_model=OrderResponse)
 async def place_order(
     order: OrderCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_funded_user),
     db=Depends(get_db),
 ):
     """
     Place a new order in the cash market.
     Creates a real order in the database linked to the user's entity.
+    FUNDED or ADMIN only.
     """
     if not current_user.entity_id:
         raise HTTPException(
@@ -381,12 +382,12 @@ async def get_my_orders(
         None, description="Filter by status: OPEN, FILLED, CANCELLED"
     ),
     certificate_type: Optional[CertificateType] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_funded_user),
     db=Depends(get_db),
 ):
     """
     Get the current user's orders from the database.
-    Returns orders linked to the user's entity.
+    Returns orders linked to the user's entity. FUNDED or ADMIN only.
     """
     if not current_user.entity_id:
         return []  # User has no entity, no orders
@@ -433,10 +434,10 @@ async def get_my_orders(
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
 async def cancel_order(
-    order_id: str, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    order_id: str, current_user: User = Depends(get_funded_user), db=Depends(get_db)
 ):
     """
-    Cancel an open order.
+    Cancel an open order. FUNDED or ADMIN only.
     Only the owner (same entity) can cancel their orders.
     """
     if not current_user.entity_id:
@@ -729,10 +730,10 @@ async def get_real_orderbook_endpoint(
 
 @router.get("/user/balances")
 async def get_user_balances(
-    current_user: User = Depends(get_current_user), db=Depends(get_db)
+    current_user: User = Depends(get_funded_user), db=Depends(get_db)
 ):
     """
-    Get the current user's asset balances (EUR, CEA, EUA).
+    Get the current user's asset balances (EUR, CEA, EUA). FUNDED or ADMIN only.
     """
     if not current_user.entity_id:
         return {
@@ -757,11 +758,11 @@ async def get_user_balances(
 @router.post("/order/preview", response_model=OrderPreviewResponse)
 async def preview_order(
     request: OrderPreviewRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_funded_user),
     db=Depends(get_db),
 ):
     """
-    Preview an order before execution.
+    Preview an order before execution. FUNDED or ADMIN only.
 
     Shows the expected fills, fees, and final cost without placing the order.
     Useful for showing the user what they'll get before they commit.
@@ -835,11 +836,11 @@ async def preview_order(
 @router.post("/order/market", response_model=OrderExecutionResponse)
 async def execute_market_order(
     request: MarketOrderRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_funded_user),
     db=Depends(get_db),
 ):
     """
-    Execute a market order immediately at best available prices.
+    Execute a market order immediately at best available prices. FUNDED or ADMIN only.
 
     Market orders are filled immediately using FIFO price-time priority.
     A 0.5% platform fee is charged on the transaction value.

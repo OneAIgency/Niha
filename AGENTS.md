@@ -6,7 +6,7 @@ this repo.
 
 ## Project layout
 
-- `backend/`: FastAPI app, Alembic migrations, and Python requirements.
+- `backend/`: FastAPI app, Alembic migrations (single baseline; schema from app startup `init_db`), and Python requirements.
 - `frontend/`: Vite + React app and UI components.
 - `docs/`: product, architecture, and workflow documentation.
 - `docker-compose.yml`: local stack (Postgres, Redis, backend, frontend). Project name: `niha_platform`.

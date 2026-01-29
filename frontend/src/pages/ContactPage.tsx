@@ -10,7 +10,6 @@ export function ContactPage() {
     entity_name: '',
     contact_email: '',
     position: '',
-    reference: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -184,16 +183,6 @@ export function ContactPage() {
                   value={formData.position}
                   onChange={(e) =>
                     setFormData({ ...formData, position: e.target.value })
-                  }
-                />
-
-                <Input
-                  label="Referral (Optional)"
-                  placeholder="Who referred you to us?"
-                  icon={<Users className="w-5 h-5" />}
-                  value={formData.reference}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reference: e.target.value })
                   }
                 />
 

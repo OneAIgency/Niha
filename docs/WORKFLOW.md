@@ -36,8 +36,8 @@ Niha is a carbon trading platform that bridges the EU ETS (European Union Emissi
 
 | Role | Access | Trading | Description |
 |------|--------|---------|-------------|
-| **PENDING** | /onboarding | No | New user, needs KYC verification |
-| **APPROVED** | /dashboard (blurred trading) | No | KYC approved, needs funding |
+| **PENDING** | /onboarding only | No | New user, needs KYC verification. Can access only onboarding routes and public routes; all other protected routes redirect to `/onboarding`. |
+| **APPROVED** | /funding, then /dashboard (blurred) | No | KYC approved, needs funding |
 | **FUNDED** | Full platform | Yes | Fully verified and funded |
 | **ADMIN** | Everything + Admin pages | Yes | Platform administrator |
 | **AGENT** | Backend only | N/A | AI agent (Ollama) for market making |

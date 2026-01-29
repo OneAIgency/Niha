@@ -5,7 +5,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 ## Features
 
 ### Core Trading Platform
-- **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects
+- **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects. PENDING users can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes; all other protected routes redirect them to `/onboarding`.
 - **User Profile Management** - View and manage personal information (admin-only editing)
 - **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
@@ -27,13 +27,14 @@ Comprehensive admin interface using the **same Layout** as the rest of the app (
 - **Accessibility** - ARIA labels, `aria-current`, keyboard navigation; see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md)
 
 #### Pages:
-- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: NDA form data and PDF stored in DB; list and badge update in real time via WebSocket. Compact list rows (Entitate, Nume, Data completării) with View modal (full form data + NDA PDF link), Approve & Invite, Reject, Delete; IP lookup available from View modal
+- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: list shows Entity and Name from each request (with "—" when missing); list and badge update in real time via WebSocket. API and WebSocket payloads are normalized to snake_case in the realtime hook so backoffice components receive `entity_name`, `contact_name`, etc. Compact list rows (Entity, Name, Submitted) with View modal (all contact request fields in theme-consistent layout + NDA open-in-browser button), Approve & Invite, Reject, Delete; IP lookup available from View modal
 - **Market Makers** - Manage AI-powered market maker clients
 - **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
 - **Deposits** - AML/deposits management (separate from Onboarding Deposits tab)
 - **Audit Logging** - Audit trail and action logging
 - **Users** - User management (accessible from backoffice Subheader nav)
+- **Settings** - Platform Settings: **Price Scraping Sources** (EUA/CEA price feeds) and **Mail & Authentication** (admin-only). Mail & Auth configures mail provider (Resend or SMTP), from address, invitation email subject/body/link base URL, and token expiry; when set, invitation emails use stored config; otherwise env (`RESEND_API_KEY`, `FROM_EMAIL`) is used. See [Settings API](docs/api/SETTINGS_API.md).
 
 ### Settlement System (v1.0.0) ✨
 Complete T+3 settlement system for external registry transfers with automated progression and monitoring.

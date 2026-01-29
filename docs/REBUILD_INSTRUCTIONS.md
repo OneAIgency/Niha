@@ -56,11 +56,11 @@ curl http://localhost:8000/health
 
 ## Database and Migrations
 
-- **Fresh install:** The backend runs `init_db()` on startup and creates tables from SQLAlchemy models. No Alembic run needed.
-- **Migrations:** Use only when upgrading an **existing** database that was previously managed by Alembic. Do **not** run `alembic upgrade head` on a fresh DB.
+- **Schema:** The backend runs `init_db()` on startup and creates/updates tables from SQLAlchemy models. The application uses the **current** DB schema; there is no dependency on old migration versions.
+- **Alembic:** A single baseline revision (`2026_01_29_baseline`) is used as head. Running `alembic upgrade head` is safe (applies baseline or is a no-op). Old migrations are archived under `backend/alembic/versions/archive/` and are not run.
 
 ```bash
-# Only if you have an existing DB and use Alembic
+# Optional: record current version (e.g. after fresh install)
 docker compose exec backend alembic upgrade head
 ```
 

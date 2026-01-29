@@ -192,11 +192,16 @@ describe('Backoffice API', () => {
 
       expect(response.ok).toBe(true);
 
-      const data = await response.json();
-      expect(Array.isArray(data)).toBe(true);
-      expect(data[0]).toHaveProperty('id');
-      expect(data[0]).toHaveProperty('email');
-      expect(data[0]).toHaveProperty('company_name');
+      const body = await response.json();
+      expect(body.data).toBeDefined();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.pagination).toBeDefined();
+      expect(body.pagination.page).toBe(1);
+      expect(body.pagination.total).toBe(1);
+      expect(body.data[0]).toHaveProperty('id');
+      expect(body.data[0]).toHaveProperty('contact_email');
+      expect(body.data[0]).toHaveProperty('entity_name');
+      expect(body.data[0]).toHaveProperty('request_type');
     });
 
     it('should create user from contact request', async () => {

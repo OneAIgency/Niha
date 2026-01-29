@@ -99,4 +99,34 @@ describe('transformKeysToSnakeCase', () => {
       { entity_id: '2', name: 'Test2' },
     ]);
   });
+
+  it('should normalize contact-request payload (camelCase from API/WS) to snake_case for backoffice', () => {
+    const contactRequestCamelCase = {
+      id: 'contact-1',
+      entityName: 'Acme Corp',
+      contactEmail: 'contact@acme.com',
+      contactName: 'Jane Doe',
+      position: 'Sustainability Director',
+      requestType: 'join',
+      ndaFileName: null,
+      submitterIp: '192.168.1.1',
+      status: 'new',
+      notes: null,
+      createdAt: '2026-01-29T12:00:00Z',
+    };
+    const result = transformKeysToSnakeCase(contactRequestCamelCase);
+    expect(result).toEqual({
+      id: 'contact-1',
+      entity_name: 'Acme Corp',
+      contact_email: 'contact@acme.com',
+      contact_name: 'Jane Doe',
+      position: 'Sustainability Director',
+      request_type: 'join',
+      nda_file_name: null,
+      submitter_ip: '192.168.1.1',
+      status: 'new',
+      notes: null,
+      created_at: '2026-01-29T12:00:00Z',
+    });
+  });
 });

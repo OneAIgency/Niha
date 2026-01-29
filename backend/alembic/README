@@ -1,1 +1,5 @@
 Generic single-database configuration.
+
+Current head: 2026_01_29_baseline (see versions/2026_01_29_baseline_current_schema.py).
+New migrations should set down_revision = "2026_01_29_baseline" (or the current head).
+Schema is created by app startup (init_db); run "alembic upgrade head" to record version.

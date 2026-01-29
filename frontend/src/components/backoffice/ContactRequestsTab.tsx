@@ -2,9 +2,10 @@
  * Contact Requests Tab Component
  *
  * Displays and manages contact requests (join requests and NDA submissions) in compact list rows
- * (Entity, Name, Submitted + View / Approve & Invite / Reject / Delete). View opens
- * ContactRequestViewModal with full form data and NDA PDF link; onIpLookup is passed to the modal
- * for the IP Lookup link. Supports real-time WebSocket updates, approval/rejection, and NDA downloads.
+ * (Entity, Name, Submitted + View / Approve & Invite / Reject / Delete). Each row shows entity_name and
+ * contact_name (fallback "—" when missing). View opens ContactRequestViewModal with all fields and NDA
+ * open-NDA button; onIpLookup is passed to the modal for the IP Lookup link. View/Approve/Reject/Delete
+ * use aria-label fallbacks (entity_name ?? contact_email ?? id ?? 'contact request'). Real-time WebSocket updates.
  *
  * @component
  * @example
@@ -17,7 +18,7 @@
  *   onApprove={handleApprove}
  *   onReject={handleReject}
  *   onDelete={handleDelete}
- *   onDownloadNDA={handleDownloadNDA}
+ *   onOpenNDA={handleOpenNDA}
  *   onIpLookup={handleIpLookup}
  *   actionLoading={null}
  * />
@@ -43,7 +44,7 @@ interface ContactRequestsTabProps {
   onApprove: (requestId: string) => void;
   onReject: (requestId: string) => void;
   onDelete: (requestId: string) => void;
-  onDownloadNDA: (requestId: string) => Promise<void>;
+  onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup: (ip: string) => void;
   actionLoading: string | null;
 }
@@ -56,7 +57,7 @@ export function ContactRequestsTab({
   onApprove,
   onReject,
   onDelete,
-  onDownloadNDA,
+  onOpenNDA,
   onIpLookup,
   actionLoading,
 }: ContactRequestsTabProps) {
@@ -115,7 +116,7 @@ export function ContactRequestsTab({
                         Entity:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary" className="font-medium">
-                        {request.entity_name}
+                        {request.entity_name ?? '—'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -143,7 +144,7 @@ export function ContactRequestsTab({
                       type="button"
                       onClick={() => setViewModalRequest(request)}
                       className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
-                      aria-label={`View details for ${request.entity_name}`}
+                      aria-label={`View details for ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
                     >
                       <Eye className="w-4 h-4" />
                     </button>
@@ -154,7 +155,7 @@ export function ContactRequestsTab({
                           size="sm"
                           onClick={() => handleApproveClick(request)}
                           loading={actionLoading === `approve-${request.id}`}
-                          aria-label={`Approve request from ${request.entity_name}`}
+                          aria-label={`Approve request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
                         >
                           Approve & Invite
                         </Button>
@@ -164,7 +165,7 @@ export function ContactRequestsTab({
                           className="text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                           onClick={() => onReject(request.id)}
                           loading={actionLoading === `reject-${request.id}`}
-                          aria-label={`Reject request from ${request.entity_name}`}
+                          aria-label={`Reject request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
                         >
                           Reject
                         </Button>
@@ -175,7 +176,7 @@ export function ContactRequestsTab({
                       onClick={() => handleDeleteClick(request)}
                       disabled={!!actionLoading}
                       className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
-                      aria-label={`Delete request from ${request.entity_name}`}
+                      aria-label={`Delete request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -201,7 +202,6 @@ export function ContactRequestsTab({
             contact_email: approveModalRequest.contact_email,
             contact_name: approveModalRequest.contact_name,
             position: approveModalRequest.position,
-            reference: approveModalRequest.reference,
             request_type: approveModalRequest.request_type,
             nda_file_name: approveModalRequest.nda_file_name,
             submitter_ip: approveModalRequest.submitter_ip,
@@ -220,9 +220,9 @@ export function ContactRequestsTab({
         request={viewModalRequest}
         isOpen={!!viewModalRequest}
         onClose={() => setViewModalRequest(null)}
-        onDownloadNDA={onDownloadNDA}
+        onOpenNDA={onOpenNDA}
         onIpLookup={onIpLookup}
-        downloadLoading={actionLoading === `download-${viewModalRequest?.id}`}
+        openNDALoading={actionLoading === `open-${viewModalRequest?.id}`}
       />
 
       {/* Delete Confirmation Modal */}

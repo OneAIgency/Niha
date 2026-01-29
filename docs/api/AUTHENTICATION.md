@@ -51,8 +51,18 @@ navigate(targetPath, { replace: true });
 **Implementation Details:**
 - Function is pure (no side effects)
 - Returns string path based on user role and email
-- Used by both `LoginPage` and route guards (`DashboardRoute`)
+- Used by both `LoginPage` and route guards (`AuthGuard`, `CatchAllRedirect`)
 - Ensures consistency across the application
+
+**Route Guards and PENDING Restrictions:**
+- PENDING users can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes (`/contact`, `/setup-password`, `/login`). All other protected routes redirect PENDING to `/onboarding`.
+- `AuthGuard` (`frontend/src/App.tsx`) is the single source of truth: order of checks is authentication → `allowedRoles` → `blockRoles`. Optional `blockRoles` and `redirectWhenBlocked` (default `/onboarding`) block specific roles. When `allowedRoles` is set and the user is not in the list, redirect uses `redirectTo ?? getPostLoginRedirect(user)` so non-allowed users get one-hop redirect to their home.
+- `ProtectedRoute` and `DashboardRoute` use AuthGuard with `blockRoles={['PENDING']}` and `redirectWhenBlocked="/onboarding"`. `OnboardingRoute` requires auth only (no blockRoles). `ApprovedRoute` uses role-based redirect (no fixed `redirectTo`) so PENDING hitting `/funding` goes to `/onboarding` in one hop. Catch-all route (`path="*"`) uses `CatchAllRedirect`: authenticated users go to `getPostLoginRedirect(user)`, unauthenticated to `/login`.
+- `/design-system` is protected (same as `/components`); PENDING cannot access it.
+
+**Backend Role Enforcement:**
+- Deposits client endpoints (`GET /deposits/wire-instructions`, `POST /deposits/announce`, `GET /deposits/my-deposits`, `GET /deposits/preview-hold`) use `get_approved_user`: only APPROVED, FUNDED, or ADMIN can call them; PENDING receives 403.
+- Cash market trading endpoints (place order, get my orders, cancel order, user balances, order preview, execute market order) use `get_funded_user`: only FUNDED or ADMIN can call them; PENDING and APPROVED receive 403.
 
 ### Token Storage
 
@@ -99,8 +109,9 @@ const token = sessionStorage.getItem(TOKEN_KEY);
 
 | Role | Description | Access Level |
 |------|-------------|--------------|
+| `PENDING` | New user, KYC not yet approved | Onboarding only; all other protected routes redirect to `/onboarding` |
 | `USER` | Regular platform user | Basic access |
-| `APPROVED` | KYC-approved user | Can trade |
+| `APPROVED` | KYC-approved user | Funding page; can report deposits |
 | `FUNDED` | Funded user account | Full trading access |
 | `ADMIN` | Platform administrator | Full admin access |
 | `MARKET_MAKER` | Market Maker client | **Cannot login** (managed by admin) |

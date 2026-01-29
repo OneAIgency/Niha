@@ -23,19 +23,23 @@ The Backoffice Dashboard (`BackofficePage`) has been refactored into modular, re
 - **Deposits** - Managed by `PendingDepositsTab`
 - **User Details** - Inline implementation with search functionality
 
+### Settings Page
+
+**`SettingsPage`** (`frontend/src/pages/SettingsPage.tsx`) — Route: `/settings` (linked from main Header). Platform Settings for admin: **Price Scraping Sources** (EUA/CEA price feeds) and **Mail & Authentication**. Mail & Auth section configures mail provider (Resend or SMTP), from address, invitation subject/body/link base URL, token expiry, and placeholders for verification/auth method. Uses `adminApi.getMailSettings()` and `adminApi.updateMailSettings()`; see [SETTINGS_API.md](../api/SETTINGS_API.md) for `GET/PUT /admin/settings/mail`. UI uses Card/card_back and design tokens only (navy, emerald, amber).
+
 ### Extracted Components
 
 #### `ContactRequestsTab`
 
 **Location:** `frontend/src/components/backoffice/ContactRequestsTab.tsx`
 
-**Purpose:** Displays and manages contact requests (join requests and NDA submissions) with real-time WebSocket updates.
+**Purpose:** Displays and manages contact requests (join requests and NDA submissions) with real-time WebSocket updates. Contact request data is supplied by `useBackofficeRealtime`, which normalizes API and WebSocket payloads (camelCase) to snake_case so the tab receives `entity_name`, `contact_name`, etc.
 
 **Features:**
-- Compact list rows (`.card_contact_request_list`): Entitate, Nume, Data completării + badge; View icon opens full-details modal
-- **ContactRequestViewModal**: all form fields, NDA PDF download link, optional IP Lookup; Escape to close, focus trap, exit animation
+- Compact list rows (`.card_contact_request_list`): Entity, Name, Submitted + badge; each row shows `entity_name` and `contact_name` (fallback "—" when missing). View icon opens full-details modal. View, Approve, Reject, and Delete buttons use safe `aria-label` fallbacks (`entity_name ?? contact_email ?? id ?? 'contact request'`) so labels never show "undefined".
+- **ContactRequestViewModal**: all contact request fields, NDA open button (opens PDF in new tab), optional IP Lookup; Escape to close, focus trap, exit animation
 - Approval/rejection workflows (Approve & Invite, Reject)
-- NDA file downloads (from list or from View modal)
+- NDA file open in new tab (from View modal)
 - IP address lookup (triggered from View modal when `onIpLookup` is passed)
 - Delete confirmation modal
 
@@ -49,7 +53,7 @@ interface ContactRequestsTabProps {
   onApprove: (requestId: string) => void;
   onReject: (requestId: string) => void;
   onDelete: (requestId: string) => void;
-  onDownloadNDA: (requestId: string) => Promise<void>;
+  onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup: (ip: string) => void;
   actionLoading: string | null;
 }
@@ -65,7 +69,7 @@ interface ContactRequestsTabProps {
   onApprove={handleApprove}
   onReject={handleReject}
   onDelete={handleDelete}
-  onDownloadNDA={handleDownloadNDA}
+  onOpenNDA={handleOpenNDA}
   onIpLookup={handleIpLookup}
   actionLoading={actionLoading}
 />
@@ -77,13 +81,13 @@ interface ContactRequestsTabProps {
 
 **Location:** `frontend/src/components/backoffice/ContactRequestViewModal.tsx`
 
-**Purpose:** Shows all contact request form data in an overlay modal and provides a link to download the attached NDA PDF. Used when the user clicks the View (eye) icon on a contact request row.
+**Purpose:** Shows all contact request form data in an overlay modal and provides a button to open the attached NDA PDF in a new browser tab. Used when the user clicks the View (eye) icon on a contact request row.
 
 **Features:**
-- All form fields: Entitate, Nume, Email, Position, Reference, Request type, Status, Data completării, IP, Notes
-- NDA document section with download button (when `nda_file_name` is present)
+- All fields in order: ID, Entity, Name, Email, Position, Request type, Status, NDA file name, Submitter IP, Notes, Submitted (theme tokens only; empty optional fields show "—" or are omitted via DataRow)
+- NDA section: label "Link to attached PDF for verification" and a button that opens the PDF in a new tab (when `nda_file_name` is present); button disabled while `openNDALoading` is true; label "Open {filename}", loading "Opening…"
 - Optional IP Lookup: when `onIpLookup` is passed and `submitter_ip` exists, a "Lookup" link opens the parent's IP lookup flow
-- Accessibility: Escape to close, focus moved to close button on open, Tab/Shift+Tab trapped inside modal
+- Accessibility: Escape to close, focus moved to close button on open, Tab/Shift+Tab trapped inside modal; NDA button `aria-label` "Open NDA {filename}"
 - Exit animation before close
 
 **Props:**
@@ -92,13 +96,13 @@ interface ContactRequestViewModalProps {
   request: ContactRequest | null;
   isOpen: boolean;
   onClose: () => void;
-  onDownloadNDA: (requestId: string) => Promise<void>;
+  onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup?: (ip: string) => void;
-  downloadLoading?: boolean;
+  openNDALoading?: boolean;
 }
 ```
 
-**Usage:** Rendered by `ContactRequestsTab` when the user clicks View on a request. Parent passes `onDownloadNDA` and `onIpLookup` (e.g. from `BackofficeOnboardingPage`).
+**Usage:** Rendered by `ContactRequestsTab` when the user clicks View on a request. Parent passes `onOpenNDA` and `onIpLookup` (e.g. from `BackofficeOnboardingPage`). If the browser blocks the pop-up, the parent should show "Allow pop-ups for this site and try again."
 
 #### `PendingDepositsTab`
 
@@ -259,7 +263,7 @@ Response format from `backofficeApi.getUserTrades()`
 BackofficeOnboardingPage (or parent)
   ├─ useBackofficeRealtime() → WebSocket connection
   ├─ contactRequests state → mapped from WebSocket data
-  ├─ handleDownloadNDA, handleIpLookup, etc.
+  ├─ handleOpenNDA, handleIpLookup, etc.
   └─ ContactRequestsTab
       ├─ Displays compact list rows (card_contact_request_list): Entitate, Nume, Data + actions
       ├─ View icon → ContactRequestViewModal (full form data, NDA link, optional IP Lookup)

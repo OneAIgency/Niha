@@ -10,10 +10,12 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Mail,
+  Save,
 } from 'lucide-react';
 import { Button, Card, Badge, Subheader } from '../components/common';
 import { adminApi } from '../services/api';
-import type { ScrapingSource, ScrapeLibrary } from '../types';
+import type { ScrapingSource, ScrapeLibrary, MailSettings, MailSettingsUpdate } from '../types';
 
 /**
  * Extract a user-facing message from an API error (e.g. axios).
@@ -48,6 +50,18 @@ export function SettingsPage() {
     scrape_interval_minutes: 5,
   });
 
+  // Mail & Auth settings
+  const [mailSettings, setMailSettings] = useState<MailSettings | null>(null);
+  const [mailSaving, setMailSaving] = useState(false);
+  const [mailSavedSuccess, setMailSavedSuccess] = useState(false);
+  const [mailForm, setMailForm] = useState<MailSettingsUpdate & { from_email: string }>({
+    provider: 'resend',
+    use_env_credentials: true,
+    from_email: '',
+    invitation_link_base_url: '',
+    invitation_token_expiry_days: 7,
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -56,8 +70,30 @@ export function SettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const sourcesData = await adminApi.getScrapingSources();
+      const [sourcesData, mailData] = await Promise.all([
+        adminApi.getScrapingSources(),
+        adminApi.getMailSettings(),
+      ]);
       setSources(sourcesData);
+      setMailSettings(mailData);
+      setMailForm({
+        provider: mailData.provider,
+        use_env_credentials: mailData.use_env_credentials,
+        from_email: mailData.from_email ?? '',
+        resend_api_key: mailData.resend_api_key ?? undefined,
+        smtp_host: mailData.smtp_host ?? undefined,
+        smtp_port: mailData.smtp_port ?? undefined,
+        smtp_use_tls: mailData.smtp_use_tls,
+        smtp_username: mailData.smtp_username ?? undefined,
+        smtp_password: mailData.smtp_password ?? undefined,
+        invitation_subject: mailData.invitation_subject ?? undefined,
+        invitation_body_html: mailData.invitation_body_html ?? undefined,
+        invitation_link_base_url: mailData.invitation_link_base_url ?? '',
+        invitation_token_expiry_days: mailData.invitation_token_expiry_days ?? 7,
+        verification_method: mailData.verification_method ?? undefined,
+        auth_method: mailData.auth_method ?? undefined,
+        from_email: mailData.from_email ?? '',
+      });
     } catch (e) {
       console.error('Failed to load settings data:', e);
       setError(getApiErrorMessage(e));
@@ -155,6 +191,57 @@ export function SettingsPage() {
     } catch (e) {
       console.error('Failed to create source:', e);
       setError(getApiErrorMessage(e));
+    }
+  };
+
+  const handleSaveMailSettings = async () => {
+    setError(null);
+    setMailSaving(true);
+    try {
+      const payload: MailSettingsUpdate = {
+        provider: mailForm.provider,
+        use_env_credentials: mailForm.use_env_credentials,
+        from_email: mailForm.from_email || undefined,
+        resend_api_key: mailForm.resend_api_key && mailForm.resend_api_key !== '********' ? mailForm.resend_api_key : undefined,
+        smtp_host: mailForm.smtp_host ?? undefined,
+        smtp_port: mailForm.smtp_port ?? undefined,
+        smtp_use_tls: mailForm.smtp_use_tls,
+        smtp_username: mailForm.smtp_username ?? undefined,
+        smtp_password: mailForm.smtp_password && mailForm.smtp_password !== '********' ? mailForm.smtp_password : undefined,
+        invitation_subject: mailForm.invitation_subject ?? undefined,
+        invitation_body_html: mailForm.invitation_body_html ?? undefined,
+        invitation_link_base_url: mailForm.invitation_link_base_url || undefined,
+        invitation_token_expiry_days: mailForm.invitation_token_expiry_days ?? undefined,
+        verification_method: mailForm.verification_method ?? undefined,
+        auth_method: mailForm.auth_method ?? undefined,
+      };
+      await adminApi.updateMailSettings(payload);
+      const mailData = await adminApi.getMailSettings();
+      setMailSettings(mailData);
+      setMailForm({
+        provider: mailData.provider,
+        use_env_credentials: mailData.use_env_credentials,
+        from_email: mailData.from_email ?? '',
+        resend_api_key: mailData.resend_api_key ?? undefined,
+        smtp_host: mailData.smtp_host ?? undefined,
+        smtp_port: mailData.smtp_port ?? undefined,
+        smtp_use_tls: mailData.smtp_use_tls,
+        smtp_username: mailData.smtp_username ?? undefined,
+        smtp_password: mailData.smtp_password ?? undefined,
+        invitation_subject: mailData.invitation_subject ?? undefined,
+        invitation_body_html: mailData.invitation_body_html ?? undefined,
+        invitation_link_base_url: mailData.invitation_link_base_url ?? '',
+        invitation_token_expiry_days: mailData.invitation_token_expiry_days ?? 7,
+        verification_method: mailData.verification_method ?? undefined,
+        auth_method: mailData.auth_method ?? undefined,
+      });
+      setMailSavedSuccess(true);
+      setTimeout(() => setMailSavedSuccess(false), 3000);
+    } catch (e) {
+      console.error('Failed to save mail settings:', e);
+      setError(getApiErrorMessage(e));
+    } finally {
+      setMailSaving(false);
     }
   };
 
@@ -382,6 +469,221 @@ export function SettingsPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Mail & Auth: admin-only config for invitation emails (provider, from, subject/body, link base URL, token expiry). GET/PUT /admin/settings/mail. */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <Card
+              data-testid="mail-auth-settings-card"
+              className="bg-navy-800/50 border-navy-700"
+              aria-describedby="mail-auth-description"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-amber-500" />
+                  Mail & Authentication
+                </h2>
+                <div className="flex items-center gap-3">
+                  {mailSavedSuccess && (
+                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400" role="status">
+                      Saved
+                    </span>
+                  )}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveMailSettings}
+                    loading={mailSaving}
+                    icon={<Save className="w-4 h-4" />}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+              <p id="mail-auth-description" className="text-sm text-navy-500 dark:text-navy-400 mb-6">
+                Configure mail server and invitation emails. When set, invitation emails use these settings; otherwise env (RESEND_API_KEY, FROM_EMAIL) is used.
+              </p>
+              {mailForm.provider === 'smtp' && (!mailForm.smtp_host || String(mailForm.smtp_host).trim() === '') && (
+                <div className="mb-6 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200" role="alert">
+                  SMTP host is not set. Invitation emails will not send until you configure host and port.
+                </div>
+              )}
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Provider</label>
+                  <select
+                    value={mailForm.provider ?? 'resend'}
+                    onChange={(e) => setMailForm({ ...mailForm, provider: e.target.value as 'resend' | 'smtp' })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  >
+                    <option value="resend">Resend</option>
+                    <option value="smtp">SMTP</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 pt-7">
+                  <input
+                    type="checkbox"
+                    id="use_env_credentials"
+                    checked={mailForm.use_env_credentials ?? true}
+                    onChange={(e) => setMailForm({ ...mailForm, use_env_credentials: e.target.checked })}
+                    className="rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="use_env_credentials" className="text-sm text-navy-600 dark:text-navy-300">
+                    Use credentials from environment
+                  </label>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">From email</label>
+                  <input
+                    type="email"
+                    value={mailForm.from_email ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, from_email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    placeholder="noreply@example.com"
+                  />
+                </div>
+                {mailForm.provider === 'resend' && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Resend API key</label>
+                    <input
+                      type="password"
+                      value={mailForm.resend_api_key === '********' ? '' : (mailForm.resend_api_key ?? '')}
+                      onChange={(e) => setMailForm({ ...mailForm, resend_api_key: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                      placeholder="Leave blank to use RESEND_API_KEY from env"
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
+                {mailForm.provider === 'smtp' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP host</label>
+                      <input
+                        type="text"
+                        value={mailForm.smtp_host ?? ''}
+                        onChange={(e) => setMailForm({ ...mailForm, smtp_host: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        placeholder="smtp.example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP port</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={mailForm.smtp_port ?? ''}
+                        onChange={(e) => setMailForm({ ...mailForm, smtp_port: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        placeholder="587"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-7">
+                      <input
+                        type="checkbox"
+                        id="smtp_use_tls"
+                        checked={mailForm.smtp_use_tls ?? true}
+                        onChange={(e) => setMailForm({ ...mailForm, smtp_use_tls: e.target.checked })}
+                        className="rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <label htmlFor="smtp_use_tls" className="text-sm text-navy-600 dark:text-navy-300">Use TLS</label>
+                    </div>
+                    <div />
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP username</label>
+                      <input
+                        type="text"
+                        value={mailForm.smtp_username ?? ''}
+                        onChange={(e) => setMailForm({ ...mailForm, smtp_username: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP password</label>
+                      <input
+                        type="password"
+                        value={mailForm.smtp_password === '********' ? '' : (mailForm.smtp_password ?? '')}
+                        onChange={(e) => setMailForm({ ...mailForm, smtp_password: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        placeholder="Leave blank to keep current"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation link base URL</label>
+                  <input
+                    type="url"
+                    value={mailForm.invitation_link_base_url ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, invitation_link_base_url: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    placeholder="https://app.example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation token expiry (days)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={mailForm.invitation_token_expiry_days ?? 7}
+                    onChange={(e) => setMailForm({ ...mailForm, invitation_token_expiry_days: parseInt(e.target.value, 10) || 7 })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation subject</label>
+                  <input
+                    type="text"
+                    value={mailForm.invitation_subject ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, invitation_subject: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    placeholder="Welcome to Nihao Carbon Trading Platform"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation body (HTML, optional)</label>
+                  <textarea
+                    rows={4}
+                    value={mailForm.invitation_body_html ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, invitation_body_html: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    placeholder="Use {{first_name}} and {{setup_url}} as placeholders. Leave blank for default template."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Verification method</label>
+                  <select
+                    value={mailForm.verification_method ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, verification_method: e.target.value || undefined })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  >
+                    <option value="">—</option>
+                    <option value="magic_link">Magic link</option>
+                    <option value="password_only">Password only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Auth method</label>
+                  <select
+                    value={mailForm.auth_method ?? ''}
+                    onChange={(e) => setMailForm({ ...mailForm, auth_method: e.target.value || undefined })}
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  >
+                    <option value="">—</option>
+                    <option value="password">Password</option>
+                    <option value="magic_link">Magic link</option>
+                  </select>
+                </div>
               </div>
             </Card>
           </motion.div>

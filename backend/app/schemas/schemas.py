@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # Enums
@@ -94,7 +94,6 @@ class ContactRequestCreate(BaseModel):
     contact_email: EmailStr
     contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
-    reference: Optional[str] = Field(None, max_length=255)
     request_type: str = Field(default="join")  # 'join' or 'nda'
 
 
@@ -104,7 +103,6 @@ class ContactRequestResponse(BaseModel):
     contact_email: str
     contact_name: Optional[str]
     position: Optional[str]
-    reference: Optional[str]
     request_type: str
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None
@@ -420,6 +418,64 @@ class ScrapingSourceCreate(BaseModel):
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
     scrape_interval_minutes: int = Field(5, ge=1, le=60)
     config: Optional[Dict[str, Any]] = None
+
+
+# Mail config (admin Settings)
+class MailProvider(str, Enum):
+    RESEND = "resend"
+    SMTP = "smtp"
+
+
+class MailConfigResponse(BaseModel):
+    id: UUID
+    provider: str
+    use_env_credentials: bool
+    from_email: str
+    resend_api_key: Optional[str] = None  # Masked in API if present
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_use_tls: bool
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None  # Never returned; use placeholder
+    invitation_subject: Optional[str] = None
+    invitation_body_html: Optional[str] = None
+    invitation_link_base_url: Optional[str] = None
+    invitation_token_expiry_days: int
+    verification_method: Optional[str] = None
+    auth_method: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MailConfigUpdate(BaseModel):
+    provider: Optional[MailProvider] = None
+    use_env_credentials: Optional[bool] = None
+    from_email: Optional[str] = Field(None, max_length=255)
+    resend_api_key: Optional[str] = Field(None, max_length=500)
+    smtp_host: Optional[str] = Field(None, max_length=255)
+    smtp_port: Optional[int] = Field(None, ge=1, le=65535)
+    smtp_use_tls: Optional[bool] = None
+    smtp_username: Optional[str] = Field(None, max_length=255)
+    smtp_password: Optional[str] = Field(None, max_length=500)
+    invitation_subject: Optional[str] = Field(None, max_length=255)
+    invitation_body_html: Optional[str] = None
+    invitation_link_base_url: Optional[str] = Field(None, max_length=500)
+    invitation_token_expiry_days: Optional[int] = Field(None, ge=1, le=365)
+    verification_method: Optional[str] = Field(None, max_length=50)
+    auth_method: Optional[str] = Field(None, max_length=50)
+
+    @field_validator("invitation_link_base_url")
+    @classmethod
+    def url_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return v
+        v = v.rstrip("/")
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("invitation_link_base_url must start with http:// or https://")
+        return v
 
 
 # User Session Schemas

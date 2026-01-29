@@ -15,7 +15,6 @@ export interface ContactRequest {
   contact_email: string;
   contact_name?: string;
   position: string;
-  reference?: string;
   request_type: 'join' | 'nda';
   nda_file_name?: string;
   submitter_ip?: string;

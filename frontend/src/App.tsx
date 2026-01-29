@@ -82,15 +82,25 @@ const PageLoader = () => (
 
 /**
  * AuthGuard - Single source of truth for authentication redirects
- * 
+ *
  * CRITICAL: This component handles ALL auth-based redirects to prevent loops.
  * Do NOT add redirect logic elsewhere (LoginPage, individual routes, etc.)
+ * Order: authentication → allowedRoles → blockRoles.
  */
-function AuthGuard({ children, requireAuth, allowedRoles, redirectTo }: {
+function AuthGuard({
+  children,
+  requireAuth,
+  allowedRoles,
+  redirectTo,
+  blockRoles,
+  redirectWhenBlocked = '/onboarding',
+}: {
   children: React.ReactNode;
   requireAuth: boolean;
   allowedRoles?: UserRole[];
   redirectTo?: string;
+  blockRoles?: UserRole[];
+  redirectWhenBlocked?: string;
 }) {
   const { isAuthenticated, user, _hasHydrated } = useAuthStore();
   const location = useLocation();
@@ -108,11 +118,16 @@ function AuthGuard({ children, requireAuth, allowedRoles, redirectTo }: {
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // Check role-based access
+    // Check role-based access (allowed roles)
     if (allowedRoles && !allowedRoles.includes(user.role)) {
       // User doesn't have required role - redirect to their appropriate page
-      const userRedirect = getPostLoginRedirect(user);
-      return <Navigate to={redirectTo || userRedirect} replace />;
+      const target = redirectTo ?? getPostLoginRedirect(user);
+      return <Navigate to={target} replace />;
+    }
+
+    // Block specific roles (e.g. PENDING) and redirect to onboarding
+    if (blockRoles && blockRoles.includes(user.role)) {
+      return <Navigate to={redirectWhenBlocked} replace />;
     }
 
     // Authenticated and authorized
@@ -134,9 +149,10 @@ function AuthGuard({ children, requireAuth, allowedRoles, redirectTo }: {
 
 // Convenience wrappers using AuthGuard
 
+/** Protects routes for authenticated non-PENDING users; PENDING redirects to /onboarding. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true}>
+    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
       {children}
     </AuthGuard>
   );
@@ -150,10 +166,14 @@ function LoginRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Restricts route to allowed roles. When user is not in allowedRoles, redirects to
+ * redirectTo if provided, otherwise getPostLoginRedirect(user) (role-based one-hop redirect).
+ */
 function RoleProtectedRoute({
   children,
   allowedRoles,
-  redirectTo = '/dashboard',
+  redirectTo,
 }: {
   children: React.ReactNode;
   allowedRoles: UserRole[];
@@ -174,14 +194,19 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Onboarding Route - temporarily allowing all for testing
+/** Onboarding area: requires auth only; PENDING and other roles can access. */
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <AuthGuard requireAuth={true}>
+      {children}
+    </AuthGuard>
+  );
 }
 
+/** Funding area: APPROVED only; non-APPROVED (e.g. PENDING) redirect to role home in one hop. */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED']} redirectTo="/dashboard">
+    <RoleProtectedRoute allowedRoles={['APPROVED']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -211,10 +236,22 @@ function FundedRoute({ children }: { children: React.ReactNode }) {
 
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true}>
+    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
       {children}
     </AuthGuard>
   );
+}
+
+/** Catch-all: redirect authenticated users to their home, others to login. */
+function CatchAllRedirect() {
+  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+
+  if (!_hasHydrated) {
+    return <PageLoader />;
+  }
+
+  const target = isAuthenticated && user ? getPostLoginRedirect(user) : '/login';
+  return <Navigate to={target} replace />;
 }
 
 function App() {
@@ -401,7 +438,14 @@ function App() {
             />
 
             {/* Design System - Comprehensive Token & Component Reference */}
-            <Route path="/design-system" element={<DesignSystemPage />} />
+            <Route
+              path="/design-system"
+              element={
+                <ProtectedRoute>
+                  <DesignSystemPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Backoffice routes - same Layout (Header + Footer) as rest of site */}
             <Route
@@ -514,7 +558,7 @@ function App() {
           <Route path="/setup-password" element={<SetupPasswordPage />} />
 
           {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
       </Suspense>
     </Router>

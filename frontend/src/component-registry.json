@@ -166,7 +166,7 @@
           "optional": false
         },
         {
-          "name": "onDownloadNDA",
+          "name": "onOpenNDA",
           "type": "(requestId: string) => Promise<void>",
           "optional": false
         },

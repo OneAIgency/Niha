@@ -1,5 +1,9 @@
+import asyncio
 import logging
-from typing import Optional
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Any, Dict, Optional
 
 from ..core.config import settings
 
@@ -171,13 +175,42 @@ class EmailService:
         return await self._send_email(to_email, subject, html_content)
 
     async def send_invitation(
-        self, to_email: str, first_name: str, invitation_token: str
+        self,
+        to_email: str,
+        first_name: str,
+        invitation_token: str,
+        mail_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """Send invitation email to new user with password setup link"""
+        """Send invitation email to new user with password setup link.
+        When mail_config is provided (from DB), use its from_email, subject, body, link base URL.
+        Otherwise use env and hardcoded template.
+        """
         name = first_name or "there"
+        if mail_config:
+            base_url = (
+                (mail_config.get("invitation_link_base_url") or "").rstrip("/")
+                or "http://localhost:5173"
+            )
+            setup_url = f"{base_url}/setup-password?token={invitation_token}"
+            subject = mail_config.get("invitation_subject") or "Welcome to Nihao Carbon Trading Platform"
+            body_html = mail_config.get("invitation_body_html")
+            if body_html:
+                html_content = body_html.replace("{{setup_url}}", setup_url).replace(
+                    "{{first_name}}", name
+                )
+            else:
+                html_content = self._default_invitation_html(name, setup_url)
+            from_email = mail_config.get("from_email") or settings.FROM_EMAIL
+            return await self._send_email(
+                to_email, subject, html_content, from_email=from_email, mail_config=mail_config
+            )
         setup_url = f"http://localhost:5173/setup-password?token={invitation_token}"
         subject = "Welcome to Nihao Carbon Trading Platform"
-        html_content = f"""
+        html_content = self._default_invitation_html(name, setup_url)
+        return await self._send_email(to_email, subject, html_content)
+
+    def _default_invitation_html(self, name: str, setup_url: str) -> str:
+        return f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -216,8 +249,6 @@ class EmailService:
         </body>
         </html>
         """
-
-        return await self._send_email(to_email, subject, html_content)
 
     async def send_account_approved(self, to_email: str, first_name: str) -> bool:
         """Send email when user account is approved"""
@@ -793,9 +824,28 @@ class EmailService:
 
         return await self._send_email(to_email, subject, html_content)
 
-    async def _send_email(self, to: str, subject: str, html: str) -> bool:
-        """Internal method to send email via Resend or log in dev mode"""
-        if not self.enabled:
+    async def _send_email(
+        self,
+        to: str,
+        subject: str,
+        html: str,
+        from_email: Optional[str] = None,
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Internal method to send email via Resend, SMTP (from config), or log in dev mode."""
+        from_addr = from_email or self.from_email
+
+        if mail_config and mail_config.get("provider") == "smtp":
+            return await self._send_via_smtp(to, subject, html, from_addr, mail_config)
+
+        api_key = self.api_key
+        if mail_config and mail_config.get("provider") == "resend":
+            if not mail_config.get("use_env_credentials") and mail_config.get("resend_api_key"):
+                api_key = mail_config["resend_api_key"]
+            else:
+                api_key = settings.RESEND_API_KEY
+
+        if not api_key:
             logger.info(f"[DEV MODE] Email would be sent to {to}")
             logger.info(f"[DEV MODE] Subject: {subject}")
             return True
@@ -803,20 +853,59 @@ class EmailService:
         try:
             import resend
 
-            resend.api_key = self.api_key
-
+            resend.api_key = api_key
             params = {
-                "from": self.from_email,
+                "from": from_addr,
                 "to": [to],
                 "subject": subject,
                 "html": html,
             }
-
             resend.Emails.send(params)
             logger.info(f"Email sent successfully to {to}")
             return True
         except Exception as e:
             logger.error(f"Failed to send email: {e}")
+            return False
+
+    async def _send_via_smtp(
+        self,
+        to: str,
+        subject: str,
+        html: str,
+        from_addr: str,
+        mail_config: Dict[str, Any],
+    ) -> bool:
+        """Send email via SMTP using config. Runs sync smtplib in thread."""
+        host = mail_config.get("smtp_host") or "localhost"
+        port = mail_config.get("smtp_port") or 587
+        use_tls = mail_config.get("smtp_use_tls", True)
+        username = mail_config.get("smtp_username")
+        password = mail_config.get("smtp_password")
+
+        def _do_send() -> None:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = from_addr
+            msg["To"] = to
+            msg.attach(MIMEText(html, "html"))
+            if use_tls:
+                with smtplib.SMTP(host, port) as server:
+                    server.starttls()
+                    if username and password:
+                        server.login(username, password)
+                    server.sendmail(from_addr, [to], msg.as_string())
+            else:
+                with smtplib.SMTP(host, port) as server:
+                    if username and password:
+                        server.login(username, password)
+                    server.sendmail(from_addr, [to], msg.as_string())
+
+        try:
+            await asyncio.to_thread(_do_send)
+            logger.info(f"Email sent via SMTP to {to}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send email via SMTP: {e}")
             return False
 
 

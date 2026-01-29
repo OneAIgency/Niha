@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
+from ...core.exceptions import handle_database_error
 from ...core.security import get_admin_user, hash_password
 from ...models.models import (
     ActivityLog,
@@ -25,6 +26,8 @@ from ...models.models import (
     Entity,
     Jurisdiction,
     KYCStatus,
+    MailConfig,
+    MailProvider,
     ScrapeLibrary,
     ScrapingSource,
     SwapRequest,
@@ -40,6 +43,7 @@ from ...schemas.schemas import (
     AdminUserUpdate,
     AuthenticationAttemptResponse,
     ContactRequestUpdate,
+    MailConfigUpdate,
     MessageResponse,
     ScrapingSourceCreate,
     ScrapingSourceUpdate,
@@ -93,7 +97,6 @@ async def get_contact_requests(
                 "contact_email": r.contact_email,
                 "contact_name": r.contact_name,
                 "position": r.position,
-                "reference": r.reference,
                 "request_type": r.request_type or "join",
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,
@@ -141,8 +144,12 @@ async def update_contact_request(
     if update.agent_id:
         contact.agent_id = update.agent_id
 
-    await db.commit()
-    await db.refresh(contact)
+    try:
+        await db.commit()
+        await db.refresh(contact)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "updating contact request", logger)
 
     # Broadcast contact request update to backoffice
     asyncio.create_task(
@@ -154,7 +161,6 @@ async def update_contact_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "reference": contact.reference,
                 "request_type": contact.request_type or "join",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
@@ -237,6 +243,17 @@ async def create_user_from_contact_request(
             status_code=400, detail="User with this email already exists"
         )
 
+    # Load mail config for invitation expiry (and later for sending)
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 7
+    )
+
     # Create entity from contact request
     entity = Entity(
         name=contact_request.entity_name,
@@ -279,7 +296,7 @@ async def create_user_from_contact_request(
             position=position,
             invitation_token=invitation_token,
             invitation_sent_at=datetime.utcnow(),
-            invitation_expires_at=datetime.utcnow() + timedelta(days=7),
+            invitation_expires_at=datetime.utcnow() + timedelta(days=invitation_expiry_days),
             must_change_password=True,
             is_active=False,  # Activate when password is set
             creation_method="invitation",
@@ -297,12 +314,32 @@ async def create_user_from_contact_request(
     # Send invitation email if applicable
     if mode == "invitation":
         try:
+            mail_cfg = None
+            if mail_row:
+                mail_cfg = {
+                    "provider": mail_row.provider.value,
+                    "use_env_credentials": mail_row.use_env_credentials,
+                    "from_email": mail_row.from_email,
+                    "resend_api_key": mail_row.resend_api_key
+                    if not mail_row.use_env_credentials and mail_row.provider == MailProvider.RESEND
+                    else None,
+                    "smtp_host": mail_row.smtp_host,
+                    "smtp_port": mail_row.smtp_port,
+                    "smtp_use_tls": mail_row.smtp_use_tls,
+                    "smtp_username": mail_row.smtp_username,
+                    "smtp_password": mail_row.smtp_password,
+                    "invitation_subject": mail_row.invitation_subject,
+                    "invitation_body_html": mail_row.invitation_body_html,
+                    "invitation_link_base_url": mail_row.invitation_link_base_url,
+                }
             await email_service.send_invitation(
-                user.email, user.first_name, user.invitation_token
+                user.email, user.first_name, user.invitation_token, mail_config=mail_cfg
             )
         except Exception:
-            # Log but don't fail - user is created
-            pass
+            logger.exception(
+                "Failed to send invitation email for user %s (user created, contact ENROLLED)",
+                user.email,
+            )
 
     # Broadcast updates
     asyncio.create_task(
@@ -1366,6 +1403,129 @@ async def delete_scraping_source(
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
     )
+
+
+# ==================== Mail & Auth Settings ====================
+
+
+@router.get("/settings/mail")
+async def get_mail_settings(
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get mail (and invitation) configuration. Single row; returns defaults/empty if none.
+    Admin only. API key and SMTP password are never returned (masked).
+    """
+    result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        return {
+            "id": None,
+            "provider": "resend",
+            "use_env_credentials": True,
+            "from_email": "",
+            "resend_api_key": None,
+            "smtp_host": None,
+            "smtp_port": None,
+            "smtp_use_tls": True,
+            "smtp_username": None,
+            "smtp_password": None,
+            "invitation_subject": None,
+            "invitation_body_html": None,
+            "invitation_link_base_url": None,
+            "invitation_token_expiry_days": 7,
+            "verification_method": None,
+            "auth_method": None,
+            "created_at": None,
+            "updated_at": None,
+        }
+    return {
+        "id": str(row.id),
+        "provider": row.provider.value,
+        "use_env_credentials": row.use_env_credentials,
+        "from_email": row.from_email,
+        "resend_api_key": "********" if row.resend_api_key else None,
+        "smtp_host": row.smtp_host,
+        "smtp_port": row.smtp_port,
+        "smtp_use_tls": row.smtp_use_tls,
+        "smtp_username": row.smtp_username,
+        "smtp_password": "********" if row.smtp_password else None,
+        "invitation_subject": row.invitation_subject,
+        "invitation_body_html": row.invitation_body_html,
+        "invitation_link_base_url": row.invitation_link_base_url,
+        "invitation_token_expiry_days": row.invitation_token_expiry_days or 7,
+        "verification_method": row.verification_method,
+        "auth_method": row.auth_method,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@router.put("/settings/mail")
+async def update_mail_settings(
+    update: MailConfigUpdate,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create or update mail configuration (single row). Admin only.
+    """
+    try:
+        result = await db.execute(
+            select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+        )
+        row = result.scalar_one_or_none()
+
+        if not row:
+            row = MailConfig(
+                provider=MailProvider.RESEND,
+                use_env_credentials=True,
+                from_email="",
+            )
+            db.add(row)
+            await db.flush()
+
+        if update.provider is not None:
+            row.provider = MailProvider(update.provider.value)
+        if update.use_env_credentials is not None:
+            row.use_env_credentials = update.use_env_credentials
+        if update.from_email is not None:
+            row.from_email = update.from_email
+        if update.resend_api_key is not None and update.resend_api_key != "********":
+            row.resend_api_key = update.resend_api_key
+        if update.smtp_host is not None:
+            row.smtp_host = update.smtp_host
+        if update.smtp_port is not None:
+            row.smtp_port = update.smtp_port
+        if update.smtp_use_tls is not None:
+            row.smtp_use_tls = update.smtp_use_tls
+        if update.smtp_username is not None:
+            row.smtp_username = update.smtp_username
+        if update.smtp_password is not None and update.smtp_password != "********":
+            row.smtp_password = update.smtp_password
+        if update.invitation_subject is not None:
+            row.invitation_subject = update.invitation_subject
+        if update.invitation_body_html is not None:
+            row.invitation_body_html = update.invitation_body_html
+        if update.invitation_link_base_url is not None:
+            # Pydantic MailConfigUpdate already strips trailing slash and validates URL
+            row.invitation_link_base_url = update.invitation_link_base_url
+        if update.invitation_token_expiry_days is not None:
+            row.invitation_token_expiry_days = update.invitation_token_expiry_days
+        if update.verification_method is not None:
+            row.verification_method = update.verification_method
+        if update.auth_method is not None:
+            row.auth_method = update.auth_method
+
+        await db.commit()
+        await db.refresh(row)
+        return {"message": "Mail settings updated", "success": True}
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "update mail settings", logger)
 
 
 # ==================== Market Overview ====================

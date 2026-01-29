@@ -146,6 +146,48 @@ export interface ScrapingSource {
   updated_at: string;
 }
 
+// Mail & Auth Settings (admin Settings page)
+export type MailProvider = 'resend' | 'smtp';
+
+export interface MailSettings {
+  id: string | null;
+  provider: MailProvider;
+  use_env_credentials: boolean;
+  from_email: string;
+  resend_api_key: string | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_use_tls: boolean;
+  smtp_username: string | null;
+  smtp_password: string | null;
+  invitation_subject: string | null;
+  invitation_body_html: string | null;
+  invitation_link_base_url: string | null;
+  invitation_token_expiry_days: number;
+  verification_method: string | null;
+  auth_method: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface MailSettingsUpdate {
+  provider?: MailProvider;
+  use_env_credentials?: boolean;
+  from_email?: string;
+  resend_api_key?: string;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_use_tls?: boolean;
+  smtp_username?: string;
+  smtp_password?: string;
+  invitation_subject?: string;
+  invitation_body_html?: string;
+  invitation_link_base_url?: string;
+  invitation_token_expiry_days?: number;
+  verification_method?: string;
+  auth_method?: string;
+}
+
 // User Session
 export interface UserSession {
   id: string;
@@ -173,7 +215,6 @@ export interface ContactRequest {
   contact_email: string;
   contact_name?: string;
   position?: string;
-  reference?: string;
   request_type?: 'join' | 'nda';
 }
 
@@ -193,7 +234,6 @@ export interface ContactRequestResponse {
   contact_email: string;
   contact_name?: string;
   position?: string;
-  reference?: string;
   request_type: 'join' | 'nda';
   nda_file_name?: string;
   submitter_ip?: string;

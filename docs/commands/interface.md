@@ -61,6 +61,8 @@ When creating or reviewing components, verify:
 
 **Backoffice nav levels:** Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` from `frontend/src/styles/design-tokens.css`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; customize via CSS variables in the same file. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8–9.
 
+**Settings pages:** Platform Settings (e.g. Price Scraping Sources, Mail & Authentication) use the same Card/Input patterns and design tokens; each section is wrapped in `.card_back` or `<Card />`. No hard-coded colors; use navy/emerald/amber/blue/red tokens per the design system.
+
 ## Output
 
 1. **Design System Documentation**: Update `docs/design-system/` with tokens, themes, and components

@@ -427,18 +427,28 @@ export const handlers = [
     });
   }),
 
-  // Get contact requests
+  // Get contact requests (paginated; shape matches ContactRequestResponse)
   http.get(`${API_BASE}/admin/contact-requests`, () => {
-    return HttpResponse.json([
-      {
-        id: 'contact-1',
-        email: 'newuser@example.com',
-        company_name: 'New Company',
-        message: 'Interested in joining',
-        status: 'pending',
-        created_at: '2026-01-25T10:00:00Z',
+    return HttpResponse.json({
+      data: [
+        {
+          id: 'contact-1',
+          entity_name: 'New Company',
+          contact_email: 'newuser@example.com',
+          contact_name: 'Jane Doe',
+          position: 'Sustainability Director',
+          request_type: 'join',
+          status: 'new',
+          created_at: '2026-01-25T10:00:00Z',
+        },
+      ],
+      pagination: {
+        page: 1,
+        per_page: 20,
+        total: 1,
+        total_pages: 1,
       },
-    ]);
+    });
   }),
 
   // Create user from contact request

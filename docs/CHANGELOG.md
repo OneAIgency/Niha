@@ -2,6 +2,134 @@
 
 All notable changes to the Nihao Carbon Platform are documented in this file.
 
+## [2026-01-29] - PENDING User Access Only to Onboarding (Feature 0009)
+
+### Features
+- **PENDING-only onboarding** — Authenticated PENDING users can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes (`/contact`, `/setup-password`, `/login`). All other protected routes (`/profile`, `/dashboard`, `/funding`, `/cash-market`, `/settings`, `/users`, `/components`, `/design-system`, backoffice) redirect PENDING to `/onboarding`.
+- **Single-hop redirect** — When a PENDING user hits `/funding`, they are redirected to `/onboarding` in one hop (ApprovedRoute uses role-based redirect via `getPostLoginRedirect` instead of a fixed redirect).
+- **Catch-all for authenticated users** — Unknown paths (`*`) redirect authenticated users to their role home (`getPostLoginRedirect(user)`) instead of `/login`.
+- **Design-system route** — `/design-system` is now protected (same as `/components`); PENDING cannot access it.
+
+### Technical
+- **Frontend:** AuthGuard extended with optional `blockRoles` and `redirectWhenBlocked`; order of checks: auth → allowedRoles → blockRoles. When `allowedRoles` fails, redirect uses `redirectTo ?? getPostLoginRedirect(user)`. ProtectedRoute, DashboardRoute: block PENDING to `/onboarding`. OnboardingRoute: requireAuth only. ApprovedRoute: no fixed redirectTo so non-APPROVED get role-based redirect. CatchAllRedirect component for catch-all route.
+- **Backend:** Deposits client endpoints (`get_wire_instructions`, `announce_deposit`, `get_my_deposits`, `preview_hold_period`) use `get_approved_user` (APPROVED/FUNDED/ADMIN only; PENDING receives 403). Cash market trading endpoints (`place_order`, `get_my_orders`, `cancel_order`, `get_user_balances`, `preview_order`, `execute_market_order`) use `get_funded_user` (FUNDED/ADMIN only).
+
+### Documentation
+- **README.md** — User Authentication: PENDING-only onboarding and redirect behaviour.
+- **app_truth.md** — §8: PENDING-only onboarding, AuthGuard behaviour, route wrappers, catch-all, backend role enforcement.
+- **docs/api/AUTHENTICATION.md** — Route guards and PENDING restrictions; backend role enforcement.
+- **docs/WORKFLOW.md** — User roles: PENDING restricted to onboarding.
+
+### Related
+- [Plan 0009](features/0009_PLAN.md) – PENDING user access only to onboarding.
+- [Review 0009](features/0009_REVIEW.md) – Implementation review and fixes.
+
+---
+
+## [2026-01-29] - Configurable Mail & Auth in Settings (Feature 0008)
+
+### Features
+- **Mail and auth settings (admin)** — Mail provider (Resend or SMTP), from address, invitation subject/body, link base URL, and token expiry are configurable in the database. Admin configures them in Platform Settings → Mail & Authentication. When a config row exists, invitation emails (and optionally other emails) use it; otherwise the app falls back to `RESEND_API_KEY` and `FROM_EMAIL` from the environment.
+- **Settings API** — `GET /api/v1/admin/settings/mail` returns current mail config or defaults (secrets masked). `PUT /api/v1/admin/settings/mail` creates or updates the single config row. Admin auth required. See [SETTINGS_API.md](api/SETTINGS_API.md).
+- **Invitation flow** — Approve & Invite with "Invite user" uses stored config for invitation expiry days, from address, subject, body template (placeholders `{{first_name}}`, `{{setup_url}}`), and setup-password link base URL. Email can be sent via Resend or SMTP depending on provider.
+
+### Technical
+- **Backend:** `MailConfig` model and `mail_config` table (migration `2026_01_29_mail_config`); Pydantic `MailConfigUpdate` with URL and port validation; `email_service.send_invitation(..., mail_config=...)` and `_send_via_smtp` for SMTP.
+- **Frontend:** Settings page Mail & Auth card (provider, credentials, invitation URL/subject/body, token expiry, verification/auth placeholders); `adminApi.getMailSettings()` / `updateMailSettings()`; design tokens only (navy, amber, emerald). Saved feedback and SMTP-host-empty warning.
+
+### Documentation
+- **app_truth.md** — §4 Integrations: mail configurable via Settings (DB) with env fallback; §8 Settings page and Mail & Auth.
+- **docs/api/SETTINGS_API.md** — GET/PUT mail settings request/response and validation.
+
+### Related
+- [Plan 0008](features/0008_PLAN.md) – NDA flow, Approve & Invite, configurable Mail/Auth in Settings.
+- [Review 0008](features/0008_REVIEW.md) – Implementation review.
+
+---
+
+## [2026-01-29] - NDA Open in Browser & Copy Consistency
+
+### Changed
+- **NDA PDF behaviour** — The backoffice NDA action now opens the PDF in a new browser tab instead of triggering a download. Implemented via `adminApi.openNDAInBrowser(requestId, fileName)`: fetches blob with auth, creates object URL, `window.open(url, '_blank', 'noopener')`, revokes URL after 5s.
+- **UI copy** — ContactRequestViewModal: button label "Open {filename}", loading "Opening…", `aria-label` "Open NDA {filename}"; icon changed from Download to ExternalLink. Prop and handler renamed: `onDownloadNDA` → `onOpenNDA`, `downloadLoading` → `openNDALoading`; page handler `handleOpenNDA`, loading key `open-{requestId}`.
+- **Error handling** — If the browser blocks the pop-up (`window.open` returns null), the API throws `Error('POPUP_BLOCKED')` and the UI shows "Allow pop-ups for this site and try again." Other errors show "Failed to open NDA file."
+
+### Documentation
+- **README.md** — Onboarding Contact Requests: "NDA download button" → "NDA open-in-browser button".
+- **app_truth.md** — §8 Backoffice Contact Requests UI: NDA button opens PDF in new tab; noted pop-up blocker message and `adminApi.openNDAInBrowser` / GET NDA endpoint.
+- **docs/admin/BACKOFFICE_COMPONENTS.md** — ContactRequestsTab and ContactRequestViewModal: props `onOpenNDA`, `openNDALoading`; usage and flow updated; NDA section describes open-in-new-tab and pop-up blocker message.
+- **docs/api/BACKOFFICE_API.md** — Contact Requests: added "Get NDA File" subsection (GET `/admin/contact-requests/{request_id}/nda`) with path params, response headers/body, error responses, and frontend example; noted frontend opens in new tab and POPUP_BLOCKED handling.
+
+### Related Documentation
+- [Code Review: NDA open in browser](features/2026_01_29_nda_open_in_browser_REVIEW.md).
+
+---
+
+## [2026-01-29] - Contact Request Entity Name Display Fix
+
+### Bugfix
+- **Contact request list** — Entity name (and other fields) entered in the contact or NDA form were showing as "—" in the backoffice list. The global axios response interceptor converts API responses to camelCase (`entity_name` → `entityName`), while backoffice types and components expect snake_case. Contact request data is now normalized to snake_case at the realtime hook boundary (`useBackofficeRealtime`) before storing, so the list and modals display `entity_name`, `contact_name`, etc. correctly.
+
+### Improvements
+- **Realtime hook** — Fetch and WebSocket handlers pass contact-request payloads through `ensurePlainObject()` before `transformKeysToSnakeCase` so non-plain objects (e.g. class instances) are safely normalized.
+- **Tests** — Added unit test in `frontend/src/utils/__tests__/dataTransform.test.ts` that contact-request-shaped camelCase payloads are converted to snake_case by `transformKeysToSnakeCase`.
+- **Logging** — WebSocket connection failure in the realtime hook now uses `logger.error` instead of `console.error`.
+
+### Documentation
+- **app_truth.md** — §8 Contact/NDA requests: noted that the frontend normalizes API and WebSocket contact-request payloads (camelCase) to snake_case at the realtime hook boundary so backoffice code can assume snake_case.
+- **README.md** — Onboarding Contact Requests: added that API/WS payloads are normalized to snake_case in the realtime hook.
+- **docs/api/BACKOFFICE_API.md** — Contact requests: added that the frontend normalizes GET and WebSocket payloads to snake_case in the realtime hook.
+
+### Related Documentation
+- [Code Review: Contact Entity Name Display](features/2026_01_29_contact_entity_name_display_REVIEW.md).
+
+---
+
+## [2026-01-29] - Contact Requests List & View Modal Completeness (Plan 0007)
+
+### Features
+- **Contact Requests list** — Each row displays Entity and Name from the contact request (`entity_name`, `contact_name`); fallback "—" only when the value is missing. View, Approve, Reject, and Delete buttons use safe `aria-label` fallbacks (`entity_name ?? contact_email ?? id ?? 'contact request'`) so labels never show "undefined".
+- **ContactRequestViewModal** — Shows all contact request fields (ID, Entity, Name, Email, Position, Request type, Status, NDA file name, Submitter IP, Notes, Submitted) in a theme-consistent layout. NDA is presented as a button labeled "Link to attached PDF for verification" that triggers download (disabled while loading). Uses theme tokens only (navy, Typography).
+
+### Improvements
+- **NDA control** — Replaced `<a href="#">` with `<button type="button">` for the NDA download control for clearer semantics and accessibility; added disabled state while download is in progress.
+- **Tests** — Added `ContactRequestViewModal.test.tsx` and `ContactRequestsTab.test.tsx` (18 tests) for list display, fallbacks, View button aria-labels, and modal content.
+
+### Documentation
+- **app_truth.md** — §8: Backoffice Contact Requests UI (list fields, View modal, aria-label fallbacks).
+- **README.md** — Onboarding Contact Requests description updated (Entity/Name, View modal, NDA button).
+- **docs/admin/BACKOFFICE_COMPONENTS.md** — ContactRequestsTab and ContactRequestViewModal sections updated to match implementation.
+
+### Related Documentation
+- [Plan 0007](features/0007_PLAN.md) – Contact requests list values and view modal completeness.
+- [Code Review 0007](features/0007_REVIEW.md) – Implementation review and fixes.
+
+---
+
+## [2026-01-29] - Contact Request Reference Removal & Alembic Baseline
+
+### Removed
+- **Contact request `reference` field** — Removed from backend model (`contact_requests` table), schemas (`ContactRequestCreate`, `ContactRequestResponse`), contact and admin API (create, GET, update, WebSocket payloads), frontend types and Contact form, and backoffice UI (view modal, approve payload). Join/Contact form no longer has a "Referral (Optional)" field.
+
+### Improvements
+- **Admin contact request update** — `PUT /admin/contact-requests/{id}` now wraps `db.commit()`/`db.refresh()` in try/except with rollback and `handle_database_error` for consistent error handling.
+- **Alembic baseline** — Single revision (`2026_01_29_baseline`) is head; schema is driven by app startup (`init_db()`). Old migrations moved to `backend/alembic/versions/archive/`. New migrations should set `down_revision = "2026_01_29_baseline"`. See `backend/alembic/README` and baseline docstring.
+- **Test mocks** — Contact request mock (GET `/admin/contact-requests`) and `MockContactRequest` factory aligned with real API shape (`ContactRequestResponse`) and pagination (`{ data, pagination }`). Backoffice test updated to assert on `body.data` and `body.pagination`.
+
+### Documentation
+- **app_truth.md** — Contact/NDA request response shape updated (no `reference`); operational commands note DB/migrations baseline and `down_revision`.
+- **docs/REBUILD_INSTRUCTIONS.md** — Database and migrations section updated for single baseline and init_db-driven schema.
+- **docs/CURSOR_DEVELOPMENT_GUIDE.md** — Database schema change steps note baseline and `down_revision` for new migrations.
+- **docs/api/BACKOFFICE_API.md** — Contact requests response and WebSocket payload documented without `reference`.
+
+### Technical Details
+- **Files**: `backend/app/models/models.py`, `backend/app/schemas/schemas.py`, `backend/app/api/v1/contact.py`, `backend/app/api/v1/admin.py`, `backend/alembic/versions/2026_01_29_baseline_current_schema.py`, `backend/alembic/README`, `frontend/src/types/index.ts`, `frontend/src/types/backoffice.ts`, `frontend/src/pages/ContactPage.tsx`, `frontend/src/components/backoffice/ContactRequestViewModal.tsx`, `frontend/src/components/backoffice/ContactRequestsTab.tsx`, `frontend/src/pages/BackofficeOnboardingPage.tsx`, `frontend/src/test/mocks/handlers.ts`, `frontend/src/test/factories.ts`, `frontend/src/services/__tests__/backoffice.test.ts`, `app_truth.md`, `docs/CHANGELOG.md`, `docs/REBUILD_INSTRUCTIONS.md`, `docs/CURSOR_DEVELOPMENT_GUIDE.md`, `docs/api/BACKOFFICE_API.md`.
+
+### Related Documentation
+- [Code Review: Contact Reference & Baseline](features/2026_01_29_contact_reference_and_baseline_REVIEW.md).
+
+---
+
 ## [2026-01-29] - NDA Form, Backoffice Notification, Badge, Modal (Plan 0006)
 
 ### Features

@@ -259,13 +259,19 @@ export function createMockKYCDocument(
 }
 
 // ==================== CONTACT REQUEST FACTORIES ====================
+// Shape matches ContactRequestResponse from admin API
 
 export interface MockContactRequest {
   id: string;
-  email: string;
-  company_name: string;
-  message: string;
-  status: 'pending' | 'processed' | 'rejected';
+  entity_name: string;
+  contact_email: string;
+  contact_name?: string;
+  position?: string;
+  request_type: 'join' | 'nda';
+  nda_file_name?: string;
+  submitter_ip?: string;
+  status: string;
+  notes?: string;
   created_at: string;
 }
 
@@ -274,10 +280,12 @@ export function createMockContactRequest(
 ): MockContactRequest {
   return {
     id: 'contact-1',
-    email: 'newuser@example.com',
-    company_name: 'New Company',
-    message: 'Interested in joining',
-    status: 'pending',
+    entity_name: 'New Company',
+    contact_email: 'newuser@example.com',
+    contact_name: 'Jane Doe',
+    position: 'Sustainability Director',
+    request_type: 'join',
+    status: 'new',
     created_at: '2026-01-25T10:00:00Z',
     ...overrides,
   };

@@ -1,11 +1,11 @@
 /**
- * Modal that shows all contact request form data and a link to the attached NDA PDF.
+ * Modal that shows all contact request form data and a button to open the attached NDA PDF in a new tab.
  * Supports Escape to close, focus trap, exit animation, and optional IP lookup.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileText } from 'lucide-react';
+import { X, ExternalLink, FileText } from 'lucide-react';
 import { Typography } from '../common/Typography';
 import type { ContactRequest } from '../../types/backoffice';
 import { formatDate } from '../../utils';
@@ -14,22 +14,31 @@ interface ContactRequestViewModalProps {
   request: ContactRequest | null;
   isOpen: boolean;
   onClose: () => void;
-  onDownloadNDA: (requestId: string) => Promise<void>;
+  onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup?: (ip: string) => void;
-  downloadLoading?: boolean;
+  openNDALoading?: boolean;
 }
 
 const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-function DataRow({ label, value }: { label: string; value: string | undefined }) {
-  if (value == null || value === '') return null;
+function DataRow({
+  label,
+  value,
+  showEmpty = false,
+}: {
+  label: string;
+  value: string | undefined;
+  showEmpty?: boolean;
+}) {
+  const display = value != null && value !== '' ? value : showEmpty ? '—' : null;
+  if (display === null) return null;
   return (
     <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60 last:border-0">
       <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
         {label}:
       </Typography>
       <Typography as="span" variant="bodySmall" color="primary">
-        {value}
+        {display}
       </Typography>
     </div>
   );
@@ -39,9 +48,9 @@ export function ContactRequestViewModal({
   request,
   isOpen,
   onClose,
-  onDownloadNDA,
+  onOpenNDA,
   onIpLookup,
-  downloadLoading = false,
+  openNDALoading = false,
 }: ContactRequestViewModalProps) {
   const [exiting, setExiting] = useState(false);
   const [closingRequest, setClosingRequest] = useState<ContactRequest | null>(null);
@@ -121,8 +130,8 @@ export function ContactRequestViewModal({
 
   if (!isVisible || !showingRequest) return null;
 
-  const handleDownloadNDA = () => {
-    onDownloadNDA(showingRequest.id);
+  const handleOpenNDA = () => {
+    onOpenNDA(showingRequest.id);
   };
 
   return (
@@ -158,58 +167,55 @@ export function ContactRequestViewModal({
         </div>
 
         <div className="p-4 overflow-y-auto space-y-4">
-          <DataRow label="Entitate" value={showingRequest.entity_name} />
-          <DataRow label="Nume" value={showingRequest.contact_name} />
-          <DataRow label="Email" value={showingRequest.contact_email} />
-          <DataRow label="Position" value={showingRequest.position} />
-          <DataRow label="Reference" value={showingRequest.reference} />
-          <DataRow label="Request type" value={showingRequest.request_type?.toUpperCase()} />
-          <DataRow label="Status" value={showingRequest.status} />
-          <DataRow label="Data completării" value={showingRequest.created_at ? formatDate(showingRequest.created_at) : undefined} />
-          {showingRequest.submitter_ip ? (
-            <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60">
-              <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
-                IP:
-              </Typography>
-              <Typography as="span" variant="bodySmall" color="primary" className="shrink-0">
-                {showingRequest.submitter_ip}
-              </Typography>
-              {onIpLookup && (
-                <button
-                  type="button"
-                  onClick={() => onIpLookup(showingRequest.submitter_ip!)}
-                  className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 rounded"
-                  aria-label={`Lookup IP ${showingRequest.submitter_ip}`}
-                >
-                  Lookup
-                </button>
-              )}
-            </div>
-          ) : (
-            <DataRow label="IP" value={showingRequest.submitter_ip} />
-          )}
-          <DataRow label="Notes" value={showingRequest.notes} />
-
-          {showingRequest.nda_file_name && (
-            <div className="pt-2">
-              <p className="text-sm font-medium text-navy-600 dark:text-navy-400 mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                NDA document
-              </p>
+          <DataRow label="ID" value={showingRequest.id} showEmpty />
+          <DataRow label="Entity" value={showingRequest.entity_name} showEmpty />
+          <DataRow label="Name" value={showingRequest.contact_name} showEmpty />
+          <DataRow label="Email" value={showingRequest.contact_email} showEmpty />
+          <DataRow label="Position" value={showingRequest.position} showEmpty />
+          <DataRow label="Request type" value={showingRequest.request_type?.toUpperCase()} showEmpty />
+          <DataRow label="Status" value={showingRequest.status} showEmpty />
+          <DataRow label="NDA file name" value={showingRequest.nda_file_name} />
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60">
+            <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
+              Submitter IP:
+            </Typography>
+            <Typography as="span" variant="bodySmall" color="primary" className="shrink-0">
+              {showingRequest.submitter_ip ?? '—'}
+            </Typography>
+            {onIpLookup && showingRequest.submitter_ip && (
               <button
                 type="button"
-                onClick={handleDownloadNDA}
-                disabled={downloadLoading}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900/50 text-navy-700 dark:text-navy-200 hover:bg-navy-100 dark:hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-navy-800"
-                aria-label={`Download NDA ${showingRequest.nda_file_name}`}
+                onClick={() => onIpLookup(showingRequest.submitter_ip!)}
+                className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 rounded"
+                aria-label={`Lookup IP ${showingRequest.submitter_ip}`}
               >
-                <Download className="w-4 h-4" />
-                {showingRequest.nda_file_name}
-                {downloadLoading ? '…' : ''}
+                Lookup
               </button>
-              <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                PDF atașat pentru verificare
-              </p>
+            )}
+          </div>
+          <DataRow label="Notes" value={showingRequest.notes} showEmpty />
+          <DataRow
+            label="Submitted"
+            value={showingRequest.created_at ? formatDate(showingRequest.created_at) : undefined}
+            showEmpty
+          />
+
+          {showingRequest.nda_file_name && (
+            <div className="pt-2 border-t border-navy-200/60 dark:border-navy-600/60">
+              <Typography as="p" variant="sectionLabel" color="muted" className="mb-2">
+                Link to attached PDF for verification
+              </Typography>
+              <button
+                type="button"
+                onClick={handleOpenNDA}
+                disabled={openNDALoading}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900/50 text-navy-700 dark:text-navy-200 hover:bg-navy-100 dark:hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={`Open NDA ${showingRequest.nda_file_name}`}
+              >
+                <FileText className="w-4 h-4 shrink-0" />
+                <ExternalLink className="w-4 h-4 shrink-0" />
+                {openNDALoading ? 'Opening…' : `Open ${showingRequest.nda_file_name}`}
+              </button>
             </div>
           )}
         </div>

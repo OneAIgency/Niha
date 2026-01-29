@@ -17,6 +17,8 @@ import type {
   KYCDocument,
   ScrapingSource,
   ScrapeLibrary,
+  MailSettings,
+  MailSettingsUpdate,
   UserSession,
   CertificateType,
   OrderSide,
@@ -723,22 +725,25 @@ export const adminApi = {
     return data;
   },
 
-  // Download NDA file (programmatic download with auth)
-  downloadNDA: async (requestId: string, fileName: string): Promise<void> => {
+  /**
+   * Open NDA PDF in a new browser tab. Fetches the file with auth, creates a blob URL, opens it with noopener, revokes the URL after 5s.
+   * @param requestId - Contact request UUID
+   * @param _fileName - Unused; kept for API compatibility
+   * @throws Error with message 'POPUP_BLOCKED' if the browser blocks window.open (caller should show "Allow pop-ups for this site and try again.")
+   */
+  openNDAInBrowser: async (requestId: string, _fileName: string): Promise<void> => {
     const response = await api.get(`/admin/contact-requests/${requestId}/nda`, {
       responseType: 'blob'
     });
 
-    // Create download link
     const blob = new Blob([response.data], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || 'nda.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) {
+      window.URL.revokeObjectURL(url);
+      throw new Error('POPUP_BLOCKED');
+    }
+    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
   },
 
   // IP WHOIS Lookup
@@ -891,6 +896,17 @@ export const adminApi = {
     scrape_interval_minutes: number;
   }): Promise<ScrapingSource> => {
     const { data } = await api.post('/admin/scraping-sources', source);
+    return data;
+  },
+
+  // Mail & Auth Settings
+  getMailSettings: async (): Promise<MailSettings> => {
+    const { data } = await api.get('/admin/settings/mail');
+    return data;
+  },
+
+  updateMailSettings: async (payload: MailSettingsUpdate): Promise<{ message: string; success: boolean }> => {
+    const { data } = await api.put('/admin/settings/mail', payload);
     return data;
   },
 
