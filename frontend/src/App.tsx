@@ -63,6 +63,7 @@ const EuEntitiesPage = lazy(() => import('./pages').then(m => ({ default: m.EuEn
 const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default: m.StrategicAdvantagePage })));
 const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
 const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
+const ThemePage = lazy(() => import('./pages').then(m => ({ default: m.ThemePage })));
 const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
 const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
@@ -444,6 +445,16 @@ function App() {
                 <ProtectedRoute>
                   <DesignSystemPage />
                 </ProtectedRoute>
+              }
+            />
+
+            {/* Theme Page - Admin only design system showcase */}
+            <Route
+              path="/theme"
+              element={
+                <AdminRoute>
+                  <ThemePage />
+                </AdminRoute>
               }
             />
 

@@ -15,6 +15,7 @@ export { default as Onboarding1Page } from './Onboarding1Page';
 export { LearnMorePage } from './LearnMorePage';
 export { ComponentShowcasePage } from './ComponentShowcasePage';
 export { DesignSystemPage } from './DesignSystemPage';
+export { ThemePage } from './ThemePage';
 export { MarketMakersPage } from './MarketMakersPage';
 export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';
