@@ -45,7 +45,7 @@ export function UsersPage() {
   const [users, setUsers] = useState<UserWithEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all' | 'DISABLED'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithEntity | null>(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function UsersPage() {
     last_name: '',
     position: '',
     password: '',
-    role: 'PENDING' as UserRole,
+    role: 'NDA' as UserRole,
   });
   const [useInvitation, setUseInvitation] = useState(false);
 
@@ -69,7 +69,7 @@ export function UsersPage() {
     first_name: '',
     last_name: '',
     position: '',
-    role: 'PENDING' as UserRole,
+    role: 'NDA' as UserRole,
     is_active: true,
   });
 
@@ -109,7 +109,7 @@ export function UsersPage() {
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const params: { role?: UserRole; search?: string; page: number; per_page: number } = {
+      const params: { role?: UserRole | 'DISABLED'; search?: string; page: number; per_page: number } = {
         page: pagination.page,
         per_page: 20,
       };
@@ -192,7 +192,7 @@ export function UsersPage() {
       const created = await adminApi.createUser(userData);
       setUsers([created, ...users]);
       setShowCreateModal(false);
-      setNewUser({ email: '', first_name: '', last_name: '', position: '', password: '', role: 'PENDING' });
+      setNewUser({ email: '', first_name: '', last_name: '', position: '', password: '', role: 'NDA' });
       setUseInvitation(false);
     } catch (error) {
       console.error('Failed to create user:', error);
@@ -231,9 +231,11 @@ export function UsersPage() {
     setDeactivating(true);
     try {
       await adminApi.deleteUser(deactivateUser.id);
-      setUsers(users.map(u =>
-        u.id === deactivateUser.id ? { ...u, is_active: false } : u
-      ));
+      setUsers(users.filter(u => u.id !== deactivateUser.id));
+      setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      if (detailUser?.id === deactivateUser.id) {
+        setDetailUser(null);
+      }
     } catch (error) {
       console.error('Failed to deactivate user:', error);
     } finally {
@@ -338,20 +340,21 @@ export function UsersPage() {
     }
   };
 
-  const getRoleBadgeVariant = (role: UserRole) => {
+  const getRoleBadgeVariant = (role: UserRole | 'DISABLED') => {
     switch (role) {
       case 'ADMIN':
         return 'default';
-      case 'FUNDED':
-        return 'success';
-      case 'APPROVED':
-        return 'info';
-      case 'PENDING':
+      case 'NDA':
         return 'warning';
+      case 'DISABLED':
+        return 'danger';
       default:
         return 'default';
     }
   };
+
+  /** All user roles for filter and role dropdown (same order as backend UserRole) */
+  const USER_ROLES: UserRole[] = ['ADMIN', 'NDA'];
 
   const getInitials = (firstName?: string, lastName?: string, email?: string) => {
     if (firstName && lastName) {
@@ -395,14 +398,13 @@ export function UsersPage() {
           <div className="flex gap-2">
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
+              onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all' | 'DISABLED')}
               className="px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">All Roles</option>
               <option value="ADMIN">Admin</option>
-              <option value="FUNDED">Funded</option>
-              <option value="APPROVED">Approved</option>
-              <option value="PENDING">Pending</option>
+              <option value="NDA">NDA</option>
+              <option value="DISABLED">Disabled</option>
             </select>
             <Button variant="ghost" onClick={loadUsers} disabled={loading}>
               <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
@@ -453,10 +455,6 @@ export function UsersPage() {
                           'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm',
                           user.role === 'ADMIN'
                             ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                            : user.role === 'FUNDED'
-                            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                            : user.role === 'APPROVED'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600'
                             : 'bg-gradient-to-br from-amber-500 to-amber-600'
                         )}
                       >
@@ -482,55 +480,61 @@ export function UsersPage() {
                   </td>
                   <td className="py-4 px-4">
                     <div className="relative">
-                      <button
-                        onClick={() => setShowRoleDropdown(showRoleDropdown === user.id ? null : user.id)}
-                        className="flex items-center gap-1"
-                        disabled={savingRole === user.id}
-                      >
-                        {savingRole === user.id ? (
-                          <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
-                        ) : (
-                          <>
-                            <Badge variant={getRoleBadgeVariant(user.role)}>
-                              {user.role.toUpperCase()}
-                            </Badge>
-                            <ChevronDown className="w-3 h-3 text-navy-400" />
-                          </>
-                        )}
-                      </button>
-                      {showRoleDropdown === user.id && (
-                        <div className="absolute z-10 mt-1 w-36 bg-white dark:bg-navy-800 rounded-lg shadow-xl border border-navy-100 dark:border-navy-700 overflow-hidden">
-                          {(['ADMIN', 'FUNDED', 'APPROVED', 'PENDING'] as UserRole[]).map((role) => (
-                            <button
-                              key={role}
-                              onClick={() => handleRoleChange(user.id, role)}
-                              className={cn(
-                                'w-full px-3 py-2 text-left text-sm hover:bg-navy-50 dark:hover:bg-navy-700 flex items-center justify-between',
-                                user.role === role && 'bg-navy-50 dark:bg-navy-700'
-                              )}
-                            >
-                              <Badge variant={getRoleBadgeVariant(role)} className="text-xs">
-                                {role.toUpperCase()}
-                              </Badge>
-                              {user.role === role && <Check className="w-3 h-3 text-emerald-500" />}
-                            </button>
-                          ))}
-                        </div>
+                      {user.is_active === false ? (
+                        <Badge variant={getRoleBadgeVariant('DISABLED')}>
+                          DISABLED
+                        </Badge>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setShowRoleDropdown(showRoleDropdown === user.id ? null : user.id)}
+                            className="flex items-center gap-1"
+                            disabled={savingRole === user.id}
+                          >
+                            {savingRole === user.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
+                            ) : (
+                              <>
+                                <Badge variant={getRoleBadgeVariant(user.role)}>
+                                  {user.role.toUpperCase()}
+                                </Badge>
+                                <ChevronDown className="w-3 h-3 text-navy-400" />
+                              </>
+                            )}
+                          </button>
+                          {showRoleDropdown === user.id && (
+                            <div className="absolute z-10 mt-1 w-36 bg-white dark:bg-navy-800 rounded-lg shadow-xl border border-navy-100 dark:border-navy-700 overflow-hidden">
+                              {USER_ROLES.map((role) => (
+                                <button
+                                  key={role}
+                                  onClick={() => handleRoleChange(user.id, role)}
+                                  className={cn(
+                                    'w-full px-3 py-2 text-left text-sm hover:bg-navy-50 dark:hover:bg-navy-700 flex items-center justify-between',
+                                    user.role === role && 'bg-navy-50 dark:bg-navy-700'
+                                  )}
+                                >
+                                  <Badge variant={getRoleBadgeVariant(role)} className="text-xs">
+                                    {role.toUpperCase()}
+                                  </Badge>
+                                  {user.role === role && <Check className="w-3 h-3 text-emerald-500" />}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
                   <td className="py-4 px-4">
                     <Badge variant={user.is_active !== false ? 'success' : 'danger'}>
-                      {user.is_active !== false ? 'Active' : 'Inactive'}
+                      {user.is_active !== false ? 'Active' : 'DISABLED'}
                     </Badge>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-navy-400" />
                       <span className="text-sm text-navy-600 dark:text-navy-300">
-                        {(user.role === 'APPROVED' || user.role === 'FUNDED') && (user as { kyc_approved_at?: string }).kyc_approved_at
-                          ? formatRelativeTime((user as { kyc_approved_at?: string }).kyc_approved_at!)
-                          : user.last_login
+                        {user.last_login
                             ? formatRelativeTime(user.last_login)
                             : 'Never'}
                       </span>
@@ -569,15 +573,17 @@ export function UsersPage() {
                           <Plus className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeactivateUser(user)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        title="Deactivate"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {user.is_active !== false && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeactivateUser(user)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Deactivate"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </motion.tr>

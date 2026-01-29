@@ -15,7 +15,6 @@ When reviewing UI/frontend changes, verify implementation against these sources.
 - **`frontend/docs/DESIGN_SYSTEM.md`** – Full design system doc: colors (navy, emerald, EUA/CEA, bid/ask), typography, spacing, radius, shadows, component patterns, trading UI.
 - **`frontend/src/styles/design-tokens.css`** – CSS variables (light/dark), utility classes (`.text-primary`, `.page-title`, `.bg-surface`, `.badge-eua`, etc.).
 - **`frontend/tailwind.config.js`** – Theme extension: `navy`, `emerald`, `primary` palettes; `darkMode: 'class'`; migration notes (no `slate-*`/`gray-*`, use `navy-*`).
-- **`frontend/scripts/check-design-system.js`** – Script that flags `slate-*`, `gray-*`, hardcoded hex/RGB; use as a compliance checklist.
 - **`.cursor/rules/niha-core.mdc`** – Frontend rules: no hard-coded colors, use Tailwind tokens (navy, emerald, amber, blue, red).
 
 1. Make sure that the plan was correctly implemented

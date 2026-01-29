@@ -111,31 +111,39 @@ export function BackofficeOnboardingPage() {
           backofficeApi.getPendingUsers(),
           backofficeApi.getKYCDocuments(),
         ]);
-        setKycUsers(users.map((u: PendingUserResponse): KYCUser => ({
+        setKycUsers(users.map((u: PendingUserResponse & { firstName?: string; lastName?: string; entityName?: string; documentsCount?: number; createdAt?: string }): KYCUser => ({
           id: u.id,
           email: u.email,
-          first_name: u.first_name,
-          last_name: u.last_name,
-          entity_name: u.entity_name,
-          documents_count: u.documents_count || 0,
-          created_at: u.created_at || new Date().toISOString(),
+          first_name: u.first_name ?? u.firstName ?? '',
+          last_name: u.last_name ?? u.lastName ?? '',
+          entity_name: u.entity_name ?? u.entityName ?? '',
+          documents_count: u.documents_count ?? u.documentsCount ?? 0,
+          created_at: u.created_at ?? u.createdAt ?? new Date().toISOString(),
         })));
-        setKycDocuments(docs);
+        // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
+        setKycDocuments((docs as Array<Record<string, unknown>>).map(d => ({
+          ...d,
+          user_id: d.user_id ?? d.userId,
+          document_type: d.document_type ?? d.documentType,
+          file_name: d.file_name ?? d.fileName,
+        })));
       } else if (activeSubpage === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
-        setPendingDeposits(deposits.map((d: PendingDepositResponse): PendingDeposit => ({
+        // API response is transformed to camelCase by axios interceptor
+        setPendingDeposits(deposits.map((d: PendingDepositResponse & Record<string, unknown>): PendingDeposit => ({
           id: d.id,
-          entity_id: d.entity_id,
-          entity_name: d.entity_name || '',
-          user_email: d.user_email || '',
-          reported_amount: d.reported_amount ?? null,
-          reported_currency: d.reported_currency ?? null,
-          wire_reference: d.wire_reference ?? null,
-          bank_reference: d.bank_reference ?? null,
+          entity_id: (d.entity_id ?? (d as Record<string, unknown>).entityId) as string,
+          entity_name: ((d.entity_name ?? (d as Record<string, unknown>).entityName) as string) || '',
+          user_email: ((d.user_email ?? (d as Record<string, unknown>).userEmail) as string) || '',
+          user_role: (d.user_role ?? (d as Record<string, unknown>).userRole) as string | undefined,
+          reported_amount: (d.reported_amount ?? (d as Record<string, unknown>).reportedAmount) ?? null,
+          reported_currency: (d.reported_currency ?? (d as Record<string, unknown>).reportedCurrency) ?? null,
+          wire_reference: (d.wire_reference ?? (d as Record<string, unknown>).wireReference) ?? null,
+          bank_reference: (d.bank_reference ?? (d as Record<string, unknown>).bankReference) ?? null,
           status: d.status,
-          reported_at: d.reported_at ?? null,
-          notes: d.notes ?? null,
-          created_at: d.created_at,
+          reported_at: (d.reported_at ?? (d as Record<string, unknown>).reportedAt) ?? null,
+          notes: (d.notes ?? (d as Record<string, unknown>).notes) ?? null,
+          created_at: (d.created_at ?? (d as Record<string, unknown>).createdAt) as string,
         })));
       }
     } catch (err) {
@@ -201,9 +209,9 @@ export function BackofficeOnboardingPage() {
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    setActionLoading(requestId);
+    setActionLoading(`reject-${requestId}`);
     try {
-      await adminApi.updateContactRequest(requestId, { status: 'rejected' });
+      await adminApi.updateContactRequest(requestId, { status: 'REJECTED' });
     } catch (err) {
       logger.error('Failed to reject request', err);
     } finally {

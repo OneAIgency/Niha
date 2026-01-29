@@ -152,33 +152,35 @@ export function BackofficeLayout({ children, subSubHeaderLeft, subSubHeader }: B
   const showSubSub = Boolean(subSubHeaderLeft) || Boolean(subSubHeader);
 
   return (
-    <div className="min-h-screen bg-navy-950">
-      <Subheader
-        icon={<IconComponent className={cn('w-5 h-5', config.iconColor)} />}
-        title="Backoffice"
-        description={config.description}
-        iconBg={config.iconBg}
-      >
-        <nav className="flex items-center gap-2" aria-label="Backoffice navigation">
-          {BACKOFFICE_NAV.map((item) => {
-            const isActive = isRouteActive(pathname, item.to);
-            const Icon = item.icon;
-            return (
-              <SubheaderNavButton
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                icon={<Icon className="w-4 h-4" aria-hidden="true" />}
-                isActive={isActive}
-              />
-            );
-          })}
-        </nav>
-      </Subheader>
-      {showSubSub && (
-        <SubSubHeader left={subSubHeaderLeft}>{subSubHeader}</SubSubHeader>
-      )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-navy-900">
+      <div className="page-section-header-sticky">
+        <Subheader
+          icon={<IconComponent className={cn('w-5 h-5', config.iconColor)} />}
+          title="Backoffice"
+          description={config.description}
+          iconBg={config.iconBg}
+        >
+          <nav className="flex items-center gap-2" aria-label="Backoffice navigation">
+            {BACKOFFICE_NAV.map((item) => {
+              const isActive = isRouteActive(pathname, item.to);
+              const Icon = item.icon;
+              return (
+                <SubheaderNavButton
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={<Icon className="w-4 h-4" aria-hidden="true" />}
+                  isActive={isActive}
+                />
+              );
+            })}
+          </nav>
+        </Subheader>
+        {showSubSub && (
+          <SubSubHeader left={subSubHeaderLeft}>{subSubHeader}</SubSubHeader>
+        )}
+      </div>
+      <div className="page-container py-6">
         {children}
       </div>
     </div>

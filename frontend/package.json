@@ -12,8 +12,6 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "check-design-system": "node scripts/check-design-system.js",
-    "generate:registry": "node scripts/generate-registry.cjs",
-    "prebuild": "npm run generate:registry",
     "prepare": "cd .. && husky"
   },
   "dependencies": {

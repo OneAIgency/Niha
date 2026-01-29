@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -15,6 +15,7 @@ import {
   Target,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useStore';
+import { onboardingApi } from '@/services/api';
 import KycUploadModal from './KycUploadModal';
 
 /* Design-token references (see design-tokens.css --color-onboarding-*) */
@@ -65,6 +66,24 @@ export default function OnboardingLayout({
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [kycProgress, setKycProgress] = useState(0);
+
+  // Load KYC progress from API so the floating button shows correct % (not just 0% until modal is opened)
+  useEffect(() => {
+    let cancelled = false;
+    onboardingApi
+      .getStatus()
+      .then((data) => {
+        const uploaded = 'documentsUploaded' in data ? (data as { documentsUploaded: number }).documentsUploaded : data.documents_uploaded;
+        const required = 'documentsRequired' in data ? (data as { documentsRequired: number }).documentsRequired : data.documents_required;
+        if (!cancelled && required > 0) {
+          setKycProgress(Math.round((uploaded / required) * 100));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();

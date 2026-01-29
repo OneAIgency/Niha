@@ -1,12 +1,16 @@
 """
 Deposit Service - AML Hold Management
 
-Handles deposit lifecycle:
-1. Client announces wire transfer
-2. Backoffice confirms receipt
-3. AML hold period calculated and applied
-4. Hold expires or admin clears early
-5. Funds credited to entity balance
+Handles deposit lifecycle (announce → confirm → clear):
+1. Client announces wire transfer (POST /deposits/announce); APPROVED→FUNDING.
+2. Backoffice confirms receipt (POST /deposits/{id}/confirm); FUNDING→AML, ON_HOLD.
+3. AML hold period calculated and applied.
+4. Hold expires or admin clears early (POST /deposits/{id}/clear); AML→CEA, credit.
+5. Funds credited to entity balance.
+
+Alternative: PUT /backoffice/deposits/{id}/confirm for immediate confirm (no hold),
+also FUNDING→AML. Direct create: POST /backoffice/deposits (no announce, no
+role transitions). See backoffice docstrings.
 
 Hold Period Rules:
 - First deposit: 3 business days
@@ -33,6 +37,8 @@ from ..models.models import (
     Entity,
     HoldType,
     TransactionType,
+    User,
+    UserRole,
 )
 from ..services.balance_utils import update_entity_balance
 
@@ -184,6 +190,17 @@ async def announce_deposit(
     db.add(deposit)
     await db.flush()
 
+    # Transition: first successful announce for this entity → APPROVED users become FUNDING
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == entity_id,
+            User.role == UserRole.APPROVED,
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.FUNDING
+    await db.flush()
+
     logger.info(
         f"Deposit announced: {deposit.id} - Entity {entity_id} - "
         f"{reported_amount} {reported_currency.value}"
@@ -259,6 +276,15 @@ async def confirm_deposit(
     if admin_notes:
         deposit.admin_notes = admin_notes
 
+    # Transition: FUNDING → AML when backoffice confirms wire
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role == UserRole.FUNDING,
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.AML
     await db.flush()
 
     logger.info(
@@ -275,7 +301,7 @@ async def clear_deposit(
     admin_id: UUID,
     admin_notes: Optional[str] = None,
     force_clear: bool = False,
-) -> Deposit:
+) -> Tuple[Deposit, int]:
     """
     Clear deposit and credit funds to entity balance.
 
@@ -325,6 +351,19 @@ async def clear_deposit(
     if admin_notes:
         deposit.admin_notes = (deposit.admin_notes or "") + f"\n[Cleared] {admin_notes}"
 
+    # Transition: AML → CEA when deposit is cleared
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role == UserRole.AML,
+        )
+    )
+    users_to_upgrade = users_result.scalars().all()
+    upgraded_count = len(users_to_upgrade)
+    for u in users_to_upgrade:
+        u.role = UserRole.CEA
+    await db.flush()
+
     # Credit funds to entity balance
     if deposit.amount and deposit.currency == Currency.EUR:
         await update_entity_balance(
@@ -356,14 +395,15 @@ async def clear_deposit(
 
     currency_val = deposit.currency.value if deposit.currency else "N/A"
     logger.info(
-        "Deposit cleared: %s - %s %s - Entity %s",
+        "Deposit cleared: %s - %s %s - Entity %s - %s user(s) AML→CEA",
         deposit.id,
         deposit.amount,
         currency_val,
         deposit.entity_id,
+        upgraded_count,
     )
 
-    return deposit
+    return deposit, upgraded_count
 
 
 async def reject_deposit(
@@ -413,6 +453,15 @@ async def reject_deposit(
             deposit.admin_notes or ""
         ) + f"\n[Rejected] {admin_notes}"
 
+    # Transition: entity users in FUNDING or AML → REJECTED
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role.in_([UserRole.FUNDING, UserRole.AML]),
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.REJECTED
     await db.flush()
 
     logger.info(
@@ -546,7 +595,7 @@ async def process_expired_holds(db: AsyncSession, system_admin_id: UUID) -> int:
                 admin_notes="Auto-cleared after hold period expiration",
                 force_clear=False,
             )
-            cleared_count += 1
+            cleared_count += 1  # (deposit, upgraded_count) returned; we count cleared deposits
         except Exception as e:
             logger.error(f"Failed to auto-clear deposit {deposit.id}: {e}")
 

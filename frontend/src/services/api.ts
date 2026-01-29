@@ -160,9 +160,28 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Standardize error response format
+    // Standardize error response format (message always string; data.detail unchanged for modal)
+    const d = error.response?.data?.detail;
+    let message: string;
+    if (typeof d === 'string') {
+      message = d;
+    } else if (
+      d &&
+      typeof d === 'object' &&
+      !Array.isArray(d) &&
+      typeof (d as { error?: string }).error === 'string'
+    ) {
+      message = (d as { error: string }).error;
+    } else if (
+      error.response?.data?.message &&
+      typeof error.response.data.message === 'string'
+    ) {
+      message = error.response.data.message;
+    } else {
+      message = error.message || 'An error occurred';
+    }
     const standardizedError = {
-      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'An error occurred',
+      message,
       status: error.response?.status,
       data: error.response?.data,
       originalError: error,
@@ -687,7 +706,7 @@ export const adminApi = {
     return data;
   },
 
-  // Create user from contact request (approve & invite)
+  // Create user from contact request (approve & create user)
   createUserFromRequest: async (
     requestId: string,
     userData: {
@@ -711,16 +730,21 @@ export const adminApi = {
       creation_method: string;
     };
   }> => {
+    const params: Record<string, string> = {
+      request_id: requestId,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      mode: userData.mode,
+    };
+    if (userData.password != null && userData.password !== '') {
+      params.password = userData.password;
+    }
+    if (userData.position != null && userData.position !== '') {
+      params.position = userData.position;
+    }
     const { data } = await api.post('/admin/users/create-from-request', null, {
-      params: {
-        request_id: requestId,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        mode: userData.mode,
-        password: userData.password,
-        position: userData.position,
-      }
+      params,
     });
     return data;
   },
@@ -772,7 +796,7 @@ export const adminApi = {
 
   // User Management
   getUsers: async (params?: {
-    role?: UserRole;
+    role?: UserRole | 'DISABLED';
     search?: string;
     page?: number;
     per_page?: number;

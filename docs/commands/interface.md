@@ -52,12 +52,15 @@ The design system MUST be centralized so that changing a theme or design token i
 ## Component Requirements
 
 When creating or reviewing components, verify:
+
 - Uses design tokens (no hex colors, no px spacing, no hard-coded fonts)
+- Form inputs and focusable elements use **emerald** for focus ring (e.g. `focus:ring-emerald-500`); see `frontend/docs/DESIGN_SYSTEM.md` § Forms/Inputs.
 - Supports all theme variants
 - Keyboard navigable and screen reader friendly
 - Proper ARIA attributes
 - Responsive on mobile, tablet, and desktop
 - Handles loading, error, and empty states
+- **Client status badge:** Use `ClientStatusBadge` (or `clientStatusVariant` from `utils/roleBadge`) for deposit/client role display in cards and tables; design tokens only. See `frontend/docs/DESIGN_SYSTEM.md` § Badges → Client status badge.
 
 **Backoffice nav levels:** Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` from `frontend/src/styles/design-tokens.css`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; customize via CSS variables in the same file. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8–9.
 

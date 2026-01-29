@@ -57,7 +57,7 @@ async def create_contact_request(
         contact_name=request.contact_name,
         position=request.position,
         request_type=request.request_type,
-        status=ContactStatus.NEW,
+        status=ContactStatus.NDA,
     )
 
     try:
@@ -143,7 +143,7 @@ async def create_nda_request(
         nda_file_data=content,  # Store binary in database
         nda_file_mime_type="application/pdf",
         submitter_ip=submitter_ip,
-        status=ContactStatus.NEW,
+        status=ContactStatus.NDA,
     )
 
     try:

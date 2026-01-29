@@ -110,6 +110,43 @@ export const usePricesStore = create<PricesState>((set) => ({
   setError: (error) => set({ error, loading: false }),
 }));
 
+// Theme token overrides: CSS variable name -> value (persisted, applied globally)
+const THEME_TOKEN_OVERRIDES_KEY = 'theme-token-overrides';
+
+interface ThemeTokenState {
+  overrides: Record<string, string>;
+  setOverride: (varName: string, value: string) => void;
+  resetOverride: (varName: string) => void;
+  resetElementOverrides: (varNames: string[]) => void;
+  resetAllOverrides: () => void;
+}
+
+export const useThemeTokenStore = create<ThemeTokenState>()(
+  persist(
+    (set) => ({
+      overrides: {},
+      setOverride: (varName, value) =>
+        set((state) => ({
+          overrides: { ...state.overrides, [varName]: value },
+        })),
+      resetOverride: (varName) =>
+        set((state) => {
+          const next = { ...state.overrides };
+          delete next[varName];
+          return { overrides: next };
+        }),
+      resetElementOverrides: (varNames) =>
+        set((state) => {
+          const next = { ...state.overrides };
+          varNames.forEach((name) => delete next[name]);
+          return { overrides: next };
+        }),
+      resetAllOverrides: () => set({ overrides: {} }),
+    }),
+    { name: THEME_TOKEN_OVERRIDES_KEY }
+  )
+);
+
 // UI Store
 interface UIState {
   sidebarOpen: boolean;

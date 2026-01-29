@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
@@ -138,10 +139,10 @@ async def get_pending_users(
     Get users awaiting approval (pending status with submitted KYC).
     Admin only.
     """
-    # Get pending users who have submitted KYC
+    # Get pending users in KYC (awaiting backoffice approve/reject after KYC submission)
     query = (
         select(User)
-        .where(User.role == UserRole.PENDING)
+        .where(User.role == UserRole.KYC)
         .where(User.is_active.is_(True))
         .order_by(User.created_at.desc())
     )
@@ -192,7 +193,7 @@ async def approve_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Approve a pending user. Changes role from PENDING to APPROVED.
+    Approve KYC: user.role KYC → APPROVED. User gets access to funding page.
     Admin only.
     """
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -201,13 +202,12 @@ async def approve_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.role != UserRole.PENDING:
+    if user.role != UserRole.KYC:
         raise HTTPException(
             status_code=400,
-            detail=f"User is not pending approval (current role: {user.role.value})",
+            detail=f"User is not in KYC review (current role: {user.role.value})",
         )
 
-    # Update user role
     user.role = UserRole.APPROVED
 
     # Update entity KYC status if exists
@@ -241,7 +241,7 @@ async def reject_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Reject a pending user.
+    Reject KYC: set user.role to REJECTED and entity KYC status to rejected.
     Admin only.
     """
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -249,6 +249,8 @@ async def reject_user(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = UserRole.REJECTED
 
     # Update entity KYC status if exists
     if user.entity_id:
@@ -258,9 +260,6 @@ async def reject_user(
         entity = entity_result.scalar_one_or_none()
         if entity:
             entity.kyc_status = KYCStatus.REJECTED
-
-    # Deactivate user account
-    user.is_active = False
 
     await db.commit()
 
@@ -274,7 +273,8 @@ async def fund_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Mark a user as funded. Changes role from APPROVED to FUNDED.
+    Manually set user to FUNDING (e.g. after confirming first deposit).
+    Normally FUNDING is set automatically when user announces deposit.
     Admin only.
     """
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -283,22 +283,21 @@ async def fund_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.role not in [UserRole.APPROVED, UserRole.PENDING]:
+    if user.role != UserRole.APPROVED:
         raise HTTPException(
             status_code=400,
-            detail=f"User cannot be funded (current role: {user.role.value})",
+            detail=f"User must be APPROVED to set FUNDING (current role: {user.role.value})",
         )
 
-    user.role = UserRole.FUNDED
+    user.role = UserRole.FUNDING
     await db.commit()
 
-    # Send funding confirmation email
     try:
         await email_service.send_account_funded(user.email, user.first_name)
     except Exception:
         pass
 
-    return MessageResponse(message=f"User {user.email} has been marked as funded")
+    return MessageResponse(message=f"User {user.email} has been marked as funding")
 
 
 @router.get("/kyc-documents")
@@ -527,10 +526,18 @@ async def get_all_deposits(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all deposits, optionally filtered by status or entity.
-    Admin only.
+    Get all deposits, optionally filtered by status or entity_id. Admin only.
+
+    Query: status (optional), entity_id (optional UUID). Returns list of deposit objects
+    (id, entity_id, entity_name, user_email, user_role, amount, currency, status, ...).
+    Uses selectinload(Deposit.entity), selectinload(Deposit.user), and a single batch query for fallback users
+    (deposits without reporting user) to avoid N+1.
     """
-    query = select(Deposit).order_by(Deposit.created_at.desc())
+    query = (
+        select(Deposit)
+        .options(selectinload(Deposit.entity), selectinload(Deposit.user))
+        .order_by(Deposit.created_at.desc())
+    )
 
     if status:
         try:
@@ -549,34 +556,49 @@ async def get_all_deposits(
     result = await db.execute(query)
     deposits = result.scalars().all()
 
+    # Batch-fetch first user per entity for deposits without reporting user
+    entity_ids_needing_fallback = list(
+        {d.entity_id for d in deposits if not d.user_id and d.entity_id}
+    )
+    fallback_user_by_entity: dict[UUID, User] = {}
+    if entity_ids_needing_fallback:
+        fallback_result = await db.execute(
+            select(User)
+            .where(User.entity_id.in_(entity_ids_needing_fallback))
+            .order_by(User.entity_id, User.created_at.asc())
+        )
+        seen: set[UUID] = set()
+        for u in fallback_result.scalars().all():
+            if u.entity_id and u.entity_id not in seen:
+                seen.add(u.entity_id)
+                fallback_user_by_entity[u.entity_id] = u
+
     deposits_with_entity = []
     for dep in deposits:
-        # Get entity info
-        entity_result = await db.execute(
-            select(Entity).where(Entity.id == dep.entity_id)
-        )
-        entity = entity_result.scalar_one_or_none()
-
-        # Get primary user email for entity
+        entity = dep.entity
+        reporting_user = dep.user
         user_email = None
-        if entity:
-            user_result = await db.execute(
-                select(User).where(User.entity_id == entity.id).limit(1)
-            )
-            user = user_result.scalar_one_or_none()
-            user_email = user.email if user else None
+        user_role = None
+        if reporting_user:
+            user_email = reporting_user.email
+            user_role = reporting_user.role.value
+        elif dep.entity_id and dep.entity_id in fallback_user_by_entity:
+            u = fallback_user_by_entity[dep.entity_id]
+            user_email = u.email
+            user_role = u.role.value
 
         deposits_with_entity.append(
             {
                 "id": str(dep.id),
                 "entity_id": str(dep.entity_id),
-                "entity_name": entity.name if entity else None,
-                "user_email": user_email,
+                "entity_name": (entity.name if entity else None) or "—",
+                "user_email": user_email or "",
+                "user_role": user_role,
                 "reported_amount": float(dep.reported_amount)
-                if dep.reported_amount
+                if dep.reported_amount is not None
                 else None,
                 "reported_currency": dep.reported_currency.value
-                if dep.reported_currency
+                if dep.reported_currency is not None
                 else None,
                 "amount": float(dep.amount) if dep.amount else None,
                 "currency": dep.currency.value if dep.currency else None,
@@ -605,8 +627,16 @@ async def create_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Create and confirm a deposit for an entity.
-    This is used when backoffice receives a wire transfer.
+    Create and confirm a deposit for an entity (direct create, no client announce).
+
+    Use when backoffice receives a wire transfer **without** a prior client
+    announce. Credited immediately; no AML hold. No user role transitions.
+
+    For the 0010 flow (announce → confirm → clear), use instead:
+    - Client: POST /deposits/announce (APPROVED→FUNDING).
+    - Admin: POST /deposits/{id}/confirm (deposit_service, ON_HOLD, FUNDING→AML)
+      or PUT /backoffice/deposits/{id}/confirm (immediate confirm, FUNDING→AML).
+    - Admin: POST /deposits/{id}/clear when hold expires (AML→CEA).
     Admin only.
     """
     # Validate deposit amount
@@ -675,10 +705,7 @@ async def create_deposit(
     users_result = await db.execute(select(User).where(User.entity_id == entity.id))
     users = users_result.scalars().all()
 
-    for user in users:
-        if user.role == UserRole.APPROVED:
-            user.role = UserRole.FUNDED
-
+    # Role transitions defined later (no APPROVED->FUNDED for now)
     await db.commit()
 
     # Send notification email to entity users
@@ -753,9 +780,12 @@ async def confirm_pending_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Confirm a pending deposit with actual received amount.
-    Updates entity balance and upgrades users to FUNDED status.
-    Admin only.
+    Confirm a pending deposit (client-announced) with actual received amount.
+
+    Use when the client has announced via POST /deposits/announce and the
+    deposit is PENDING. Updates entity balance and transitions FUNDING → AML
+    (0010 §4.2). Alternative to POST /deposits/{id}/confirm (deposit_service,
+    which uses AML hold before clear). Admin only.
     """
     # Get deposit with row lock
     result = await db.execute(
@@ -807,15 +837,18 @@ async def confirm_pending_deposit(
     entity.balance_currency = confirmed_currency
     entity.total_deposited = (entity.total_deposited or Decimal("0")) + confirmed_amount
 
-    # Upgrade users from APPROVED to FUNDED
-    users_result = await db.execute(select(User).where(User.entity_id == entity.id))
+    # Role transition (0010 §4.2): FUNDING → AML when backoffice confirms transfer
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == entity.id,
+            User.role == UserRole.FUNDING,
+        )
+    )
     users = users_result.scalars().all()
-
-    upgraded_count = 0
-    for user in users:
-        if user.role == UserRole.APPROVED:
-            user.role = UserRole.FUNDED
-            upgraded_count += 1
+    upgraded_count = len(users)
+    for u in users:
+        u.role = UserRole.AML
+    await db.flush()
 
     await db.commit()
 
@@ -841,7 +874,7 @@ async def confirm_pending_deposit(
     return MessageResponse(
         message=(
             f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} "
-            f"for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
+            f"for {entity.name}. {upgraded_count} user(s) upgraded to AML."
         )
     )
 
@@ -1034,19 +1067,7 @@ async def add_asset_to_entity(
             entity.total_deposited or Decimal("0")
         ) + amount_to_add
 
-    # Upgrade user(s) to FUNDED if they have any balance now
-    if balance_after > 0:
-        users_result = await db.execute(
-            select(User).where(
-                User.entity_id == UUID(entity_id),
-                User.role.in_([UserRole.APPROVED, UserRole.PENDING]),
-            )
-        )
-        users = users_result.scalars().all()
-        for user in users:
-            if user.role in [UserRole.APPROVED, UserRole.PENDING]:
-                user.role = UserRole.FUNDED
-
+    # Role transitions defined later
     await db.commit()
 
     asset_label = {

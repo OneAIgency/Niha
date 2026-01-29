@@ -1,5 +1,5 @@
 /**
- * Unit tests for redirect utilities (post-login and PENDING routing).
+ * Unit tests for redirect utilities (post-login and 0010 role routing).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,52 +12,77 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: 'user@example.com',
     first_name: 'Test',
     last_name: 'User',
-    role: 'PENDING',
+    role: 'NDA',
     entity_id: undefined,
     ...overrides,
   };
 }
 
 describe('getPostLoginRedirect', () => {
-  it('sends PENDING users to /onboarding', () => {
-    const user = makeUser({ role: 'PENDING' });
-    expect(getPostLoginRedirect(user)).toBe('/onboarding');
+  it('sends NDA users to /onboarding', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'NDA' }))).toBe('/onboarding');
+  });
+
+  it('sends KYC users to /onboarding', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'KYC' }))).toBe('/onboarding');
+  });
+
+  it('sends REJECTED users to /login', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'REJECTED' }))).toBe('/login');
   });
 
   it('sends APPROVED users to /funding', () => {
-    const user = makeUser({ role: 'APPROVED' });
-    expect(getPostLoginRedirect(user)).toBe('/funding');
+    expect(getPostLoginRedirect(makeUser({ role: 'APPROVED' }))).toBe('/funding');
   });
 
-  it('sends FUNDED users to /dashboard', () => {
-    const user = makeUser({ role: 'FUNDED' });
-    expect(getPostLoginRedirect(user)).toBe('/dashboard');
+  it('sends FUNDING users to /funding', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'FUNDING' }))).toBe('/funding');
+  });
+
+  it('sends AML users to /funding', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'AML' }))).toBe('/funding');
+  });
+
+  it('sends CEA users to /cash-market', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'CEA' }))).toBe('/cash-market');
+  });
+
+  it('sends CEA_SETTLE users to /cash-market', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'CEA_SETTLE' }))).toBe('/cash-market');
+  });
+
+  it('sends SWAP users to /swap', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'SWAP' }))).toBe('/swap');
+  });
+
+  it('sends EUA_SETTLE users to /swap', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'EUA_SETTLE' }))).toBe('/swap');
+  });
+
+  it('sends EUA users to /dashboard', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'EUA' }))).toBe('/dashboard');
   });
 
   it('sends ADMIN users to /dashboard', () => {
-    const user = makeUser({ role: 'ADMIN' });
-    expect(getPostLoginRedirect(user)).toBe('/dashboard');
+    expect(getPostLoginRedirect(makeUser({ role: 'ADMIN' }))).toBe('/dashboard');
   });
 
   it('sends special email eu@eu.ro to /onboarding regardless of role', () => {
-    expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'APPROVED' }))).toBe(
+    expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'ADMIN' }))).toBe(
       '/onboarding'
     );
-    expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'FUNDED' }))).toBe(
+    expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'NDA' }))).toBe(
       '/onboarding'
     );
   });
 });
 
-describe('PENDING routing (0009)', () => {
-  it('PENDING user redirect target is /onboarding for protected routes', () => {
-    const pendingUser = makeUser({ role: 'PENDING' });
-    expect(getPostLoginRedirect(pendingUser)).toBe('/onboarding');
+describe('NDA routing (0009)', () => {
+  it('NDA user redirect target is /onboarding for protected routes', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'NDA' }))).toBe('/onboarding');
   });
 
   it('unauthenticated access to onboarding would use login redirect (contract)', () => {
-    // AuthGuard sends unauthenticated to /login; getPostLoginRedirect is for authenticated users.
-    const approvedUser = makeUser({ role: 'APPROVED' });
-    expect(getPostLoginRedirect(approvedUser)).toBe('/funding');
+    expect(getPostLoginRedirect(makeUser({ role: 'ADMIN' }))).toBe('/dashboard');
   });
 });

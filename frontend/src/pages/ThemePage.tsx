@@ -39,9 +39,8 @@ export function ThemePage() {
   const textMuted = isDark ? 'text-navy-500' : 'text-navy-500';
 
   return (
-    <div className={isDark ? 'min-h-screen bg-navy-950' : 'min-h-screen bg-navy-50'}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PageHeader
+    <>
+      <PageHeader
           title="Theme Sample"
           subtitle={`Current theme: ${theme} · All design elements in one view`}
           className="mb-10"
@@ -69,7 +68,7 @@ export function ThemePage() {
             ].map((c) => (
               <div
                 key={c.name}
-                className={`rounded-xl border p-4 ${sectionCls} border-navy-700`}
+                className={`rounded-xl border p-4 ${sectionCls}`}
               >
                 <div className={`h-12 rounded-lg ${c.class} mb-2`} />
                 <p className={`text-sm font-medium ${textPrimary}`}>{c.name}</p>
@@ -549,8 +548,8 @@ export function ThemePage() {
               </h3>
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 animate-pulse rounded-full bg-emerald-500" />
-                <div className="h-12 w-12 animate-pulse rounded-full bg-blue-500" style={{ animationDelay: '150ms' }} />
-                <div className="h-12 w-12 animate-pulse rounded-full bg-amber-500" style={{ animationDelay: '300ms' }} />
+                <div className="h-12 w-12 animate-pulse rounded-full bg-blue-500 animate-delay-150" />
+                <div className="h-12 w-12 animate-pulse rounded-full bg-amber-500 animate-delay-300" />
               </div>
             </Card>
             <Card className="p-6">
@@ -562,7 +561,6 @@ export function ThemePage() {
           </div>
         </section>
         </div>
-      </div>
-    </div>
+    </>
   );
 }

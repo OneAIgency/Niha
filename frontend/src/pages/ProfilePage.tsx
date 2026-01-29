@@ -219,11 +219,7 @@ export function ProfilePage() {
     switch (role) {
       case 'ADMIN':
         return 'default';
-      case 'FUNDED':
-        return 'success';
-      case 'APPROVED':
-        return 'info';
-      case 'PENDING':
+      case 'NDA':
         return 'warning';
       default:
         return 'default';
@@ -355,7 +351,7 @@ export function ProfilePage() {
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
                     {getInitials()}
                   </div>
-                  <Badge variant={getRoleBadgeVariant(user?.role || 'PENDING')} className="mt-3">
+                  <Badge variant={getRoleBadgeVariant(user?.role || 'NDA')} className="mt-3">
                     {user?.role?.toUpperCase()}
                   </Badge>
                 </div>

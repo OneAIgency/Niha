@@ -229,6 +229,18 @@ class SettlementService:
 
             if new_status == SettlementStatus.SETTLED:
                 await SettlementService.finalize_settlement(db, settlement, updated_by)
+                # Role transitions (0010): CEA_SETTLE→SWAP, SWAP→EUA_SETTLE, EUA_SETTLE→EUA
+                from .role_transitions import (
+                    transition_cea_settle_to_swap_if_all_cea_settled,
+                    transition_eua_settle_to_eua_if_all_swap_settled,
+                    transition_swap_to_eua_settle_if_cea_zero,
+                )
+                entity_id = settlement.entity_id
+                if settlement.settlement_type == SettlementType.CEA_PURCHASE:
+                    await transition_cea_settle_to_swap_if_all_cea_settled(db, entity_id)
+                elif settlement.settlement_type == SettlementType.SWAP_CEA_TO_EUA:
+                    await transition_swap_to_eua_settle_if_cea_zero(db, entity_id)
+                    await transition_eua_settle_to_eua_if_all_swap_settled(db, entity_id)
 
             await db.commit()
 

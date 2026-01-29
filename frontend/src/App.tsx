@@ -1,6 +1,7 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Layout } from './components/layout';
+import { Layout, ThemeLayout } from './components/layout';
+import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
 import { getPostLoginRedirect } from './utils/redirect';
@@ -42,9 +43,7 @@ class BackofficeErrorBoundary extends Component<
 // Code splitting: Lazy load pages for better performance
 const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
 const LoginPage = lazy(() => import('./pages').then(m => ({ default: m.LoginPage })));
-const CashMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketPage })));
 const CashMarketProPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketProPage })));
-const SwapPage = lazy(() => import('./pages').then(m => ({ default: m.SwapPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.DashboardPage })));
 const ProfilePage = lazy(() => import('./pages').then(m => ({ default: m.ProfilePage })));
@@ -64,6 +63,7 @@ const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default
 const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
 const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
 const ThemePage = lazy(() => import('./pages').then(m => ({ default: m.ThemePage })));
+const ThemeContainersPage = lazy(() => import('./pages').then(m => ({ default: m.ThemeContainersPage })));
 const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
 const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
@@ -118,6 +118,10 @@ function AuthGuard({
       // Not authenticated - redirect to login
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
+    // Rejected users have no access
+    if (user.role === 'REJECTED') {
+      return <Navigate to="/login" replace />;
+    }
 
     // Check role-based access (allowed roles)
     if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -150,10 +154,10 @@ function AuthGuard({
 
 // Convenience wrappers using AuthGuard
 
-/** Protects routes for authenticated non-PENDING users; PENDING redirects to /onboarding. */
+/** Protects routes for authenticated non-NDA users; NDA redirects to /onboarding. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
+    <AuthGuard requireAuth={true} blockRoles={['NDA']} redirectWhenBlocked="/onboarding">
       {children}
     </AuthGuard>
   );
@@ -195,51 +199,42 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Onboarding area: requires auth only; PENDING and other roles can access. */
+/** Onboarding (KYC form): NDA and KYC only. */
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true}>
+    <RoleProtectedRoute allowedRoles={['NDA', 'KYC']}>
       {children}
-    </AuthGuard>
+    </RoleProtectedRoute>
   );
 }
 
-/** Funding area: APPROVED only; non-APPROVED (e.g. PENDING) redirect to role home in one hop. */
+/** Funding page: APPROVED, FUNDING, AML, ADMIN. */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED']}>
+    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'ADMIN']}>
       {children}
     </RoleProtectedRoute>
   );
 }
 
+/** Cash market / funded flow: CEA and beyond, or ADMIN. */
 function FundedRoute({ children }: { children: React.ReactNode }) {
-  const { user, _hasHydrated } = useAuthStore();
-
-  if (!_hasHydrated) {
-    return <PageLoader />;
-  }
-
-  // Special redirects based on role
-  if (user?.role === 'PENDING') {
-    return <Navigate to="/onboarding" replace />;
-  }
-  if (user?.role === 'APPROVED') {
-    return <Navigate to="/funding" replace />;
-  }
-
   return (
-    <RoleProtectedRoute allowedRoles={['FUNDED', 'ADMIN']} redirectTo="/dashboard">
+    <RoleProtectedRoute
+      allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN']}
+      redirectTo={undefined}
+    >
       {children}
     </RoleProtectedRoute>
   );
 }
 
+/** Dashboard: EUA (full access) or ADMIN. */
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
+    <RoleProtectedRoute allowedRoles={['EUA', 'ADMIN']}>
       {children}
-    </AuthGuard>
+    </RoleProtectedRoute>
   );
 }
 
@@ -258,6 +253,7 @@ function CatchAllRedirect() {
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ThemeTokenOverridesStyle />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Redirect root to login */}
@@ -374,39 +370,24 @@ function App() {
                 </DashboardRoute>
               }
             />
-            {/* FUNDED and ADMIN - Cash Market access */}
+            {/* FUNDED and ADMIN - Cash Market (Pro layout) */}
             <Route
               path="/cash-market"
-              element={
-                <FundedRoute>
-                  <CashMarketPage />
-                </FundedRoute>
-              }
-            />
-            {/* Cash Market Pro - Professional Trading Interface */}
-            <Route
-              path="/cash-market-pro"
               element={
                 <FundedRoute>
                   <CashMarketProPage />
                 </FundedRoute>
               }
             />
-            {/* ADMIN only - Swap Center access */}
+            {/* Legacy: redirect to main cash market */}
+            <Route path="/cash-market-pro" element={<Navigate to="/cash-market" replace />} />
+            {/* Swap Center: SWAP, EUA_SETTLE, EUA, ADMIN */}
             <Route
               path="/swap"
               element={
-                <AdminRoute>
+                <RoleProtectedRoute allowedRoles={['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN']}>
                   <CeaSwapMarketPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/swap-old"
-              element={
-                <AdminRoute>
-                  <SwapPage />
-                </AdminRoute>
+                </RoleProtectedRoute>
               }
             />
 
@@ -448,15 +429,19 @@ function App() {
               }
             />
 
-            {/* Theme Page - Admin only design system showcase */}
+            {/* Theme - Admin only design system showcase with subpages */}
             <Route
               path="/theme"
               element={
                 <AdminRoute>
-                  <ThemePage />
+                  <ThemeLayout />
                 </AdminRoute>
               }
-            />
+            >
+              <Route index element={<Navigate to="sample" replace />} />
+              <Route path="sample" element={<ThemePage />} />
+              <Route path="containers" element={<ThemeContainersPage />} />
+            </Route>
 
             {/* Backoffice routes - same Layout (Header + Footer) as rest of site */}
             <Route

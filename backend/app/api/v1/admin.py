@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -73,12 +73,12 @@ async def get_contact_requests(
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
-        query = query.where(ContactRequest.status == status)
+        query = query.where(ContactRequest.status == ContactStatus(status))
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
-        count_query = count_query.where(ContactRequest.status == status)
+        count_query = count_query.where(ContactRequest.status == ContactStatus(status))
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -138,7 +138,16 @@ async def update_contact_request(
         raise HTTPException(status_code=404, detail="Contact request not found")
 
     if update.status:
-        contact.status = ContactStatus(update.status)
+        new_status = ContactStatus(update.status)
+        contact.status = new_status
+        # When rejecting NDA, also set linked user to REJECTED if one exists (created from this request)
+        if new_status == ContactStatus.REJECTED:
+            user_result = await db.execute(
+                select(User).where(User.email == contact.contact_email)
+            )
+            linked_user = user_result.scalar_one_or_none()
+            if linked_user:
+                linked_user.role = UserRole.REJECTED
     if update.notes:
         contact.notes = update.notes
     if update.agent_id:
@@ -222,15 +231,22 @@ async def create_user_from_contact_request(
     """
     Create a new user from an approved contact request.
     Supports two modes:
-    - 'manual': Admin provides password, user can login immediately
-    - 'invitation': Send email invitation, user sets own password
-    Admin only.
+    - 'manual': Admin provides password (required, ≥8 chars), user active immediately.
+    - 'invitation': Send email invitation after commit; user sets password via link (MailConfig for expiry).
+    Creates Entity (name from contact_request, jurisdiction OTHER, KYC PENDING), User (role KYC), sets contact_request.status = KYC. Broadcasts request_updated and user_created on backoffice WebSocket.
+    Admin only. All parameters are Query params.
+    Returns: { message, success: true, user: { id, email, first_name, last_name, role, entity_id, creation_method } }.
+    Errors: 400 (invalid request_id, duplicate email, password validation), 404 (contact request not found), 400/409/500 from handle_database_error (optional details.hint).
     """
-    from datetime import timedelta
+    # Validate request_id as UUID
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
 
     # Get contact request
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact_request = result.scalar_one_or_none()
     if not contact_request:
@@ -254,64 +270,71 @@ async def create_user_from_contact_request(
         else 7
     )
 
-    # Create entity from contact request
-    entity = Entity(
-        name=contact_request.entity_name,
-        jurisdiction=Jurisdiction.OTHER,
-        kyc_status=KYCStatus.PENDING,
-    )
-    db.add(entity)
-    await db.flush()
+    try:
+        # Create entity from contact request
+        entity = Entity(
+            name=contact_request.entity_name,
+            jurisdiction=Jurisdiction.OTHER,
+            kyc_status=KYCStatus.PENDING,
+        )
+        db.add(entity)
+        await db.flush()
 
-    if mode == "manual":
-        # Manual creation with password
-        if not password or len(password) < 8:
-            raise HTTPException(
-                status_code=400,
-                detail="Password required and must be at least 8 characters",
+        if mode == "manual":
+            # Manual creation with password
+            if not password or len(password) < 8:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Password required and must be at least 8 characters",
+                )
+
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                password_hash=hash_password(password),
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                must_change_password=False,
+                is_active=True,
+                creation_method="manual",
+                created_by=admin_user.id,
+            )
+        else:
+            # Send invitation
+            invitation_token = secrets.token_urlsafe(32)
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                invitation_token=invitation_token,
+                invitation_sent_at=datetime.now(timezone.utc),
+                invitation_expires_at=(
+                    datetime.now(timezone.utc) + timedelta(days=invitation_expiry_days)
+                ),
+                must_change_password=True,
+                is_active=False,  # Activate when password is set
+                creation_method="invitation",
+                created_by=admin_user.id,
             )
 
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            password_hash=hash_password(password),
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            must_change_password=False,
-            is_active=True,
-            creation_method="manual",
-            created_by=admin_user.id,
-        )
-    else:
-        # Send invitation
-        invitation_token = secrets.token_urlsafe(32)
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            invitation_token=invitation_token,
-            invitation_sent_at=datetime.utcnow(),
-            invitation_expires_at=(
-                datetime.utcnow() + timedelta(days=invitation_expiry_days)
-            ),
-            must_change_password=True,
-            is_active=False,  # Activate when password is set
-            creation_method="invitation",
-            created_by=admin_user.id,
-        )
+        db.add(user)
 
-    db.add(user)
+        # Update contact request status to KYC (approved, user created)
+        contact_request.status = ContactStatus.KYC
 
-    # Update contact request status
-    contact_request.status = ContactStatus.ENROLLED
-
-    await db.commit()
-    await db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "create user from contact request", logger) from e
 
     # Send invitation email if applicable
     if mode == "invitation":
@@ -343,14 +366,29 @@ async def create_user_from_contact_request(
         except Exception:
             logger.exception(
                 "Failed to send invitation email for user %s "
-                "(user created, contact ENROLLED)",
+                "(user created, contact request KYC)",
                 user.email,
             )
 
-    # Broadcast updates
+    # Broadcast updates (full payload so realtime hook can replace list item)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
-            "request_updated", {"id": str(contact_request.id), "status": "enrolled"}
+            "request_updated",
+            {
+                "id": str(contact_request.id),
+                "entity_name": contact_request.entity_name,
+                "contact_email": contact_request.contact_email,
+                "contact_name": contact_request.contact_name,
+                "position": contact_request.position,
+                "request_type": contact_request.request_type or "join",
+                "nda_file_name": contact_request.nda_file_name,
+                "submitter_ip": contact_request.submitter_ip,
+                "status": contact_request.status.value if contact_request.status else "new",
+                "notes": contact_request.notes,
+                "created_at": (contact_request.created_at.isoformat() + "Z")
+                if contact_request.created_at
+                else None,
+            },
         )
     )
     asyncio.create_task(
@@ -361,7 +399,7 @@ async def create_user_from_contact_request(
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role.value,
+                "role": user.role.value,  # KYC
             },
         )
     )
@@ -485,7 +523,7 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
     new_contacts = await db.execute(
         select(func.count())
         .select_from(ContactRequest)
-        .where(ContactRequest.status == ContactStatus.NEW)
+        .where(ContactRequest.status == ContactStatus.NDA)
     )
     new_count = new_contacts.scalar()
 
@@ -588,13 +626,19 @@ async def get_users(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all users with optional filters.
-    Admin only.
+    Get users with optional filters.
+    Admin only. By default returns only active users. Use role=DISABLED to list
+    deactivated users (soft-deleted; kept for ticketing, transactions, etc.).
     """
-    query = select(User).order_by(User.created_at.desc())
-
-    if role:
-        query = query.where(User.role == UserRole(role))
+    if role == "DISABLED":
+        query = select(User).where(User.is_active.is_(False)).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(User.is_active.is_(False))
+    else:
+        query = select(User).where(User.is_active.is_(True)).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(User.is_active.is_(True))
+        if role:
+            query = query.where(User.role == UserRole(role))
+            count_query = count_query.where(User.role == UserRole(role))
 
     if search:
         search_term = f"%{search}%"
@@ -603,12 +647,6 @@ async def get_users(
             | (User.first_name.ilike(search_term))
             | (User.last_name.ilike(search_term))
         )
-
-    # Count total
-    count_query = select(func.count()).select_from(User)
-    if role:
-        count_query = count_query.where(User.role == UserRole(role))
-    if search:
         count_query = count_query.where(
             (User.email.ilike(search_term))
             | (User.first_name.ilike(search_term))

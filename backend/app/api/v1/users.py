@@ -241,11 +241,11 @@ async def report_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Report a wire transfer deposit (APPROVED users only).
+    Report a wire transfer deposit (APPROVED or ADMIN users).
     Creates a pending deposit that backoffice will confirm when funds arrive.
     """
-    # Only APPROVED users can report deposits
-    if current_user.role != UserRole.APPROVED:
+    # APPROVED and ADMIN can report deposits; others must complete KYC first
+    if current_user.role not in (UserRole.APPROVED, UserRole.ADMIN):
         raise HTTPException(
             status_code=403,
             detail=(
@@ -264,9 +264,10 @@ async def report_deposit(
     chars = string.ascii_uppercase + string.digits
     bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
 
-    # Create pending deposit
+    # Create pending deposit (link to reporting user for backoffice display)
     deposit = Deposit(
         entity_id=current_user.entity_id,
+        user_id=current_user.id,
         reported_amount=Decimal(str(deposit_data.amount)),
         reported_currency=Currency(deposit_data.currency.value),
         wire_reference=deposit_data.wire_reference,

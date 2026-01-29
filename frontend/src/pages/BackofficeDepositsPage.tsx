@@ -2,15 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     Clock,
     RefreshCw,
+    X,
+    DollarSign,
+    AlertCircle,
+    CheckCircle,
 } from 'lucide-react';
 import { BackofficeLayout } from '../components/layout/BackofficeLayout';
-import { Card, Button, Badge } from '../components/common';
+import { Card, Button, Badge, ClientStatusBadge } from '../components/common';
 import api from '../services/api';
+import { cn } from '../utils';
 
 interface Deposit {
     id: string;
     entity_name: string;
     user_email: string;
+    /** Client status; API may return userRole (camelCase). */
+    user_role?: string;
+    userRole?: string;
     amount: number;
     currency: string;
     status: string;
@@ -19,17 +27,28 @@ interface Deposit {
     reported_at: string;
     source_bank?: string;
     wire_reference?: string;
+    reported_amount?: number;
+    reported_currency?: string;
 }
+
+type ConfirmModalState = {
+    deposit: Deposit;
+    amount: string;
+    currency: string;
+    notes: string;
+    validationError: string | null;
+} | null;
 
 export function BackofficeDepositsPage() {
     const [deposits, setDeposits] = useState<Deposit[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'pending' | 'on_hold'>('pending');
+    const [confirmModal, setConfirmModal] = useState<ConfirmModalState>(null);
+    const [confirmSubmitting, setConfirmSubmitting] = useState(false);
 
     const fetchDeposits = useCallback(async () => {
         setLoading(true);
         try {
-            // Endpoint depends on filter
             const endpoint = filter === 'pending' ? '/api/v1/deposits/pending' : '/api/v1/deposits/on-hold';
             const response = await api.get(endpoint);
             setDeposits(response.data.deposits);
@@ -44,18 +63,55 @@ export function BackofficeDepositsPage() {
         fetchDeposits();
     }, [fetchDeposits]);
 
-    const handleConfirm = async (id: string, amount: number) => {
-        if (!window.confirm('Confirm wire receipt for this deposit?')) return;
+    const openConfirmModal = (d: Deposit) => {
+        const reported = d.reported_amount ?? d.amount ?? 0;
+        setConfirmModal({
+            deposit: d,
+            amount: reported ? String(reported) : '',
+            currency: d.reported_currency || d.currency || 'EUR',
+            notes: '',
+            validationError: null,
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal(null);
+        setConfirmSubmitting(false);
+    };
+
+    const handleConfirmSubmit = async () => {
+        if (!confirmModal) return;
+        const amountNum = parseFloat(confirmModal.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            setConfirmModal((prev) =>
+                prev ? { ...prev, validationError: 'Please enter a valid amount greater than 0' } : null
+            );
+            return;
+        }
+        setConfirmModal((prev) => (prev ? { ...prev, validationError: null } : null));
+        setConfirmSubmitting(true);
         try {
-            await api.post(`/api/v1/deposits/${id}/confirm`, {
-                actual_amount: amount,
-                actual_currency: 'EUR', // Defaulting to EUR for MVP
-                admin_notes: 'Confirmed via Backoffice UI'
+            await api.post(`/api/v1/deposits/${confirmModal.deposit.id}/confirm`, {
+                actual_amount: amountNum,
+                actual_currency: confirmModal.currency,
+                admin_notes: confirmModal.notes.trim() || undefined,
             });
+            closeConfirmModal();
             fetchDeposits();
         } catch (error) {
             console.error('Failed to confirm deposit:', error);
-            alert('Failed to confirm deposit');
+            setConfirmModal((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          validationError:
+                              (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+                              'Failed to confirm deposit',
+                      }
+                    : null
+            );
+        } finally {
+            setConfirmSubmitting(false);
         }
     };
 
@@ -116,6 +172,7 @@ export function BackofficeDepositsPage() {
                                         <th className="pb-3">Entity / User</th>
                                         <th className="pb-3">Amount</th>
                                         <th className="pb-3">Bank Details</th>
+                                        <th className="pb-3">Client</th>
                                         <th className="pb-3">Status</th>
                                         <th className="pb-3 pr-4 text-right">Actions</th>
                                     </tr>
@@ -148,6 +205,9 @@ export function BackofficeDepositsPage() {
                                                 )}
                                             </td>
                                             <td className="py-4">
+                                                <ClientStatusBadge role={d.user_role ?? d.userRole} />
+                                            </td>
+                                            <td className="py-4">
                                                 <Badge
                                                     variant={
                                                         d.status === 'pending' ? 'warning' :
@@ -170,7 +230,7 @@ export function BackofficeDepositsPage() {
                                                         <Button
                                                             size="sm"
                                                             variant="primary"
-                                                            onClick={() => handleConfirm(d.id, d.amount)}
+                                                            onClick={() => openConfirmModal(d)}
                                                         >
                                                             Confirm
                                                         </Button>
@@ -194,6 +254,125 @@ export function BackofficeDepositsPage() {
                     )}
                 </Card>
             </div>
+
+            {/* Confirm Deposit Modal */}
+            {confirmModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="bg-navy-800 rounded-xl shadow-xl w-full max-w-md border border-navy-700"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b border-navy-700">
+                            <h3 className="font-semibold text-white flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-navy-400" />
+                                Confirm Deposit
+                            </h3>
+                            <button
+                                onClick={closeConfirmModal}
+                                className="text-navy-400 hover:text-navy-200 p-1 rounded-lg transition-colors"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="p-3 bg-navy-900/50 rounded-lg">
+                                <p className="text-xs text-navy-400">Entity</p>
+                                <p className="font-semibold text-white">{confirmModal.deposit.entity_name}</p>
+                                <p className="text-xs text-navy-400 mt-1">{confirmModal.deposit.user_email}</p>
+                            </div>
+                            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                <p className="text-xs text-amber-400">Reported by user</p>
+                                <p className="font-semibold text-amber-200">
+                                    {(confirmModal.deposit.reported_amount ?? confirmModal.deposit.amount)?.toLocaleString(
+                                        'en-US',
+                                        {
+                                            style: 'currency',
+                                            currency:
+                                                confirmModal.deposit.reported_currency ||
+                                                confirmModal.deposit.currency ||
+                                                'EUR',
+                                        }
+                                    )}
+                                </p>
+                            </div>
+                            {confirmModal.validationError && (
+                                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-2">
+                                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-red-400 flex-1">{confirmModal.validationError}</p>
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-medium text-navy-300 mb-1">
+                                    Actual amount received *
+                                </label>
+                                <input
+                                    type="number"
+                                    value={confirmModal.amount}
+                                    onChange={(e) =>
+                                        setConfirmModal((prev) =>
+                                            prev ? { ...prev, amount: e.target.value, validationError: null } : null
+                                        )
+                                    }
+                                    placeholder="Enter actual amount"
+                                    min="0"
+                                    step="0.01"
+                                    className={cn(
+                                        'w-full px-4 py-2 rounded-lg border bg-navy-900 text-white font-mono focus:outline-none focus:ring-2',
+                                        confirmModal.validationError
+                                            ? 'border-red-500 focus:ring-red-500'
+                                            : 'border-navy-600 focus:ring-navy-500'
+                                    )}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-navy-300 mb-1">Currency *</label>
+                                <select
+                                    value={confirmModal.currency}
+                                    onChange={(e) =>
+                                        setConfirmModal((prev) => (prev ? { ...prev, currency: e.target.value } : null))
+                                    }
+                                    className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white focus:outline-none focus:ring-2 focus:ring-navy-500"
+                                >
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="CNY">CNY</option>
+                                    <option value="HKD">HKD</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-navy-300 mb-1">
+                                    Notes (optional)
+                                </label>
+                                <textarea
+                                    value={confirmModal.notes}
+                                    onChange={(e) =>
+                                        setConfirmModal((prev) => (prev ? { ...prev, notes: e.target.value } : null))
+                                    }
+                                    placeholder="Admin notes..."
+                                    rows={2}
+                                    className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <Button variant="ghost" className="flex-1" onClick={closeConfirmModal} disabled={confirmSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    className="flex-1"
+                                    onClick={handleConfirmSubmit}
+                                    loading={confirmSubmitting}
+                                    disabled={!confirmModal.amount || parseFloat(confirmModal.amount) <= 0}
+                                    icon={<CheckCircle className="w-4 h-4" />}
+                                >
+                                    Confirm Deposit
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </BackofficeLayout>
     );
 }

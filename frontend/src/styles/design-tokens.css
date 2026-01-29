@@ -3,6 +3,9 @@
  * Standardized design system for consistent UI across all components
  * Version: 1.0.0
  * Last Updated: 2026-01-22
+ *
+ * Theme hub (unde modifici tot ce ține de temă): src/theme/README.md
+ * Tailwind palette: tailwind.config.js (păstrează paleta aliniată cu acest fișier)
  */
 
 :root {
@@ -31,6 +34,14 @@
   --color-card-back-bg: #f1f5f9;        /* navy-100 – one step above layout */
   --color-card-back-border: #e2e8f0;    /* navy-200 */
   --radius-card-back: 0.75rem;           /* 12px – less rounded than 2xl */
+
+  /* Editable theme tokens (overridable from theme/containers) */
+  --content-wrapper-bg: #e2e8f0;        /* navy-200 light */
+  --content-wrapper-border: #cbd5e1;    /* navy-300 */
+  --content-wrapper-radius: 0.75rem;
+  --content-wrapper-padding: 1.25rem;
+  --page-bg-bg: #f8fafc;                /* navy-50 */
+  --page-container-dark-bg: #020617;     /* navy-950 */
 
   /* Brand Colors - Emerald (Primary) */
   --color-primary: #10b981;              /* emerald-500 - Primary brand */
@@ -95,6 +106,19 @@
   /* SubSubHeader nav count badge (new items / pending count – high visibility) */
   --color-subsubheader-nav-badge-bg: #dc2626;   /* red-600 */
   --color-subsubheader-nav-badge-text: #ffffff;
+
+  /* Subheader bar (page section title bar – icon, title, description, nav) */
+  --color-subheader-bg: #1e293b;   /* navy-800 */
+  --color-subheader-border: #334155;   /* navy-700 */
+  --subheader-padding-x: 1.5rem;   /* 24px */
+  --subheader-padding-y: 1rem;   /* 16px */
+
+  /* SubSubHeader bar (child bar under Subheader – filters, actions) */
+  --color-subsubheader-bg: rgba(15, 23, 42, 0.8);   /* navy-900/80 */
+  --color-subsubheader-border: #334155;   /* navy-700 */
+  --subsubheader-padding-x: 1.5rem;
+  --subsubheader-padding-y: 0.75rem;
+  --subsubheader-min-height: 3rem;
 
   /* ========================================
      TYPOGRAPHY SYSTEM
@@ -250,6 +274,14 @@
   --color-card-back-bg: #0f172a;        /* navy-900 – one step above layout */
   --color-card-back-border: #1e293b;   /* navy-800 */
   --radius-card-back: 0.75rem;          /* 12px */
+
+  /* Editable theme tokens (overridable from theme/containers) */
+  --content-wrapper-bg: #1e293b;       /* navy-800 */
+  --content-wrapper-border: #334155;   /* navy-700 */
+  --content-wrapper-radius: 0.75rem;
+  --content-wrapper-padding: 1.25rem;
+  --page-bg-bg: #0f172a;                /* navy-900 */
+  --page-container-dark-bg: #020617;    /* navy-950 */
 
   /* Brand Colors - Emerald (adjusted for dark) */
   --color-primary: #34d399;              /* emerald-400 - Lighter for dark bg */
@@ -443,6 +475,30 @@
   color: var(--color-subsubheader-nav-badge-text);
 }
 
+/* Subheader bar (page section title – single source of truth for bar styling) */
+.subheader-bar {
+  background-color: var(--color-subheader-bg);
+  border-bottom: 1px solid var(--color-subheader-border);
+  padding: var(--subheader-padding-y) var(--subheader-padding-x);
+}
+
+/* SubSubHeader bar (child bar under Subheader – filters, actions) */
+.subsubheader-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-subsubheader-bg);
+  border-bottom: 1px solid var(--color-subsubheader-border);
+  padding: var(--subsubheader-padding-y) var(--subsubheader-padding-x);
+  min-height: var(--subsubheader-min-height);
+}
+
+/* Sticky wrapper for Subheader + optional SubSubHeader (use in layouts for fixed headers on scroll) */
+.page-section-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-elevated);
+}
+
 /* Glass Effect */
 .glass {
   background: rgba(255, 255, 255, 0.8);
@@ -466,4 +522,12 @@
   transition-property: color, background-color, border-color;
   transition-duration: var(--duration-slow);
   transition-timing-function: var(--ease-out);
+}
+
+/* Animation delay utilities (e.g. staggered pulse) */
+.animate-delay-150 {
+  animation-delay: 150ms;
+}
+.animate-delay-300 {
+  animation-delay: 300ms;
 }

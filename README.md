@@ -5,7 +5,8 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 ## Features
 
 ### Core Trading Platform
-- **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects. PENDING users can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes; all other protected routes redirect them to `/onboarding`.
+- **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects. Users in **NDA** or **KYC** roles can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes; all other protected routes redirect them to `/onboarding`. Login page offers ENTER (password) and NDA (request access); after NDA submit, a "Request Submitted" confirmation is shown, then after 5 seconds the content fades out and an ambient animation is displayed. Preview: `/login?preview=nda-success` shows the NDA success flow without submitting.
+- **User status flow (0010)** — Full onboarding flow **NDA → KYC → APPROVED → FUNDING → AML → CEA → CEA_SETTLE → SWAP → EUA_SETTLE → EUA**. Role-based redirects (`getPostLoginRedirect`), route guards (`OnboardingRoute`, `ApprovedRoute`, `FundedRoute`, `DashboardRoute`, etc.), and API protection (`get_onboarding_user`, `get_swap_user`, `get_approved_user`, `get_funded_user`) align with this flow. Details in **`app_truth.md`** §8.
 - **User Profile Management** - View and manage personal information (admin-only editing)
 - **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
@@ -19,22 +20,23 @@ Comprehensive admin interface using the **same Layout** as the rest of the app (
 
 #### Features:
 - **Single Header** - Backoffice shares the main site Header (brand, nav, user menu); no separate backoffice header
-- **Subheader Navigation** - Icon-only buttons (page name on hover); active page shows icon + label via `SubheaderNavButton`; design tokens in `design-tokens.css`
+- **Subheader Navigation** - Icon-only buttons (page name on hover); active page shows icon + label
 - **SubSubHeader** - Optional bar under Subheader: left (e.g. Onboarding subpage links, filters), right (actions, refresh). Uses distinct button classes (`.subsubheader-nav-btn*`) and count badge (`.subsubheader-nav-badge`) for high-visibility pending counts
 - **Onboarding (default)** - Visiting `/backoffice` redirects to Onboarding → Contact Requests. Subpages: Contact Requests, KYC Review, Deposits; nav in SubSubHeader with standardized buttons and red count badges
 - **Market Orders Management** - Place BID/ASK orders with unified `PlaceOrder` component and modal-based interface
 - **Error Handling** - Backoffice routes wrapped in `BackofficeErrorBoundary`; render errors shown in UI and logged (no blank page on crash)
-- **Accessibility** - ARIA labels, `aria-current`, keyboard navigation; see [Backoffice navigation](docs/admin/BACKOFFICE_NAVIGATION.md)
+- **Accessibility** - ARIA labels, `aria-current`, keyboard navigation
 
 #### Pages:
-- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: list shows Entity and Name from each request (with "—" when missing); list and badge update in real time via WebSocket. API and WebSocket payloads are normalized to snake_case in the realtime hook so backoffice components receive `entity_name`, `contact_name`, etc. Compact list rows (Entity, Name, Submitted) with View modal (all contact request fields in theme-consistent layout + NDA open-in-browser button), Approve & Invite, Reject, Delete; IP lookup available from View modal
+- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: list shows Entity and Name from each request (with "—" when missing); list and badge update in real time via WebSocket. Compact list rows with View modal (all contact request fields, NDA open-in-browser button), **Approve & Create User** (manual or invitation; creates entity + KYC user, sets request to KYC), Reject, Delete; IP lookup available from View modal
 - **Market Makers** - Manage AI-powered market maker clients
 - **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
-- **Deposits** - AML/deposits management (separate from Onboarding Deposits tab)
+- **Deposits** - AML/deposits management (separate from Onboarding Deposits tab). Client status (`user_role`) is shown consistently in deposit cards and tables via **ClientStatusBadge**; single source of truth (FUNDING when user announced transfer). See `app_truth.md` §8.
 - **Audit Logging** - Audit trail and action logging
-- **Users** - User management (accessible from backoffice Subheader nav)
-- **Settings** - Platform Settings: **Price Scraping Sources** (EUA/CEA price feeds) and **Mail & Authentication** (admin-only). Mail & Auth configures mail provider (Resend or SMTP), from address, invitation email subject/body/link base URL, and token expiry; when set, invitation emails use stored config; otherwise env (`RESEND_API_KEY`, `FROM_EMAIL`) is used. See [Settings API](docs/api/SETTINGS_API.md).
+- **Users** - User management (accessible from backoffice Subheader nav). List and user detail modal show Status as **Active** or **DISABLED** (based on `is_active`); Role column shows DISABLED badge for disabled users.
+- **Settings** - Platform Settings: **Price Scraping Sources** (EUA/CEA price feeds) and **Mail & Authentication** (admin-only). Mail & Auth configures mail provider (Resend or SMTP), from address, invitation email subject/body/link base URL, and token expiry; when set, invitation emails use stored config; otherwise env (`RESEND_API_KEY`, `FROM_EMAIL`) is used.
+- **Theme** - Admin-only UI showcase at `/theme` (sample and containers subpages).
 
 ### Settlement System (v1.0.0) ✨
 Complete T+3 settlement system for external registry transfers with automated progression and monitoring.
@@ -109,18 +111,17 @@ Niha/
 │   │   │   └── layout/      # Layout components
 │   │   ├── pages/           # Page components
 │   │   ├── stores/          # Zustand stores
-│   │   └── styles/          # Design system
-│   └── docs/                # Frontend documentation
-└── docs/                    # Project documentation
-    ├── SETTLEMENT_DEPLOYMENT_CHECKLIST.md
-    ├── REBUILD_INSTRUCTIONS.md
-    └── RESTART_INSTRUCTIONS.md
+│   │   └── styles/          # Styles
 ```
+
+## Documentation
+
+Application behaviour, configuration, ports, routes, roles, and design system references are documented in **`app_truth.md`** (project root). Use it as the single source of truth (SSOT) for planning, implementation, and code review. See also **`docs/commands/`** for plan, review, and documentation workflows. Feature plans and reviews (e.g. **0010** user status flow) live in **`docs/features/`**.
 
 ## Getting Started
 
 ### Prerequisites
-- Docker & Docker Compose
+- Docker & Docker Compose (use `docker compose` v2; project name `niha_platform`)
 - Node.js 18+ (for local frontend development)
 - PostgreSQL 15+ (if running without Docker)
 
@@ -140,12 +141,12 @@ Niha/
 
 3. **Start all services**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 4. **Run database migrations**
    ```bash
-   docker-compose exec backend alembic upgrade head
+   docker compose exec backend alembic upgrade head
    ```
 
 5. **Access the application**
@@ -155,34 +156,14 @@ Niha/
 
 ### Development Scripts
 
-See [AGENTS.md](AGENTS.md) for detailed development workflows.
-
-**Quick rebuild:**
+**Full rebuild (stop, build without cache, start):**
 ```bash
-./rebuild.sh
+docker compose down && docker compose build --no-cache && docker compose up -d
 ```
 
-**Quick restart:**
+**Restart (no rebuild):**
 ```bash
-./restart.sh
-```
-
-## Settlement System Deployment
-
-For production deployment of the settlement system, follow the comprehensive checklist:
-
-```bash
-# Review deployment checklist
-cat docs/SETTLEMENT_DEPLOYMENT_CHECKLIST.md
-
-# Key steps:
-# 1. Verify database schema
-# 2. Run migrations
-# 3. Configure environment variables
-# 4. Restart services
-# 5. Verify background tasks
-# 6. Test API endpoints
-# 7. Monitor for 48 hours
+docker compose down && docker compose up -d
 ```
 
 ## Testing
@@ -190,13 +171,13 @@ cat docs/SETTLEMENT_DEPLOYMENT_CHECKLIST.md
 ### Backend Tests
 ```bash
 # Run all tests
-docker-compose exec backend pytest
+docker compose exec backend pytest
 
 # Run settlement tests only
-docker-compose exec backend pytest tests/test_settlement*.py
+docker compose exec backend pytest tests/test_settlement*.py
 
 # Run with coverage
-docker-compose exec backend pytest --cov=app tests/
+docker compose exec backend pytest --cov=app tests/
 ```
 
 **Test Suite:**
@@ -241,10 +222,10 @@ curl http://localhost:8000/api/v1/settlement/monitoring/metrics \
 Settlement processor and monitoring run every hour:
 ```bash
 # Check processor logs
-docker-compose logs backend | grep "Settlement processor"
+docker compose logs backend | grep "Settlement processor"
 
 # Check monitoring logs
-docker-compose logs backend | grep "Settlement monitoring"
+docker compose logs backend | grep "Settlement monitoring"
 ```
 
 ## API Documentation
@@ -252,13 +233,6 @@ docker-compose logs backend | grep "Settlement monitoring"
 - **Interactive Docs:** http://localhost:8000/docs
 - **ReDoc:** http://localhost:8000/redoc
 - **OpenAPI Spec:** http://localhost:8000/openapi.json
-
-### API Reference
-- [Authentication API](docs/api/AUTHENTICATION.md) - Login and token management
-- [Users API](docs/api/USERS_API.md) - Profile management and password changes
-- [Backoffice API](docs/api/BACKOFFICE_API.md) - Admin operations
-- [Settlement API](docs/api/SETTLEMENT_API.md) - T+3 settlement system
-- [Market Makers API](docs/api/MARKET_MAKERS_API.md) - Market maker management
 
 ### Authentication
 
@@ -312,20 +286,6 @@ VITE_API_URL=http://localhost:8000/api/v1
 - Entity isolation enforcement
 - Admin-only monitoring endpoints
 
-## Contributing
-
-See [AGENTS.md](AGENTS.md) for development guidelines and workflows.
-
-## Documentation
-
-- **Settlement Deployment:** [docs/SETTLEMENT_DEPLOYMENT_CHECKLIST.md](docs/SETTLEMENT_DEPLOYMENT_CHECKLIST.md)
-- **Rebuild Instructions:** [docs/REBUILD_INSTRUCTIONS.md](docs/REBUILD_INSTRUCTIONS.md)
-- **Restart Instructions:** [docs/RESTART_INSTRUCTIONS.md](docs/RESTART_INSTRUCTIONS.md)
-- **Development Guide:** [AGENTS.md](AGENTS.md)
-- **Design System:** [frontend/docs/DESIGN_SYSTEM.md](frontend/docs/DESIGN_SYSTEM.md)
-- **Backoffice Layout:** [docs/features/2026-01-26-backoffice-layout-refactor.md](docs/features/2026-01-26-backoffice-layout-refactor.md)
-- **API Documentation:** [docs/api/](docs/api/)
-
 ## Troubleshooting
 
 ### Common Issues
@@ -333,39 +293,39 @@ See [AGENTS.md](AGENTS.md) for development guidelines and workflows.
 **Backend won't start:**
 ```bash
 # Check logs
-docker-compose logs backend
+docker compose logs backend
 
 # Rebuild and restart
-docker-compose down
-docker-compose build backend
-docker-compose up -d backend
+docker compose down
+docker compose build backend
+docker compose up -d backend
 ```
 
 **Settlement processor not running:**
 ```bash
 # Check logs
-docker-compose logs backend | grep "Settlement processor"
+docker compose logs backend | grep "Settlement processor"
 
 # Restart backend
-docker-compose restart backend
+docker compose restart backend
 ```
 
-**Database migration errors:**
+**Database migration errors (e.g. "Invalid enum value" for Create User / contactstatus/userrole):**
 ```bash
 # Check current version
-docker-compose exec backend alembic current
+docker compose exec backend alembic current
 
 # Stamp as current (if tables exist)
-docker-compose exec backend alembic stamp head
+docker compose exec backend alembic stamp head
 
-# Run migrations
-docker-compose exec backend alembic upgrade head
+# Run migrations (adds KYC, REJECTED, etc. to userrole/contactstatus)
+docker compose exec backend alembic upgrade head
 ```
 
 **Frontend proxy errors:**
 ```bash
 # Restart frontend
-docker-compose restart frontend
+docker compose restart frontend
 
 # Or run locally
 cd frontend
@@ -418,7 +378,6 @@ npm run dev
 
 For issues and questions:
 - GitHub Issues: [repository-url]/issues
-- Documentation: [repository-url]/docs
 - Email: support@nihagroup.com
 
 ---

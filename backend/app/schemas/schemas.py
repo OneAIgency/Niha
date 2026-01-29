@@ -16,11 +16,19 @@ class Jurisdiction(str, Enum):
 
 
 class UserRole(str, Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class CertificateType(str, Enum):
@@ -146,7 +154,7 @@ class UserCreate(BaseModel):
     password: Optional[str] = Field(
         None, min_length=8
     )  # Optional - if not provided, send invitation
-    role: UserRole = UserRole.PENDING
+    role: UserRole = UserRole.NDA
     entity_id: Optional[UUID] = None
     position: Optional[str] = None
 
@@ -323,10 +331,24 @@ class DashboardStats(BaseModel):
 
 
 # Admin Schemas
+VALID_CONTACT_STATUS = frozenset({"NDA", "REJECTED", "KYC"})
+
+
 class ContactRequestUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     agent_id: Optional[UUID] = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if v not in VALID_CONTACT_STATUS:
+            raise ValueError(
+                f"status must be one of {sorted(VALID_CONTACT_STATUS)}"
+            )
+        return v
 
 
 class EntityKYCUpdate(BaseModel):

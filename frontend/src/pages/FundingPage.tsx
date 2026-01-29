@@ -182,14 +182,14 @@ export function FundingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="min-h-screen bg-navy-900">
       <Subheader
         icon={<Banknote className="w-5 h-5 text-teal-400" />}
         title="Fund Your Account"
         description="Wire transfer funds to start trading on the Carbon Market"
         iconBg="bg-teal-500/20"
       />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="page-container py-8 space-y-6">
 
         {/* Current Balance (if any) */}
         {balance && balance.balance_amount > 0 && (

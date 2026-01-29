@@ -87,9 +87,17 @@ export function CreateUserModal({
               onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
               className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
             >
-              <option value="PENDING">Pending</option>
+              <option value="NDA">NDA</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="KYC">KYC</option>
               <option value="APPROVED">Approved</option>
-              <option value="FUNDED">Funded</option>
+              <option value="FUNDING">Funding</option>
+              <option value="AML">AML</option>
+              <option value="CEA">CEA</option>
+              <option value="CEA_SETTLE">CEA Settle</option>
+              <option value="SWAP">Swap</option>
+              <option value="EUA_SETTLE">EUA Settle</option>
+              <option value="EUA">EUA</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>

@@ -6,308 +6,20 @@ import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { isValidEmail, sanitizeEmail, sanitizeString } from '../utils';
 import { logger } from '../utils/logger';
+import {
+  CO2Molecule,
+  DiffuseLogo,
+  FloatingPrices,
+  GrowingTree,
+  NDASuccessAmbient,
+  ParticleField,
+} from './LoginPageAnimations';
 
-// CO2 Molecule Animation Component - MORE VISIBLE
-function CO2Molecule() {
-  return (
-    <motion.div
-      className="absolute pointer-events-none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.4 }}
-      transition={{ duration: 2 }}
-    >
-      <svg viewBox="0 0 200 100" className="w-[500px] h-[250px]">
-        <defs>
-          <radialGradient id="carbonGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgb(51, 65, 85)" stopOpacity="1" />
-            <stop offset="100%" stopColor="rgb(30, 41, 59)" stopOpacity="0.6" />
-          </radialGradient>
-          <radialGradient id="oxygenGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgb(239, 68, 68)" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="rgb(220, 38, 38)" stopOpacity="0.5" />
-          </radialGradient>
-        </defs>
-
-        {/* Left Oxygen */}
-        <motion.circle
-          cx="40"
-          cy="50"
-          r="20"
-          fill="url(#oxygenGrad)"
-          animate={{
-            cx: [40, 38, 40, 42, 40],
-            cy: [50, 48, 50, 52, 50],
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        {/* Carbon (center) */}
-        <motion.circle
-          cx="100"
-          cy="50"
-          r="25"
-          fill="url(#carbonGrad)"
-          animate={{
-            r: [25, 26, 25, 24, 25],
-          }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        {/* Right Oxygen */}
-        <motion.circle
-          cx="160"
-          cy="50"
-          r="20"
-          fill="url(#oxygenGrad)"
-          animate={{
-            cx: [160, 162, 160, 158, 160],
-            cy: [50, 52, 50, 48, 50],
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-        />
-
-        {/* Bonds */}
-        <motion.line
-          x1="60"
-          y1="50"
-          x2="75"
-          y2="50"
-          stroke="rgb(100, 116, 139)"
-          strokeWidth="4"
-          strokeOpacity="0.6"
-          animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-        <motion.line
-          x1="60"
-          y1="44"
-          x2="75"
-          y2="44"
-          stroke="rgb(100, 116, 139)"
-          strokeWidth="4"
-          strokeOpacity="0.6"
-          animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-        />
-        <motion.line
-          x1="125"
-          y1="50"
-          x2="140"
-          y2="50"
-          stroke="rgb(100, 116, 139)"
-          strokeWidth="4"
-          strokeOpacity="0.6"
-          animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-        />
-        <motion.line
-          x1="125"
-          y1="56"
-          x2="140"
-          y2="56"
-          stroke="rgb(100, 116, 139)"
-          strokeWidth="4"
-          strokeOpacity="0.6"
-          animate={{ strokeOpacity: [0.6, 0.8, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 0.9 }}
-        />
-      </svg>
-    </motion.div>
-  );
-}
-
-// Growing Tree Animation Component - MORE VISIBLE
-function GrowingTree() {
-  return (
-    <motion.div
-      className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.6 }}
-      transition={{ duration: 3 }}
-    >
-      <svg viewBox="0 0 200 300" className="w-[400px] h-[600px]">
-        {/* Tree trunk */}
-        <motion.path
-          d="M100 300 Q100 250 95 200 Q90 150 100 100"
-          stroke="rgb(120, 53, 15)"
-          strokeWidth="12"
-          fill="none"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 8, ease: "easeOut" }}
-        />
-
-        {/* Main branches */}
-        <motion.path
-          d="M100 180 Q130 160 150 140"
-          stroke="rgb(120, 53, 15)"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 3, delay: 3, ease: "easeOut" }}
-        />
-        <motion.path
-          d="M100 150 Q60 130 40 100"
-          stroke="rgb(120, 53, 15)"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 3, delay: 4, ease: "easeOut" }}
-        />
-        <motion.path
-          d="M100 120 Q140 100 160 70"
-          stroke="rgb(120, 53, 15)"
-          strokeWidth="5"
-          fill="none"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 2, delay: 5, ease: "easeOut" }}
-        />
-
-        {/* Foliage circles - MORE VISIBLE */}
-        {[
-          { cx: 150, cy: 130, r: 30, delay: 6 },
-          { cx: 40, cy: 90, r: 35, delay: 6.5 },
-          { cx: 160, cy: 60, r: 28, delay: 7 },
-          { cx: 100, cy: 80, r: 40, delay: 7.5 },
-          { cx: 70, cy: 60, r: 32, delay: 8 },
-          { cx: 130, cy: 40, r: 30, delay: 8.5 },
-          { cx: 100, cy: 30, r: 35, delay: 9 },
-        ].map((leaf, i) => (
-          <motion.circle
-            key={i}
-            cx={leaf.cx}
-            cy={leaf.cy}
-            r={leaf.r}
-            fill="rgb(16, 185, 129)"
-            fillOpacity="0.5"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.5 }}
-            transition={{ duration: 2, delay: leaf.delay, ease: "easeOut" }}
-          />
-        ))}
-      </svg>
-    </motion.div>
-  );
-}
-
-// Floating Market Prices Animation - MORE VISIBLE
-function FloatingPrices() {
-  const prices = [
-    { symbol: 'EUR/USD', value: '1.0847', change: '+0.12%' },
-    { symbol: 'GBP/USD', value: '1.2691', change: '-0.08%' },
-    { symbol: 'BRENT', value: '78.42', change: '+1.24%' },
-    { symbol: 'GOLD', value: '2,041', change: '+0.31%' },
-    { symbol: 'DAX', value: '17,892', change: '+0.67%' },
-    { symbol: 'S&P500', value: '5,123', change: '+0.45%' },
-  ];
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {prices.map((price, i) => (
-        <motion.div
-          key={i}
-          className="absolute text-sm font-mono text-white/15 blur-[0.5px]"
-          initial={{
-            x: Math.random() * window.innerWidth,
-            y: -50,
-            opacity: 0,
-          }}
-          animate={{
-            y: window.innerHeight + 50,
-            opacity: [0, 0.4, 0.4, 0],
-          }}
-          transition={{
-            duration: 15 + Math.random() * 10,
-            repeat: Infinity,
-            delay: i * 2,
-            ease: "linear",
-          }}
-          style={{ left: `${10 + i * 15}%` }}
-        >
-          <div className="whitespace-nowrap">
-            <span className="text-white/25">{price.symbol}</span>
-            <span className="ml-2">{price.value}</span>
-            <span className={`ml-2 ${price.change.startsWith('+') ? 'text-emerald-500/40' : 'text-red-500/40'}`}>
-              {price.change}
-            </span>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-// Diffuse Logo Background
-function DiffuseLogo() {
-  return (
-    <motion.div
-      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 3 }}
-    >
-      <motion.div
-        className="text-[20rem] font-black text-white/[0.03] select-none tracking-tighter"
-        animate={{
-          scale: [1, 1.02, 1],
-          opacity: [0.03, 0.05, 0.03],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      >
-        N
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// Particle Field
-function ParticleField() {
-  const particles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 2,
-    duration: Math.random() * 20 + 10,
-  }));
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-white/10"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.1, 0.2, 0.1],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
+/**
+ * Login page: ENTER (password login) and NDA (request access) modes.
+ * After NDA submit, shows "Request Submitted" then after 5s fades to ambient animation.
+ * Preview: ?preview=nda-success shows that flow without submitting.
+ */
 export function LoginPage() {
   const [mode, setMode] = useState<'initial' | 'enter' | 'nda'>('initial');
   const [email, setEmail] = useState('');
@@ -316,7 +28,18 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const isSubmittingRef = useRef(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [ndaAmbientActive, setNdaAmbientActive] = useState(false);
   const [verifying, setVerifying] = useState(false);
+
+  // After 5s on NDA success, fade out content and show ambient animation
+  useEffect(() => {
+    if (!requestSent) {
+      setNdaAmbientActive(false);
+      return;
+    }
+    const t = setTimeout(() => setNdaAmbientActive(true), 5000);
+    return () => clearTimeout(t);
+  }, [requestSent]);
 
   // NDA form fields
   const [entity, setEntity] = useState('');
@@ -329,6 +52,7 @@ export function LoginPage() {
   const { setAuth } = useAuthStore();
   // Note: isAuthenticated, user, and _hasHydrated are now handled by AuthGuard in App.tsx
   const containerRef = useRef<HTMLDivElement>(null);
+  const previewAppliedRef = useRef(false);
 
   // Memoize verifyToken to prevent recreation and ensure stable reference
   // This helps prevent race conditions and unnecessary re-renders
@@ -361,6 +85,26 @@ export function LoginPage() {
       verifyToken(token);
     }
   }, [searchParams, verifyToken]);
+
+  // Pre-fill admin credentials when opening in Cursor browser (?cursor=1)
+  useEffect(() => {
+    if (searchParams.get('cursor') === '1') {
+      setEmail('admin@nihaogroup.com');
+      setPassword('Admin123!');
+    }
+  }, [searchParams]);
+
+  // Preview NDA success flow: ?preview=nda-success shows Request Submitted then ambient after 5s (once per mount)
+  useEffect(() => {
+    if (searchParams.get('preview') === 'nda-success' && !previewAppliedRef.current) {
+      previewAppliedRef.current = true;
+      setRequestSent(true);
+      setEmail('preview@example.com');
+    }
+    if (searchParams.get('preview') !== 'nda-success') {
+      previewAppliedRef.current = false;
+    }
+  }, [searchParams]);
 
   // Note: Navigation for already-authenticated users is now handled by LoginRoute guard in App.tsx
   // This prevents refresh loops by having a single source of truth for redirects
@@ -496,35 +240,71 @@ export function LoginPage() {
   }
 
   if (requestSent) {
+    const resetNda = () => {
+      setRequestSent(false);
+      setNdaAmbientActive(false);
+      setMode('initial');
+      setEntity('');
+      setEmail('');
+      setContactName('');
+      setPosition('');
+      setNdaFile(null);
+    };
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4">
-        <ParticleField />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center z-10"
-        >
-          <motion.div
-            className="w-20 h-20 rounded-full border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center mx-auto mb-8"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <CheckCircle className="w-10 h-10 text-emerald-400/80" />
-          </motion.div>
-          <h2 className="text-2xl font-light text-white/90 mb-4 tracking-wide">Request Submitted</h2>
-          <p className="text-white/40 max-w-sm mx-auto text-sm leading-relaxed mb-2">
-            Thank you for your interest in Nihao Group.
-          </p>
-          <p className="text-white/40 max-w-sm mx-auto text-sm leading-relaxed">
-            Our team will review your application and contact you at <span className="text-white/60">{email}</span>
-          </p>
-          <button
-            onClick={() => { setRequestSent(false); setMode('initial'); setEntity(''); setEmail(''); setContactName(''); setPosition(''); setNdaFile(null); }}
-            className="mt-8 text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
-          >
-            Submit another request
-          </button>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4 overflow-hidden">
+        {ndaAmbientActive ? <NDASuccessAmbient /> : <ParticleField />}
+        <AnimatePresence mode="wait">
+          {!ndaAmbientActive ? (
+            <motion.div
+              key="nda-confirm"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.8, ease: 'easeInOut' } }}
+              className="text-center z-10"
+            >
+              <motion.div
+                className="w-20 h-20 rounded-full border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center mx-auto mb-8"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <CheckCircle className="w-10 h-10 text-emerald-400/80" />
+              </motion.div>
+              <h2 className="text-2xl font-light text-white/90 mb-4 tracking-wide">Request Submitted</h2>
+              <p className="text-white/40 max-w-sm mx-auto text-sm leading-relaxed mb-2">
+                Thank you for your interest in Nihao Group.
+              </p>
+              <p className="text-white/40 max-w-sm mx-auto text-sm leading-relaxed">
+                Our team will review your application and contact you at <span className="text-white/60">{email}</span>
+              </p>
+              <button
+                type="button"
+                onClick={resetNda}
+                className="mt-8 text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
+                aria-label="Submit another NDA request"
+              >
+                Submit another request
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="nda-ambient-cta"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="absolute bottom-12 left-0 right-0 text-center z-10"
+            >
+              <button
+                type="button"
+                onClick={resetNda}
+                className="text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
+                aria-label="Submit another NDA request"
+              >
+                Submit another request
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

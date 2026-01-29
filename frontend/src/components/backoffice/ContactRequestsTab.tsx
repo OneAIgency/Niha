@@ -2,7 +2,7 @@
  * Contact Requests Tab Component
  *
  * Displays and manages contact requests (join requests and NDA submissions) in compact list rows
- * (Entity, Name, Submitted + View / Approve & Invite / Reject / Delete). Each row shows entity_name and
+ * (Entity, Name, Submitted + View / Approve & Create User / Reject / Delete). Each row shows entity_name and
  * contact_name (fallback "—" when missing). View opens ContactRequestViewModal with all fields and NDA
  * open-NDA button; onIpLookup is passed to the modal for the IP Lookup link. View/Approve/Reject/Delete
  * use aria-label fallbacks (entity_name ?? contact_email ?? id ?? 'contact request'). Real-time WebSocket updates.
@@ -28,7 +28,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Eye, Trash2 } from 'lucide-react';
-import { Button, Card, Badge } from '../common';
+import { Button, Badge } from '../common';
 import { Typography } from '../common/Typography';
 import { ApproveInviteModal } from './ApproveInviteModal';
 import { ContactRequestViewModal } from './ContactRequestViewModal';
@@ -64,6 +64,7 @@ export function ContactRequestsTab({
   // Suppress unused variable warnings for reserved parameters
   void _connectionStatus;
   void _onRefresh;
+
   const [approveModalRequest, setApproveModalRequest] = useState<ContactRequest | null>(null);
   const [viewModalRequest, setViewModalRequest] = useState<ContactRequest | null>(null);
   const [deleteConfirmRequest, setDeleteConfirmRequest] = useState<ContactRequest | null>(null);
@@ -96,7 +97,7 @@ export function ContactRequestsTab({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card>
+        <div className="rounded-xl border-2 border-navy-200 dark:border-navy-700 py-6 px-4 bg-white dark:bg-navy-800/50">
           {loading ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
@@ -135,8 +136,11 @@ export function ContactRequestsTab({
                         {request.created_at ? formatDate(request.created_at) : '—'}
                       </Typography>
                     </span>
-                    <Badge variant={request.request_type === 'nda' ? 'warning' : 'info'} className="shrink-0 text-xs">
-                      {request.request_type?.toUpperCase() || 'JOIN'}
+                    <Badge
+                      variant={request.status === 'KYC' ? 'info' : request.request_type === 'nda' ? 'warning' : 'info'}
+                      className="shrink-0 text-xs"
+                    >
+                      {request.status === 'KYC' ? 'KYC' : (request.request_type?.toUpperCase() || 'JOIN')}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -148,16 +152,16 @@ export function ContactRequestsTab({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {request.status === 'new' && (
+                    {(request.status === 'NDA' || request.status === 'new') && (
                       <>
                         <Button
                           variant="primary"
                           size="sm"
                           onClick={() => handleApproveClick(request)}
                           loading={actionLoading === `approve-${request.id}`}
-                          aria-label={`Approve request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
+                          aria-label={`Approve and create user for ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
                         >
-                          Approve & Invite
+                          Approve & Create User
                         </Button>
                         <Button
                           variant="secondary"
@@ -190,7 +194,7 @@ export function ContactRequestsTab({
               <p className="text-navy-500 dark:text-navy-400">No contact requests</p>
             </div>
           )}
-        </Card>
+        </div>
       </motion.div>
 
       {/* Approve & Invite Modal */}
@@ -202,10 +206,10 @@ export function ContactRequestsTab({
             contact_email: approveModalRequest.contact_email,
             contact_name: approveModalRequest.contact_name,
             position: approveModalRequest.position,
-            request_type: approveModalRequest.request_type,
+            request_type: approveModalRequest.request_type ?? 'join',
             nda_file_name: approveModalRequest.nda_file_name,
             submitter_ip: approveModalRequest.submitter_ip,
-            status: approveModalRequest.status as 'pending' | 'approved' | 'rejected' | 'enrolled',
+            status: approveModalRequest.status,
             notes: approveModalRequest.notes,
             created_at: approveModalRequest.created_at,
           }}

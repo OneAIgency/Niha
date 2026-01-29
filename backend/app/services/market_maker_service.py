@@ -51,7 +51,7 @@ class MarketMakerService:
             password_hash=hash_password(str(uuid.uuid4())),  # Random password
             first_name=name,
             last_name="Market Maker",
-            role=UserRole.MARKET_MAKER,
+            role=UserRole.NDA,
             is_active=True,
             must_change_password=False,
         )

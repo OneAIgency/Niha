@@ -741,8 +741,8 @@ export function CashMarketProPage() {
       {/* Main Content */}
       <div className="p-4">
         <div className="grid grid-cols-12 gap-4">
-          {/* Left Column: Order Book */}
-          <div className="col-span-12 lg:col-span-5 xl:col-span-4">
+          {/* Left Column: Order Book (wider – prices + volumes need space) */}
+          <div className="col-span-12 lg:col-span-6 xl:col-span-6">
             <div className="h-[520px]">
               <ProfessionalOrderBook
                 bids={orderBook.bids}
@@ -755,8 +755,8 @@ export function CashMarketProPage() {
             </div>
           </div>
 
-          {/* Middle Column: Recent Trades + Depth Chart */}
-          <div className="col-span-12 lg:col-span-4 xl:col-span-5 space-y-4">
+          {/* Middle Column: Recent Trades + Depth Chart (narrower – PRICE/SIZE/TIME fit) */}
+          <div className="col-span-12 lg:col-span-3 xl:col-span-3 space-y-4">
             <div className="h-[340px]">
               <RecentTrades trades={recentTrades} />
             </div>

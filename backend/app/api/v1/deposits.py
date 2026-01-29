@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, get_approved_user
-from ...models.models import Currency, DepositStatus, User, UserRole
+from ...models.models import Currency, DepositStatus, User
 from ...schemas.schemas import MessageResponse
 from ...services import deposit_service
 from ...services.deposit_service import DepositNotFoundError, InvalidDepositStateError
@@ -145,6 +145,7 @@ class DepositDetailResponse(BaseModel):
 
     # Status
     status: str
+    user_role: Optional[str] = None  # Reporting user's role (client status); FUNDING when announced
     aml_status: Optional[str] = None
     hold_type: Optional[str] = None
     hold_days_required: Optional[int] = None
@@ -200,9 +201,10 @@ class HoldCalculationResponse(BaseModel):
 
 
 def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailResponse:
-    """Convert Deposit model to response schema"""
+    """Convert Deposit model to DepositDetailResponse. Sets user_role from deposit.user.role when present (client status; FUNDING when announced)."""
     entity_name = None
     user_email = None
+    user_role = None
     confirmed_by_name = None
     cleared_by_name = None
     rejected_by_name = None
@@ -212,6 +214,7 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
 
     if hasattr(deposit, "user") and deposit.user:
         user_email = deposit.user.email
+        user_role = deposit.user.role.value
 
     if hasattr(deposit, "confirmed_by_user") and deposit.confirmed_by_user:
         confirmed_by_name = deposit.confirmed_by_user.email
@@ -243,6 +246,7 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
         wire_reference=deposit.wire_reference,
         bank_reference=deposit.bank_reference,
         status=deposit.status.value,
+        user_role=user_role,
         aml_status=deposit.aml_status,
         hold_type=deposit.hold_type,
         hold_days_required=deposit.hold_days_required,
@@ -557,7 +561,7 @@ async def clear_deposit(
     - Manually with force_clear=True before hold expires
     """
     try:
-        deposit = await deposit_service.clear_deposit(
+        deposit, upgraded_count = await deposit_service.clear_deposit(
             db=db,
             deposit_id=UUID(deposit_id),
             admin_id=admin_user.id,
@@ -565,45 +569,21 @@ async def clear_deposit(
             force_clear=request.force_clear,
         )
 
-        # Upgrade entity users to FUNDED if first cleared deposit
-        from sqlalchemy import select
-
-        from ...models.models import Entity
-
-        entity_result = await db.execute(
-            select(Entity).where(Entity.id == deposit.entity_id)
-        )
-        entity = entity_result.scalar_one_or_none()
-
-        upgraded_count = 0
-        if entity:
-            users_result = await db.execute(
-                select(User).where(User.entity_id == entity.id)
-            )
-            users = users_result.scalars().all()
-
-            for user in users:
-                if user.role == UserRole.APPROVED:
-                    user.role = UserRole.FUNDED
-                    upgraded_count += 1
-
         await db.commit()
 
-        # Broadcast WebSocket event
+        # Reload with relationships for entity name
+        deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         await backoffice_ws_manager.broadcast(
             "deposit_cleared",
             {
                 "deposit_id": str(deposit.id),
                 "entity_id": str(deposit.entity_id),
-                "entity_name": entity.name if entity else None,
+                "entity_name": deposit.entity.name if deposit.entity else None,
                 "amount": float(deposit.amount) if deposit.amount else 0,
                 "currency": deposit.currency.value if deposit.currency else None,
                 "upgraded_users": upgraded_count,
             },
         )
-
-        # Reload with relationships
-        deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
 
     except DepositNotFoundError as e:

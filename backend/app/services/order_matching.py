@@ -559,6 +559,10 @@ async def execute_market_buy_order(
         ),
     )
 
+    # Role transition: CEA → CEA_SETTLE when entity EUR balance reaches 0
+    from .role_transitions import transition_cea_to_cea_settle_if_eur_zero
+    await transition_cea_to_cea_settle_if_eur_zero(db, entity_id, new_eur_balance)
+
     # Create settlement batch for CEA delivery (T+3)
     # CEA will be credited when settlement is finalized, not immediately
     settlement = await SettlementService.create_cea_purchase_settlement(

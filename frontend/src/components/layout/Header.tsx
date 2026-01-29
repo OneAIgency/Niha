@@ -28,9 +28,8 @@ export function Header() {
 
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
-  const isAdmin = user?.role === 'ADMIN';
-  const isFunded = user?.role === 'FUNDED';
-  const isApproved = user?.role === 'APPROVED';
+  const role = user?.role ?? null;
+  const isAdmin = role === 'ADMIN';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,41 +53,26 @@ export function Header() {
     navigate('/');
   };
 
-  // Build navigation links based on user role
+  // Build navigation links based on user role (0010 flow)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
-      return [
-        { href: '/contact', label: 'Contact' },
-      ];
+      return [{ href: '/contact', label: 'Contact' }];
     }
+    if (!role) return [];
 
-    // APPROVED users - only see Funding
-    if (isApproved) {
-      return [
-        { href: '/funding', label: 'Funding' },
-      ];
-    }
+    const links: { href: string; label: string }[] = [];
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN'].includes(role);
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
+    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
+    const canDashboard = ['EUA', 'ADMIN'].includes(role);
 
-    // FUNDED users - Dashboard and Cash Market (no Swap)
-    if (isFunded) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-      ];
-    }
+    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard' });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding' });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market' });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap Center' });
 
-    // ADMIN users - full access including Swap
-    if (isAdmin) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-        { href: '/swap', label: 'Swap Center' },
-      ];
-    }
-
-    // Default (PENDING or unknown) - minimal navigation
-    return [];
-  }, [isAuthenticated, isApproved, isFunded, isAdmin]);
+    return links;
+  }, [isAuthenticated, role]);
 
   return (
     <header

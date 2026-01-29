@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
-from ...core.security import get_current_user
+from ...core.security import get_onboarding_user
 from ...models.models import (
     DocumentStatus,
     DocumentType,
@@ -55,10 +55,10 @@ def get_upload_path():
 
 @router.get("/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
+    current_user: User = Depends(get_onboarding_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
-    Get current user's onboarding/KYC status.
+    Get current user's onboarding/KYC status. NDA, KYC, or ADMIN only (0010 §3).
     """
     # Get user's documents
     query = select(KYCDocument).where(KYCDocument.user_id == current_user.id)
@@ -103,11 +103,11 @@ async def get_onboarding_status(
 async def upload_document(
     document_type: str = Form(...),  # noqa: B008
     file: UploadFile = File(...),  # noqa: B008
-    current_user: User = Depends(get_current_user),  # noqa: B008
+    current_user: User = Depends(get_onboarding_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Upload a KYC document.
+    Upload a KYC document. NDA, KYC, or ADMIN only (0010 §3).
     """
     # Validate document type
     try:
@@ -205,10 +205,10 @@ async def upload_document(
 
 @router.get("/documents")
 async def get_my_documents(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
+    current_user: User = Depends(get_onboarding_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
-    Get current user's uploaded KYC documents.
+    Get current user's uploaded KYC documents. NDA, KYC, or ADMIN only (0010 §3).
     """
     query = (
         select(KYCDocument)
@@ -225,11 +225,11 @@ async def get_my_documents(
 @router.delete("/documents/{document_id}", response_model=MessageResponse)
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_user),  # noqa: B008
+    current_user: User = Depends(get_onboarding_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Delete a KYC document. Only allowed for pending or rejected documents.
+    Delete a KYC document. NDA, KYC, or ADMIN only (0010 §3). Only pending/rejected.
     """
     result = await db.execute(
         select(KYCDocument).where(
@@ -267,10 +267,10 @@ async def delete_document(
 
 @router.post("/submit", response_model=MessageResponse)
 async def submit_for_review(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)  # noqa: B008
+    current_user: User = Depends(get_onboarding_user), db: AsyncSession = Depends(get_db)  # noqa: B008
 ):
     """
-    Submit KYC documents for review.
+    Submit KYC documents for review. NDA, KYC, or ADMIN only (0010 §3).
     All required documents must be uploaded.
     """
     # Get user's documents
