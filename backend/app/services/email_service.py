@@ -960,7 +960,6 @@ class EmailService:
 
         if not api_key:
             logger.info(f"[DEV MODE] Email would be sent to {to}")
-            logger.info(f"[DEV MODE] Subject: {subject}")
             return True
 
         try:
