@@ -909,15 +909,6 @@ export const adminApi = {
     const { data } = await api.put('/admin/settings/mail', payload);
     return data;
   },
-
-  // Market Overview
-  getMarketOverview: async (): Promise<{
-    top_20_cea_value_usd: number;
-    top_20_swap_value_usd: number;
-  }> => {
-    const { data } = await api.get('/admin/market-overview');
-    return data;
-  },
 };
 
 // Backoffice API (KYC review, user approvals)
@@ -1600,9 +1591,6 @@ export const getTickets = (params?: {
   limit?: number;
   offset?: number;
 }) => api.get('/admin/logging/tickets', { params });
-
-export const getTicket = (ticketId: string) =>
-  api.get(`/admin/logging/tickets/${ticketId}`);
 
 export const getLoggingStats = (params?: {
   date_from?: string;
