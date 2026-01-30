@@ -106,7 +106,7 @@ export function PlaceOrder({
 
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
-  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number } | null>(null);
+  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number; eur_balance: number } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
@@ -231,11 +231,19 @@ export function PlaceOrder({
       return 'Quantity must be greater than 0';
     }
 
-    // Balance validation for ASK orders
+    // Balance validation for ASK orders (selling certificates)
     if (side === 'ASK' && balances) {
       const availableBalance = certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance;
       if (quantityNum > availableBalance) {
         return `Insufficient ${certificateType} balance. Available: ${formatQuantity(availableBalance)}`;
+      }
+    }
+
+    // Balance validation for BID orders (buying - need EUR)
+    if (side === 'BID' && balances) {
+      const totalCost = priceNum * quantityNum;
+      if (totalCost > balances.eur_balance) {
+        return `Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_balance)}`;
       }
     }
 
@@ -377,7 +385,13 @@ export function PlaceOrder({
           </div>
 
           {balances ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
+                <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">EUR</div>
+                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(balances.eur_balance)}
+                </div>
+              </div>
               <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
                 <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">CEA</div>
                 <div className="font-mono font-bold text-amber-600 dark:text-amber-400">
@@ -399,7 +413,7 @@ export function PlaceOrder({
         </div>
       )}
 
-      {/* Available Balance for ASK orders */}
+      {/* Available Balance for ASK orders (selling certificates) */}
       {side === 'ASK' && selectedMMObj && balances && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -412,6 +426,24 @@ export function PlaceOrder({
             </span>
             <span className={`${compact ? 'text-base' : 'text-lg'} font-bold font-mono text-emerald-900 dark:text-emerald-100`}>
               {availableBalance.toLocaleString()}
+            </span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Available EUR for BID orders (buying - need cash) */}
+      {side === 'BID' && selectedMMObj && balances && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`${compact ? 'p-2.5' : 'p-4'} bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-emerald-700 dark:text-emerald-300">
+              Available EUR Balance
+            </span>
+            <span className={`${compact ? 'text-base' : 'text-lg'} font-bold font-mono text-emerald-900 dark:text-emerald-100`}>
+              {formatCurrency(balances.eur_balance)}
             </span>
           </div>
         </motion.div>

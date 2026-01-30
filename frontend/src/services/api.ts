@@ -1634,21 +1634,25 @@ export const createTransaction = async (id: string, data: {
 export const getMarketMakerBalances = async (id: string): Promise<{
   cea_balance: number;
   eua_balance: number;
+  eur_balance: number;
   cea_available: number;
   eua_available: number;
+  eur_available: number;
   cea_locked: number;
   eua_locked: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
 
   // Transform nested backend structure to flat frontend structure
-  // Backend returns: {CEA: {available, locked, total}, EUA: {available, locked, total}}
+  // Backend returns: {CEA: {available, locked, total}, EUA: {...}, EUR: {...}}
   // Frontend expects: flat structure with total, available, and locked for each
   return {
     cea_balance: data.CEA?.total ?? 0,
     eua_balance: data.EUA?.total ?? 0,
+    eur_balance: data.EUR?.total ?? 0,
     cea_available: data.CEA?.available ?? 0,
     eua_available: data.EUA?.available ?? 0,
+    eur_available: data.EUR?.available ?? 0,
     cea_locked: data.CEA?.locked ?? 0,
     eua_locked: data.EUA?.locked ?? 0,
   };

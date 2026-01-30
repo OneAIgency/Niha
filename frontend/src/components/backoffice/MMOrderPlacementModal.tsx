@@ -41,7 +41,7 @@ export function MMOrderPlacementModal({
 }: MMOrderPlacementModalProps) {
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
-  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number } | null>(null);
+  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number; eur_balance: number } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
@@ -151,11 +151,20 @@ export function MMOrderPlacementModal({
       return;
     }
 
-    // Balance validation for ASK orders
+    // Balance validation for ASK orders (selling certificates)
     if (side === 'ASK' && balances) {
       const availableBalance = certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance;
       if (quantityNum > availableBalance) {
         setError(`Insufficient ${certificateType} balance. Available: ${formatQuantity(availableBalance)}`);
+        return;
+      }
+    }
+
+    // Balance validation for BID orders (buying - need EUR)
+    if (side === 'BID' && balances) {
+      const totalCost = priceNum * quantityNum;
+      if (totalCost > balances.eur_balance) {
+        setError(`Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_balance)}`);
         return;
       }
     }

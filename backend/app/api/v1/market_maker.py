@@ -469,6 +469,13 @@ async def get_market_maker_balances(
         for cert_type, balance_data in balances.items()
     }
 
+    # Add EUR balance from MM client (for CASH_BUYER validation)
+    formatted_balances["EUR"] = {
+        "available": float(mm.eur_balance),
+        "locked": 0,
+        "total": float(mm.eur_balance),
+    }
+
     return formatted_balances
 
 
