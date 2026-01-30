@@ -1,5 +1,5 @@
 import { DataTable, Badge, Card, type Column } from '../common';
-import { CheckCircle, XCircle, Leaf, Wind, Activity } from 'lucide-react';
+import { CheckCircle, XCircle, Leaf, Wind, Activity, Wallet, TrendingUp } from 'lucide-react';
 import { formatQuantity, formatCurrency } from '../../utils';
 import { usePrices } from '../../hooks/usePrices';
 import type { MarketMaker } from '../../types';
@@ -173,40 +173,58 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             const ceaCashTotal = totalEUR + ceaValue;
 
             return ceaCashMMs.length > 0 ? (
-              <Card>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="purple">{MARKETS.CEA_CASH.name}</Badge>
-                      <span className="text-sm text-navy-600 dark:text-navy-400">
-                        ({ceaCashMMs.length} Market Makers)
-                      </span>
+              <Card className="overflow-hidden">
+                {/* Header with gradient accent */}
+                <div className="px-5 py-4 border-b border-purple-200 dark:border-purple-800/50 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.CEA_CASH.name}</span>
+                          <Badge variant="purple" className="text-xs">{ceaCashMMs.length} MMs</Badge>
+                        </div>
+                        <div className="text-xs text-navy-500 dark:text-navy-400">Market Liquidity Overview</div>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-navy-500 dark:text-navy-400">Market Total</div>
-                      <div className="text-xl font-bold font-mono text-purple-600 dark:text-purple-400">
+                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Market Total</div>
+                      <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
                         {formatCurrency(ceaCashTotal, 'EUR')}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex-1 text-center">
-                      <div className="text-xs text-navy-500 dark:text-navy-400">Cash Buyers</div>
-                      <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(totalEUR, 'EUR')}
-                      </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">
-                        ({cashBuyers.length} MMs)
-                      </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 divide-x divide-navy-200 dark:divide-navy-700">
+                  {/* Cash Buyers */}
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wallet className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">Cash Buyers</span>
                     </div>
-                    <div className="flex-1 text-center">
-                      <div className="text-xs text-navy-500 dark:text-navy-400">CEA Inventory</div>
-                      <div className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
-                        {formatQuantity(totalCEA)} CEA
-                      </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">
-                        {formatCurrency(ceaValue, 'EUR')} • ({ceaSellers.length} MMs)
-                      </div>
+                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(totalEUR, 'EUR')}
+                    </div>
+                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      {cashBuyers.length} Market Maker{cashBuyers.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+
+                  {/* CEA Inventory */}
+                  <div className="p-5 text-right">
+                    <div className="flex items-center justify-end gap-2 mb-2">
+                      <Leaf className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Inventory</span>
+                    </div>
+                    <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                      {formatQuantity(totalCEA)} CEA
+                    </div>
+                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      {formatCurrency(ceaValue, 'EUR')} · {ceaSellers.length} Market Maker{ceaSellers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>

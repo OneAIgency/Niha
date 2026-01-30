@@ -21,7 +21,6 @@ import {
   DollarSign,
   X,
   RefreshCw,
-  Ban,
   Eye,
 } from 'lucide-react';
 import { Button, Card, Badge, ClientStatusBadge } from '../common';
@@ -208,18 +207,6 @@ export function AMLDepositsTab() {
     return new Date(expiresAt) <= new Date();
   };
 
-  const getHoldTypeBadge = (holdType: string | undefined) => {
-    switch (holdType) {
-      case 'FIRST_DEPOSIT':
-        return <Badge variant="warning">First Deposit</Badge>;
-      case 'LARGE_AMOUNT':
-        return <Badge variant="danger">Large Amount</Badge>;
-      case 'SUBSEQUENT':
-        return <Badge variant="info">Subsequent</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -439,91 +426,69 @@ export function AMLDepositsTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              {onHoldDeposits.map((deposit) => (
-                <div
-                  key={deposit.id}
-                  className={`p-4 rounded-xl ${
-                    isHoldExpired(deposit.hold_expires_at)
-                      ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
-                      : 'bg-navy-50 dark:bg-navy-700/50'
-                  }`}
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h4 className="font-semibold text-navy-900 dark:text-white">
-                          {deposit.entity_name || 'Unknown Entity'}
-                        </h4>
-                        {getHoldTypeBadge(deposit.hold_type)}
-                        {isHoldExpired(deposit.hold_expires_at) && (
-                          <Badge variant="danger">EXPIRED</Badge>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                        <div>
-                          <span className="text-navy-500">Amount:</span>
-                          <span className="ml-2 font-medium text-navy-900 dark:text-white">
+              {onHoldDeposits.map((deposit) => {
+                const daysPassed = deposit.confirmed_at
+                  ? Math.floor((Date.now() - new Date(deposit.confirmed_at).getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
+                const confirmedDate = deposit.confirmed_at
+                  ? new Date(deposit.confirmed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : 'N/A';
+
+                return (
+                  <div
+                    key={deposit.id}
+                    className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium text-sm text-navy-900 dark:text-white truncate">
+                            {deposit.entity_name || 'Unknown Entity'}
+                          </h4>
+                          <span className="text-xs text-navy-500 dark:text-navy-400 whitespace-nowrap">
+                            RECEIVED AT {confirmedDate}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-navy-900 dark:text-white">
                             {deposit.amount ? formatCurrency(deposit.amount) : 'N/A'} {deposit.currency}
                           </span>
-                        </div>
-                        <div>
-                          <span className="text-navy-500">Hold:</span>
-                          <span className={`ml-2 font-medium ${
-                            isHoldExpired(deposit.hold_expires_at)
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-navy-900 dark:text-white'
-                          }`}>
-                            {deposit.hold_days_required} days - {getHoldTimeRemaining(deposit.hold_expires_at)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-navy-500">Wire Ref:</span>
-                          <span className="ml-2 font-mono text-xs">{deposit.wire_reference || 'N/A'}</span>
-                        </div>
-                        <div>
-                          <span className="text-navy-500">Confirmed:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-300">
-                            {formatRelativeTime(deposit.confirmed_at || deposit.created_at)}
-                          </span>
+                          {/* Progress bar - segmente per zi */}
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: Math.max(daysPassed, 1) }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-2 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-sm"
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs text-navy-500">{daysPassed}d</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDetailModal(deposit)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setRejectModal(deposit);
-                          resetForm();
-                        }}
-                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Ban className="w-4 h-4" />
-                        Reject
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => {
-                          setClearModal(deposit);
-                          setForceClear(!isHoldExpired(deposit.hold_expires_at));
-                          resetForm();
-                        }}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Clear
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDetailModal(deposit)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setClearModal(deposit);
+                            setForceClear(!isHoldExpired(deposit.hold_expires_at));
+                            resetForm();
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

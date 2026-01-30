@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, TrendingUp, TrendingDown, AlertCircle, CheckCircle, X } from 'lucide-react';
-import { Subheader } from '../components/common';
+import { BackofficeLayout } from '../components/layout/BackofficeLayout';
 import { LiquidityPreviewModal } from '../components/liquidity';
 import { liquidityApi } from '../services/api';
 import type { CertificateType } from '../types';
 import type { LiquidityPreviewResponse, LiquidityCreationResponse } from '../types/liquidity';
 
 export function CreateLiquidityPage() {
-  const [certificateType, setCertificateType] = useState<CertificateType>('EUA');
+  const [certificateType, setCertificateType] = useState<CertificateType>('CEA');
   const [bidEur, setBidEur] = useState<string>('');
   const [askEur, setAskEur] = useState<string>('');
   const [preview, setPreview] = useState<LiquidityPreviewResponse | null>(null);
@@ -77,17 +77,9 @@ export function CreateLiquidityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950">
-      {/* Subheader */}
-      <Subheader
-        icon={<Zap className="w-5 h-5 text-purple-400" />}
-        title="Create Liquidity"
-        description="Add liquidity to the order book using Market Maker balances"
-        iconBg="bg-purple-500/20"
-      />
-
+    <BackofficeLayout>
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto">
         {/* Success Message */}
         {successMessage && (
           <motion.div
@@ -161,27 +153,34 @@ export function CreateLiquidityPage() {
         {/* Main Form */}
         <div className="bg-navy-900 border border-navy-800 rounded-lg p-4">
           <div className="space-y-4">
-            {/* Certificate Type Selector */}
+            {/* Market Selector */}
             <div>
               <label className="block text-xs font-medium text-navy-400 mb-2">
-                Certificate Type
+                Market
               </label>
               <div className="grid grid-cols-2 gap-1 p-1 bg-navy-950 rounded-lg">
-                {(['EUA', 'CEA'] as CertificateType[]).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setCertificateType(type)}
-                    className={`py-2 text-sm font-semibold rounded-md transition-colors ${
-                      certificateType === type
-                        ? type === 'EUA'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-amber-500 text-white'
-                        : 'text-navy-400 hover:text-white hover:bg-navy-800'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                {/* CEA Cash Market */}
+                <button
+                  onClick={() => setCertificateType('CEA')}
+                  className={`py-2 text-sm font-semibold rounded-md transition-colors ${
+                    certificateType === 'CEA'
+                      ? 'bg-amber-500 text-white'
+                      : 'text-navy-400 hover:text-white hover:bg-navy-800'
+                  }`}
+                >
+                  CEA Cash
+                </button>
+                {/* Swap Market (uses EUA internally) */}
+                <button
+                  onClick={() => setCertificateType('EUA')}
+                  className={`py-2 text-sm font-semibold rounded-md transition-colors ${
+                    certificateType === 'EUA'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-navy-400 hover:text-white hover:bg-navy-800'
+                  }`}
+                >
+                  Swap
+                </button>
               </div>
             </div>
 
@@ -276,6 +275,6 @@ export function CreateLiquidityPage() {
         onConfirm={handleCreate}
         isCreating={isCreating}
       />
-    </div>
+    </BackofficeLayout>
   );
 }
