@@ -172,8 +172,7 @@ export function ContactRequestViewModal({
           <DataRow label="Name" value={showingRequest.contact_name} showEmpty />
           <DataRow label="Email" value={showingRequest.contact_email} showEmpty />
           <DataRow label="Position" value={showingRequest.position} showEmpty />
-          <DataRow label="Request type" value={showingRequest.request_type?.toUpperCase()} showEmpty />
-          <DataRow label="Status" value={showingRequest.status} showEmpty />
+          <DataRow label="User role" value={showingRequest.user_role} showEmpty />
           <DataRow label="NDA file name" value={showingRequest.nda_file_name} />
           <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60">
             <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">

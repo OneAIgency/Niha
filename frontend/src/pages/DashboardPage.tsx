@@ -247,7 +247,7 @@ export function DashboardPage() {
    * @returns Promise<boolean> - true if fetch succeeded, false otherwise
    */
   const fetchBalance = useCallback(async (): Promise<boolean> => {
-    if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
+    if (user?.role === 'ADMIN') {
       // Prevent overlapping calls using ref to avoid dependency issues
       if (isRefreshingBalanceRef.current) {
         return false;
@@ -572,7 +572,7 @@ export function DashboardPage() {
       </motion.div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="page-container py-6">
         {/* Error Banner */}
         {error && (
           <motion.div
@@ -591,7 +591,7 @@ export function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5 contained"
+            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-emerald-300/70">Total Portfolio Value</span>
@@ -624,7 +624,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
+            className="content_wrapper"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-navy-400">Cash ({entityBalance?.balance_currency || 'EUR'})</span>
@@ -660,7 +660,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
+            className="content_wrapper"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-navy-400">CEA Holdings</span>
@@ -693,7 +693,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
+            className="content_wrapper"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-navy-400">EUA Holdings</span>
@@ -729,7 +729,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-navy-800 rounded-xl border border-navy-700 contained"
+            className="content_wrapper p-0 lg:col-span-2"
           >
             <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -817,7 +817,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 contained"
+            className="content_wrapper p-0"
           >
             <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -947,7 +947,7 @@ export function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-navy-800 rounded-xl border border-navy-700 contained"
+          className="content_wrapper p-0"
         >
           <div className="px-5 py-4 border-b border-navy-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">

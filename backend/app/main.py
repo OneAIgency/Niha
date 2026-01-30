@@ -115,14 +115,66 @@ async def lifespan(app: FastAPI):
             # Wait 1 hour
             await asyncio.sleep(3600)
 
+    # Price scraping scheduler
+    async def price_scraping_scheduler_loop():
+        """Run price scraping based on each source's configured interval"""
+        from datetime import datetime
+
+        from sqlalchemy import select
+
+        from .models.models import ScrapingSource
+        from .services.price_scraper import price_scraper
+
+        # Wait 30 seconds on startup before first check
+        await asyncio.sleep(30)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get all active scraping sources
+                    result = await db.execute(
+                        select(ScrapingSource).where(ScrapingSource.is_active == True)
+                    )
+                    sources = result.scalars().all()
+
+                    now = datetime.utcnow()
+                    for source in sources:
+                        # Check if it's time to scrape based on configured interval
+                        if source.last_scrape_at is None:
+                            should_scrape = True
+                        else:
+                            minutes_since_last = (
+                                now - source.last_scrape_at
+                            ).total_seconds() / 60
+                            should_scrape = (
+                                minutes_since_last >= source.scrape_interval_minutes
+                            )
+
+                        if should_scrape:
+                            try:
+                                await price_scraper.refresh_source(source, db)
+                                logger.info(
+                                    f"Auto-scraped {source.name}: {source.last_price}"
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Auto-scrape failed for {source.name}: {e}"
+                                )
+            except Exception as e:
+                logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
+
+            # Check every 60 seconds
+            await asyncio.sleep(60)
+
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())
     monitoring_task = asyncio.create_task(settlement_monitoring_loop())
     deposit_task = asyncio.create_task(deposit_hold_processor_loop())
-    _background_tasks.extend([processor_task, monitoring_task, deposit_task])
+    scraping_task = asyncio.create_task(price_scraping_scheduler_loop())
+    _background_tasks.extend([processor_task, monitoring_task, deposit_task, scraping_task])
     logger.info(
-        "Settlement processor, monitoring and deposit hold processor started "
-        "(running every 1 hour)"
+        "Settlement processor, monitoring, deposit hold processor, and price scraping "
+        "scheduler started"
     )
 
     yield

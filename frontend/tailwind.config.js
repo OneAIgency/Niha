@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+// Theme hub (unde modifici tot ce ține de temă): src/theme/README.md
+// Variabile CSS (sursa canonică): src/styles/design-tokens.css
 export default {
   content: [
     "./index.html",

@@ -109,7 +109,7 @@ export function ComponentShowcasePage() {
       <div className="page-container-dark min-h-screen">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-navy-800 border-b border-navy-700">
-          <div className="content-container flex justify-between items-center py-4">
+          <div className="page-container flex justify-between items-center py-4">
             <div>
               <h1 className="text-xl font-bold text-white">Design System</h1>
               <p className="text-sm text-navy-400">Component Library & Style Guide</p>
@@ -125,7 +125,7 @@ export function ComponentShowcasePage() {
           </div>
         </header>
 
-        <div className="content-container py-8">
+        <div className="page-container py-8">
           <div className="grid grid-cols-12 gap-8">
             {/* Navigation Sidebar */}
             <nav className="col-span-3 sticky top-24 h-fit">

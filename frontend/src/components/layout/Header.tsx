@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown, Palette, BookOpen } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
@@ -28,9 +28,8 @@ export function Header() {
 
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
-  const isAdmin = user?.role === 'ADMIN';
-  const isFunded = user?.role === 'FUNDED';
-  const isApproved = user?.role === 'APPROVED';
+  const role = user?.role ?? null;
+  const isAdmin = role === 'ADMIN';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,41 +53,29 @@ export function Header() {
     navigate('/');
   };
 
-  // Build navigation links based on user role
+  // Build navigation links based on user role (0010 flow)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
-      return [
-        { href: '/contact', label: 'Contact' },
-      ];
+      return [{ href: '/contact', label: 'Contact', icon: null }];
     }
+    if (!role) return [];
 
-    // APPROVED users - only see Funding
-    if (isApproved) {
-      return [
-        { href: '/funding', label: 'Funding' },
-      ];
-    }
+    const links: { href: string; label: string; icon: typeof BookOpen | null }[] = [];
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN', 'MM'].includes(role);
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    // Post-KYC users can access onboarding docs via "Mechanism" link (they've completed KYC)
+    const canMechanism = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'].includes(role);
 
-    // FUNDED users - Dashboard and Cash Market (no Swap)
-    if (isFunded) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-      ];
-    }
+    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
+    if (canMechanism) links.push({ href: '/onboarding', label: 'Mechanism', icon: BookOpen });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market', icon: null });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap Center', icon: null });
 
-    // ADMIN users - full access including Swap
-    if (isAdmin) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-        { href: '/swap', label: 'Swap Center' },
-      ];
-    }
-
-    // Default (PENDING or unknown) - minimal navigation
-    return [];
-  }, [isAuthenticated, isApproved, isFunded, isAdmin]);
+    return links;
+  }, [isAuthenticated, role]);
 
   return (
     <header
@@ -117,22 +104,26 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  isLandingPage || isDark
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-navy-600 hover:text-navy-900',
-                  location.pathname === link.href &&
-                    (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    'text-sm font-medium transition-colors flex items-center gap-1.5',
+                    isLandingPage || isDark
+                      ? 'text-white/80 hover:text-white'
+                      : 'text-navy-600 hover:text-navy-900',
+                    location.pathname === link.href &&
+                      (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
+                  )}
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  {link.label}
+                </Link>
+              );
+            })}
 
             {/* Theme Toggle */}
             <button
@@ -239,6 +230,18 @@ export function Header() {
                               Settings
                             </button>
                             <button
+                              onClick={() => handleMenuItemClick('/theme')}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                                isDark
+                                  ? 'text-navy-200 hover:bg-navy-700'
+                                  : 'text-navy-700 hover:bg-navy-50'
+                              )}
+                            >
+                              <Palette className="w-4 h-4" />
+                              Theme
+                            </button>
+                            <button
                               onClick={() => handleMenuItemClick('/backoffice')}
                               className={cn(
                                 'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
@@ -321,19 +324,23 @@ export function Header() {
             isDark ? 'border-navy-700' : 'border-white/10'
           )}>
             <nav className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    'text-lg font-medium',
-                    isLandingPage || isDark ? 'text-white' : 'text-navy-900'
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={cn(
+                      'text-lg font-medium flex items-center gap-2',
+                      isLandingPage || isDark ? 'text-white' : 'text-navy-900'
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {Icon && <Icon className="w-5 h-5" />}
+                    {link.label}
+                  </Link>
+                );
+              })}
               {!isAuthenticated && (
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" className="w-full">

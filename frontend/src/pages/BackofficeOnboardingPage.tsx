@@ -22,11 +22,11 @@ import {
 import { adminApi, backofficeApi } from '../services/api';
 import { cn } from '../utils';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
+import { isPendingContactRequest } from '../utils/contactRequest';
 import { logger } from '../utils/logger';
 import type {
   ContactRequest,
   PendingUserResponse,
-  PendingDepositResponse,
   KYCUser,
   KYCDocument,
   PendingDeposit,
@@ -53,7 +53,7 @@ type OnboardingSubpage = 'requests' | 'kyc' | 'deposits';
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
-  { path: 'deposits', label: 'Deposits', icon: Banknote },
+  { path: 'deposits', label: 'Deposits/AML', icon: Banknote },
 ];
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
@@ -75,19 +75,22 @@ export function BackofficeOnboardingPage() {
     refresh: refreshContactRequests,
   } = useBackofficeRealtime();
 
-  const contactRequests: ContactRequest[] = realtimeContactRequests.map(r => ({
+  const allMapped: ContactRequest[] = realtimeContactRequests.map(r => ({
     id: r.id,
     entity_name: r.entity_name,
     contact_email: r.contact_email,
     contact_name: r.contact_name,
     position: r.position || '',
-    request_type: r.request_type,
     nda_file_name: r.nda_file_name,
     submitter_ip: r.submitter_ip,
-    status: r.status,
+    user_role: ('user_role' in r ? r.user_role : (r as { status?: string }).status) ?? 'new',
     notes: r.notes,
     created_at: r.created_at,
   }));
+  // Only show pending requests (NDA, new); KYC and REJECTED disappear immediately after approval
+  const contactRequests: ContactRequest[] = allMapped.filter(r =>
+    isPendingContactRequest(r.user_role)
+  );
   const contactRequestsCount = contactRequests.length;
 
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
@@ -111,31 +114,43 @@ export function BackofficeOnboardingPage() {
           backofficeApi.getPendingUsers(),
           backofficeApi.getKYCDocuments(),
         ]);
-        setKycUsers(users.map((u: PendingUserResponse): KYCUser => ({
+        setKycUsers(users.map((u: PendingUserResponse & { firstName?: string; lastName?: string; entityName?: string; documentsCount?: number; createdAt?: string }): KYCUser => ({
           id: u.id,
           email: u.email,
-          first_name: u.first_name,
-          last_name: u.last_name,
-          entity_name: u.entity_name,
-          documents_count: u.documents_count || 0,
-          created_at: u.created_at || new Date().toISOString(),
+          first_name: u.first_name ?? u.firstName ?? '',
+          last_name: u.last_name ?? u.lastName ?? '',
+          entity_name: u.entity_name ?? u.entityName ?? '',
+          documents_count: u.documents_count ?? u.documentsCount ?? 0,
+          created_at: u.created_at ?? u.createdAt ?? new Date().toISOString(),
         })));
-        setKycDocuments(docs);
+        // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setKycDocuments((docs as any[]).map((d: any) => ({
+          ...d,
+          id: d.id,
+          status: d.status,
+          created_at: d.created_at ?? d.createdAt,
+          user_id: d.user_id ?? d.userId,
+          document_type: d.document_type ?? d.documentType,
+          file_name: d.file_name ?? d.fileName,
+        })));
       } else if (activeSubpage === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
-        setPendingDeposits(deposits.map((d: PendingDepositResponse): PendingDeposit => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setPendingDeposits(deposits.map((d: any): PendingDeposit => ({
           id: d.id,
-          entity_id: d.entity_id,
-          entity_name: d.entity_name || '',
-          user_email: d.user_email || '',
-          reported_amount: d.reported_amount ?? null,
-          reported_currency: d.reported_currency ?? null,
-          wire_reference: d.wire_reference ?? null,
-          bank_reference: d.bank_reference ?? null,
+          entity_id: d.entity_id ?? d.entityId ?? '',
+          entity_name: d.entity_name ?? d.entityName ?? '',
+          user_email: d.user_email ?? d.userEmail ?? '',
+          user_role: d.user_role ?? d.userRole,
+          reported_amount: d.reported_amount ?? d.reportedAmount ?? null,
+          reported_currency: d.reported_currency ?? d.reportedCurrency ?? null,
+          wire_reference: d.wire_reference ?? d.wireReference ?? null,
+          bank_reference: d.bank_reference ?? d.bankReference ?? null,
           status: d.status,
-          reported_at: d.reported_at ?? null,
+          reported_at: d.reported_at ?? d.reportedAt ?? null,
           notes: d.notes ?? null,
-          created_at: d.created_at,
+          created_at: d.created_at ?? d.createdAt ?? '',
         })));
       }
     } catch (err) {
@@ -201,9 +216,9 @@ export function BackofficeOnboardingPage() {
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    setActionLoading(requestId);
+    setActionLoading(`reject-${requestId}`);
     try {
-      await adminApi.updateContactRequest(requestId, { status: 'rejected' });
+      await adminApi.updateContactRequest(requestId, { user_role: 'REJECTED' });
     } catch (err) {
       logger.error('Failed to reject request', err);
     } finally {

@@ -28,7 +28,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  to="/marketplace"
+                  to="/cash-market"
                   className="text-navy-400 hover:text-white transition-colors"
                 >
                   CEA Marketplace

@@ -35,11 +35,20 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class DocumentType(str, enum.Enum):
@@ -75,10 +84,10 @@ class ScrapeLibrary(str, enum.Enum):
 
 
 class ContactStatus(str, enum.Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    ENROLLED = "enrolled"
-    REJECTED = "rejected"
+    """Same values as UserRole where applicable; NDA, REJECTED, KYC for contact requests."""
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
 
 
 class CertificateType(str, enum.Enum):
@@ -223,7 +232,7 @@ class User(Base):
     last_name = Column(String(100))
     position = Column(String(100))
     phone = Column(String(50), nullable=True)
-    role = Column(SQLEnum(UserRole), default=UserRole.PENDING)
+    role = Column(SQLEnum(UserRole), default=UserRole.NDA)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     invitation_token = Column(String(100), nullable=True)
@@ -329,7 +338,6 @@ class ContactRequest(Base):
     contact_email = Column(String(255), nullable=False)
     contact_name = Column(String(255), nullable=True)  # Person's name
     position = Column(String(100))
-    request_type = Column(String(50), default="join")  # 'join' or 'nda'
     nda_file_path = Column(
         String(500), nullable=True
     )  # Deprecated - kept for migration
@@ -337,7 +345,7 @@ class ContactRequest(Base):
     nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
-    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW)
+    user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -479,10 +487,36 @@ class ScrapingSource(Base):
     scrape_interval_minutes = Column(Integer, default=5)
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
-    last_price = Column(Numeric(18, 4), nullable=True)
+    last_price = Column(Numeric(18, 4), nullable=True)  # Raw price in source currency
+    last_price_eur = Column(Numeric(18, 4), nullable=True)  # Converted EUR price (for CEA)
+    last_exchange_rate = Column(Numeric(18, 8), nullable=True)  # Rate used for conversion
     config = Column(
         JSON, nullable=True
     )  # Additional scraper configuration (CSS selectors, etc.)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ExchangeRateSource(Base):
+    """Configuration for exchange rate scraping sources"""
+
+    __tablename__ = "exchange_rate_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    from_currency = Column(String(3), nullable=False)  # e.g., "EUR"
+    to_currency = Column(String(3), nullable=False)  # e.g., "CNY"
+    url = Column(String(500), nullable=False)
+    scrape_library = Column(SQLEnum(ScrapeLibrary), default=ScrapeLibrary.HTTPX)
+    is_active = Column(Boolean, default=True)
+    is_primary = Column(Boolean, default=False)  # Primary source for this pair
+    scrape_interval_minutes = Column(Integer, default=60)
+    last_rate = Column(Numeric(18, 8), nullable=True)
+    last_scraped_at = Column(DateTime, nullable=True)
+    last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
+    config = Column(
+        JSON, nullable=True
+    )  # Additional scraper configuration (CSS selectors, XPath, etc.)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

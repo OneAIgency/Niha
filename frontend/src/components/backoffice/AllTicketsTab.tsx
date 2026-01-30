@@ -8,21 +8,21 @@ import { TicketDetailModal } from './TicketDetailModal';
 interface TicketLog {
   [key: string]: unknown;
   id: string;
-  ticket_id: string;
+  ticketId: string;
   timestamp: string;
-  user_id?: string;
-  market_maker_id?: string;
-  action_type: string;
-  entity_type: string;
-  entity_id?: string;
+  userId?: string;
+  marketMakerId?: string;
+  actionType: string;
+  entityType: string;
+  entityId?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: Record<string, unknown>;
-  response_data?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
-  before_state?: Record<string, unknown>;
-  after_state?: Record<string, unknown>;
-  related_ticket_ids: string[];
+  requestPayload?: Record<string, unknown>;
+  responseData?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  relatedTicketIds: string[];
   tags: string[];
 }
 
@@ -84,7 +84,7 @@ export function AllTicketsTab() {
 
   const columns: Column<TicketLog>[] = [
     {
-      key: 'ticket_id',
+      key: 'ticketId',
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
@@ -104,7 +104,7 @@ export function AllTicketsTab() {
       ),
     },
     {
-      key: 'action_type',
+      key: 'actionType',
       header: 'Action Type',
       width: '180px',
       render: (value) => (
@@ -114,7 +114,7 @@ export function AllTicketsTab() {
       ),
     },
     {
-      key: 'entity_type',
+      key: 'entityType',
       header: 'Entity',
       width: '120px',
       render: (value) => (
@@ -141,7 +141,7 @@ export function AllTicketsTab() {
       ),
     },
     {
-      key: 'user_id',
+      key: 'userId',
       header: 'User',
       width: '100px',
       render: (value) =>
@@ -154,7 +154,7 @@ export function AllTicketsTab() {
         ),
     },
     {
-      key: 'market_maker_id',
+      key: 'marketMakerId',
       header: 'MM',
       width: '100px',
       render: (value) =>

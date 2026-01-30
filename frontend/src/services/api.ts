@@ -17,6 +17,7 @@ import type {
   KYCDocument,
   ScrapingSource,
   ScrapeLibrary,
+  ExchangeRateSource,
   MailSettings,
   MailSettingsUpdate,
   UserSession,
@@ -160,9 +161,28 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Standardize error response format
+    // Standardize error response format (message always string; data.detail unchanged for modal)
+    const d = error.response?.data?.detail;
+    let message: string;
+    if (typeof d === 'string') {
+      message = d;
+    } else if (
+      d &&
+      typeof d === 'object' &&
+      !Array.isArray(d) &&
+      typeof (d as { error?: string }).error === 'string'
+    ) {
+      message = (d as { error: string }).error;
+    } else if (
+      error.response?.data?.message &&
+      typeof error.response.data.message === 'string'
+    ) {
+      message = error.response.data.message;
+    } else {
+      message = error.message || 'An error occurred';
+    }
     const standardizedError = {
-      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'An error occurred',
+      message,
       status: error.response?.status,
       data: error.response?.data,
       originalError: error,
@@ -668,7 +688,7 @@ export const usersApi = {
 export const adminApi = {
   // Contact Requests
   getContactRequests: async (params?: {
-    status?: string;
+    user_role?: string;
     page?: number;
     per_page?: number;
   }): Promise<PaginatedResponse<ContactRequestResponse>> => {
@@ -687,7 +707,7 @@ export const adminApi = {
     return data;
   },
 
-  // Create user from contact request (approve & invite)
+  // Create user from contact request (approve & create user)
   createUserFromRequest: async (
     requestId: string,
     userData: {
@@ -711,16 +731,21 @@ export const adminApi = {
       creation_method: string;
     };
   }> => {
+    const params: Record<string, string> = {
+      request_id: requestId,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      mode: userData.mode,
+    };
+    if (userData.password != null && userData.password !== '') {
+      params.password = userData.password;
+    }
+    if (userData.position != null && userData.position !== '') {
+      params.position = userData.position;
+    }
     const { data } = await api.post('/admin/users/create-from-request', null, {
-      params: {
-        request_id: requestId,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        mode: userData.mode,
-        password: userData.password,
-        position: userData.position,
-      }
+      params,
     });
     return data;
   },
@@ -772,7 +797,7 @@ export const adminApi = {
 
   // User Management
   getUsers: async (params?: {
-    role?: UserRole;
+    role?: UserRole | 'DISABLED';
     search?: string;
     page?: number;
     per_page?: number;
@@ -787,6 +812,7 @@ export const adminApi = {
     last_name: string;
     role: UserRole;
     password?: string;
+    position?: string;
     entity_id?: string;
   }): Promise<User> => {
     const { data } = await api.post('/admin/users', userData);
@@ -800,11 +826,6 @@ export const adminApi = {
 
   updateUser: async (id: string, update: Partial<User>): Promise<User> => {
     const { data } = await api.put(`/admin/users/${id}`, update);
-    return data;
-  },
-
-  changeUserRole: async (id: string, role: UserRole): Promise<User> => {
-    const { data } = await api.put(`/admin/users/${id}/role`, { role });
     return data;
   },
 
@@ -896,6 +917,59 @@ export const adminApi = {
     scrape_interval_minutes: number;
   }): Promise<ScrapingSource> => {
     const { data } = await api.post('/admin/scraping-sources', source);
+    return data;
+  },
+
+  // Exchange Rate Sources
+  getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
+    const { data } = await api.get('/admin/exchange-rate-sources');
+    return data;
+  },
+
+  createExchangeRateSource: async (source: {
+    name: string;
+    from_currency: string;
+    to_currency: string;
+    url: string;
+    scrape_library?: ScrapeLibrary;
+    scrape_interval_minutes: number;
+    is_primary?: boolean;
+    config?: Record<string, unknown>;
+  }): Promise<ExchangeRateSource> => {
+    const { data } = await api.post('/admin/exchange-rate-sources', source);
+    return data;
+  },
+
+  updateExchangeRateSource: async (
+    id: string,
+    update: {
+      name?: string;
+      url?: string;
+      scrape_library?: ScrapeLibrary;
+      is_active?: boolean;
+      is_primary?: boolean;
+      scrape_interval_minutes?: number;
+      config?: Record<string, unknown>;
+    }
+  ): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/exchange-rate-sources/${id}`, update);
+    return data;
+  },
+
+  testExchangeRateSource: async (
+    id: string
+  ): Promise<{ success: boolean; message: string; rate?: number }> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/test`);
+    return data;
+  },
+
+  refreshExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/refresh`);
+    return data;
+  },
+
+  deleteExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/admin/exchange-rate-sources/${id}`);
     return data;
   },
 

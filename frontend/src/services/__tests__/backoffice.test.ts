@@ -201,7 +201,7 @@ describe('Backoffice API', () => {
       expect(body.data[0]).toHaveProperty('id');
       expect(body.data[0]).toHaveProperty('contact_email');
       expect(body.data[0]).toHaveProperty('entity_name');
-      expect(body.data[0]).toHaveProperty('request_type');
+      expect(body.data[0]).toHaveProperty('status');
     });
 
     it('should create user from contact request', async () => {

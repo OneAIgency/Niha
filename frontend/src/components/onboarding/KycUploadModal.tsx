@@ -140,7 +140,15 @@ export default function KycUploadModal({
     setError(null);
     try {
       const status = await onboardingApi.getStatus();
-      setUploadedDocs(status.documents || []);
+      const docs = status.documents || [];
+      // API response is camelCase (documentType, fileName); normalize so matching works
+      setUploadedDocs(
+        docs.map((doc: KYCDocument & { documentType?: string; fileName?: string }) => ({
+          ...doc,
+          document_type: doc.document_type ?? doc.documentType ?? '',
+          file_name: doc.file_name ?? doc.fileName ?? '',
+        }))
+      );
     } catch (err) {
       console.error('Failed to load documents:', err);
       setError('Failed to load documents');
@@ -149,9 +157,12 @@ export default function KycUploadModal({
     }
   };
 
+  const getDocType = (d: KYCDocument & { documentType?: string }) =>
+    d.document_type ?? d.documentType ?? '';
+
   // Calculate progress
   const requiredDocs = documentDefinitions.filter(d => d.required);
-  const uploadedTypes = new Set(uploadedDocs.map(d => d.document_type));
+  const uploadedTypes = new Set(uploadedDocs.map(d => getDocType(d)));
   const uploadedRequiredCount = requiredDocs.filter(d => uploadedTypes.has(d.type)).length;
   const progress = Math.round((uploadedRequiredCount / requiredDocs.length) * 100);
 
@@ -164,13 +175,19 @@ export default function KycUploadModal({
     setError(null);
     try {
       const doc = await onboardingApi.uploadDocument(type, file);
-      setUploadedDocs(prev => [...prev.filter(d => d.document_type !== type), doc]);
+      setUploadedDocs(prev => [...prev.filter(d => getDocType(d) !== type), doc]);
     } catch (err: unknown) {
       console.error('Upload failed:', err);
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
         : null;
-      setError(typeof msg === 'string' ? msg : 'Upload failed');
+      const detail = typeof msg === 'string' ? msg : '';
+      if (detail.includes('already uploaded')) {
+        setError('This document type is already uploaded. Delete it using the trash icon, then upload a new file.');
+        await loadDocuments();
+      } else {
+        setError(detail || 'Upload failed');
+      }
     } finally {
       setUploading(null);
     }
@@ -214,7 +231,8 @@ export default function KycUploadModal({
   const activeDocuments = documentDefinitions.filter(d => d.category === activeCategory);
   const activeCategoryData = categories.find(c => c.id === activeCategory);
 
-  const getUploadedDoc = (type: KYCDocumentType) => uploadedDocs.find(d => d.document_type === type);
+  const getUploadedDoc = (type: KYCDocumentType) =>
+    uploadedDocs.find(d => getDocType(d) === type);
 
   return (
     <AnimatePresence>

@@ -218,8 +218,10 @@ def require_roles(*allowed_roles: str):
 # Available functions for endpoint protection:
 # - get_current_user: Get authenticated user (any role)
 # - get_admin_user: Require ADMIN role
-# - get_funded_user: Require FUNDED or ADMIN role
-# - get_approved_user: Require APPROVED, FUNDED, or ADMIN role
+# - get_funded_user: Require CEA+ or ADMIN (cash market, dashboard)
+# - get_approved_user: Require APPROVED+ or ADMIN (funding, deposits)
+# - get_swap_user: Require SWAP, EUA_SETTLE, EUA or ADMIN (swap page; 0010 §8)
+# - get_onboarding_user: Require NDA, KYC or ADMIN (onboarding / KYC form; 0010 §3)
 # - require_roles(*roles): Factory for custom role requirements
 
 async def get_admin_user(current_user=Depends(get_current_user)):  # noqa: B008
@@ -266,10 +268,19 @@ async def get_admin_user(current_user=Depends(get_current_user)):  # noqa: B008
 
 
 async def get_funded_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires funded or admin role"""
+    """Dependency that requires funded flow roles (CEA and beyond), admin, or MM (Market Maker)."""
     from ..models.models import UserRole
 
-    if current_user.role not in [UserRole.ADMIN, UserRole.FUNDED]:
+    funded_roles = {
+        UserRole.ADMIN,
+        UserRole.MM,
+        UserRole.CEA,
+        UserRole.CEA_SETTLE,
+        UserRole.SWAP,
+        UserRole.EUA_SETTLE,
+        UserRole.EUA,
+    }
+    if current_user.role not in funded_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Funded account required"
         )
@@ -277,11 +288,53 @@ async def get_funded_user(current_user=Depends(get_current_user)):  # noqa: B008
 
 
 async def get_approved_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires approved, funded, or admin role"""
+    """Dependency that requires approved or later (funding page, deposits), admin, or MM (Market Maker)."""
     from ..models.models import UserRole
 
-    if current_user.role not in [UserRole.ADMIN, UserRole.FUNDED, UserRole.APPROVED]:
+    funding_access_roles = {
+        UserRole.ADMIN,
+        UserRole.MM,
+        UserRole.APPROVED,
+        UserRole.FUNDING,
+        UserRole.AML,
+        UserRole.CEA,
+        UserRole.CEA_SETTLE,
+        UserRole.SWAP,
+        UserRole.EUA_SETTLE,
+        UserRole.EUA,
+    }
+    if current_user.role not in funding_access_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Approved account required"
+        )
+    return current_user
+
+
+async def get_swap_user(current_user=Depends(get_current_user)):  # noqa: B008
+    """Dependency that requires swap access (SWAP, EUA_SETTLE, EUA), admin, or MM (Market Maker). 0010 plan §8."""
+    from ..models.models import UserRole
+
+    swap_roles = {
+        UserRole.ADMIN,
+        UserRole.MM,
+        UserRole.SWAP,
+        UserRole.EUA_SETTLE,
+        UserRole.EUA,
+    }
+    if current_user.role not in swap_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Swap access required"
+        )
+    return current_user
+
+
+async def get_onboarding_user(current_user=Depends(get_current_user)):  # noqa: B008
+    """Dependency that allows only NDA, KYC, or ADMIN (onboarding / KYC form). 0010 plan §3."""
+    from ..models.models import UserRole
+
+    onboarding_roles = {UserRole.ADMIN, UserRole.NDA, UserRole.KYC}
+    if current_user.role not in onboarding_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Onboarding access required"
         )
     return current_user

@@ -3,12 +3,13 @@ import { Activity, CheckCircle, AlertCircle, TrendingUp, RefreshCw } from 'lucid
 import { getLoggingStats } from '../../services/api';
 
 interface LoggingStats {
-  total_actions: number;
-  success_count: number;
-  failed_count: number;
-  by_action_type: Record<string, number>;
-  by_user: Array<{ user_id: string; email: string; count: number }>;
-  actions_over_time: Array<{ date: string; count: number }>;
+  // API returns snake_case but axios interceptor converts to camelCase
+  totalActions: number;
+  successCount: number;
+  failedCount: number;
+  byActionType: Record<string, number> | null;
+  byUser: Array<{ userId: string; email: string; actionCount: number; companyName?: string }>;
+  actionsOverTime: Array<{ date: string; count: number }>;
 }
 
 export function LoggingOverview() {
@@ -53,14 +54,16 @@ export function LoggingOverview() {
 
   if (!stats) return null;
 
-  const successRate = stats.total_actions > 0
-    ? ((stats.success_count / stats.total_actions) * 100).toFixed(1)
+  const successRate = stats.totalActions > 0
+    ? ((stats.successCount / stats.totalActions) * 100).toFixed(1)
     : '0';
 
-  // Top action types (sorted by count)
-  const topActions = Object.entries(stats.by_action_type)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10);
+  // Top action types (sorted by count) - with null check
+  const topActions = stats.byActionType
+    ? Object.entries(stats.byActionType)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -75,7 +78,7 @@ export function LoggingOverview() {
             <Activity className="w-5 h-5 text-blue-500" />
           </div>
           <div className="text-2xl font-bold text-navy-900 dark:text-white">
-            {stats.total_actions.toLocaleString()}
+            {stats.totalActions.toLocaleString()}
           </div>
         </div>
 
@@ -88,7 +91,7 @@ export function LoggingOverview() {
             <CheckCircle className="w-5 h-5 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-            {stats.success_count.toLocaleString()}
+            {stats.successCount.toLocaleString()}
           </div>
         </div>
 
@@ -101,7 +104,7 @@ export function LoggingOverview() {
             <AlertCircle className="w-5 h-5 text-red-500" />
           </div>
           <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-            {stats.failed_count.toLocaleString()}
+            {stats.failedCount.toLocaleString()}
           </div>
         </div>
 
@@ -130,7 +133,7 @@ export function LoggingOverview() {
               <p className="text-sm text-navy-500 dark:text-navy-400">No actions recorded</p>
             ) : (
               topActions.map(([actionType, count]) => {
-                const percentage = ((count / stats.total_actions) * 100).toFixed(1);
+                const percentage = ((count / stats.totalActions) * 100).toFixed(1);
                 return (
                   <div key={actionType} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
@@ -160,19 +163,20 @@ export function LoggingOverview() {
             Most Active Users
           </h3>
           <div className="space-y-3">
-            {stats.by_user.length === 0 ? (
+            {!stats.byUser || stats.byUser.length === 0 ? (
               <p className="text-sm text-navy-500 dark:text-navy-400">No user activity recorded</p>
             ) : (
-              stats.by_user.map((user) => {
-                const percentage = ((user.count / stats.total_actions) * 100).toFixed(1);
+              stats.byUser.map((user) => {
+                const percentage = ((user.actionCount / stats.totalActions) * 100).toFixed(1);
                 return (
-                  <div key={user.user_id} className="space-y-1">
+                  <div key={user.userId} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-navy-700 dark:text-navy-300 truncate">
-                        {user.email}
+                        {user.email || 'System'}
+                        {user.companyName && <span className="text-navy-400 ml-1">({user.companyName})</span>}
                       </span>
                       <span className="text-navy-500 dark:text-navy-400">
-                        {user.count} ({percentage}%)
+                        {user.actionCount} ({percentage}%)
                       </span>
                     </div>
                     <div className="h-2 bg-navy-100 dark:bg-navy-700 rounded-full overflow-hidden">

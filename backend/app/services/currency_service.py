@@ -56,6 +56,8 @@ class CurrencyService:
         """
         Get exchange rate between two currencies.
 
+        Priority: 1) Scraped sources 2) Cache 3) API 4) Fallback
+
         Args:
             from_currency: Source currency (e.g., "CNY", "USD")
             to_currency: Target currency (default: "EUR")
@@ -72,23 +74,80 @@ class CurrencyService:
         if to_currency != "EUR":
             raise ValueError("This service only converts TO EUR")
 
-        # Try cache first
+        # 1. Try scraped source first (highest priority)
+        scraped_rate = await self._get_scraped_rate(from_currency, to_currency)
+        if scraped_rate:
+            logger.debug(f"Using scraped rate for {from_currency}: {scraped_rate}")
+            return scraped_rate
+
+        # 2. Try cache
         cached = await self._get_cached_rate(from_currency)
         if cached:
             return cached
 
-        # Fetch fresh rates
+        # 3. Fetch fresh rates from API
         rates = await self._fetch_rates()
         if rates and from_currency in rates:
             return rates[from_currency]
 
-        # Fallback to default
+        # 4. Fallback to default
         if from_currency in self.FALLBACK_RATES:
             logger.warning(f"Using fallback rate for {from_currency}")
             self._fallback_count += 1
             return Decimal("1.0") / self.FALLBACK_RATES[from_currency]
 
         raise ValueError(f"No exchange rate available for {from_currency}")
+
+    async def _get_scraped_rate(
+        self, from_currency: str, to_currency: str = "EUR"
+    ) -> Optional[Decimal]:
+        """
+        Get exchange rate from scraped sources (database).
+        Returns None if no active source or rate is stale.
+        """
+        from datetime import timedelta
+
+        from sqlalchemy import select
+
+        try:
+            from ..core.database import AsyncSessionLocal
+            from ..models.models import ExchangeRateSource
+
+            async with AsyncSessionLocal() as db:
+                # Find active source for this currency pair
+                # Note: ExchangeRateSource stores EUR -> foreign (e.g., EUR -> CNY = 7.85)
+                # We need foreign -> EUR, so we invert the rate
+                query = (
+                    select(ExchangeRateSource)
+                    .where(
+                        ExchangeRateSource.from_currency == to_currency,  # EUR
+                        ExchangeRateSource.to_currency == from_currency,  # CNY
+                        ExchangeRateSource.is_active == True,  # noqa: E712
+                    )
+                    .order_by(ExchangeRateSource.is_primary.desc())
+                    .limit(1)
+                )
+                result = await db.execute(query)
+                source = result.scalar_one_or_none()
+
+                if not source or not source.last_rate:
+                    return None
+
+                # Check if rate is stale (older than 2x scrape interval)
+                if source.last_scraped_at:
+                    stale_threshold = timedelta(
+                        minutes=source.scrape_interval_minutes * 2
+                    )
+                    if datetime.utcnow() - source.last_scraped_at > stale_threshold:
+                        logger.warning(f"Scraped rate for {from_currency} is stale")
+                        return None
+
+                # Invert rate: stored as EUR->CNY, we need CNY->EUR
+                return Decimal("1.0") / source.last_rate
+
+        except Exception as e:
+            logger.error(f"Failed to get scraped rate: {e}")
+            return None
 
     async def convert(
         self, amount: Decimal, from_currency: str, to_currency: str = "EUR"

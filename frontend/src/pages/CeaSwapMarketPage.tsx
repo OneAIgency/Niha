@@ -130,7 +130,7 @@ export function CeaSwapMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="min-h-screen bg-navy-900">
       {/* Subheader */}
       <Subheader
         icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
@@ -175,7 +175,7 @@ export function CeaSwapMarketPage() {
       </Subheader>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="page-container py-6">
         {isLoading && !swapRate ? (
           <div className="flex items-center justify-center h-96">
             <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />

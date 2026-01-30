@@ -3,22 +3,23 @@ import { X, FileText, AlertCircle, CheckCircle, Clock, User, Tag } from 'lucide-
 import { Button } from '../common';
 
 interface TicketLog {
+  [key: string]: unknown;
   id: string;
-  ticket_id: string;
+  ticketId: string;
   timestamp: string;
-  user_id?: string;
-  market_maker_id?: string;
-  action_type: string;
-  entity_type: string;
-  entity_id?: string;
+  userId?: string;
+  marketMakerId?: string;
+  actionType: string;
+  entityType: string;
+  entityId?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: Record<string, unknown>;
-  response_data?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
-  before_state?: Record<string, unknown>;
-  after_state?: Record<string, unknown>;
-  related_ticket_ids: string[];
+  requestPayload?: Record<string, unknown>;
+  responseData?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  relatedTicketIds: string[];
   tags: string[];
 }
 
@@ -58,7 +59,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
                 <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
                   Ticket Details
                 </h2>
-                <p className="text-sm text-navy-500 dark:text-navy-400">{ticket.ticket_id}</p>
+                <p className="text-sm text-navy-500 dark:text-navy-400">{ticket.ticketId}</p>
               </div>
             </div>
             <button
@@ -78,7 +79,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
                   Action Type
                 </label>
                 <div className="text-sm text-navy-900 dark:text-white font-medium">
-                  {ticket.action_type}
+                  {ticket.actionType}
                 </div>
               </div>
               <div>
@@ -86,7 +87,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
                   Entity Type
                 </label>
                 <div className="text-sm text-navy-900 dark:text-white font-medium">
-                  {ticket.entity_type}
+                  {ticket.entityType}
                 </div>
               </div>
               <div>
@@ -113,34 +114,34 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             </div>
 
             {/* IDs */}
-            {(ticket.user_id || ticket.market_maker_id || ticket.entity_id) && (
+            {(ticket.userId || ticket.marketMakerId || ticket.entityId) && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white flex items-center gap-2">
                   <User className="w-4 h-4" />
                   Identifiers
                 </h3>
                 <div className="grid grid-cols-1 gap-2">
-                  {ticket.user_id && (
+                  {ticket.userId && (
                     <div className="text-sm">
                       <span className="text-navy-500 dark:text-navy-400">User ID:</span>{' '}
                       <code className="text-navy-900 dark:text-white bg-navy-100 dark:bg-navy-700 px-2 py-0.5 rounded">
-                        {ticket.user_id}
+                        {ticket.userId}
                       </code>
                     </div>
                   )}
-                  {ticket.market_maker_id && (
+                  {ticket.marketMakerId && (
                     <div className="text-sm">
                       <span className="text-navy-500 dark:text-navy-400">Market Maker ID:</span>{' '}
                       <code className="text-navy-900 dark:text-white bg-navy-100 dark:bg-navy-700 px-2 py-0.5 rounded">
-                        {ticket.market_maker_id}
+                        {ticket.marketMakerId}
                       </code>
                     </div>
                   )}
-                  {ticket.entity_id && (
+                  {ticket.entityId && (
                     <div className="text-sm">
                       <span className="text-navy-500 dark:text-navy-400">Entity ID:</span>{' '}
                       <code className="text-navy-900 dark:text-white bg-navy-100 dark:bg-navy-700 px-2 py-0.5 rounded">
-                        {ticket.entity_id}
+                        {ticket.entityId}
                       </code>
                     </div>
                   )}
@@ -169,14 +170,14 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             )}
 
             {/* Related Tickets */}
-            {ticket.related_ticket_ids && ticket.related_ticket_ids.length > 0 && (
+            {ticket.relatedTicketIds && ticket.relatedTicketIds.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Related Tickets
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {ticket.related_ticket_ids.map((relatedId, index) => (
+                  {ticket.relatedTicketIds.map((relatedId, index) => (
                     <code
                       key={index}
                       className="text-xs text-navy-900 dark:text-white bg-navy-100 dark:bg-navy-700 px-2 py-1 rounded"
@@ -189,58 +190,58 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             )}
 
             {/* Request Payload */}
-            {ticket.request_payload && (
+            {ticket.requestPayload && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white">Request Payload</h3>
                 <pre className="text-xs bg-navy-100 dark:bg-navy-700 p-3 rounded-lg overflow-x-auto text-navy-900 dark:text-white">
-                  {JSON.stringify(ticket.request_payload, null, 2)}
+                  {JSON.stringify(ticket.requestPayload, null, 2)}
                 </pre>
               </div>
             )}
 
             {/* Response Data */}
-            {ticket.response_data && (
+            {ticket.responseData && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white">Response Data</h3>
                 <pre className="text-xs bg-navy-100 dark:bg-navy-700 p-3 rounded-lg overflow-x-auto text-navy-900 dark:text-white">
-                  {JSON.stringify(ticket.response_data, null, 2)}
+                  {JSON.stringify(ticket.responseData, null, 2)}
                 </pre>
               </div>
             )}
 
             {/* Before State */}
-            {ticket.before_state && (
+            {ticket.beforeState && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white">Before State</h3>
                 <pre className="text-xs bg-navy-100 dark:bg-navy-700 p-3 rounded-lg overflow-x-auto text-navy-900 dark:text-white">
-                  {JSON.stringify(ticket.before_state, null, 2)}
+                  {JSON.stringify(ticket.beforeState, null, 2)}
                 </pre>
               </div>
             )}
 
             {/* After State */}
-            {ticket.after_state && (
+            {ticket.afterState && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white">After State</h3>
                 <pre className="text-xs bg-navy-100 dark:bg-navy-700 p-3 rounded-lg overflow-x-auto text-navy-900 dark:text-white">
-                  {JSON.stringify(ticket.after_state, null, 2)}
+                  {JSON.stringify(ticket.afterState, null, 2)}
                 </pre>
               </div>
             )}
 
             {/* Technical Info */}
-            {(ticket.ip_address || ticket.user_agent) && (
+            {(ticket.ipAddress || ticket.userAgent) && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-navy-900 dark:text-white">Technical Information</h3>
                 <div className="space-y-1 text-xs text-navy-600 dark:text-navy-400">
-                  {ticket.ip_address && (
+                  {ticket.ipAddress && (
                     <div>
-                      <span className="font-medium">IP Address:</span> {ticket.ip_address}
+                      <span className="font-medium">IP Address:</span> {ticket.ipAddress}
                     </div>
                   )}
-                  {ticket.user_agent && (
+                  {ticket.userAgent && (
                     <div>
-                      <span className="font-medium">User Agent:</span> {ticket.user_agent}
+                      <span className="font-medium">User Agent:</span> {ticket.userAgent}
                     </div>
                   )}
                 </div>

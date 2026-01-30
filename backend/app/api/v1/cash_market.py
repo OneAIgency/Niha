@@ -23,8 +23,10 @@ from ...models.models import (
     Order,
     OrderStatus,
     Seller,
+    TicketStatus,
     User,
 )
+from ...services.ticket_service import TicketService
 from ...models.models import CertificateType as CertTypeEnum
 from ...models.models import OrderSide as OrderSideEnum
 from ...schemas.schemas import (
@@ -358,6 +360,29 @@ async def place_order(
     )
 
     db.add(new_order)
+    await db.flush()  # Get order ID before ticket creation
+
+    # Create audit ticket for order placement
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="ORDER_PLACED",
+        entity_type="Order",
+        entity_id=new_order.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "certificate_type": order.certificate_type.value,
+            "side": order.side.value,
+            "price": float(order.price),
+            "quantity": float(order.quantity),
+        },
+        response_data={
+            "order_id": str(new_order.id),
+            "status": new_order.status.value,
+        },
+        tags=["order", "cash_market", order.side.value.lower()],
+    )
+
     await db.commit()
     await db.refresh(new_order)
 
@@ -468,13 +493,35 @@ async def cancel_order(
             detail=f"Cannot cancel order with status {order.status.value}",
         )
 
+    # Capture before state
+    before_state = {
+        "status": order.status.value,
+        "filled_quantity": float(order.filled_quantity) if order.filled_quantity else 0,
+    }
+
     # Cancel the order
     order.status = OrderStatus.CANCELLED
     order.updated_at = datetime.utcnow()
+
+    # Create audit ticket for order cancellation
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="ORDER_CANCELLED",
+        entity_type="Order",
+        entity_id=order.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={"order_id": order_id},
+        response_data={"cancelled_at": datetime.utcnow().isoformat()},
+        before_state=before_state,
+        after_state={"status": "CANCELLED"},
+        tags=["order", "cancel"],
+    )
+
     await db.commit()
 
     return MessageResponse(
-        message=f"Order {order_id} cancelled successfully", success=True
+        message=f"Order {order_id} cancelled. Ticket: {ticket.ticket_id}", success=True
     )
 
 

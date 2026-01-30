@@ -16,11 +16,20 @@ class Jurisdiction(str, Enum):
 
 
 class UserRole(str, Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class CertificateType(str, Enum):
@@ -94,19 +103,19 @@ class ContactRequestCreate(BaseModel):
     contact_email: EmailStr
     contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
-    request_type: str = Field(default="join")  # 'join' or 'nda'
 
 
 class ContactRequestResponse(BaseModel):
+    """Contact request; client/request state is ONLY user_role (NDA, KYC, REJECTED). Do not use request_type."""
+
     id: UUID
     entity_name: str
     contact_email: str
     contact_name: Optional[str]
     position: Optional[str]
-    request_type: str
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None
-    status: str
+    user_role: str  # Sole source for request state; values NDA, KYC, REJECTED
     notes: Optional[str] = None
     created_at: datetime
 
@@ -146,7 +155,7 @@ class UserCreate(BaseModel):
     password: Optional[str] = Field(
         None, min_length=8
     )  # Optional - if not provided, send invitation
-    role: UserRole = UserRole.PENDING
+    role: UserRole = UserRole.NDA
     entity_id: Optional[UUID] = None
     position: Optional[str] = None
 
@@ -323,10 +332,24 @@ class DashboardStats(BaseModel):
 
 
 # Admin Schemas
+VALID_CONTACT_STATUS = frozenset({"NDA", "REJECTED", "KYC"})
+
+
 class ContactRequestUpdate(BaseModel):
-    status: Optional[str] = None
+    user_role: Optional[str] = None
     notes: Optional[str] = None
     agent_id: Optional[UUID] = None
+
+    @field_validator("user_role")
+    @classmethod
+    def validate_user_role(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if v not in VALID_CONTACT_STATUS:
+            raise ValueError(
+                f"user_role must be one of {sorted(VALID_CONTACT_STATUS)}"
+            )
+        return v
 
 
 class EntityKYCUpdate(BaseModel):
@@ -417,6 +440,28 @@ class ScrapingSourceCreate(BaseModel):
     certificate_type: CertificateType
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
     scrape_interval_minutes: int = Field(5, ge=1, le=60)
+    config: Optional[Dict[str, Any]] = None
+
+
+# Exchange Rate Source Schemas
+class ExchangeRateSourceCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    from_currency: str = Field(..., min_length=3, max_length=3)
+    to_currency: str = Field(..., min_length=3, max_length=3)
+    url: str = Field(..., min_length=1, max_length=500)
+    scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
+    scrape_interval_minutes: int = Field(60, ge=1, le=1440)
+    is_primary: bool = False
+    config: Optional[Dict[str, Any]] = None
+
+
+class ExchangeRateSourceUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    url: Optional[str] = Field(None, min_length=1, max_length=500)
+    scrape_library: Optional[ScrapeLibrary] = None
+    is_active: Optional[bool] = None
+    is_primary: Optional[bool] = None
+    scrape_interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
     config: Optional[Dict[str, Any]] = None
 
 

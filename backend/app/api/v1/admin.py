@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -24,11 +24,14 @@ from ...models.models import (
     ContactRequest,
     ContactStatus,
     Entity,
+    ExchangeRateSource,
     Jurisdiction,
     KYCStatus,
     MailConfig,
     MailProvider,
+    MarketMakerClient,
     ScrapeLibrary,
+    ScrapeStatus,
     ScrapingSource,
     SwapRequest,
     SwapStatus,
@@ -43,6 +46,8 @@ from ...schemas.schemas import (
     AdminUserUpdate,
     AuthenticationAttemptResponse,
     ContactRequestUpdate,
+    ExchangeRateSourceCreate,
+    ExchangeRateSourceUpdate,
     MailConfigUpdate,
     MessageResponse,
     ScrapingSourceCreate,
@@ -73,12 +78,12 @@ async def get_contact_requests(
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
-        query = query.where(ContactRequest.status == status)
+        query = query.where(ContactRequest.status == ContactStatus(status))
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
-        count_query = count_query.where(ContactRequest.status == status)
+        count_query = count_query.where(ContactRequest.status == ContactStatus(status))
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -138,7 +143,16 @@ async def update_contact_request(
         raise HTTPException(status_code=404, detail="Contact request not found")
 
     if update.status:
-        contact.status = ContactStatus(update.status)
+        new_status = ContactStatus(update.status)
+        contact.status = new_status
+        # When rejecting NDA, also set linked user to REJECTED if one exists (created from this request)
+        if new_status == ContactStatus.REJECTED:
+            user_result = await db.execute(
+                select(User).where(User.email == contact.contact_email)
+            )
+            linked_user = user_result.scalar_one_or_none()
+            if linked_user:
+                linked_user.role = UserRole.REJECTED
     if update.notes:
         contact.notes = update.notes
     if update.agent_id:
@@ -222,15 +236,22 @@ async def create_user_from_contact_request(
     """
     Create a new user from an approved contact request.
     Supports two modes:
-    - 'manual': Admin provides password, user can login immediately
-    - 'invitation': Send email invitation, user sets own password
-    Admin only.
+    - 'manual': Admin provides password (required, ≥8 chars), user active immediately.
+    - 'invitation': Send email invitation after commit; user sets password via link (MailConfig for expiry).
+    Creates Entity (name from contact_request, jurisdiction OTHER, KYC PENDING), User (role KYC), sets contact_request.status = KYC. Broadcasts request_updated and user_created on backoffice WebSocket.
+    Admin only. All parameters are Query params.
+    Returns: { message, success: true, user: { id, email, first_name, last_name, role, entity_id, creation_method } }.
+    Errors: 400 (invalid request_id, duplicate email, password validation), 404 (contact request not found), 400/409/500 from handle_database_error (optional details.hint).
     """
-    from datetime import timedelta
+    # Validate request_id as UUID
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
 
     # Get contact request
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact_request = result.scalar_one_or_none()
     if not contact_request:
@@ -254,64 +275,71 @@ async def create_user_from_contact_request(
         else 7
     )
 
-    # Create entity from contact request
-    entity = Entity(
-        name=contact_request.entity_name,
-        jurisdiction=Jurisdiction.OTHER,
-        kyc_status=KYCStatus.PENDING,
-    )
-    db.add(entity)
-    await db.flush()
+    try:
+        # Create entity from contact request
+        entity = Entity(
+            name=contact_request.entity_name,
+            jurisdiction=Jurisdiction.OTHER,
+            kyc_status=KYCStatus.PENDING,
+        )
+        db.add(entity)
+        await db.flush()
 
-    if mode == "manual":
-        # Manual creation with password
-        if not password or len(password) < 8:
-            raise HTTPException(
-                status_code=400,
-                detail="Password required and must be at least 8 characters",
+        if mode == "manual":
+            # Manual creation with password
+            if not password or len(password) < 8:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Password required and must be at least 8 characters",
+                )
+
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                password_hash=hash_password(password),
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                must_change_password=False,
+                is_active=True,
+                creation_method="manual",
+                created_by=admin_user.id,
+            )
+        else:
+            # Send invitation
+            invitation_token = secrets.token_urlsafe(32)
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                invitation_token=invitation_token,
+                invitation_sent_at=datetime.now(timezone.utc),
+                invitation_expires_at=(
+                    datetime.now(timezone.utc) + timedelta(days=invitation_expiry_days)
+                ),
+                must_change_password=True,
+                is_active=False,  # Activate when password is set
+                creation_method="invitation",
+                created_by=admin_user.id,
             )
 
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            password_hash=hash_password(password),
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            must_change_password=False,
-            is_active=True,
-            creation_method="manual",
-            created_by=admin_user.id,
-        )
-    else:
-        # Send invitation
-        invitation_token = secrets.token_urlsafe(32)
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            invitation_token=invitation_token,
-            invitation_sent_at=datetime.utcnow(),
-            invitation_expires_at=(
-                datetime.utcnow() + timedelta(days=invitation_expiry_days)
-            ),
-            must_change_password=True,
-            is_active=False,  # Activate when password is set
-            creation_method="invitation",
-            created_by=admin_user.id,
-        )
+        db.add(user)
 
-    db.add(user)
+        # Update contact request status to KYC (approved, user created)
+        contact_request.status = ContactStatus.KYC
 
-    # Update contact request status
-    contact_request.status = ContactStatus.ENROLLED
-
-    await db.commit()
-    await db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "create user from contact request", logger) from e
 
     # Send invitation email if applicable
     if mode == "invitation":
@@ -343,14 +371,29 @@ async def create_user_from_contact_request(
         except Exception:
             logger.exception(
                 "Failed to send invitation email for user %s "
-                "(user created, contact ENROLLED)",
+                "(user created, contact request KYC)",
                 user.email,
             )
 
-    # Broadcast updates
+    # Broadcast updates (full payload so realtime hook can replace list item)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
-            "request_updated", {"id": str(contact_request.id), "status": "enrolled"}
+            "request_updated",
+            {
+                "id": str(contact_request.id),
+                "entity_name": contact_request.entity_name,
+                "contact_email": contact_request.contact_email,
+                "contact_name": contact_request.contact_name,
+                "position": contact_request.position,
+                "request_type": contact_request.request_type or "join",
+                "nda_file_name": contact_request.nda_file_name,
+                "submitter_ip": contact_request.submitter_ip,
+                "status": contact_request.status.value if contact_request.status else "new",
+                "notes": contact_request.notes,
+                "created_at": (contact_request.created_at.isoformat() + "Z")
+                if contact_request.created_at
+                else None,
+            },
         )
     )
     asyncio.create_task(
@@ -361,7 +404,7 @@ async def create_user_from_contact_request(
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role.value,
+                "role": user.role.value,  # KYC
             },
         )
     )
@@ -485,7 +528,7 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
     new_contacts = await db.execute(
         select(func.count())
         .select_from(ContactRequest)
-        .where(ContactRequest.status == ContactStatus.NEW)
+        .where(ContactRequest.status == ContactStatus.NDA)
     )
     new_count = new_contacts.scalar()
 
@@ -588,13 +631,37 @@ async def get_users(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all users with optional filters.
-    Admin only.
+    Get users with optional filters.
+    Admin only. By default returns only active users. Use role=DISABLED to list
+    deactivated users (soft-deleted; kept for ticketing, transactions, etc.).
+    Excludes Market Maker users (they have their own management page).
     """
-    query = select(User).order_by(User.created_at.desc())
+    # Subquery to find user IDs that are Market Makers
+    mm_user_ids = select(MarketMakerClient.user_id).where(
+        MarketMakerClient.user_id.isnot(None)
+    ).scalar_subquery()
 
-    if role:
-        query = query.where(User.role == UserRole(role))
+    if role == "DISABLED":
+        query = select(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        )
+    else:
+        query = select(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        )
+        if role:
+            query = query.where(User.role == UserRole(role))
+            count_query = count_query.where(User.role == UserRole(role))
 
     if search:
         search_term = f"%{search}%"
@@ -603,12 +670,6 @@ async def get_users(
             | (User.first_name.ilike(search_term))
             | (User.last_name.ilike(search_term))
         )
-
-    # Count total
-    count_query = select(func.count()).select_from(User)
-    if role:
-        count_query = count_query.where(User.role == UserRole(role))
-    if search:
         count_query = count_query.where(
             (User.email.ilike(search_term))
             | (User.first_name.ilike(search_term))
@@ -1215,16 +1276,20 @@ async def get_scraping_sources(
             else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
             "scrape_interval_minutes": s.scrape_interval_minutes,
-            "last_scrape_at": s.last_scrape_at.isoformat()
+            "last_scrape_at": (s.last_scrape_at.isoformat() + "Z")
             if s.last_scrape_at
             else None,
             "last_scrape_status": s.last_scrape_status.value
             if s.last_scrape_status
             else None,
             "last_price": float(s.last_price) if s.last_price else None,
+            "last_price_eur": float(s.last_price_eur) if s.last_price_eur else None,
+            "last_exchange_rate": float(s.last_exchange_rate)
+            if s.last_exchange_rate
+            else None,
             "config": s.config,
-            "created_at": s.created_at.isoformat(),
-            "updated_at": s.updated_at.isoformat(),
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
         }
         for s in sources
     ]
@@ -1271,6 +1336,12 @@ async def create_scraping_source(
         if source.last_scrape_status
         else None,
         "last_price": float(source.last_price) if source.last_price else None,
+        "last_price_eur": float(source.last_price_eur)
+        if source.last_price_eur
+        else None,
+        "last_exchange_rate": float(source.last_exchange_rate)
+        if source.last_exchange_rate
+        else None,
         "config": source.config,
         "created_at": source.created_at.isoformat(),
         "updated_at": source.updated_at.isoformat(),
@@ -1416,6 +1487,231 @@ async def delete_scraping_source(
 
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
+    )
+
+
+# ==================== Exchange Rate Sources ====================
+
+
+@router.get("/exchange-rate-sources")
+async def get_exchange_rate_sources(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Get all exchange rate source configurations.
+    Admin only.
+    """
+    query = select(ExchangeRateSource).order_by(ExchangeRateSource.created_at.desc())
+    result = await db.execute(query)
+    sources = result.scalars().all()
+
+    return [
+        {
+            "id": str(s.id),
+            "name": s.name,
+            "from_currency": s.from_currency,
+            "to_currency": s.to_currency,
+            "url": s.url,
+            "scrape_library": s.scrape_library.value
+            if s.scrape_library
+            else ScrapeLibrary.HTTPX.value,
+            "is_active": s.is_active,
+            "is_primary": s.is_primary,
+            "scrape_interval_minutes": s.scrape_interval_minutes,
+            "last_rate": float(s.last_rate) if s.last_rate else None,
+            "last_scraped_at": (s.last_scraped_at.isoformat() + "Z")
+            if s.last_scraped_at
+            else None,
+            "last_scrape_status": s.last_scrape_status.value
+            if s.last_scrape_status
+            else None,
+            "config": s.config,
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
+        }
+        for s in sources
+    ]
+
+
+@router.post("/exchange-rate-sources")
+async def create_exchange_rate_source(
+    source_data: ExchangeRateSourceCreate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Create a new exchange rate source.
+    Admin only.
+    """
+    from sqlalchemy import update
+
+    # If marking as primary, unset other primary sources for same pair
+    if source_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source_data.from_currency.upper(),
+                ExchangeRateSource.to_currency == source_data.to_currency.upper(),
+            )
+            .values(is_primary=False)
+        )
+
+    source = ExchangeRateSource(
+        name=source_data.name,
+        from_currency=source_data.from_currency.upper(),
+        to_currency=source_data.to_currency.upper(),
+        url=source_data.url,
+        scrape_library=source_data.scrape_library,
+        scrape_interval_minutes=source_data.scrape_interval_minutes,
+        is_primary=source_data.is_primary,
+        config=source_data.config,
+        is_active=True,
+    )
+
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    return {
+        "id": str(source.id),
+        "name": source.name,
+        "from_currency": source.from_currency,
+        "to_currency": source.to_currency,
+        "url": source.url,
+        "scrape_library": source.scrape_library.value,
+        "is_active": source.is_active,
+        "is_primary": source.is_primary,
+        "scrape_interval_minutes": source.scrape_interval_minutes,
+        "last_rate": None,
+        "last_scraped_at": None,
+        "last_scrape_status": None,
+        "config": source.config,
+        "created_at": source.created_at.isoformat() + "Z",
+        "updated_at": source.updated_at.isoformat() + "Z",
+    }
+
+
+@router.put("/exchange-rate-sources/{source_id}")
+async def update_exchange_rate_source(
+    source_id: str,
+    update_data: ExchangeRateSourceUpdate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Update an exchange rate source configuration."""
+    from sqlalchemy import update
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    # If marking as primary, unset other primary sources
+    if update_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source.from_currency,
+                ExchangeRateSource.to_currency == source.to_currency,
+                ExchangeRateSource.id != source.id,
+            )
+            .values(is_primary=False)
+        )
+
+    if update_data.name is not None:
+        source.name = update_data.name
+    if update_data.url is not None:
+        source.url = update_data.url
+    if update_data.scrape_library is not None:
+        source.scrape_library = update_data.scrape_library
+    if update_data.is_active is not None:
+        source.is_active = update_data.is_active
+    if update_data.is_primary is not None:
+        source.is_primary = update_data.is_primary
+    if update_data.scrape_interval_minutes is not None:
+        source.scrape_interval_minutes = update_data.scrape_interval_minutes
+    if update_data.config is not None:
+        source.config = update_data.config
+
+    await db.commit()
+    return MessageResponse(message="Exchange rate source updated successfully")
+
+
+@router.post("/exchange-rate-sources/{source_id}/test")
+async def test_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Test an exchange rate source by fetching current rate."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        rate = await price_scraper.scrape_exchange_rate(source)
+        return {"success": True, "message": "Rate fetched successfully", "rate": rate}
+    except Exception as e:
+        logger.exception("Exchange rate source test failed")
+        return {"success": False, "message": str(e), "rate": None}
+
+
+@router.post("/exchange-rate-sources/{source_id}/refresh")
+async def refresh_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Force refresh exchange rate from a source."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        await price_scraper.refresh_exchange_rate_source(source, db)
+        return MessageResponse(message="Exchange rate refreshed successfully")
+    except Exception as e:
+        logger.exception("Exchange rate refresh failed")
+        status_code = 408 if "timeout" in str(e).lower() else 500
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
+
+
+@router.delete("/exchange-rate-sources/{source_id}")
+async def delete_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Delete an exchange rate source."""
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    await db.delete(source)
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Exchange rate source '{source.name}' deleted successfully"
     )
 
 
