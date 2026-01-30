@@ -88,6 +88,10 @@ async def list_market_makers(
         )
         total_trades = trade_count_result.scalar() or 0
 
+        # Extract CEA and EUA balances for frontend compatibility
+        cea_balance = balances.get("CEA", {}).get("total", 0)
+        eua_balance = balances.get("EUA", {}).get("total", 0)
+
         response.append(
             MarketMakerResponse(
                 id=mm.id,
@@ -98,6 +102,8 @@ async def list_market_makers(
                 is_active=mm.is_active,
                 current_balances=formatted_balances,
                 eur_balance=mm.eur_balance,
+                cea_balance=cea_balance,
+                eua_balance=eua_balance,
                 total_orders=total_orders,
                 total_trades=total_trades,
                 created_at=mm.created_at,

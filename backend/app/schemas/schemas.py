@@ -1226,6 +1226,8 @@ class MarketMakerResponse(BaseModel):
     is_active: bool
     current_balances: Dict[str, MarketMakerBalance]  # {CEA: {...}, EUA: {...}}
     eur_balance: Optional[Decimal] = None
+    cea_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
+    eua_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
     total_orders: int = 0
     total_trades: int = 0
     created_at: datetime

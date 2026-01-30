@@ -1465,30 +1465,34 @@ export const getMarketMakers = async (params?: MarketMakerQueryParams): Promise<
   const { data } = await api.get('/admin/market-makers', { params });
 
   // Transform backend response to match frontend expectations
+  // Note: Vite proxy converts snake_case to camelCase automatically
   return data.map((mm: {
     id: string;
     name: string;
     description?: string;
-    mm_type: MarketMakerType;
-    is_active: boolean;
-    eur_balance?: number;
-    current_balances?: { CEA?: { total: number }; EUA?: { total: number } };
-    total_orders?: number;
-    created_at: string;
-    ticket_id?: string;
+    mmType: MarketMakerType;
+    isActive: boolean;
+    eurBalance?: number | string;
+    ceaBalance?: number | string;
+    euaBalance?: number | string;
+    currentBalances?: { CEA?: { total: string | number }; EUA?: { total: string | number } };
+    totalOrders?: number;
+    createdAt: string;
+    ticketId?: string;
   }): MarketMaker => ({
     id: mm.id,
     name: mm.name,
     description: mm.description,
-    mm_type: mm.mm_type || 'CEA_CASH_SELLER',
-    market: MARKET_MAKER_TYPES[mm.mm_type as MarketMakerType]?.market || 'CEA_CASH',
-    is_active: mm.is_active,
-    eur_balance: mm.eur_balance ?? 0,
-    cea_balance: mm.current_balances?.CEA?.total ?? 0,
-    eua_balance: mm.current_balances?.EUA?.total ?? 0,
-    total_orders: mm.total_orders || 0,
-    created_at: mm.created_at,
-    ticket_id: mm.ticket_id,
+    mm_type: mm.mmType || 'CEA_CASH_SELLER',
+    market: MARKET_MAKER_TYPES[mm.mmType as MarketMakerType]?.market || 'CEA_CASH',
+    is_active: mm.isActive,
+    eur_balance: Number(mm.eurBalance) || 0,
+    // Use flat fields if available (new backend), fallback to nested (legacy)
+    cea_balance: Number(mm.ceaBalance) || Number(mm.currentBalances?.CEA?.total) || 0,
+    eua_balance: Number(mm.euaBalance) || Number(mm.currentBalances?.EUA?.total) || 0,
+    total_orders: mm.totalOrders || 0,
+    created_at: mm.createdAt,
+    ticket_id: mm.ticketId,
   }));
 };
 

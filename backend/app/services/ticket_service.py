@@ -112,6 +112,8 @@ class TicketService:
             return None
 
         # Convert to dict, excluding relationships
+        from decimal import Decimal
+
         state = {}
         for column in model.__table__.columns:
             value = getattr(entity, column.name)
@@ -120,6 +122,10 @@ class TicketService:
                 state[column.name] = str(value)
             elif isinstance(value, datetime):
                 state[column.name] = value.isoformat()
+            elif isinstance(value, Decimal):
+                state[column.name] = float(value)
+            elif hasattr(value, 'value'):  # Enum
+                state[column.name] = value.value
             else:
                 state[column.name] = value
 
