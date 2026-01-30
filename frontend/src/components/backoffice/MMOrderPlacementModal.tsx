@@ -10,6 +10,8 @@ interface MarketMaker {
   name: string;
   email?: string;
   is_active: boolean;
+  mm_type: 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+  eur_balance: number;
   cea_balance: number;
   eua_balance: number;
 }
@@ -46,12 +48,15 @@ export function MMOrderPlacementModal({
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load market makers on mount
+  // Load market makers when modal opens or filter criteria change
   useEffect(() => {
     if (isOpen) {
       loadMarketMakers();
+      // Reset selection when filters change
+      setSelectedMM('');
+      setBalances(null);
     }
-  }, [isOpen]);
+  }, [isOpen, certificateType, side]);
 
   // Update price when prefilled price changes
   useEffect(() => {
@@ -72,7 +77,38 @@ export function MMOrderPlacementModal({
   const loadMarketMakers = async () => {
     try {
       const mms = await getMarketMakers({ is_active: true });
-      setMarketMakers(mms);
+
+      // Filter MMs based on certificate type and order side
+      // CEA-CASH market:
+      //   - ASK (sell CEA): only CEA_CASH_SELLER (they have CEA to sell)
+      //   - BID (buy CEA): only CASH_BUYER (they have EUR to buy)
+      // SWAP market (EUA):
+      //   - ASK (sell EUA): only SWAP_MAKER (they have EUA)
+      //   - BID (buy EUA): only SWAP_MAKER (they have CEA to exchange)
+      const filteredMMs = mms.filter(mm => {
+        if (certificateType === 'CEA') {
+          // CEA-CASH market
+          if (side === 'ASK') {
+            // Selling CEA - need CEA_CASH_SELLER with CEA balance
+            return mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0;
+          } else {
+            // Buying CEA - need CASH_BUYER with EUR balance
+            return mm.mm_type === 'CASH_BUYER' && mm.eur_balance > 0;
+          }
+        } else {
+          // SWAP market (EUA)
+          // Only SWAP_MAKER can trade EUA
+          if (side === 'ASK') {
+            // Selling EUA - need SWAP_MAKER with EUA balance
+            return mm.mm_type === 'SWAP_MAKER' && mm.eua_balance > 0;
+          } else {
+            // Buying EUA - need SWAP_MAKER with CEA to exchange
+            return mm.mm_type === 'SWAP_MAKER' && mm.cea_balance > 0;
+          }
+        }
+      });
+
+      setMarketMakers(filteredMMs);
     } catch (err) {
       console.error('Failed to load market makers:', err);
       setError('Failed to load market makers');

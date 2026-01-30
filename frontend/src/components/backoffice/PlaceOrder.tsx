@@ -14,6 +14,7 @@ interface MarketMaker {
   name: string;
   email?: string;
   is_active: boolean;
+  eur_balance: number;
   cea_balance: number;
   eua_balance: number;
   mm_type?: string;
@@ -126,16 +127,41 @@ export function PlaceOrder({
       try {
         const data = await getMarketMakers({ is_active: true });
         
-        // Filter market makers based on side
+        // Filter market makers based on certificate type and order side
+        // CEA-CASH market:
+        //   - ASK (sell CEA): only CEA_CASH_SELLER (they have CEA to sell)
+        //   - BID (buy CEA): only CASH_BUYER (they have EUR to buy)
+        // SWAP market (EUA):
+        //   - ASK (sell EUA): only SWAP_MAKER (they have EUA)
+        //   - BID (buy EUA): only SWAP_MAKER (they have CEA to exchange)
         let filteredMMs: MarketMaker[] = [];
-        if (side === 'ASK') {
-          // For ASK orders, only show CEA cash sellers with available CEA balance
-          filteredMMs = data.filter((mm: MarketMaker) => 
-            mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
-          );
+        if (certificateType === 'CEA') {
+          // CEA-CASH market
+          if (side === 'ASK') {
+            // Selling CEA - need CEA_CASH_SELLER with CEA balance
+            filteredMMs = data.filter((mm: MarketMaker) =>
+              mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
+            );
+          } else {
+            // Buying CEA - need CASH_BUYER with EUR balance
+            filteredMMs = data.filter((mm: MarketMaker) =>
+              mm.mm_type === 'CASH_BUYER' && mm.eur_balance > 0
+            );
+          }
         } else {
-          // For BID orders, show all active market makers
-          filteredMMs = data;
+          // SWAP market (EUA)
+          // Only SWAP_MAKER can trade EUA
+          if (side === 'ASK') {
+            // Selling EUA - need SWAP_MAKER with EUA balance
+            filteredMMs = data.filter((mm: MarketMaker) =>
+              mm.mm_type === 'SWAP_MAKER' && mm.eua_balance > 0
+            );
+          } else {
+            // Buying EUA - need SWAP_MAKER with CEA to exchange
+            filteredMMs = data.filter((mm: MarketMaker) =>
+              mm.mm_type === 'SWAP_MAKER' && mm.cea_balance > 0
+            );
+          }
         }
         
         setMarketMakers(filteredMMs);
@@ -147,7 +173,7 @@ export function PlaceOrder({
       }
     };
     loadMMs();
-  }, [side]);
+  }, [side, certificateType]);
 
   /**
    * Update price input when prefilledPrice prop changes.
@@ -275,20 +301,25 @@ export function PlaceOrder({
 
   /**
    * Generates display text for market maker dropdown options.
-   * Format differs based on order side:
-   * - ASK: Shows name and CEA balance available
-   * - BID: Shows name only (with inactive indicator if applicable)
-   * 
+   * Shows relevant balance based on MM type and order side.
+   *
    * @param mm - Market maker object
    * @returns Formatted display string
    */
   const getMMDisplayText = (mm: MarketMaker) => {
-    if (side === 'ASK') {
-      // For ASK, show CEA balance
-      return `${mm.name} - ${Number(mm.cea_balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} CEA available`;
+    const formatBalance = (value: number) =>
+      Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    // Show the relevant balance based on MM type
+    if (mm.mm_type === 'CEA_CASH_SELLER') {
+      return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA`;
+    } else if (mm.mm_type === 'CASH_BUYER') {
+      return `${mm.name} - €${formatBalance(mm.eur_balance)}`;
+    } else if (mm.mm_type === 'SWAP_MAKER') {
+      // For SWAP_MAKER, show both CEA and EUA
+      return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA / ${formatBalance(mm.eua_balance)} EUA`;
     }
-    // For BID, just show name
-    return `${mm.name}${!mm.is_active ? ' (Inactive)' : ''}`;
+    return mm.name;
   };
 
   return (
