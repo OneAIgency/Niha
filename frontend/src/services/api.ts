@@ -1384,7 +1384,31 @@ export const cashMarketApi = {
 
   getRealOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
     const { data } = await api.get(`/cash-market/real/orderbook/${certificateType}`);
-    return data;
+    // Transform camelCase response back to snake_case for frontend types
+    // Vite proxy auto-converts snake_case to camelCase
+    return {
+      certificate_type: data.certificateType || data.certificate_type,
+      bids: (data.bids || []).map((b: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
+        price: b.price,
+        quantity: b.quantity,
+        order_count: b.orderCount ?? b.order_count ?? 0,
+        cumulative_quantity: b.cumulativeQuantity ?? b.cumulative_quantity ?? 0,
+      })),
+      asks: (data.asks || []).map((a: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
+        price: a.price,
+        quantity: a.quantity,
+        order_count: a.orderCount ?? a.order_count ?? 0,
+        cumulative_quantity: a.cumulativeQuantity ?? a.cumulative_quantity ?? 0,
+      })),
+      spread: data.spread,
+      best_bid: data.bestBid ?? data.best_bid,
+      best_ask: data.bestAsk ?? data.best_ask,
+      last_price: data.lastPrice ?? data.last_price,
+      volume_24h: data.volume24h ?? data.volume_24h ?? 0,
+      change_24h: data.change24h ?? data.change_24h ?? 0,
+      high_24h: data.high24h ?? data.high_24h ?? null,
+      low_24h: data.low24h ?? data.low_24h ?? null,
+    };
   },
 
   previewOrder: async (request: {
