@@ -20,11 +20,13 @@ from ...models.models import (
     Deposit,
     DepositStatus,
     Entity,
+    TicketStatus,
     User,
     UserRole,
     UserSession,
 )
 from ...services import deposit_service
+from ...services.ticket_service import TicketService
 from ...schemas.schemas import (
     ActivityLogResponse,
     MessageResponse,
@@ -262,6 +264,9 @@ async def report_deposit(
             detail="User must be associated with an entity to report deposits",
         )
 
+    # Capture before state for audit
+    before_state = await TicketService.get_entity_state(db, "User", current_user.id)
+
     # Use deposit_service which handles role transition APPROVED → FUNDING
     deposit = await deposit_service.announce_deposit(
         db=db,
@@ -275,12 +280,38 @@ async def report_deposit(
         client_notes=deposit_data.wire_reference,
     )
 
+    # Capture after state
+    after_state = await TicketService.get_entity_state(db, "User", current_user.id)
+
+    # Create audit ticket
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="DEPOSIT_ANNOUNCED",
+        entity_type="Deposit",
+        entity_id=deposit.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "amount": float(deposit_data.amount),
+            "currency": deposit_data.currency.value,
+            "wire_reference": deposit_data.wire_reference,
+        },
+        response_data={
+            "deposit_id": str(deposit.id),
+            "bank_reference": deposit.bank_reference,
+        },
+        before_state=before_state,
+        after_state=after_state,
+        tags=["deposit", "funding"],
+    )
+
     await db.commit()
 
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"reported. Reference: {deposit.bank_reference}. Awaiting confirmation."
+            f"reported. Reference: {deposit.bank_reference}. "
+            f"Ticket: {ticket.ticket_id}. Awaiting confirmation."
         )
     )
 

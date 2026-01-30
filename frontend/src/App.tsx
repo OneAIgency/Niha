@@ -198,10 +198,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Onboarding (KYC form): NDA and KYC only. */
+/** Onboarding documentation: NDA, KYC, and all post-KYC users (for re-reading mechanism docs). */
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['NDA', 'KYC']}>
+    <RoleProtectedRoute allowedRoles={['NDA', 'KYC', 'APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -228,10 +228,10 @@ function FundedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Dashboard: EUA (full access), ADMIN, or MM. */
+/** Dashboard: CEA and above (funded users with market access), ADMIN, or MM. */
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['EUA', 'ADMIN', 'MM']}>
+    <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -336,6 +336,16 @@ function App() {
             }
           />
 
+          {/* Full-screen trading terminal - NO header/footer */}
+          <Route
+            path="/cash-market"
+            element={
+              <FundedRoute>
+                <CashMarketProPage />
+              </FundedRoute>
+            }
+          />
+
           {/* Public routes with layout */}
           <Route element={<Layout />}>
             <Route path="/contact" element={<ContactPage />} />
@@ -367,15 +377,6 @@ function App() {
                 <DashboardRoute>
                   <DashboardPage />
                 </DashboardRoute>
-              }
-            />
-            {/* FUNDED and ADMIN - Cash Market (Pro layout) */}
-            <Route
-              path="/cash-market"
-              element={
-                <FundedRoute>
-                  <CashMarketProPage />
-                </FundedRoute>
               }
             />
             {/* Legacy: redirect to main cash market */}

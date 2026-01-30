@@ -1,0 +1,262 @@
+/* =============================================================================
+   TRADING TERMINAL COMPACT THEME
+   Professional trading interface with maximum information density
+   ============================================================================= */
+
+/* Import JetBrains Mono for trading terminal aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* Theme Variables */
+.trading-terminal {
+  /* Typography */
+  --tt-font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+  --tt-font-size-2xs: 9px;
+  --tt-font-size-xs: 10px;
+  --tt-font-size-sm: 11px;
+  --tt-font-size-base: 12px;
+  --tt-font-size-lg: 13px;
+  --tt-font-size-xl: 14px;
+
+  /* Spacing */
+  --tt-spacing-2xs: 1px;
+  --tt-spacing-xs: 2px;
+  --tt-spacing-sm: 4px;
+  --tt-spacing-md: 6px;
+  --tt-spacing-lg: 8px;
+  --tt-spacing-xl: 12px;
+
+  /* Component Heights */
+  --tt-row-height: 20px;
+  --tt-row-height-lg: 24px;
+  --tt-header-height: 28px;
+  --tt-button-height: 24px;
+  --tt-button-height-lg: 28px;
+  --tt-input-height: 26px;
+  --tt-tab-height: 32px;
+
+  /* Border Radius */
+  --tt-radius-sm: 2px;
+  --tt-radius-md: 4px;
+  --tt-radius-lg: 6px;
+
+  /* Apply font family to all descendants */
+  font-family: var(--tt-font-family);
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+/* Text Sizes */
+.tt-text-2xs { font-size: var(--tt-font-size-2xs); line-height: 1.2; }
+.tt-text-xs { font-size: var(--tt-font-size-xs); line-height: 1.3; }
+.tt-text-sm { font-size: var(--tt-font-size-sm); line-height: 1.3; }
+.tt-text-base { font-size: var(--tt-font-size-base); line-height: 1.4; }
+.tt-text-lg { font-size: var(--tt-font-size-lg); line-height: 1.4; }
+.tt-text-xl { font-size: var(--tt-font-size-xl); line-height: 1.4; }
+
+/* Spacing Utilities */
+.tt-p-xs { padding: var(--tt-spacing-xs); }
+.tt-p-sm { padding: var(--tt-spacing-sm); }
+.tt-p-md { padding: var(--tt-spacing-md); }
+.tt-p-lg { padding: var(--tt-spacing-lg); }
+.tt-p-xl { padding: var(--tt-spacing-xl); }
+
+.tt-px-xs { padding-left: var(--tt-spacing-xs); padding-right: var(--tt-spacing-xs); }
+.tt-px-sm { padding-left: var(--tt-spacing-sm); padding-right: var(--tt-spacing-sm); }
+.tt-px-md { padding-left: var(--tt-spacing-md); padding-right: var(--tt-spacing-md); }
+.tt-px-lg { padding-left: var(--tt-spacing-lg); padding-right: var(--tt-spacing-lg); }
+
+.tt-py-xs { padding-top: var(--tt-spacing-xs); padding-bottom: var(--tt-spacing-xs); }
+.tt-py-sm { padding-top: var(--tt-spacing-sm); padding-bottom: var(--tt-spacing-sm); }
+.tt-py-md { padding-top: var(--tt-spacing-md); padding-bottom: var(--tt-spacing-md); }
+.tt-py-lg { padding-top: var(--tt-spacing-lg); padding-bottom: var(--tt-spacing-lg); }
+
+.tt-gap-xs { gap: var(--tt-spacing-xs); }
+.tt-gap-sm { gap: var(--tt-spacing-sm); }
+.tt-gap-md { gap: var(--tt-spacing-md); }
+.tt-gap-lg { gap: var(--tt-spacing-lg); }
+
+/* Row Heights */
+.tt-row { height: var(--tt-row-height); min-height: var(--tt-row-height); }
+.tt-row-lg { height: var(--tt-row-height-lg); min-height: var(--tt-row-height-lg); }
+
+/* Component Heights */
+.tt-header { height: var(--tt-header-height); min-height: var(--tt-header-height); }
+.tt-button { height: var(--tt-button-height); min-height: var(--tt-button-height); }
+.tt-button-lg { height: var(--tt-button-height-lg); min-height: var(--tt-button-height-lg); }
+.tt-input { height: var(--tt-input-height); min-height: var(--tt-input-height); }
+.tt-tab { height: var(--tt-tab-height); min-height: var(--tt-tab-height); }
+
+/* =============================================================================
+   COMPONENT STYLES
+   ============================================================================= */
+
+/* Card Compact */
+.tt-card {
+  background: rgb(15 23 42); /* navy-900 */
+  border-radius: var(--tt-radius-lg);
+  border: 1px solid rgb(30 41 59); /* navy-800 */
+}
+
+.tt-card-header {
+  padding: var(--tt-spacing-md) var(--tt-spacing-lg);
+  border-bottom: 1px solid rgb(30 41 59);
+  font-size: var(--tt-font-size-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--tt-spacing-sm);
+}
+
+.tt-card-body {
+  padding: var(--tt-spacing-lg);
+}
+
+/* Table Styles */
+.tt-table-header {
+  padding: var(--tt-spacing-sm) var(--tt-spacing-lg);
+  font-size: var(--tt-font-size-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(148 163 184); /* slate-400 */
+  border-bottom: 1px solid rgb(30 41 59);
+}
+
+.tt-table-row {
+  padding: var(--tt-spacing-xs) var(--tt-spacing-lg);
+  font-size: var(--tt-font-size-sm);
+  height: var(--tt-row-height);
+  display: flex;
+  align-items: center;
+  transition: background-color 0.1s;
+}
+
+.tt-table-row:hover {
+  background: rgb(30 41 59 / 0.5);
+}
+
+/* Button Styles */
+.tt-btn {
+  height: var(--tt-button-height);
+  padding: 0 var(--tt-spacing-lg);
+  font-size: var(--tt-font-size-sm);
+  font-weight: 600;
+  border-radius: var(--tt-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.tt-btn-lg {
+  height: var(--tt-button-height-lg);
+  font-size: var(--tt-font-size-base);
+}
+
+.tt-btn-buy {
+  background: linear-gradient(135deg, rgb(16 185 129) 0%, rgb(5 150 105) 100%);
+  color: white;
+}
+
+.tt-btn-buy:hover {
+  background: linear-gradient(135deg, rgb(5 150 105) 0%, rgb(4 120 87) 100%);
+}
+
+.tt-btn-sell {
+  background: linear-gradient(135deg, rgb(239 68 68) 0%, rgb(220 38 38) 100%);
+  color: white;
+}
+
+.tt-btn-sell:hover {
+  background: linear-gradient(135deg, rgb(220 38 38) 0%, rgb(185 28 28) 100%);
+}
+
+/* Input Styles */
+.tt-input-field {
+  height: var(--tt-input-height);
+  padding: 0 var(--tt-spacing-lg);
+  font-size: var(--tt-font-size-sm);
+  font-family: var(--tt-font-family);
+  background: rgb(15 23 42);
+  border: 1px solid rgb(51 65 85);
+  border-radius: var(--tt-radius-md);
+  color: white;
+  transition: border-color 0.15s;
+}
+
+.tt-input-field:focus {
+  outline: none;
+  border-color: rgb(245 158 11);
+}
+
+.tt-input-field::placeholder {
+  color: rgb(100 116 139);
+}
+
+/* Label Styles */
+.tt-label {
+  font-size: var(--tt-font-size-xs);
+  font-weight: 500;
+  color: rgb(148 163 184);
+  margin-bottom: var(--tt-spacing-xs);
+  display: block;
+}
+
+/* Tab Styles */
+.tt-tab-btn {
+  height: var(--tt-tab-height);
+  font-size: var(--tt-font-size-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+/* Badge Styles */
+.tt-badge {
+  padding: var(--tt-spacing-2xs) var(--tt-spacing-sm);
+  font-size: var(--tt-font-size-2xs);
+  font-weight: 600;
+  border-radius: var(--tt-radius-sm);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* =============================================================================
+   COLOR UTILITIES
+   ============================================================================= */
+
+/* Bid/Ask Colors */
+.tt-bid { color: rgb(16 185 129); } /* emerald-500 */
+.tt-ask { color: rgb(239 68 68); } /* red-500 */
+.tt-bid-bg { background: rgb(16 185 129 / 0.15); }
+.tt-ask-bg { background: rgb(239 68 68 / 0.15); }
+
+/* Muted Text */
+.tt-muted { color: rgb(100 116 139); } /* slate-500 */
+.tt-muted-light { color: rgb(148 163 184); } /* slate-400 */
+
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+
+@keyframes tt-flash-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(16 185 129 / 0.2); }
+}
+
+@keyframes tt-flash-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(239 68 68 / 0.2); }
+}
+
+.tt-flash-bid {
+  animation: tt-flash-green 0.3s ease-out;
+}
+
+.tt-flash-ask {
+  animation: tt-flash-red 0.3s ease-out;
+}

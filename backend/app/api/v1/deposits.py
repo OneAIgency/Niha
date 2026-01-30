@@ -20,10 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, get_approved_user
-from ...models.models import Currency, DepositStatus, User
+from ...models.models import Currency, DepositStatus, TicketStatus, User
 from ...schemas.schemas import MessageResponse
 from ...services import deposit_service
 from ...services.deposit_service import DepositNotFoundError, InvalidDepositStateError
+from ...services.ticket_service import TicketService
 from .backoffice import backoffice_ws_manager
 
 router = APIRouter(prefix="/deposits", tags=["Deposits"])
@@ -519,6 +520,29 @@ async def confirm_deposit(
             admin_notes=request.admin_notes,
         )
 
+        # Create audit ticket for deposit confirmation
+        ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="DEPOSIT_CONFIRMED",
+            entity_type="Deposit",
+            entity_id=deposit.id,
+            status=TicketStatus.SUCCESS,
+            user_id=admin_user.id,
+            request_payload={
+                "deposit_id": deposit_id,
+                "actual_amount": float(request.actual_amount),
+                "actual_currency": request.actual_currency.value,
+            },
+            response_data={
+                "status": deposit.status.value if deposit.status else "ON_HOLD",
+                "hold_type": deposit.hold_type,
+                "hold_expires_at": deposit.hold_expires_at.isoformat()
+                if deposit.hold_expires_at
+                else None,
+            },
+            tags=["deposit", "confirm", "admin"],
+        )
+
         await db.commit()
 
         # Broadcast WebSocket event
@@ -529,6 +553,7 @@ async def confirm_deposit(
                 "entity_id": str(deposit.entity_id),
                 "amount": float(deposit.amount),
                 "hold_type": deposit.hold_type,
+                "ticket_id": ticket.ticket_id,
                 "hold_expires_at": deposit.hold_expires_at.isoformat()
                 if deposit.hold_expires_at
                 else None,
@@ -569,6 +594,26 @@ async def clear_deposit(
             force_clear=request.force_clear,
         )
 
+        # Create audit ticket for deposit clearing
+        ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="DEPOSIT_CLEARED",
+            entity_type="Deposit",
+            entity_id=deposit.id,
+            status=TicketStatus.SUCCESS,
+            user_id=admin_user.id,
+            request_payload={
+                "deposit_id": deposit_id,
+                "force_clear": request.force_clear,
+            },
+            response_data={
+                "amount": float(deposit.amount) if deposit.amount else 0,
+                "currency": deposit.currency.value if deposit.currency else None,
+                "upgraded_users": upgraded_count,
+            },
+            tags=["deposit", "clear", "admin"],
+        )
+
         await db.commit()
 
         # Reload with relationships for entity name
@@ -582,6 +627,7 @@ async def clear_deposit(
                 "amount": float(deposit.amount) if deposit.amount else 0,
                 "currency": deposit.currency.value if deposit.currency else None,
                 "upgraded_users": upgraded_count,
+                "ticket_id": ticket.ticket_id,
             },
         )
         return deposit_to_response(deposit)

@@ -14,7 +14,7 @@ from ...core.security import (
     verify_password,
     verify_token,
 )
-from ...models.models import AuthenticationAttempt, AuthMethod, User
+from ...models.models import AuthenticationAttempt, AuthMethod, TicketStatus, User
 from ...schemas.schemas import (
     MagicLinkRequest,
     MagicLinkVerify,
@@ -24,6 +24,7 @@ from ...schemas.schemas import (
     UserResponse,
 )
 from ...services.email_service import email_service
+from ...services.ticket_service import TicketService
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +132,25 @@ async def verify_magic_link(
 
     # Update last login
     user.last_login = datetime.utcnow()
+
+    # Create audit ticket for magic link login
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="USER_LOGIN_MAGIC_LINK",
+        entity_type="User",
+        entity_id=user.id,
+        status=TicketStatus.SUCCESS,
+        user_id=user.id,
+        request_payload={"email": email, "method": "magic_link"},
+        response_data={"login_time": datetime.utcnow().isoformat()},
+        ip_address=ip_address,
+        user_agent=user_agent,
+        tags=["auth", "login", "magic_link"],
+    )
+
     await db.commit()
 
-    logger.info(f"Magic link auth: email={email}, success=True, ip={ip_address}")
+    logger.info(f"Magic link auth: email={email}, success=True, ip={ip_address}, ticket={ticket.ticket_id}")
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
@@ -205,7 +222,25 @@ async def password_login(
 
     # Update last login
     user.last_login = datetime.utcnow()
+
+    # Create audit ticket for login
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="USER_LOGIN",
+        entity_type="User",
+        entity_id=user.id,
+        status=TicketStatus.SUCCESS,
+        user_id=user.id,
+        request_payload={"email": email},
+        response_data={"login_time": datetime.utcnow().isoformat()},
+        ip_address=ip_address,
+        user_agent=user_agent,
+        tags=["auth", "login"],
+    )
+
     await db.commit()
+
+    logger.info(f"Login successful: email={email}, ticket={ticket.ticket_id}")
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})

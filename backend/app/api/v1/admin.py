@@ -24,12 +24,14 @@ from ...models.models import (
     ContactRequest,
     ContactStatus,
     Entity,
+    ExchangeRateSource,
     Jurisdiction,
     KYCStatus,
     MailConfig,
     MailProvider,
     MarketMakerClient,
     ScrapeLibrary,
+    ScrapeStatus,
     ScrapingSource,
     SwapRequest,
     SwapStatus,
@@ -44,6 +46,8 @@ from ...schemas.schemas import (
     AdminUserUpdate,
     AuthenticationAttemptResponse,
     ContactRequestUpdate,
+    ExchangeRateSourceCreate,
+    ExchangeRateSourceUpdate,
     MailConfigUpdate,
     MessageResponse,
     ScrapingSourceCreate,
@@ -1272,16 +1276,20 @@ async def get_scraping_sources(
             else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
             "scrape_interval_minutes": s.scrape_interval_minutes,
-            "last_scrape_at": s.last_scrape_at.isoformat()
+            "last_scrape_at": (s.last_scrape_at.isoformat() + "Z")
             if s.last_scrape_at
             else None,
             "last_scrape_status": s.last_scrape_status.value
             if s.last_scrape_status
             else None,
             "last_price": float(s.last_price) if s.last_price else None,
+            "last_price_eur": float(s.last_price_eur) if s.last_price_eur else None,
+            "last_exchange_rate": float(s.last_exchange_rate)
+            if s.last_exchange_rate
+            else None,
             "config": s.config,
-            "created_at": s.created_at.isoformat(),
-            "updated_at": s.updated_at.isoformat(),
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
         }
         for s in sources
     ]
@@ -1328,6 +1336,12 @@ async def create_scraping_source(
         if source.last_scrape_status
         else None,
         "last_price": float(source.last_price) if source.last_price else None,
+        "last_price_eur": float(source.last_price_eur)
+        if source.last_price_eur
+        else None,
+        "last_exchange_rate": float(source.last_exchange_rate)
+        if source.last_exchange_rate
+        else None,
         "config": source.config,
         "created_at": source.created_at.isoformat(),
         "updated_at": source.updated_at.isoformat(),
@@ -1473,6 +1487,231 @@ async def delete_scraping_source(
 
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
+    )
+
+
+# ==================== Exchange Rate Sources ====================
+
+
+@router.get("/exchange-rate-sources")
+async def get_exchange_rate_sources(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Get all exchange rate source configurations.
+    Admin only.
+    """
+    query = select(ExchangeRateSource).order_by(ExchangeRateSource.created_at.desc())
+    result = await db.execute(query)
+    sources = result.scalars().all()
+
+    return [
+        {
+            "id": str(s.id),
+            "name": s.name,
+            "from_currency": s.from_currency,
+            "to_currency": s.to_currency,
+            "url": s.url,
+            "scrape_library": s.scrape_library.value
+            if s.scrape_library
+            else ScrapeLibrary.HTTPX.value,
+            "is_active": s.is_active,
+            "is_primary": s.is_primary,
+            "scrape_interval_minutes": s.scrape_interval_minutes,
+            "last_rate": float(s.last_rate) if s.last_rate else None,
+            "last_scraped_at": (s.last_scraped_at.isoformat() + "Z")
+            if s.last_scraped_at
+            else None,
+            "last_scrape_status": s.last_scrape_status.value
+            if s.last_scrape_status
+            else None,
+            "config": s.config,
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
+        }
+        for s in sources
+    ]
+
+
+@router.post("/exchange-rate-sources")
+async def create_exchange_rate_source(
+    source_data: ExchangeRateSourceCreate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Create a new exchange rate source.
+    Admin only.
+    """
+    from sqlalchemy import update
+
+    # If marking as primary, unset other primary sources for same pair
+    if source_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source_data.from_currency.upper(),
+                ExchangeRateSource.to_currency == source_data.to_currency.upper(),
+            )
+            .values(is_primary=False)
+        )
+
+    source = ExchangeRateSource(
+        name=source_data.name,
+        from_currency=source_data.from_currency.upper(),
+        to_currency=source_data.to_currency.upper(),
+        url=source_data.url,
+        scrape_library=source_data.scrape_library,
+        scrape_interval_minutes=source_data.scrape_interval_minutes,
+        is_primary=source_data.is_primary,
+        config=source_data.config,
+        is_active=True,
+    )
+
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    return {
+        "id": str(source.id),
+        "name": source.name,
+        "from_currency": source.from_currency,
+        "to_currency": source.to_currency,
+        "url": source.url,
+        "scrape_library": source.scrape_library.value,
+        "is_active": source.is_active,
+        "is_primary": source.is_primary,
+        "scrape_interval_minutes": source.scrape_interval_minutes,
+        "last_rate": None,
+        "last_scraped_at": None,
+        "last_scrape_status": None,
+        "config": source.config,
+        "created_at": source.created_at.isoformat() + "Z",
+        "updated_at": source.updated_at.isoformat() + "Z",
+    }
+
+
+@router.put("/exchange-rate-sources/{source_id}")
+async def update_exchange_rate_source(
+    source_id: str,
+    update_data: ExchangeRateSourceUpdate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Update an exchange rate source configuration."""
+    from sqlalchemy import update
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    # If marking as primary, unset other primary sources
+    if update_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source.from_currency,
+                ExchangeRateSource.to_currency == source.to_currency,
+                ExchangeRateSource.id != source.id,
+            )
+            .values(is_primary=False)
+        )
+
+    if update_data.name is not None:
+        source.name = update_data.name
+    if update_data.url is not None:
+        source.url = update_data.url
+    if update_data.scrape_library is not None:
+        source.scrape_library = update_data.scrape_library
+    if update_data.is_active is not None:
+        source.is_active = update_data.is_active
+    if update_data.is_primary is not None:
+        source.is_primary = update_data.is_primary
+    if update_data.scrape_interval_minutes is not None:
+        source.scrape_interval_minutes = update_data.scrape_interval_minutes
+    if update_data.config is not None:
+        source.config = update_data.config
+
+    await db.commit()
+    return MessageResponse(message="Exchange rate source updated successfully")
+
+
+@router.post("/exchange-rate-sources/{source_id}/test")
+async def test_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Test an exchange rate source by fetching current rate."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        rate = await price_scraper.scrape_exchange_rate(source)
+        return {"success": True, "message": "Rate fetched successfully", "rate": rate}
+    except Exception as e:
+        logger.exception("Exchange rate source test failed")
+        return {"success": False, "message": str(e), "rate": None}
+
+
+@router.post("/exchange-rate-sources/{source_id}/refresh")
+async def refresh_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Force refresh exchange rate from a source."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        await price_scraper.refresh_exchange_rate_source(source, db)
+        return MessageResponse(message="Exchange rate refreshed successfully")
+    except Exception as e:
+        logger.exception("Exchange rate refresh failed")
+        status_code = 408 if "timeout" in str(e).lower() else 500
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
+
+
+@router.delete("/exchange-rate-sources/{source_id}")
+async def delete_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Delete an exchange rate source."""
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    await db.delete(source)
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Exchange rate source '{source.name}' deleted successfully"
     )
 
 

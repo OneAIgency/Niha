@@ -17,6 +17,7 @@ import type {
   KYCDocument,
   ScrapingSource,
   ScrapeLibrary,
+  ExchangeRateSource,
   MailSettings,
   MailSettingsUpdate,
   UserSession,
@@ -916,6 +917,59 @@ export const adminApi = {
     scrape_interval_minutes: number;
   }): Promise<ScrapingSource> => {
     const { data } = await api.post('/admin/scraping-sources', source);
+    return data;
+  },
+
+  // Exchange Rate Sources
+  getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
+    const { data } = await api.get('/admin/exchange-rate-sources');
+    return data;
+  },
+
+  createExchangeRateSource: async (source: {
+    name: string;
+    from_currency: string;
+    to_currency: string;
+    url: string;
+    scrape_library?: ScrapeLibrary;
+    scrape_interval_minutes: number;
+    is_primary?: boolean;
+    config?: Record<string, unknown>;
+  }): Promise<ExchangeRateSource> => {
+    const { data } = await api.post('/admin/exchange-rate-sources', source);
+    return data;
+  },
+
+  updateExchangeRateSource: async (
+    id: string,
+    update: {
+      name?: string;
+      url?: string;
+      scrape_library?: ScrapeLibrary;
+      is_active?: boolean;
+      is_primary?: boolean;
+      scrape_interval_minutes?: number;
+      config?: Record<string, unknown>;
+    }
+  ): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/exchange-rate-sources/${id}`, update);
+    return data;
+  },
+
+  testExchangeRateSource: async (
+    id: string
+  ): Promise<{ success: boolean; message: string; rate?: number }> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/test`);
+    return data;
+  },
+
+  refreshExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/refresh`);
+    return data;
+  },
+
+  deleteExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/admin/exchange-rate-sources/${id}`);
     return data;
   },
 
