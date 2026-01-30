@@ -50,7 +50,7 @@ export function PlaceMarketOrderSection({
         const data = await getMarketMakers({ is_active: true });
         // Filter only CEA cash sellers with CEA balance > 0
         const ceaCashSellers = data.filter((mm: MarketMaker) => 
-          mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
+          mm.mm_type === 'CEA_SELLER' && mm.cea_balance > 0
         );
         setMarketMakers(ceaCashSellers);
       } catch (err) {

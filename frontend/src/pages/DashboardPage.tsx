@@ -988,7 +988,7 @@ export function DashboardPage() {
               data={filteredTransactions}
               variant="dark"
               rowKey="id"
-              emptyMessage="No orders found. Place your first order in the Cash Market."
+              emptyMessage="No orders found. Place your first order in CEA Cash."
               className="border-none rounded-none"
               getRowClassName={(row: Transaction) => {
                 // Style swap transactions with violet accent to distinguish from regular BUY/SELL orders

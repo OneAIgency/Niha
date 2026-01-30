@@ -105,3 +105,27 @@ All UI changes must follow the established interface standards. Reference these 
 - **Compact list rows**: Use `.card_contact_request_list` for compact list rows (e.g. Contact Requests: Entitate, Nume, Data completării + actions). Defined in `frontend/src/index.css`; uses Tailwind navy tokens only.
 - **Theme**: Light/dark via class on root; tokens in `design-tokens.css` and Tailwind `dark:` variants.
 - **Backoffice nav levels**: Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; all in `design-tokens.css`.
+
+## 10. Frozen Files (Do Not Refactor)
+
+The following files are **locked** and should NOT be refactored, restructured, or have their inline styles converted to Tailwind classes. They work as intended and any changes risk breaking their carefully crafted layouts.
+
+| File | Reason |
+|------|--------|
+| `frontend/src/pages/onboarding/EuaHoldersPage.tsx` | Complex marketing layout, frozen |
+| `frontend/src/pages/onboarding/EuEntitiesPage.tsx` | Complex marketing layout, frozen |
+| `frontend/src/pages/onboarding/CeaHoldersPage.tsx` | Complex marketing layout, frozen |
+| `frontend/src/pages/onboarding/AboutNihaoPage.tsx` | Complex marketing layout, frozen |
+| `frontend/src/pages/onboarding/MarketOverviewPage.tsx` | Complex marketing layout, frozen |
+| `frontend/src/pages/onboarding/OnboardingIndexPage.tsx` | Onboarding entry, frozen |
+| `frontend/src/pages/LoginPage.tsx` | Login page, frozen |
+| `frontend/src/pages/LoginPageAnimations.tsx` | Login animations, frozen |
+| `frontend/src/pages/Onboarding1Page.tsx` | Legacy onboarding, frozen |
+
+**Rules for frozen files:**
+- Bug fixes are allowed
+- Security fixes are allowed
+- Do NOT refactor inline styles to Tailwind
+- Do NOT split into smaller components
+- Do NOT change file structure
+- Functionality changes require explicit user approval

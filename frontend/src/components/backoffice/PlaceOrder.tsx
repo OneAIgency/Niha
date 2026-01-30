@@ -1,10 +1,13 @@
 import { useState, useEffect, useId } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Info } from 'lucide-react';
 import { Button } from '../common';
-import { getMarketMakers, getMarketMakerBalances } from '../../services/api';
+import { getMarketMakers, getMarketMakerBalances, feesApi } from '../../services/api';
 import { formatCurrency, formatQuantity } from '../../utils';
 import type { CertificateType } from '../../types';
+
+// Default fee rate if not configured (0.5%)
+const DEFAULT_FEE_RATE = 0.005;
 
 // Constants
 const SUCCESS_MESSAGE_TIMEOUT = 5000; // 5 seconds
@@ -45,9 +48,11 @@ interface PlaceOrderProps {
    * Used for UI updates like closing modals or refreshing data.
    */
   onSuccess?: () => void;
-  /** Optional pre-filled price value (e.g., from order book click) */
+  /** Optional pre-filled price value (e.g., from order book click or best price) */
   prefilledPrice?: number;
-  /** 
+  /** Optional pre-filled quantity value (e.g., volume at best price) */
+  prefilledQuantity?: number;
+  /**
    * Compact mode for modal display.
    * When true, uses tighter spacing and padding optimized for modals.
    * Default: false
@@ -95,6 +100,7 @@ export function PlaceOrder({
   onSubmit,
   onSuccess,
   prefilledPrice,
+  prefilledQuantity,
   compact = false,
 }: PlaceOrderProps) {
   // Generate unique IDs for accessibility
@@ -108,12 +114,14 @@ export function PlaceOrder({
   const [selectedMM, setSelectedMM] = useState<string>('');
   const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number; eur_balance: number } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
-  const [quantity, setQuantity] = useState('');
+  const [quantity, setQuantity] = useState(prefilledQuantity?.toString() || '');
   const [loading, setLoading] = useState(false);
   const [loadingMMs, setLoadingMMs] = useState(true);
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [feeRate, setFeeRate] = useState<number>(DEFAULT_FEE_RATE);
+  const [loadingFee, setLoadingFee] = useState(false);
 
   /**
    * Load market makers on component mount and when side changes.
@@ -128,38 +136,38 @@ export function PlaceOrder({
         const data = await getMarketMakers({ is_active: true });
         
         // Filter market makers based on certificate type and order side
-        // CEA-CASH market:
-        //   - ASK (sell CEA): only CEA_CASH_SELLER (they have CEA to sell)
-        //   - BID (buy CEA): only CASH_BUYER (they have EUR to buy)
-        // SWAP market (EUA):
-        //   - ASK (sell EUA): only SWAP_MAKER (they have EUA)
-        //   - BID (buy EUA): only SWAP_MAKER (they have CEA to exchange)
+        // CEA Cash market:
+        //   - ASK (sell CEA): only CEA_SELLER (they have CEA to sell)
+        //   - BID (buy CEA): only CEA_BUYER (they have EUR to buy)
+        // Swap market (EUA):
+        //   - ASK (sell EUA): only EUA_OFFER (they have EUA)
+        //   - BID (buy EUA): only EUA_OFFER (they have CEA to exchange)
         let filteredMMs: MarketMaker[] = [];
         if (certificateType === 'CEA') {
-          // CEA-CASH market
+          // CEA Cash market
           if (side === 'ASK') {
-            // Selling CEA - need CEA_CASH_SELLER with CEA balance
+            // Selling CEA - need CEA_SELLER with CEA balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
+              mm.mm_type === 'CEA_SELLER' && mm.cea_balance > 0
             );
           } else {
-            // Buying CEA - need CASH_BUYER with EUR balance
+            // Buying CEA - need CEA_BUYER with EUR balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'CASH_BUYER' && mm.eur_balance > 0
+              mm.mm_type === 'CEA_BUYER' && mm.eur_balance > 0
             );
           }
         } else {
-          // SWAP market (EUA)
-          // Only SWAP_MAKER can trade EUA
+          // Swap market (EUA)
+          // Only EUA_OFFER can trade EUA
           if (side === 'ASK') {
-            // Selling EUA - need SWAP_MAKER with EUA balance
+            // Selling EUA - need EUA_OFFER with EUA balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'SWAP_MAKER' && mm.eua_balance > 0
+              mm.mm_type === 'EUA_OFFER' && mm.eua_balance > 0
             );
           } else {
-            // Buying EUA - need SWAP_MAKER with CEA to exchange
+            // Buying EUA - need EUA_OFFER with CEA to exchange
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'SWAP_MAKER' && mm.cea_balance > 0
+              mm.mm_type === 'EUA_OFFER' && mm.cea_balance > 0
             );
           }
         }
@@ -177,13 +185,23 @@ export function PlaceOrder({
 
   /**
    * Update price input when prefilledPrice prop changes.
-   * Used when user clicks on order book price.
+   * Used when user clicks on order book price or when modal opens with best price.
    */
   useEffect(() => {
     if (prefilledPrice !== undefined) {
       setPrice(prefilledPrice.toString());
     }
   }, [prefilledPrice]);
+
+  /**
+   * Update quantity input when prefilledQuantity prop changes.
+   * Used when modal opens with best quantity from orderbook.
+   */
+  useEffect(() => {
+    if (prefilledQuantity !== undefined) {
+      setQuantity(prefilledQuantity.toString());
+    }
+  }, [prefilledQuantity]);
 
   /**
    * Load market maker balances when a market maker is selected.
@@ -209,6 +227,30 @@ export function PlaceOrder({
       setBalances(null);
     }
   }, [selectedMM]);
+
+  /**
+   * Load effective fee rate for the current market and side.
+   * Fee rates can be configured per market (CEA_CASH or SWAP).
+   */
+  useEffect(() => {
+    const loadFeeRate = async () => {
+      setLoadingFee(true);
+      try {
+        // Determine market type based on certificate type
+        const market = certificateType === 'CEA' ? 'CEA_CASH' : 'SWAP';
+        const response = await feesApi.getEffectiveFee(market, side);
+        setFeeRate(response.fee_rate);
+      } catch (err) {
+        console.error('Failed to load fee rate:', err);
+        // Use default fee rate if API call fails
+        setFeeRate(DEFAULT_FEE_RATE);
+      } finally {
+        setLoadingFee(false);
+      }
+    };
+
+    loadFeeRate();
+  }, [certificateType, side]);
 
   /**
    * Validates form inputs before submission.
@@ -319,12 +361,12 @@ export function PlaceOrder({
       Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
     // Show the relevant balance based on MM type
-    if (mm.mm_type === 'CEA_CASH_SELLER') {
+    if (mm.mm_type === 'CEA_SELLER') {
       return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA`;
-    } else if (mm.mm_type === 'CASH_BUYER') {
+    } else if (mm.mm_type === 'CEA_BUYER') {
       return `${mm.name} - €${formatBalance(mm.eur_balance)}`;
-    } else if (mm.mm_type === 'SWAP_MAKER') {
-      // For SWAP_MAKER, show both CEA and EUA
+    } else if (mm.mm_type === 'EUA_OFFER') {
+      // For EUA_OFFER, show both CEA and EUA
       return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA / ${formatBalance(mm.eua_balance)} EUA`;
     }
     return mm.name;
@@ -524,20 +566,58 @@ export function PlaceOrder({
         )}
       </div>
 
-      {/* Total Calculation */}
+      {/* Total Calculation with Fee */}
       {total > 0 && (
-        <div className={`${compact ? 'p-4' : 'p-4'} bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800`}>
+        <div className={`${compact ? 'p-4' : 'p-4'} bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800 space-y-3`}>
+          {/* Subtotal */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-navy-700 dark:text-navy-300">
-              Total Cost
+            <span className="text-sm text-navy-600 dark:text-navy-400">
+              Subtotal
             </span>
-            <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            <span className="font-mono text-navy-700 dark:text-navy-300">
               {formatCurrency(total)}
             </span>
           </div>
-          <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+
+          {/* Fee */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-navy-600 dark:text-navy-400 flex items-center gap-1">
+              Platform Fee
+              <span className="text-xs text-navy-400">({(feeRate * 100).toFixed(2)}%)</span>
+              {loadingFee && <Loader2 className="w-3 h-3 animate-spin" />}
+            </span>
+            <span className="font-mono text-navy-700 dark:text-navy-300">
+              {formatCurrency(total * feeRate)}
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-emerald-300 dark:border-emerald-700" />
+
+          {/* Total */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-navy-700 dark:text-navy-300">
+              Total {side === 'BID' ? 'Cost' : 'Proceeds'}
+            </span>
+            <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(side === 'BID' ? total * (1 + feeRate) : total * (1 - feeRate))}
+            </span>
+          </div>
+
+          {/* Breakdown */}
+          <p className="text-xs text-navy-500 dark:text-navy-400">
             {formatQuantity(parseFloat(quantity))} {certificateType} × €{parseFloat(price).toFixed(2)}
           </p>
+
+          {/* Fee Info */}
+          <div className="flex items-start gap-1.5 text-xs text-navy-500 dark:text-navy-400">
+            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>
+              {side === 'BID'
+                ? 'Buyer pays the platform fee on purchase'
+                : 'Seller pays the platform fee, deducted from proceeds'}
+            </span>
+          </div>
         </div>
       )}
 

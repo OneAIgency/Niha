@@ -15,33 +15,34 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
   const midpoint = (safeBid + safeAsk) / 2;
   const spreadPercentage = midpoint > 0 ? ((safeSpread / midpoint) * 100).toFixed(2) : '0.00';
 
+  // BID (left) = red, ASK (right) = green - standard trading convention
   return (
-    <div className="border-y-2 border-navy-300 dark:border-navy-600 bg-gradient-to-r from-emerald-50 via-navy-50 to-red-50 dark:from-emerald-900/20 dark:via-navy-800 dark:to-red-900/20">
+    <div className="border-y-2 border-navy-300 dark:border-navy-600 bg-gradient-to-r from-red-50 via-navy-50 to-emerald-50 dark:from-red-900/20 dark:via-navy-800 dark:to-emerald-900/20">
       <div className="grid grid-cols-2 px-4 py-3">
-        {/* Best Bid (Left Side) */}
+        {/* Best Bid (Left Side) - RED */}
         <div className="flex items-center justify-start gap-2">
-          <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+          <TrendingUp className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+            <span className="text-[10px] font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
               Best Bid
             </span>
-            <span className="font-mono font-bold text-sm md:text-base text-emerald-600 dark:text-emerald-400">
+            <span className="font-mono font-bold text-sm md:text-base text-red-600 dark:text-red-400">
               €{safeBid.toFixed(2)}
             </span>
           </div>
         </div>
 
-        {/* Best Ask (Right Side) */}
+        {/* Best Ask (Right Side) - GREEN */}
         <div className="flex items-center justify-end gap-2">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
+            <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
               Best Ask
             </span>
-            <span className="font-mono font-bold text-sm md:text-base text-red-600 dark:text-red-400">
+            <span className="font-mono font-bold text-sm md:text-base text-emerald-600 dark:text-emerald-400">
               €{safeAsk.toFixed(2)}
             </span>
           </div>
-          <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+          <TrendingDown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
         </div>
       </div>
 

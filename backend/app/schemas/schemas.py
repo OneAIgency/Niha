@@ -572,7 +572,7 @@ class PaginatedResponse(BaseModel):
     pagination: Dict[str, int]
 
 
-# Cash Market Order Schemas
+# CEA Cash Market Order Schemas
 class OrderCreate(BaseModel):
     certificate_type: CertificateType
     side: OrderSide
@@ -1123,9 +1123,9 @@ class AssetTypeEnum(str, Enum):
 class MarketMakerTypeEnum(str, Enum):
     """Types of market makers"""
 
-    CEA_CASH_SELLER = "CEA_CASH_SELLER"
-    CASH_BUYER = "CASH_BUYER"
-    SWAP_MAKER = "SWAP_MAKER"
+    CEA_BUYER = "CEA_BUYER"
+    CEA_SELLER = "CEA_SELLER"
+    EUA_OFFER = "EUA_OFFER"
 
 
 class TransactionTypeEnum(str, Enum):
@@ -1200,7 +1200,7 @@ class MarketMakerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     description: Optional[str] = None
-    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_CASH_SELLER
+    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_SELLER
     initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
     initial_eur_balance: Optional[Decimal] = None
 
@@ -1376,3 +1376,79 @@ class ProvisionRequest(BaseModel):
     amount: Decimal = Field(..., gt=0)
     mm_ids: Optional[List[UUID]] = None
     count: Optional[int] = None
+
+
+# =============================================================================
+# Trading Fee Schemas
+# =============================================================================
+
+
+class MarketTypeEnum(str, Enum):
+    """Trading markets"""
+
+    CEA_CASH = "CEA_CASH"
+    SWAP = "SWAP"
+
+
+class TradingFeeConfigResponse(BaseModel):
+    """Response for a single market's fee configuration"""
+
+    id: UUID
+    market: MarketTypeEnum
+    bid_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for buyers (0-1)")
+    ask_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for sellers (0-1)")
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TradingFeeConfigUpdate(BaseModel):
+    """Request to update a market's fee configuration"""
+
+    bid_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for buyers (0-1)")
+    ask_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for sellers (0-1)")
+
+
+class EntityFeeOverrideResponse(BaseModel):
+    """Response for an entity's custom fee override"""
+
+    id: UUID
+    entity_id: UUID
+    entity_name: Optional[str] = None  # Populated from join
+    market: MarketTypeEnum
+    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntityFeeOverrideCreate(BaseModel):
+    """Request to create/update an entity's fee override"""
+
+    entity_id: UUID
+    market: MarketTypeEnum
+    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom buyer fee (null = use default)")
+    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom seller fee (null = use default)")
+
+
+class AllFeesResponse(BaseModel):
+    """Response containing all fee configurations"""
+
+    market_fees: List[TradingFeeConfigResponse]
+    entity_overrides: List[EntityFeeOverrideResponse]
+
+
+class EffectiveFeeResponse(BaseModel):
+    """Response containing the effective fee rate for a specific context"""
+
+    market: MarketTypeEnum
+    side: str  # "BID" or "ASK"
+    fee_rate: Decimal
+    is_override: bool  # True if using entity override, False if using default
+    entity_id: Optional[UUID] = None

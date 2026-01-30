@@ -12,10 +12,11 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
   const isBid = side === 'bid';
   const depthPercentage = maxQuantity > 0 ? (level.cumulative_quantity / maxQuantity) * 100 : 0;
 
+  // BID (buy) = red, ASK (sell) = green - standard trading convention
   const colorClasses = {
-    hover: isBid ? 'hover:bg-emerald-50 dark:hover:bg-emerald-900/10' : 'hover:bg-red-50 dark:hover:bg-red-900/10',
-    depth: isBid ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 'bg-red-500/10 dark:bg-red-500/20',
-    price: isBid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+    hover: isBid ? 'hover:bg-red-50 dark:hover:bg-red-900/10' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/10',
+    depth: isBid ? 'bg-red-500/10 dark:bg-red-500/20' : 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    price: isBid ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400',
   };
 
   const depthPosition = isBid ? 'right-0' : 'left-0';

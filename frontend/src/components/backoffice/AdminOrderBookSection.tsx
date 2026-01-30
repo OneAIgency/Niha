@@ -4,13 +4,22 @@ import { ProfessionalOrderBook } from '../cash-market/ProfessionalOrderBook';
 import { getAdminOrderBook } from '../../services/api';
 import type { OrderBook as OrderBookType, CertificateType } from '../../types';
 
+export interface OrderBookData {
+  best_bid: number | null;
+  best_ask: number | null;
+  bid_quantity_at_best: number;  // Volume at best bid price
+  ask_quantity_at_best: number;  // Volume at best ask price
+}
+
 interface AdminOrderBookSectionProps {
   certificateType: CertificateType;
   /** Called when user clicks a price in the order book (e.g. to open placement modal) */
   onPriceClick?: (price: number, side: 'BUY' | 'SELL') => void;
+  /** Called when orderbook data is updated - provides best prices and volumes for auto-fill */
+  onOrderBookData?: (data: OrderBookData) => void;
 }
 
-export function AdminOrderBookSection({ certificateType, onPriceClick }: AdminOrderBookSectionProps) {
+export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBookData }: AdminOrderBookSectionProps) {
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -18,14 +27,27 @@ export function AdminOrderBookSection({ certificateType, onPriceClick }: AdminOr
   const fetchOrderBook = useCallback(async () => {
     try {
       const response = await getAdminOrderBook(certificateType);
-      setOrderBook(response.data);
+      const data = response.data;
+      setOrderBook(data);
+
+      // Notify parent with best prices and quantities for auto-fill
+      if (onOrderBookData) {
+        const bidQuantityAtBest = data.bids.length > 0 ? data.bids[0].quantity : 0;
+        const askQuantityAtBest = data.asks.length > 0 ? data.asks[0].quantity : 0;
+        onOrderBookData({
+          best_bid: data.best_bid,
+          best_ask: data.best_ask,
+          bid_quantity_at_best: bidQuantityAtBest,
+          ask_quantity_at_best: askQuantityAtBest,
+        });
+      }
     } catch (error) {
       console.error('Error fetching order book:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [certificateType]);
+  }, [certificateType, onOrderBookData]);
 
   useEffect(() => {
     setIsLoading(true);

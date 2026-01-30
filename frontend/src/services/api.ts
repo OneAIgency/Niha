@@ -57,6 +57,12 @@ import type {
   CompleteWithdrawalRequest,
   RejectWithdrawalRequest,
   WithdrawalStats,
+  AllFeesResponse,
+  TradingFeeConfig,
+  TradingFeeConfigUpdate,
+  EntityFeeOverride,
+  EntityFeeOverrideCreate,
+  EffectiveFeeResponse,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -983,6 +989,12 @@ export const adminApi = {
     const { data } = await api.put('/admin/settings/mail', payload);
     return data;
   },
+
+  // Get all entities for admin purposes (for fee override dropdown)
+  getEntities: async (): Promise<Entity[]> => {
+    const { data } = await api.get('/admin/entities');
+    return data.data;  // API returns { data: [...] }
+  },
 };
 
 // Backoffice API (KYC review, user approvals)
@@ -1507,7 +1519,7 @@ export const getMarketMakers = async (params?: MarketMakerQueryParams): Promise<
     id: mm.id,
     name: mm.name,
     description: mm.description,
-    mm_type: mm.mmType || 'CEA_CASH_SELLER',
+    mm_type: mm.mmType || 'CEA_SELLER',
     market: MARKET_MAKER_TYPES[mm.mmType as MarketMakerType]?.market || 'CEA_CASH',
     is_active: mm.isActive,
     eur_balance: Number(mm.eurBalance) || 0,
@@ -1545,15 +1557,15 @@ export const createMarketMaker = async (data: CreateMarketMakerRequest): Promise
     name: data.name,
     email: data.email,
     description: data.description,
-    mm_type: data.mm_type || 'CEA_CASH_SELLER',
+    mm_type: data.mm_type || 'CEA_SELLER',
   };
 
-  // Add EUR balance for CASH_BUYER
+  // Add EUR balance for CEA_BUYER
   if (data.initial_eur_balance !== undefined) {
     payload.initial_eur_balance = data.initial_eur_balance;
   }
 
-  // Build initial_balances dict if any balance provided for CEA_CASH_SELLER or SWAP_MAKER
+  // Build initial_balances dict if any balance provided for CEA_SELLER or EUA_OFFER
   // Use !== undefined to properly handle zero values
   if (data.cea_balance !== undefined || data.eua_balance !== undefined) {
     payload.initial_balances = {};
@@ -1804,6 +1816,61 @@ export const withdrawalApi = {
     request: RejectWithdrawalRequest
   ): Promise<{ success: boolean; error?: string }> => {
     const { data } = await api.post(`/withdrawals/${withdrawalId}/reject`, request);
+    return data;
+  },
+};
+
+// =============================================================================
+// Trading Fee Configuration API
+// =============================================================================
+
+export const feesApi = {
+  getAllFees: async (): Promise<AllFeesResponse> => {
+    const { data } = await api.get('/admin/fees');
+    return data;
+  },
+
+  updateMarketFees: async (
+    market: 'CEA_CASH' | 'SWAP',
+    feeData: TradingFeeConfigUpdate
+  ): Promise<TradingFeeConfig> => {
+    const { data } = await api.put(`/admin/fees/${market}`, feeData);
+    return data;
+  },
+
+  getEntityOverrides: async (): Promise<EntityFeeOverride[]> => {
+    const { data } = await api.get('/admin/fees/entities');
+    return data;
+  },
+
+  getEntityOverride: async (entityId: string): Promise<EntityFeeOverride[]> => {
+    const { data } = await api.get(`/admin/fees/entities/${entityId}`);
+    return data;
+  },
+
+  upsertEntityOverride: async (
+    entityId: string,
+    overrideData: EntityFeeOverrideCreate
+  ): Promise<EntityFeeOverride> => {
+    const { data } = await api.put(`/admin/fees/entities/${entityId}`, overrideData);
+    return data;
+  },
+
+  deleteEntityOverride: async (
+    entityId: string,
+    market: 'CEA_CASH' | 'SWAP'
+  ): Promise<{ status: string; entity_id: string; market: string }> => {
+    const { data } = await api.delete(`/admin/fees/entities/${entityId}/${market}`);
+    return data;
+  },
+
+  getEffectiveFee: async (
+    market: 'CEA_CASH' | 'SWAP',
+    side: 'BID' | 'ASK',
+    entityId?: string
+  ): Promise<EffectiveFeeResponse> => {
+    const params = entityId ? `?entity_id=${entityId}` : '';
+    const { data } = await api.get(`/admin/fees/effective/${market}/${side}${params}`);
     return data;
   },
 };

@@ -680,12 +680,12 @@ export interface Market {
 export const MARKETS: Record<MarketType, Market> = {
   CEA_CASH: {
     type: 'CEA_CASH',
-    name: 'CEA-CASH Market',
-    description: 'Buy and sell CEA certificates with EUR cash'
+    name: 'CEA Cash',
+    description: 'Trade CEA certificates with EUR'
   },
   SWAP: {
     type: 'SWAP',
-    name: 'SWAP Market',
+    name: 'Swap',
     description: 'Exchange CEA certificates for EUA certificates'
   }
 };
@@ -694,7 +694,7 @@ export const MARKETS: Record<MarketType, Market> = {
 // Market Maker Types
 // =============================================================================
 
-export type MarketMakerType = 'CEA_CASH_SELLER' | 'CASH_BUYER' | 'SWAP_MAKER';
+export type MarketMakerType = 'CEA_BUYER' | 'CEA_SELLER' | 'EUA_OFFER';
 
 export interface MarketMaker {
   id: string;
@@ -723,28 +723,28 @@ export interface MarketMakerTypeInfo {
 }
 
 export const MARKET_MAKER_TYPES: Record<MarketMakerType, MarketMakerTypeInfo> = {
-  CEA_CASH_SELLER: {
-    value: 'CEA_CASH_SELLER',
+  CEA_BUYER: {
+    value: 'CEA_BUYER',
     market: 'CEA_CASH',
-    name: 'CEA-CASH Seller',
-    description: 'Holds CEA certificates, sells them for EUR on the CEA-CASH market',
-    balanceLabel: 'CEA Balance',
-    color: 'amber'
-  },
-  CASH_BUYER: {
-    value: 'CASH_BUYER',
-    market: 'CEA_CASH',
-    name: 'CASH Buyer',
-    description: 'Holds EUR cash, buys CEA certificates on the CEA-CASH market',
+    name: 'CEA Buyer',
+    description: 'Buys CEA certificates with EUR',
     balanceLabel: 'EUR Balance',
     color: 'emerald'
   },
-  SWAP_MAKER: {
-    value: 'SWAP_MAKER',
+  CEA_SELLER: {
+    value: 'CEA_SELLER',
+    market: 'CEA_CASH',
+    name: 'CEA Seller',
+    description: 'Sells CEA certificates for EUR',
+    balanceLabel: 'CEA Balance',
+    color: 'amber'
+  },
+  EUA_OFFER: {
+    value: 'EUA_OFFER',
     market: 'SWAP',
-    name: 'SWAP Maker',
-    description: 'Facilitates CEA↔EUA swaps on the SWAP market',
-    balanceLabel: 'CEA/EUA Inventory',
+    name: 'EUA Offer',
+    description: 'Offers EUA for swap operations',
+    balanceLabel: 'EUA Balance',
     color: 'blue'
   }
 };
@@ -890,3 +890,54 @@ export type {
   ContactRequest as BackofficeContactRequest,
   KYCDocument as BackofficeKYCDocument,
 } from './backoffice';
+
+// ============================================================
+// Trading Fee Types
+// ============================================================
+
+export type MarketTypeEnum = 'CEA_CASH' | 'SWAP';
+
+export interface TradingFeeConfig {
+  id: string;
+  market: MarketTypeEnum;
+  bid_fee_rate: number;
+  ask_fee_rate: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TradingFeeConfigUpdate {
+  bid_fee_rate: number;
+  ask_fee_rate: number;
+}
+
+export interface EntityFeeOverride {
+  id: string;
+  entity_id: string;
+  entity_name: string;
+  market: MarketTypeEnum;
+  bid_fee_rate: number | null;
+  ask_fee_rate: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface EntityFeeOverrideCreate {
+  market: MarketTypeEnum;
+  bid_fee_rate: number | null;
+  ask_fee_rate: number | null;
+}
+
+export interface AllFeesResponse {
+  market_fees: TradingFeeConfig[];
+  entity_overrides: EntityFeeOverride[];
+}
+
+export interface EffectiveFeeResponse {
+  market: MarketTypeEnum;
+  side: string;
+  fee_rate: number;
+  is_override: boolean;
+  entity_id?: string;
+}

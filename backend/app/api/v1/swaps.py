@@ -8,7 +8,7 @@ from ...models.models import User
 from ...services.price_scraper import price_scraper
 from ...services.simulation import simulation_engine
 
-router = APIRouter(prefix="/swaps", tags=["Swaps"])
+router = APIRouter(prefix="/swaps", tags=["Swap"])
 
 
 class SwapDirection(str, Enum):

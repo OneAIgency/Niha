@@ -69,6 +69,7 @@ const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.Ma
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
 const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
 const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
+const FeeSettingsPage = lazy(() => import('./pages').then(m => ({ default: m.FeeSettingsPage })));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -397,6 +398,14 @@ function App() {
               element={
                 <AdminRoute>
                   <SettingsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/fee-settings"
+              element={
+                <AdminRoute>
+                  <FeeSettingsPage />
                 </AdminRoute>
               }
             />

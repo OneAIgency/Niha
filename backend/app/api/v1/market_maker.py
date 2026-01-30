@@ -136,75 +136,57 @@ async def create_market_maker(
     # Convert schema enum to model enum
     mm_type = MarketMakerType(data.mm_type.value)
 
-    # Validate constraints
-    if mm_type == MarketMakerType.CASH_BUYER:
-        # CASH_BUYER: CEA-CASH market, buys CEA with EUR
+    # Validate constraints based on MM type
+    if mm_type == MarketMakerType.CEA_BUYER:
+        # CEA_BUYER: Buys CEA with EUR
         if data.initial_balances:
             raise HTTPException(
                 status_code=400,
-                detail="CASH_BUYER cannot have certificate balances, only EUR",
+                detail="CEA_BUYER cannot have certificate balances, only EUR",
             )
         if data.initial_eur_balance is None or data.initial_eur_balance <= 0:
             raise HTTPException(
                 status_code=400,
-                detail="CASH_BUYER must have positive initial_eur_balance",
+                detail="CEA_BUYER must have positive initial_eur_balance",
             )
-    elif mm_type == MarketMakerType.CEA_CASH_SELLER:
-        # CEA_CASH_SELLER: CEA-CASH market, sells CEA for EUR
+    elif mm_type == MarketMakerType.CEA_SELLER:
+        # CEA_SELLER: Sells CEA for EUR
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
-                status_code=400, detail="CEA_CASH_SELLER cannot have EUR balance"
+                status_code=400, detail="CEA_SELLER cannot have EUR balance"
             )
         if not data.initial_balances or "CEA" not in data.initial_balances:
             raise HTTPException(
-                status_code=400, detail="CEA_CASH_SELLER must have initial CEA balance"
+                status_code=400, detail="CEA_SELLER must have initial CEA balance"
             )
         if data.initial_balances["CEA"] <= 0:
             raise HTTPException(
-                status_code=400, detail="CEA_CASH_SELLER must have positive CEA balance"
+                status_code=400, detail="CEA_SELLER must have positive CEA balance"
             )
         invalid_certs = set(data.initial_balances.keys()) - {"CEA"}
         if invalid_certs:
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"CEA_CASH_SELLER can only have CEA balance, "
+                    f"CEA_SELLER can only have CEA balance, "
                     f"found: {invalid_certs}"
                 ),
             )
-        if "EUA" in data.initial_balances:
-            raise HTTPException(
-                status_code=400,
-                detail="CEA_CASH_SELLER operates in CEA-CASH market, cannot have EUA",
-            )
-    elif mm_type == MarketMakerType.SWAP_MAKER:
-        # SWAP_MAKER: SWAP market, facilitates CEA↔EUA conversions
+    elif mm_type == MarketMakerType.EUA_OFFER:
+        # EUA_OFFER: Offers EUA for swap operations
         if data.initial_eur_balance is not None and data.initial_eur_balance > 0:
             raise HTTPException(
                 status_code=400,
-                detail="SWAP_MAKER operates in SWAP market, cannot have EUR",
+                detail="EUA_OFFER cannot have EUR balance",
             )
-        if (
-            not data.initial_balances
-            or "CEA" not in data.initial_balances
-            or "EUA" not in data.initial_balances
-        ):
+        if not data.initial_balances or "EUA" not in data.initial_balances:
             raise HTTPException(
-                status_code=400, detail="SWAP_MAKER must have both CEA and EUA balances"
+                status_code=400, detail="EUA_OFFER must have initial EUA balance"
             )
-        if data.initial_balances["CEA"] <= 0 or data.initial_balances["EUA"] <= 0:
+        if data.initial_balances["EUA"] <= 0:
             raise HTTPException(
                 status_code=400,
-                detail="SWAP_MAKER must have positive CEA and EUA balances",
-            )
-        invalid_certs = set(data.initial_balances.keys()) - {"CEA", "EUA"}
-        if invalid_certs:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"SWAP_MAKER can only have CEA and EUA balances, "
-                    f"found: {invalid_certs}"
-                ),
+                detail="EUA_OFFER must have positive EUA balance",
             )
     else:
         raise HTTPException(
@@ -469,7 +451,7 @@ async def get_market_maker_balances(
         for cert_type, balance_data in balances.items()
     }
 
-    # Add EUR balance from MM client (for CASH_BUYER validation)
+    # Add EUR balance from MM client (for CEA_BUYER validation)
     formatted_balances["EUR"] = {
         "available": float(mm.eur_balance),
         "locked": 0,

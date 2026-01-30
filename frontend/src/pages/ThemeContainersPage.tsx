@@ -26,13 +26,13 @@ export function ThemeContainersPage() {
   }, []);
 
   const config = selectedElement ? THEME_ELEMENT_CONFIG[selectedElement] : null;
-  const varNames = config?.params.map((p) => p.key) ?? [];
 
   const handleReset = useCallback(() => {
+    const varNames = config?.params.map((p) => p.key) ?? [];
     if (selectedElement && varNames.length) {
       resetElementOverrides(varNames);
     }
-  }, [selectedElement, varNames, resetElementOverrides]);
+  }, [selectedElement, config, resetElementOverrides]);
 
   return (
     <>
@@ -334,6 +334,7 @@ export function ThemeContainersPage() {
                       value={
                         /^#[0-9A-Fa-f]{6}$/.test(overrides[param.key] ?? '')
                           ? (overrides[param.key] as string)
+                          // eslint-disable-next-line no-restricted-syntax -- Default fallback for color picker in theme editor
                           : '#1e293b'
                       }
                       onChange={(e) => setOverride(param.key, e.target.value)}

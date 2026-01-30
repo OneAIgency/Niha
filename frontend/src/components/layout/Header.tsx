@@ -71,8 +71,8 @@ export function Header() {
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
     if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
     if (canMechanism) links.push({ href: '/onboarding', label: 'Mechanism', icon: BookOpen });
-    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market', icon: null });
-    if (canSwap) links.push({ href: '/swap', label: 'Swap Center', icon: null });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
 
     return links;
   }, [isAuthenticated, role]);

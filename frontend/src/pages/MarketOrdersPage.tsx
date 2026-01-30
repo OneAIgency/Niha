@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { Button } from '../components/common';
-import { AdminOrderBookSection } from '../components/backoffice/AdminOrderBookSection';
+import { AdminOrderBookSection, type OrderBookData } from '../components/backoffice/AdminOrderBookSection';
 import { PlaceOrder } from '../components/backoffice/PlaceOrder';
 import { BackofficeLayout } from '../components/layout';
 import { placeMarketMakerOrder } from '../services/api';
@@ -34,6 +34,9 @@ export function MarketOrdersPage() {
   const [bidModalOpen, setBidModalOpen] = useState(false);
   const [bidPrefilledPrice, setBidPrefilledPrice] = useState<number | undefined>(undefined);
   const [askPrefilledPrice, setAskPrefilledPrice] = useState<number | undefined>(undefined);
+  const [bidPrefilledQuantity, setBidPrefilledQuantity] = useState<number | undefined>(undefined);
+  const [askPrefilledQuantity, setAskPrefilledQuantity] = useState<number | undefined>(undefined);
+  const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const askDialogRef = useRef<HTMLDivElement>(null);
   const bidDialogRef = useRef<HTMLDivElement>(null);
@@ -51,36 +54,68 @@ export function MarketOrdersPage() {
   const closeAsk = useCallback(() => {
     setAskModalOpen(false);
     setAskPrefilledPrice(undefined);
+    setAskPrefilledQuantity(undefined);
   }, []);
 
   const closeBid = useCallback(() => {
     setBidModalOpen(false);
     setBidPrefilledPrice(undefined);
+    setBidPrefilledQuantity(undefined);
   }, []);
 
+  /**
+   * Open ASK modal with best ask price and quantity auto-filled
+   */
   const handlePlaceAsk = () => {
-    setAskPrefilledPrice(undefined);
+    // Auto-fill with best ask price and quantity from orderbook
+    if (orderBookData?.best_ask) {
+      setAskPrefilledPrice(orderBookData.best_ask);
+      setAskPrefilledQuantity(orderBookData.ask_quantity_at_best);
+    } else {
+      setAskPrefilledPrice(undefined);
+      setAskPrefilledQuantity(undefined);
+    }
     setAskModalOpen(true);
   };
 
+  /**
+   * Open BID modal with best bid price and quantity auto-filled
+   */
   const handlePlaceBid = () => {
-    setBidPrefilledPrice(undefined);
+    // Auto-fill with best bid price and quantity from orderbook
+    if (orderBookData?.best_bid) {
+      setBidPrefilledPrice(orderBookData.best_bid);
+      setBidPrefilledQuantity(orderBookData.bid_quantity_at_best);
+    } else {
+      setBidPrefilledPrice(undefined);
+      setBidPrefilledQuantity(undefined);
+    }
     setBidModalOpen(true);
   };
 
   /**
    * Order book price click: bid row (BUY) → place ASK (sell into it); ask row (SELL) → place BID (buy from it).
    * Prefilled price is set so the modal opens with the clicked price.
+   * Quantity is NOT auto-filled when clicking a specific price (user clicked intentionally).
    */
   const handlePriceClick = (price: number, side: 'BUY' | 'SELL') => {
     if (side === 'BUY') {
       setAskPrefilledPrice(price);
+      setAskPrefilledQuantity(undefined); // Don't auto-fill quantity on price click
       setAskModalOpen(true);
     } else {
       setBidPrefilledPrice(price);
+      setBidPrefilledQuantity(undefined); // Don't auto-fill quantity on price click
       setBidModalOpen(true);
     }
   };
+
+  /**
+   * Callback to receive orderbook data for auto-fill
+   */
+  const handleOrderBookData = useCallback((data: OrderBookData) => {
+    setOrderBookData(data);
+  }, []);
 
   /** API-only submit. PlaceOrder handles errors; onSuccess handles refresh + close. */
   const handleOrderSubmit = async (order: MarketOrder) => {
@@ -178,7 +213,10 @@ export function MarketOrdersPage() {
     <BackofficeLayout
       subSubHeaderLeft={
         <div className="inline-flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800">
-          {(['CEA', 'EUA'] as CertificateType[]).map((type) => (
+          {([
+            { type: 'CEA' as CertificateType, label: 'CEA Cash' },
+            { type: 'EUA' as CertificateType, label: 'Swap' }
+          ]).map(({ type, label }) => (
             <button
               key={type}
               onClick={() => setCertificateType(type)}
@@ -189,7 +227,7 @@ export function MarketOrdersPage() {
                   : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
               )}
             >
-              {type}
+              {label}
             </button>
           ))}
         </div>
@@ -242,6 +280,7 @@ export function MarketOrdersPage() {
               key={`orderbook-${refreshKey}`}
               certificateType={certificateType}
               onPriceClick={handlePriceClick}
+              onOrderBookData={handleOrderBookData}
             />
           </div>
         </motion.div>
@@ -297,6 +336,7 @@ export function MarketOrdersPage() {
                   onSubmit={handleOrderSubmit}
                   onSuccess={handleSuccessAndCloseAsk}
                   prefilledPrice={askPrefilledPrice}
+                  prefilledQuantity={askPrefilledQuantity}
                   compact
                 />
               </div>
@@ -355,6 +395,7 @@ export function MarketOrdersPage() {
                   onSubmit={handleOrderSubmit}
                   onSuccess={handleSuccessAndCloseBid}
                   prefilledPrice={bidPrefilledPrice}
+                  prefilledQuantity={bidPrefilledQuantity}
                   compact
                 />
               </div>

@@ -134,7 +134,7 @@ export function CeaSwapMarketPage() {
       {/* Subheader */}
       <Subheader
         icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
-        title="CEA → EUA Swap Market"
+        title="Swap"
         description="Exchange CEA for EU Allowances"
         iconBg="bg-violet-500/20"
       >

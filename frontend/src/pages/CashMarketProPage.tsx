@@ -651,7 +651,7 @@ function MarketStatsBar({
           <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
         </div>
         <div>
-          <h1 className="text-[12px] font-bold text-white">CEA Cash Market</h1>
+          <h1 className="text-[12px] font-bold text-white">CEA Cash</h1>
           <p className="text-[9px] text-navy-500">Professional Trading</p>
         </div>
       </div>

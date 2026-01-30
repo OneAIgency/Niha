@@ -65,13 +65,13 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       width: '18%',
       align: 'right',
       render: (_, row) => {
-        if (row.mm_type === 'CASH_BUYER') {
+        if (row.mm_type === 'CEA_BUYER') {
           return (
             <div className="flex items-center justify-end font-mono font-bold text-emerald-600">
               {formatCurrency(row.eur_balance, 'EUR')}
             </div>
           );
-        } else if (row.mm_type === 'CEA_CASH_SELLER') {
+        } else if (row.mm_type === 'CEA_SELLER') {
           return (
             <div className="flex items-center justify-end gap-2">
               <Leaf className="w-4 h-4 text-amber-500" />
@@ -80,7 +80,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               </span>
             </div>
           );
-        } else { // SWAP_MAKER
+        } else { // EUA_OFFER
           return (
             <div className="space-y-1">
               <div className="flex items-center justify-end gap-2">
@@ -161,11 +161,11 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       {/* Market-Based Portfolio Summary */}
       {marketMakers.length > 0 && prices && (
         <div className="mt-4 space-y-3">
-          {/* CEA-CASH Market Summary */}
+          {/* CEA Cash Market Summary */}
           {(() => {
             const ceaCashMMs = marketMakers.filter(mm => MARKET_MAKER_TYPES[mm.mm_type].market === 'CEA_CASH');
-            const cashBuyers = ceaCashMMs.filter(mm => mm.mm_type === 'CASH_BUYER');
-            const ceaSellers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_CASH_SELLER');
+            const cashBuyers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_BUYER');
+            const ceaSellers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_SELLER');
 
             const totalEUR = cashBuyers.reduce((sum, mm) => sum + mm.eur_balance, 0);
             const totalCEA = ceaSellers.reduce((sum, mm) => sum + mm.cea_balance, 0);
@@ -214,9 +214,9 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             ) : null;
           })()}
 
-          {/* SWAP Market Summary */}
+          {/* Swap Market Summary */}
           {(() => {
-            const swapMMs = marketMakers.filter(mm => mm.mm_type === 'SWAP_MAKER');
+            const swapMMs = marketMakers.filter(mm => mm.mm_type === 'EUA_OFFER');
             const totalCEA = swapMMs.reduce((sum, mm) => sum + mm.cea_balance, 0);
             const totalEUA = swapMMs.reduce((sum, mm) => sum + mm.eua_balance, 0);
             const ceaValue = totalCEA * prices.cea.price;
@@ -282,8 +282,8 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                   {formatCurrency(
                     marketMakers.reduce((sum, mm) => {
                       let value = sum;
-                      // Add EUR for CASH_BUYER
-                      if (mm.mm_type === 'CASH_BUYER') {
+                      // Add EUR for CEA_BUYER
+                      if (mm.mm_type === 'CEA_BUYER') {
                         value += mm.eur_balance;
                       }
                       // Add CEA/EUA value for all types

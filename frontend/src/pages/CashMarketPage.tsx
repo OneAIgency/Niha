@@ -139,7 +139,7 @@ export function CashMarketPage() {
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
-        title="CEA Cash Market"
+        title="CEA Cash"
         description="Trade China Emission Allowances"
         iconBg="bg-amber-500/20"
       >

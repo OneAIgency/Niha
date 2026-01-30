@@ -13,6 +13,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
@@ -171,20 +172,60 @@ class Currency(str, enum.Enum):
 
 
 class MarketMakerType(str, enum.Enum):
-    """Types of market maker clients - organized by market"""
+    """Types of market maker clients"""
 
-    CEA_CASH_SELLER = (
-        "CEA_CASH_SELLER"  # CEA-CASH market: Holds CEA, places SELL orders
-    )
-    CASH_BUYER = "CASH_BUYER"  # CEA-CASH market: Holds EUR, places BUY orders
-    SWAP_MAKER = "SWAP_MAKER"  # SWAP market: Facilitates CEA↔EUA swaps
+    CEA_BUYER = "CEA_BUYER"  # Buys CEA with EUR (places BID orders)
+    CEA_SELLER = "CEA_SELLER"  # Sells CEA for EUR (places ASK orders)
+    EUA_OFFER = "EUA_OFFER"  # Offers EUA for swap operations
 
 
 class MarketType(str, enum.Enum):
     """Trading markets"""
 
-    CEA_CASH = "CEA_CASH"  # Cash market: Buy/sell CEA with EUR
-    SWAP = "SWAP"  # Swap market: Exchange CEA↔EUA
+    CEA_CASH = "CEA_CASH"  # CEA Cash: Trade CEA with EUR
+    SWAP = "SWAP"  # Swap: Exchange CEA↔EUA
+
+
+class TradingFeeConfig(Base):
+    """Platform-wide trading fee configuration per market.
+
+    Defines default fees for each market, separate for buyers (BID) and sellers (ASK).
+    Fees are stored as decimal rates (e.g., 0.005 = 0.5%).
+    """
+    __tablename__ = "trading_fee_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market = Column(SQLEnum(MarketType), nullable=False, unique=True)
+    bid_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for buyers (BID)
+    ask_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for sellers (ASK)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+
+class EntityFeeOverride(Base):
+    """Per-entity fee override for custom client rates.
+
+    When an entity has an override for a market, their fee rate takes precedence
+    over the default market rate. NULL values mean "use default".
+    """
+    __tablename__ = "entity_fee_overrides"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    market = Column(SQLEnum(MarketType), nullable=False)
+    bid_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
+    ask_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    entity = relationship("Entity", backref="fee_overrides")
+
+    # Unique constraint: one override per entity per market
+    __table_args__ = (UniqueConstraint('entity_id', 'market', name='uq_entity_market_fee'),)
 
 
 class Entity(Base):
@@ -292,7 +333,7 @@ class MarketMakerClient(Base):
     )
     mm_type = Column(
         SQLEnum(MarketMakerType),
-        default=MarketMakerType.CEA_CASH_SELLER,
+        default=MarketMakerType.CEA_SELLER,
         nullable=False,
     )
     eur_balance = Column(
@@ -305,15 +346,15 @@ class MarketMakerClient(Base):
         Determine which market this Market Maker operates in.
 
         Returns:
-            MarketType.CEA_CASH for CEA_CASH_SELLER and CASH_BUYER
-            MarketType.SWAP for SWAP_MAKER
+            MarketType.CEA_CASH for CEA_BUYER and CEA_SELLER
+            MarketType.SWAP for EUA_OFFER
         """
         if self.mm_type in (
-            MarketMakerType.CEA_CASH_SELLER,
-            MarketMakerType.CASH_BUYER,
+            MarketMakerType.CEA_BUYER,
+            MarketMakerType.CEA_SELLER,
         ):
             return MarketType.CEA_CASH
-        elif self.mm_type == MarketMakerType.SWAP_MAKER:
+        elif self.mm_type == MarketMakerType.EUA_OFFER:
             return MarketType.SWAP
         else:
             # Should never happen with proper enum validation
@@ -542,7 +583,7 @@ class UserSession(Base):
 
 
 class Order(Base):
-    """Cash market orders for trading"""
+    """CEA Cash market orders for trading"""
 
     __tablename__ = "orders"
 
@@ -588,7 +629,7 @@ class Order(Base):
 
 
 class CashMarketTrade(Base):
-    """Executed trades from the cash market matching engine"""
+    """Executed trades from the CEA Cash market matching engine"""
 
     __tablename__ = "cash_market_trades"
 
@@ -645,7 +686,7 @@ class AuthenticationAttempt(Base):
 
 
 class Seller(Base):
-    """CEA sellers with unique client codes for the Cash Market"""
+    """CEA sellers with unique client codes for the CEA Cash market"""
 
     __tablename__ = "sellers"
 
@@ -885,7 +926,7 @@ class LiquidityOperation(Base):
     [
         {
             "mm_id": "uuid-string",
-            "mm_type": "CEA_CASH_SELLER" | "CASH_BUYER" | "SWAP_MAKER",
+            "mm_type": "CEA_BUYER" | "CEA_SELLER" | "EUA_OFFER",
             "amount": "decimal-as-string"
         },
         ...

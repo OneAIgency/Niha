@@ -53,7 +53,7 @@ export function ApproveInviteModal({
     setGeneratedPassword(null);
     setError('');
     setSuccess(false);
-  }, [contactRequest.id, contactRequest.contact_email, contactRequest.contact_name, contactRequest.position]);
+  }, [contactRequest]);
 
   // Generate a strong random password
   const generatePassword = () => {

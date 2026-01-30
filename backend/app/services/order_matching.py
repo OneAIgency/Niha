@@ -1,7 +1,7 @@
 """
 Order Matching Service
 
-FIFO price-time priority matching engine for the Cash Market.
+FIFO price-time priority matching engine for the CEA Cash market.
 Handles order preview, market orders, and limit orders with proper fee calculations.
 """
 
@@ -20,19 +20,83 @@ from ..models.models import (
     CashMarketTrade,
     CertificateType,
     Entity,
+    EntityFeeOverride,
     EntityHolding,
     MarketType,
     Order,
     OrderSide,
     OrderStatus,
     Seller,
+    TradingFeeConfig,
     TransactionType,
 )
 from ..services.currency_service import currency_service
 from ..services.settlement_service import SettlementService
 
-# Platform fee rate: 0.5%
-PLATFORM_FEE_RATE = Decimal("0.005")
+# Default platform fee rate: 0.5% (fallback if no config exists)
+DEFAULT_FEE_RATE = Decimal("0.005")
+
+
+async def get_effective_fee_rate(
+    db: AsyncSession,
+    market: MarketType,
+    side: str,
+    entity_id: Optional[UUID] = None,
+) -> Decimal:
+    """
+    Get the effective fee rate for a transaction.
+
+    Priority:
+    1. Entity override (if exists and has value for this side)
+    2. Market default from trading_fee_configs
+    3. Hardcoded fallback (0.5%)
+
+    Args:
+        db: Database session
+        market: Market type (CEA_CASH or SWAP)
+        side: "BID" or "ASK"
+        entity_id: Optional entity ID to check for overrides
+
+    Returns:
+        Decimal: Fee rate (e.g., 0.005 for 0.5%)
+    """
+    side_upper = side.upper()
+
+    # 1. Check for entity override
+    if entity_id:
+        result = await db.execute(
+            select(EntityFeeOverride).where(
+                and_(
+                    EntityFeeOverride.entity_id == entity_id,
+                    EntityFeeOverride.market == market,
+                    EntityFeeOverride.is_active == True,
+                )
+            )
+        )
+        override = result.scalar_one_or_none()
+
+        if override:
+            override_rate = (
+                override.bid_fee_rate if side_upper == "BID" else override.ask_fee_rate
+            )
+            if override_rate is not None:
+                return Decimal(str(override_rate))
+
+    # 2. Get market default
+    result = await db.execute(
+        select(TradingFeeConfig).where(TradingFeeConfig.market == market)
+    )
+    config = result.scalar_one_or_none()
+
+    if config:
+        return (
+            Decimal(str(config.bid_fee_rate))
+            if side_upper == "BID"
+            else Decimal(str(config.ask_fee_rate))
+        )
+
+    # 3. Fallback to default
+    return DEFAULT_FEE_RATE
 
 # EUR migration date - orders created before this are in CNY, after are in EUR
 # Set to deployment date of this feature
@@ -225,6 +289,11 @@ async def preview_buy_order(
     Returns:
         OrderPreviewResult with all fill and fee details
     """
+    # Get dynamic fee rate for buyer (BID side)
+    fee_rate = await get_effective_fee_rate(
+        db, MarketType.CEA_CASH, "BID", entity_id
+    )
+
     # Get available balance
     available_eur = await get_entity_balance(db, entity_id, AssetType.EUR)
 
@@ -270,10 +339,10 @@ async def preview_buy_order(
     if amount_eur is not None:
         # Use minimum of requested amount and available balance
         spending_limit_net = min(amount_eur, available_eur)
-        max_gross = spending_limit_net / (Decimal("1") + PLATFORM_FEE_RATE)
+        max_gross = spending_limit_net / (Decimal("1") + fee_rate)
     else:
         # For quantity-based, we'll calculate as we go
-        max_gross = available_eur / (Decimal("1") + PLATFORM_FEE_RATE)
+        max_gross = available_eur / (Decimal("1") + fee_rate)
 
     # Simulate FIFO matching
     fills: List[OrderFillResult] = []
@@ -308,16 +377,16 @@ async def preview_buy_order(
             qty_to_buy = min(remaining_qty, remaining_order_qty)
             # But also check if we have enough funds
             cost_for_qty = qty_to_buy * order_price_eur
-            fee_for_cost = cost_for_qty * PLATFORM_FEE_RATE
+            fee_for_cost = cost_for_qty * fee_rate
             total_needed = cost_for_qty + fee_for_cost
             if total_needed > available_eur - total_cost_gross - (
-                total_cost_gross * PLATFORM_FEE_RATE
+                total_cost_gross * fee_rate
             ):
                 # Adjust quantity to what we can afford
                 max_gross_remaining = (
                     available_eur
-                    - total_cost_gross * (Decimal("1") + PLATFORM_FEE_RATE)
-                ) / (Decimal("1") + PLATFORM_FEE_RATE)
+                    - total_cost_gross * (Decimal("1") + fee_rate)
+                ) / (Decimal("1") + fee_rate)
                 qty_to_buy = min(qty_to_buy, max_gross_remaining / order_price_eur)
 
         if qty_to_buy <= Decimal("0"):
@@ -351,7 +420,7 @@ async def preview_buy_order(
             remaining_qty -= qty_to_buy
 
     # Calculate summary
-    platform_fee_amount = total_cost_gross * PLATFORM_FEE_RATE
+    platform_fee_amount = total_cost_gross * fee_rate
     total_cost_net = total_cost_gross + platform_fee_amount
     weighted_avg_price = (
         (total_cost_gross / total_quantity)

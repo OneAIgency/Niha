@@ -47,8 +47,8 @@ class LiquidityService:
 
     Provides automated liquidity injection by coordinating orders across multiple
     market makers. Supports two market maker types:
-    - CASH_BUYER: Holds EUR, places BUY orders (BID liquidity)
-    - CEA_CASH_SELLER: Holds certificates, places SELL orders (ASK liquidity)
+    - CEA_BUYER: Holds EUR, places BUY orders (BID liquidity)
+    - CEA_SELLER: Holds certificates, places SELL orders (ASK liquidity)
 
     Orders are distributed across 3 price levels with tight spreads (0.2-0.5%)
     and volume allocation (50/30/20) for optimal market depth.
@@ -69,7 +69,7 @@ class LiquidityService:
         """
         Get all active EUR-holding market makers with balances.
 
-        Returns market makers of type CASH_BUYER that have positive EUR balance
+        Returns market makers of type CEA_BUYER that have positive EUR balance
         and are active. Used for placing BID orders.
 
         Args:
@@ -82,7 +82,7 @@ class LiquidityService:
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.CASH_BUYER,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER,
                     MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.eur_balance > 0,
                 )
@@ -98,7 +98,7 @@ class LiquidityService:
         """
         Get all active asset-holding market makers with certificate balances.
 
-        Returns market makers of type CEA_CASH_SELLER that have available
+        Returns market makers of type CEA_SELLER that have available
         certificate balance for the specified type. Used for placing ASK orders.
 
         Args:
@@ -122,7 +122,7 @@ class LiquidityService:
         result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.CEA_CASH_SELLER,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
                     MarketMakerClient.is_active.is_(True),
                 )
             )

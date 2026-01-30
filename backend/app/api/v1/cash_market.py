@@ -1,7 +1,8 @@
 """
-Cash Market API Router
+CEA Cash Market API Router
 
 Order-driven market with order book, market depth, and FIFO matching.
+Trade CEA certificates with EUR.
 """
 
 import random
@@ -48,14 +49,15 @@ from ...schemas.schemas import (
     OrderSide,
 )
 from ...services.order_matching import (
-    PLATFORM_FEE_RATE,
+    DEFAULT_FEE_RATE,
     execute_market_buy_order,
+    get_effective_fee_rate,
     get_entity_balance,
     get_real_orderbook,
     preview_buy_order,
 )
 
-router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
+router = APIRouter(prefix="/cash-market", tags=["CEA Cash"])
 
 
 class OrderBookSimulator:
@@ -841,6 +843,11 @@ async def preview_order(
     quantity = Decimal(str(request.quantity)) if request.quantity else None
     limit_price = Decimal(str(request.limit_price)) if request.limit_price else None
 
+    # Get effective fee rate for this entity
+    fee_rate = await get_effective_fee_rate(
+        db, MarketType.CEA_CASH, "BID", current_user.entity_id
+    )
+
     # Get preview
     preview = await preview_buy_order(
         db=db,
@@ -873,7 +880,7 @@ async def preview_order(
         weighted_avg_price=float(preview.weighted_avg_price),
         best_price=float(preview.best_price) if preview.best_price else None,
         worst_price=float(preview.worst_price) if preview.worst_price else None,
-        platform_fee_rate=float(PLATFORM_FEE_RATE),
+        platform_fee_rate=float(fee_rate),
         platform_fee_amount=float(preview.platform_fee_amount),
         total_cost_net=float(preview.total_cost_net),
         net_price_per_unit=float(preview.net_price_per_unit),
