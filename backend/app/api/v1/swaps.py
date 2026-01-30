@@ -3,12 +3,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
+from ...core.database import get_db
 from ...core.security import get_swap_user
 from ...models.models import User
 from ...services.price_scraper import price_scraper
-from ...services.simulation import simulation_engine
 
 router = APIRouter(prefix="/swaps", tags=["Swap"])
+
+# NOTE: Swap market uses real data from database - no simulation
 
 
 class SwapDirection(str, Enum):
@@ -25,41 +27,28 @@ async def get_available_swaps(
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=50),  # noqa: B008
     current_user: User = Depends(get_swap_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
-    Get available swap requests in the marketplace. SWAP+ or ADMIN only (0010 §8).
+    Get available swap requests in the marketplace. SWAP+ or ADMIN only.
+
+    TODO: Query real swap orders from database when swap order model is implemented.
+    Currently returns empty list as swap market is not yet live.
     """
-    swaps = simulation_engine.generate_swap_requests(count=30)
-
-    # Filter by status (only open swaps)
-    swaps = [s for s in swaps if s["status"] == "open"]
-
-    # Filter by direction
-    if direction == SwapDirection.EUA_TO_CEA:
-        swaps = [s for s in swaps if s["from_type"] == "EUA"]
-    elif direction == SwapDirection.CEA_TO_EUA:
-        swaps = [s for s in swaps if s["from_type"] == "CEA"]
-
-    # Filter by quantity
-    if min_quantity:
-        swaps = [s for s in swaps if s["quantity"] >= min_quantity]
-    if max_quantity:
-        swaps = [s for s in swaps if s["quantity"] <= max_quantity]
-
-    # Pagination
-    total = len(swaps)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated = swaps[start:end]
+    # Real implementation will query SwapOrder table
+    # For now, return empty as swap market is being developed
+    swaps = []
+    total = 0
 
     return {
-        "data": paginated,
+        "data": swaps,
         "pagination": {
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page,
+            "total_pages": 0,
         },
+        "message": "Swap market coming soon. No active swap requests.",
     }
 
 
@@ -153,29 +142,21 @@ async def get_swap_stats(
     current_user: User = Depends(get_swap_user),  # noqa: B008
 ):
     """
-    Get swap market statistics. SWAP+ or ADMIN only (0010 §8).
+    Get swap market statistics. SWAP+ or ADMIN only.
+
+    TODO: Calculate real stats from SwapOrder table when implemented.
     """
-    swaps = simulation_engine.generate_swap_requests()
     prices = await price_scraper.get_current_prices()
 
-    open_swaps = [s for s in swaps if s["status"] == "open"]
-    matched_swaps = [s for s in swaps if s["status"] == "matched"]
-
-    eua_to_cea = [s for s in open_swaps if s["from_type"] == "EUA"]
-    cea_to_eua = [s for s in open_swaps if s["from_type"] == "CEA"]
-
+    # Real implementation will aggregate from SwapOrder table
     return {
-        "open_swaps": len(open_swaps),
-        "matched_today": len(matched_swaps),
-        "eua_to_cea_requests": len(eua_to_cea),
-        "cea_to_eua_requests": len(cea_to_eua),
-        "total_eua_volume": round(sum(s["quantity"] for s in eua_to_cea), 2),
-        "total_cea_volume": round(sum(s["quantity"] for s in cea_to_eua), 2),
+        "open_swaps": 0,
+        "matched_today": 0,
+        "eua_to_cea_requests": 0,
+        "cea_to_eua_requests": 0,
+        "total_eua_volume": 0.0,
+        "total_cea_volume": 0.0,
         "current_rate": prices["swap_rate"],
-        "avg_requested_rate": round(
-            sum(s["desired_rate"] for s in eua_to_cea) / len(eua_to_cea)
-            if eua_to_cea
-            else 0,
-            4,
-        ),
+        "avg_requested_rate": 0.0,
+        "message": "Swap market coming soon.",
     }

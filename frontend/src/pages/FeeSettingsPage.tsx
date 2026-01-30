@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Settings, Percent, Building2, Plus, Pencil, Trash2, Save, RefreshCw } from 'lucide-react';
 import { feesApi, adminApi } from '../services/api';
+import { BackofficeLayout } from '../components/layout';
 import type {
   TradingFeeConfig,
   EntityFeeOverride,
@@ -47,9 +48,9 @@ export function FeeSettingsPage() {
         adminApi.getEntities(),
       ]);
 
-      setMarketFees(feesRes.market_fees);
-      setEntityOverrides(feesRes.entity_overrides);
-      setEntities(entitiesRes);
+      setMarketFees(feesRes.market_fees || []);
+      setEntityOverrides(feesRes.entity_overrides || []);
+      setEntities(entitiesRes || []);
     } catch (err) {
       console.error('Error fetching fee data:', err);
       setError('Failed to load fee settings');
@@ -177,13 +178,16 @@ export function FeeSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
+      <BackofficeLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      </BackofficeLayout>
     );
   }
 
   return (
+    <BackofficeLayout>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -532,5 +536,6 @@ export function FeeSettingsPage() {
         </div>
       )}
     </div>
+    </BackofficeLayout>
   );
 }

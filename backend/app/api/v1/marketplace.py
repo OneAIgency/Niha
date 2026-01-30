@@ -1,10 +1,18 @@
+"""
+Marketplace API - Real data from database
+
+NOTE: Only CEA marketplace exists. No EUA market (EUA only via swap).
+"""
+
 from enum import Enum
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, and_
 
+from ...core.database import get_db
+from ...models.models import Order, Seller, OrderStatus, CertificateType, OrderSide
 from ...services.price_scraper import price_scraper
-from ...services.simulation import simulation_engine
 
 router = APIRouter(prefix="/marketplace", tags=["Marketplace"])
 
@@ -20,51 +28,81 @@ class SortBy(str, Enum):
 
 @router.get("/cea")
 async def get_cea_marketplace(
-    sort_by: SortBy = SortBy.DATE_DESC,
+    sort_by: SortBy = SortBy.PRICE_ASC,
     min_quantity: Optional[float] = None,
     max_quantity: Optional[float] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
-    vintage_year: Optional[int] = None,
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=100),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
     Get CEA marketplace listings with filtering and sorting.
-    Returns anonymous sellers with realistic simulated data.
+    Returns REAL sell orders from registered sellers and market makers.
     """
-    sellers = simulation_engine.generate_cea_sellers(count=60)
+    # Build query for real sell orders
+    query = select(Order, Seller).join(
+        Seller, Order.seller_id == Seller.id, isouter=True
+    ).where(
+        and_(
+            Order.certificate_type == CertificateType.CEA,
+            Order.side == OrderSide.SELL,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+        )
+    )
 
     # Apply filters
     if min_quantity:
-        sellers = [s for s in sellers if s["quantity"] >= min_quantity]
+        query = query.where(Order.quantity >= min_quantity)
     if max_quantity:
-        sellers = [s for s in sellers if s["quantity"] <= max_quantity]
+        query = query.where(Order.quantity <= max_quantity)
     if min_price:
-        sellers = [s for s in sellers if s["unit_price"] >= min_price]
+        query = query.where(Order.price >= min_price)
     if max_price:
-        sellers = [s for s in sellers if s["unit_price"] <= max_price]
-    if vintage_year:
-        sellers = [s for s in sellers if s["vintage_year"] == vintage_year]
+        query = query.where(Order.price <= max_price)
 
     # Apply sorting
     if sort_by == SortBy.PRICE_ASC:
-        sellers.sort(key=lambda x: x["unit_price"])
+        query = query.order_by(Order.price.asc())
     elif sort_by == SortBy.PRICE_DESC:
-        sellers.sort(key=lambda x: x["unit_price"], reverse=True)
+        query = query.order_by(Order.price.desc())
     elif sort_by == SortBy.QUANTITY_ASC:
-        sellers.sort(key=lambda x: x["quantity"])
+        query = query.order_by(Order.quantity.asc())
     elif sort_by == SortBy.QUANTITY_DESC:
-        sellers.sort(key=lambda x: x["quantity"], reverse=True)
+        query = query.order_by(Order.quantity.desc())
     elif sort_by == SortBy.DATE_ASC:
-        sellers.sort(key=lambda x: x["created_at"])
-    # DATE_DESC is default
+        query = query.order_by(Order.created_at.asc())
+    else:  # DATE_DESC
+        query = query.order_by(Order.created_at.desc())
+
+    result = await db.execute(query)
+    orders = result.all()
+
+    # Convert to marketplace format
+    listings = []
+    for order, seller in orders:
+        remaining_qty = float(order.quantity) - float(order.filled_quantity)
+        if remaining_qty <= 0:
+            continue
+
+        listings.append({
+            "id": str(order.id),
+            "anonymous_code": seller.client_code if seller else "MM",
+            "certificate_type": "CEA",
+            "quantity": remaining_qty,
+            "unit_price": float(order.price),
+            "total_value": round(remaining_qty * float(order.price), 2),
+            "status": "available",
+            "created_at": order.created_at.isoformat(),
+            "seller_type": "seller" if seller else "market_maker",
+        })
 
     # Pagination
-    total = len(sellers)
+    total = len(listings)
     start = (page - 1) * per_page
     end = start + per_page
-    paginated = sellers[start:end]
+    paginated = listings[start:end]
 
     return {
         "data": paginated,
@@ -72,84 +110,84 @@ async def get_cea_marketplace(
             "page": page,
             "per_page": per_page,
             "total": total,
-            "total_pages": (total + per_page - 1) // per_page,
-        },
-    }
-
-
-@router.get("/eua")
-async def get_eua_marketplace(
-    sort_by: SortBy = SortBy.DATE_DESC,
-    min_quantity: Optional[float] = None,
-    max_quantity: Optional[float] = None,
-    page: int = Query(1, ge=1),  # noqa: B008
-    per_page: int = Query(20, ge=1, le=100),  # noqa: B008
-):
-    """
-    Get EUA marketplace listings.
-    """
-    sellers = simulation_engine.generate_eua_sellers(count=35)
-
-    # Apply filters
-    if min_quantity:
-        sellers = [s for s in sellers if s["quantity"] >= min_quantity]
-    if max_quantity:
-        sellers = [s for s in sellers if s["quantity"] <= max_quantity]
-
-    # Apply sorting
-    if sort_by == SortBy.PRICE_ASC:
-        sellers.sort(key=lambda x: x["unit_price"])
-    elif sort_by == SortBy.PRICE_DESC:
-        sellers.sort(key=lambda x: x["unit_price"], reverse=True)
-    elif sort_by == SortBy.QUANTITY_ASC:
-        sellers.sort(key=lambda x: x["quantity"])
-    elif sort_by == SortBy.QUANTITY_DESC:
-        sellers.sort(key=lambda x: x["quantity"], reverse=True)
-
-    # Pagination
-    total = len(sellers)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated = sellers[start:end]
-
-    return {
-        "data": paginated,
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": (total + per_page - 1) // per_page,
+            "total_pages": (total + per_page - 1) // per_page if total > 0 else 0,
         },
     }
 
 
 @router.get("/stats")
-async def get_marketplace_stats():
+async def get_marketplace_stats(db=Depends(get_db)):  # noqa: B008
     """
-    Get overall marketplace statistics.
+    Get overall marketplace statistics from REAL data.
     """
-    stats = simulation_engine.get_market_stats()
-    prices = await price_scraper.get_current_prices()
+    # Get CEA orders
+    result = await db.execute(
+        select(Order).where(
+            and_(
+                Order.certificate_type == CertificateType.CEA,
+                Order.side == OrderSide.SELL,
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            )
+        )
+    )
+    cea_orders = result.scalars().all()
 
-    return {**stats, "current_prices": prices}
-
-
-@router.get("/listing/{anonymous_code}")
-async def get_listing_details(anonymous_code: str):
-    """
-    Get details of a specific listing by anonymous code.
-    """
-    # Search in both CEA and EUA listings
-    cea_sellers = simulation_engine.generate_cea_sellers()
-    eua_sellers = simulation_engine.generate_eua_sellers()
-
-    all_sellers = cea_sellers + eua_sellers
-
-    listing = next(
-        (s for s in all_sellers if s["anonymous_code"] == anonymous_code), None
+    total_cea_volume = sum(
+        float(o.quantity) - float(o.filled_quantity) for o in cea_orders
+    )
+    total_cea_value = sum(
+        (float(o.quantity) - float(o.filled_quantity)) * float(o.price)
+        for o in cea_orders
     )
 
-    if not listing:
-        return {"error": "Listing not found"}
+    prices = await price_scraper.get_current_prices()
 
-    return listing
+    return {
+        "cea_listings": len(cea_orders),
+        "eua_listings": 0,  # No EUA market
+        "active_swaps": 0,  # Swap market coming soon
+        "total_cea_volume": round(total_cea_volume, 2),
+        "total_eua_volume": 0.0,
+        "total_market_value_eur": round(total_cea_value, 2),
+        "avg_cea_price": round(
+            sum(float(o.price) for o in cea_orders) / len(cea_orders), 4
+        ) if cea_orders else 0.0,
+        "current_prices": prices,
+    }
+
+
+@router.get("/listing/{order_id}")
+async def get_listing_details(order_id: str, db=Depends(get_db)):  # noqa: B008
+    """
+    Get details of a specific listing by order ID.
+    """
+    try:
+        from uuid import UUID
+        order_uuid = UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid order ID")
+
+    result = await db.execute(
+        select(Order, Seller)
+        .join(Seller, Order.seller_id == Seller.id, isouter=True)
+        .where(Order.id == order_uuid)
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    order, seller = row
+    remaining_qty = float(order.quantity) - float(order.filled_quantity)
+
+    return {
+        "id": str(order.id),
+        "anonymous_code": seller.client_code if seller else "MM",
+        "certificate_type": order.certificate_type.value,
+        "quantity": remaining_qty,
+        "unit_price": float(order.price),
+        "total_value": round(remaining_qty * float(order.price), 2),
+        "status": order.status.value,
+        "created_at": order.created_at.isoformat(),
+        "seller_type": "seller" if seller else "market_maker",
+    }
