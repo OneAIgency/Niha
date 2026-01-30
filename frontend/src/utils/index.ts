@@ -198,3 +198,9 @@ export { formatUserName, getUserInitials } from './userUtils';
 
 // Export role badge helpers (client status / user_role)
 export { clientStatusVariant, type ClientStatusVariant } from './roleBadge';
+
+// Export contact request helpers (pending list filter)
+export {
+  isPendingContactRequest,
+  PENDING_CONTACT_REQUEST_ROLES,
+} from './contactRequest';

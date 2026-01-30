@@ -687,7 +687,7 @@ export const usersApi = {
 export const adminApi = {
   // Contact Requests
   getContactRequests: async (params?: {
-    status?: string;
+    user_role?: string;
     page?: number;
     per_page?: number;
   }): Promise<PaginatedResponse<ContactRequestResponse>> => {
@@ -811,6 +811,7 @@ export const adminApi = {
     last_name: string;
     role: UserRole;
     password?: string;
+    position?: string;
     entity_id?: string;
   }): Promise<User> => {
     const { data } = await api.post('/admin/users', userData);
@@ -824,11 +825,6 @@ export const adminApi = {
 
   updateUser: async (id: string, update: Partial<User>): Promise<User> => {
     const { data } = await api.put(`/admin/users/${id}`, update);
-    return data;
-  },
-
-  changeUserRole: async (id: string, role: UserRole): Promise<User> => {
-    const { data } = await api.put(`/admin/users/${id}/role`, { role });
     return data;
   },
 

@@ -24,6 +24,7 @@ from ...models.models import (
     UserRole,
     UserSession,
 )
+from ...services import deposit_service
 from ...schemas.schemas import (
     ActivityLogResponse,
     MessageResponse,
@@ -243,6 +244,7 @@ async def report_deposit(
     """
     Report a wire transfer deposit (APPROVED or ADMIN users).
     Creates a pending deposit that backoffice will confirm when funds arrive.
+    Also transitions APPROVED users to FUNDING role.
     """
     # APPROVED and ADMIN can report deposits; others must complete KYC first
     if current_user.role not in (UserRole.APPROVED, UserRole.ADMIN):
@@ -260,29 +262,25 @@ async def report_deposit(
             detail="User must be associated with an entity to report deposits",
         )
 
-    # Generate bank reference
-    chars = string.ascii_uppercase + string.digits
-    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
-
-    # Create pending deposit (link to reporting user for backoffice display)
-    deposit = Deposit(
+    # Use deposit_service which handles role transition APPROVED → FUNDING
+    deposit = await deposit_service.announce_deposit(
+        db=db,
         entity_id=current_user.entity_id,
         user_id=current_user.id,
         reported_amount=Decimal(str(deposit_data.amount)),
         reported_currency=Currency(deposit_data.currency.value),
-        wire_reference=deposit_data.wire_reference,
-        bank_reference=bank_ref,
-        status=DepositStatus.PENDING,
-        reported_at=datetime.utcnow(),
+        source_bank=None,
+        source_iban=None,
+        source_swift=None,
+        client_notes=deposit_data.wire_reference,
     )
 
-    db.add(deposit)
     await db.commit()
 
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"reported. Reference: {bank_ref}. Awaiting confirmation."
+            f"reported. Reference: {deposit.bank_reference}. Awaiting confirmation."
         )
     )
 

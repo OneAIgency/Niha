@@ -65,6 +65,8 @@ function getRoleBadgeVariant(role: UserRole) {
   switch (role) {
     case 'ADMIN':
       return 'default';
+    case 'MM':
+      return 'info';
     case 'EUA':
       return 'success';
     case 'NDA':
@@ -134,7 +136,9 @@ export function UserDetailModal({
                   'w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl',
               user.role === 'ADMIN'
                 ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                : 'bg-gradient-to-br from-amber-500 to-amber-600'
+                : user.role === 'MM'
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                  : 'bg-gradient-to-br from-amber-500 to-amber-600'
                 )}>
                   {getInitials(user.first_name, user.last_name, user.email)}
                 </div>

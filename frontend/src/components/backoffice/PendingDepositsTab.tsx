@@ -109,7 +109,7 @@ export function PendingDepositsTab({
                         <h3 className="font-semibold text-navy-900 dark:text-white">
                           {deposit.entity_name}
                         </h3>
-                        <ClientStatusBadge role={deposit.user_role} />
+                        <ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>

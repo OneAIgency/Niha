@@ -6,7 +6,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 
 ### Core Trading Platform
 - **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects. Users in **NDA** or **KYC** roles can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes; all other protected routes redirect them to `/onboarding`. Login page offers ENTER (password) and NDA (request access); after NDA submit, a "Request Submitted" confirmation is shown, then after 5 seconds the content fades out and an ambient animation is displayed. Preview: `/login?preview=nda-success` shows the NDA success flow without submitting.
-- **User status flow (0010)** — Full onboarding flow **NDA → KYC → APPROVED → FUNDING → AML → CEA → CEA_SETTLE → SWAP → EUA_SETTLE → EUA**. Role-based redirects (`getPostLoginRedirect`), route guards (`OnboardingRoute`, `ApprovedRoute`, `FundedRoute`, `DashboardRoute`, etc.), and API protection (`get_onboarding_user`, `get_swap_user`, `get_approved_user`, `get_funded_user`) align with this flow. Details in **`app_truth.md`** §8.
+- **User status flow (0010)** — Full onboarding flow **NDA → KYC → APPROVED → FUNDING → AML → CEA → CEA_SETTLE → SWAP → EUA_SETTLE → EUA**. **MM (Market Maker)** is an admin-only role: created via Backoffice → Users → Create User (no contact request); MM has the same route and API access as EUA/ADMIN (dashboard, funding, cash market, swap). Role-based redirects (`getPostLoginRedirect`), route guards (`OnboardingRoute`, `ApprovedRoute`, `FundedRoute`, `DashboardRoute`, etc.), and API protection (`get_onboarding_user`, `get_swap_user`, `get_approved_user`, `get_funded_user`) align with this flow. Details in **`app_truth.md`** §8 and **`docs/ROLE_TRANSITIONS.md`**.
 - **User Profile Management** - View and manage personal information (admin-only editing)
 - **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
@@ -28,7 +28,7 @@ Comprehensive admin interface using the **same Layout** as the rest of the app (
 - **Accessibility** - ARIA labels, `aria-current`, keyboard navigation
 
 #### Pages:
-- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: list shows Entity and Name from each request (with "—" when missing); list and badge update in real time via WebSocket. Compact list rows with View modal (all contact request fields, NDA open-in-browser button), **Approve & Create User** (manual or invitation; creates entity + KYC user, sets request to KYC), Reject, Delete; IP lookup available from View modal
+- **Onboarding** (default) - Contact Requests, KYC Review, Deposits (SubSubHeader nav; route-based content). Contact Requests: list shows only **pending** requests (NDA/new); approved (KYC) or rejected disappear immediately. Entity and Name per row (with "—" when missing); list and badge update in real time via WebSocket. Compact list rows with View modal (all contact request fields, NDA open-in-browser button), **Approve & Create User** (manual or invitation; creates entity + KYC user, sets request to KYC), Reject, Delete; IP lookup available from View modal
 - **Market Makers** - Manage AI-powered market maker clients
 - **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
@@ -318,9 +318,11 @@ docker compose exec backend alembic current
 # Stamp as current (if tables exist)
 docker compose exec backend alembic stamp head
 
-# Run migrations (adds KYC, REJECTED, etc. to userrole/contactstatus)
+# Run migrations (adds KYC, REJECTED, MM, etc. to userrole/contactstatus)
 docker compose exec backend alembic upgrade head
 ```
+
+**MM (Market Maker) user shows as NDA or wrong role:** Ensure migrations are applied (`alembic upgrade head`); the `userrole` enum must include `MM`. Create new users with role **MM (Market Maker)** from Backoffice → Users → Create User, or edit an existing user and set role to MM in Edit User. Refresh the Users list.
 
 **Frontend proxy errors:**
 ```bash

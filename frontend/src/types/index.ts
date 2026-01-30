@@ -76,9 +76,10 @@ export interface SwapCalculation {
 }
 
 // User Types
-/** Full onboarding flow: NDA → KYC → … → EUA. Unified with contact request status where applicable. */
+/** Full onboarding flow: NDA → KYC → … → EUA. MM = Market Maker (admin-created only). */
 export type UserRole =
   | 'ADMIN'
+  | 'MM'
   | 'NDA'
   | 'REJECTED'
   | 'KYC'
@@ -229,7 +230,6 @@ export interface ContactRequest {
   contact_email: string;
   contact_name?: string;
   position?: string;
-  request_type?: 'join' | 'nda';
 }
 
 // NDA Request (for file upload)
@@ -241,24 +241,24 @@ export interface NDARequest {
   nda_file: File;
 }
 
-// Contact Request Response (from admin API)
+// Contact Request Response (from admin API). Client state: ONLY user_role (NDA, KYC, REJECTED).
 export interface ContactRequestResponse {
   id: string;
   entity_name: string;
   contact_email: string;
   contact_name?: string;
   position?: string;
-  request_type: 'join' | 'nda';
   nda_file_name?: string;
   submitter_ip?: string;
-  status: string;
+  /** Sole source for request state; values NDA, KYC, REJECTED. */
+  user_role: string;
   notes?: string;
   created_at: string;
 }
 
 // Contact Request update payload (admin API)
 export interface ContactRequestUpdate {
-  status?: string;
+  user_role?: string;
   notes?: string;
 }
 

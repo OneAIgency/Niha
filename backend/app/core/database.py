@@ -188,8 +188,7 @@ async def create_seed_users():
                 contact_email="test@test.ro",
                 contact_name="Test Contact",
                 position="Tester",
-                request_type="nda",
-                status=ContactStatus.NDA,
+                user_role=ContactStatus.NDA,
             )
             db.add(contact)
             logger.info("Created seed contact request: test@test.ro (NDA)")

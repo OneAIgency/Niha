@@ -8,75 +8,18 @@ import {
   Activity,
   Clock,
   ArrowUpDown,
+  AlertCircle,
 } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Subheader } from '../components/common';
+import { useCashMarket } from '../hooks/useCashMarket';
+import { cashMarketApi } from '../services/api';
 import type {
   OrderBookLevel,
   Order,
   OrderSide,
   CashMarketTrade,
 } from '../types';
-
-// =============================================================================
-// MOCK DATA - Professional Order Book
-// =============================================================================
-
-const generateMockOrderBook = () => {
-  const bids: OrderBookLevel[] = [
-    { price: 81.450, quantity: 150, order_count: 3, cumulative_quantity: 150 },
-    { price: 81.400, quantity: 280, order_count: 5, cumulative_quantity: 430 },
-    { price: 81.350, quantity: 420, order_count: 8, cumulative_quantity: 850 },
-    { price: 81.300, quantity: 185, order_count: 4, cumulative_quantity: 1035 },
-    { price: 81.250, quantity: 520, order_count: 12, cumulative_quantity: 1555 },
-    { price: 81.200, quantity: 340, order_count: 7, cumulative_quantity: 1895 },
-    { price: 81.150, quantity: 275, order_count: 6, cumulative_quantity: 2170 },
-    { price: 81.100, quantity: 190, order_count: 4, cumulative_quantity: 2360 },
-  ];
-
-  const asks: OrderBookLevel[] = [
-    { price: 81.500, quantity: 180, order_count: 4, cumulative_quantity: 180 },
-    { price: 81.550, quantity: 320, order_count: 6, cumulative_quantity: 500 },
-    { price: 81.600, quantity: 250, order_count: 5, cumulative_quantity: 750 },
-    { price: 81.650, quantity: 480, order_count: 9, cumulative_quantity: 1230 },
-    { price: 81.700, quantity: 195, order_count: 4, cumulative_quantity: 1425 },
-    { price: 81.750, quantity: 410, order_count: 8, cumulative_quantity: 1835 },
-    { price: 81.800, quantity: 290, order_count: 6, cumulative_quantity: 2125 },
-    { price: 81.850, quantity: 165, order_count: 3, cumulative_quantity: 2290 },
-  ];
-
-  return {
-    bids,
-    asks,
-    spread: asks[0].price - bids[0].price,
-    best_bid: bids[0].price,
-    best_ask: asks[0].price,
-    last_price: 81.48,
-    volume_24h: 12450,
-    change_24h: 1.24,
-    high_24h: 82.15,
-    low_24h: 80.20,
-  };
-};
-
-const mockRecentTrades: CashMarketTrade[] = [
-  { id: '1', certificate_type: 'CEA', price: 81.48, quantity: 25, side: 'BUY', executed_at: new Date(Date.now() - 15000).toISOString() },
-  { id: '2', certificate_type: 'CEA', price: 81.50, quantity: 50, side: 'SELL', executed_at: new Date(Date.now() - 42000).toISOString() },
-  { id: '3', certificate_type: 'CEA', price: 81.47, quantity: 30, side: 'BUY', executed_at: new Date(Date.now() - 68000).toISOString() },
-  { id: '4', certificate_type: 'CEA', price: 81.49, quantity: 15, side: 'BUY', executed_at: new Date(Date.now() - 95000).toISOString() },
-  { id: '5', certificate_type: 'CEA', price: 81.52, quantity: 80, side: 'SELL', executed_at: new Date(Date.now() - 130000).toISOString() },
-  { id: '6', certificate_type: 'CEA', price: 81.48, quantity: 45, side: 'BUY', executed_at: new Date(Date.now() - 165000).toISOString() },
-  { id: '7', certificate_type: 'CEA', price: 81.51, quantity: 60, side: 'SELL', executed_at: new Date(Date.now() - 200000).toISOString() },
-  { id: '8', certificate_type: 'CEA', price: 81.46, quantity: 35, side: 'BUY', executed_at: new Date(Date.now() - 240000).toISOString() },
-  { id: '9', certificate_type: 'CEA', price: 81.53, quantity: 90, side: 'SELL', executed_at: new Date(Date.now() - 280000).toISOString() },
-  { id: '10', certificate_type: 'CEA', price: 81.45, quantity: 20, side: 'BUY', executed_at: new Date(Date.now() - 320000).toISOString() },
-];
-
-const mockMyOrders: Order[] = [
-  { id: 'ORD-001', entity_id: 'e1', certificate_type: 'CEA', side: 'BUY', price: 81.30, quantity: 100, filled_quantity: 45, remaining_quantity: 55, status: 'PARTIALLY_FILLED', created_at: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'ORD-002', entity_id: 'e1', certificate_type: 'CEA', side: 'SELL', price: 81.80, quantity: 50, filled_quantity: 0, remaining_quantity: 50, status: 'OPEN', created_at: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'ORD-003', entity_id: 'e1', certificate_type: 'CEA', side: 'BUY', price: 81.15, quantity: 200, filled_quantity: 0, remaining_quantity: 200, status: 'OPEN', created_at: new Date(Date.now() - 10800000).toISOString() },
-];
 
 // =============================================================================
 // PROFESSIONAL ORDER BOOK COMPONENT
@@ -151,9 +94,9 @@ function ProfessionalOrderBook({
       </div>
 
       {/* Order Book Grid */}
-      <div className="grid grid-cols-2 flex-1 overflow-hidden">
+      <div className="grid grid-cols-2 flex-1 overflow-hidden min-h-0">
         {/* Bids */}
-        <div className="border-r border-navy-200 dark:border-navy-700 overflow-y-auto">
+        <div className="border-r border-navy-200 dark:border-navy-700 overflow-hidden flex flex-col">
           {bids.map((bid, idx) => {
             const depthPercent = maxCumulative > 0 ? (bid.cumulative_quantity / maxCumulative) * 100 : 0;
             return (
@@ -177,7 +120,7 @@ function ProfessionalOrderBook({
         </div>
 
         {/* Asks */}
-        <div className="overflow-y-auto">
+        <div className="overflow-hidden flex flex-col">
           {asks.map((ask, idx) => {
             const depthPercent = maxCumulative > 0 ? (ask.cumulative_quantity / maxCumulative) * 100 : 0;
             return (
@@ -584,9 +527,9 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
       </div>
 
       {/* Orders */}
-      <div className="overflow-y-auto max-h-64">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {displayOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-navy-400 dark:text-navy-500">
+          <div className="flex flex-col items-center justify-center h-20 text-navy-400 dark:text-navy-500">
             <span>No {activeTab === 'open' ? 'open' : 'historical'} orders</span>
           </div>
         ) : (
@@ -632,30 +575,50 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
 // =============================================================================
 
 export function CashMarketProPage() {
-  const [orderBook, setOrderBook] = useState(generateMockOrderBook());
-  const [recentTrades] = useState(mockRecentTrades);
-  const [myOrders, setMyOrders] = useState(mockMyOrders);
+  // Use real data from API with 5s polling
+  const {
+    orderBook,
+    recentTrades,
+    myOrders,
+    balances,
+    loading,
+    error,
+    refresh,
+  } = useCashMarket('CEA', 5000);
+
   const [selectedPrice, setSelectedPrice] = useState<number | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock user balances
-  const availableEur = 125430.00;
-  const availableCea = 2450;
+  // Real user balances from API
+  const availableEur = balances.eur;
+  const availableCea = balances.cea;
 
-  // Simulate data refresh
-  const refreshData = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setOrderBook(generateMockOrderBook());
-      setIsLoading(false);
-    }, 500);
+  // Handle order cancellation via API
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await cashMarketApi.cancelOrder(orderId);
+      await refresh(); // Refresh data after cancel
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+    }
   };
 
-  // Handle order cancellation
-  const handleCancelOrder = (orderId: string) => {
-    setMyOrders(prev => prev.map(o =>
-      o.id === orderId ? { ...o, status: 'CANCELLED' as const } : o
-    ));
+  // Handle order placement via API
+  const handlePlaceOrder = async (order: { side: OrderSide; price: number; quantity: number }) => {
+    setIsSubmitting(true);
+    try {
+      await cashMarketApi.placeOrder({
+        certificate_type: 'CEA',
+        side: order.side,
+        price: order.price,
+        quantity: order.quantity,
+      });
+      await refresh(); // Refresh data after order
+    } catch (err) {
+      console.error('Failed to place order:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Format helpers
@@ -673,8 +636,52 @@ export function CashMarketProPage() {
     return vol.toFixed(0);
   };
 
+  // Loading state
+  if (loading && !orderBook) {
+    return (
+      <div className="h-screen bg-navy-950 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-4" />
+          <p className="text-navy-400">Loading market data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !orderBook) {
+    return (
+      <div className="h-screen bg-navy-950 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={refresh}
+            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Safe defaults for when orderBook is null but we're past loading
+  const safeOrderBook = orderBook || {
+    bids: [],
+    asks: [],
+    spread: null,
+    best_bid: null,
+    best_ask: null,
+    last_price: null,
+    volume_24h: 0,
+    change_24h: 0,
+    high_24h: null,
+    low_24h: null,
+  };
+
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="h-screen bg-navy-950 flex flex-col overflow-hidden">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
@@ -687,7 +694,7 @@ export function CashMarketProPage() {
           <div className="flex items-center gap-2">
             <span className="text-navy-400">Last</span>
             <span className="font-bold font-mono text-white text-lg">
-              €{formatNumber(orderBook.last_price, 3)}
+              €{formatNumber(safeOrderBook.last_price, 3)}
             </span>
           </div>
 
@@ -695,34 +702,34 @@ export function CashMarketProPage() {
           <div className="flex items-center gap-1">
             <span className="text-navy-400">24h</span>
             <span className={`flex items-center font-semibold ${
-              orderBook.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+              safeOrderBook.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'
             }`}>
-              {orderBook.change_24h >= 0 ? (
+              {safeOrderBook.change_24h >= 0 ? (
                 <TrendingUp className="w-4 h-4 mr-1" />
               ) : (
                 <TrendingDown className="w-4 h-4 mr-1" />
               )}
-              {orderBook.change_24h >= 0 ? '+' : ''}{orderBook.change_24h.toFixed(2)}%
+              {safeOrderBook.change_24h >= 0 ? '+' : ''}{safeOrderBook.change_24h.toFixed(2)}%
             </span>
           </div>
 
           {/* High */}
           <div>
             <span className="text-navy-400 mr-1">High</span>
-            <span className="font-mono text-emerald-400">€{formatNumber(orderBook.high_24h, 2)}</span>
+            <span className="font-mono text-emerald-400">€{formatNumber(safeOrderBook.high_24h, 2)}</span>
           </div>
 
           {/* Low */}
           <div>
             <span className="text-navy-400 mr-1">Low</span>
-            <span className="font-mono text-red-400">€{formatNumber(orderBook.low_24h, 2)}</span>
+            <span className="font-mono text-red-400">€{formatNumber(safeOrderBook.low_24h, 2)}</span>
           </div>
 
           {/* Volume */}
           <div>
             <span className="text-navy-400 mr-1">Vol</span>
             <span className="font-semibold text-white font-mono">
-              {formatVolume(orderBook.volume_24h)}
+              {formatVolume(safeOrderBook.volume_24h)}
             </span>
           </div>
 
@@ -730,45 +737,45 @@ export function CashMarketProPage() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={refreshData}
+            onClick={refresh}
             className="p-2 rounded-lg hover:bg-navy-700 text-navy-400"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </motion.button>
         </div>
       </Subheader>
 
       {/* Main Content */}
-      <div className="p-4">
-        <div className="grid grid-cols-12 gap-4">
+      <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-0">
+        <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
           {/* Left Column: Order Book (wider – prices + volumes need space) */}
-          <div className="col-span-12 lg:col-span-6 xl:col-span-6">
-            <div className="h-[520px]">
+          <div className="col-span-12 lg:col-span-6 xl:col-span-6 flex flex-col min-h-0">
+            <div className="flex-1 min-h-0">
               <ProfessionalOrderBook
-                bids={orderBook.bids}
-                asks={orderBook.asks}
-                spread={orderBook.spread}
-                bestBid={orderBook.best_bid}
-                bestAsk={orderBook.best_ask}
+                bids={safeOrderBook.bids}
+                asks={safeOrderBook.asks}
+                spread={safeOrderBook.spread}
+                bestBid={safeOrderBook.best_bid}
+                bestAsk={safeOrderBook.best_ask}
                 onPriceClick={setSelectedPrice}
               />
             </div>
           </div>
 
           {/* Middle Column: Recent Trades + Depth Chart (narrower – PRICE/SIZE/TIME fit) */}
-          <div className="col-span-12 lg:col-span-3 xl:col-span-3 space-y-4">
-            <div className="h-[340px]">
+          <div className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col min-h-0 gap-2">
+            <div className="flex-1 min-h-0">
               <RecentTrades trades={recentTrades} />
             </div>
-            <DepthChartMini bids={orderBook.bids} asks={orderBook.asks} />
+            <DepthChartMini bids={safeOrderBook.bids} asks={safeOrderBook.asks} />
           </div>
 
           {/* Right Column: Trade Panel */}
-          <div className="col-span-12 lg:col-span-3">
+          <div className="col-span-12 lg:col-span-3 flex flex-col min-h-0">
             <TradePanelPro
-              bestBid={orderBook.best_bid}
-              bestAsk={orderBook.best_ask}
-              lastPrice={orderBook.last_price}
+              bestBid={safeOrderBook.best_bid}
+              bestAsk={safeOrderBook.best_ask}
+              lastPrice={safeOrderBook.last_price}
               selectedPrice={selectedPrice}
               availableEur={availableEur}
               availableCea={availableCea}
@@ -777,7 +784,7 @@ export function CashMarketProPage() {
         </div>
 
         {/* Bottom: My Orders */}
-        <div className="mt-4">
+        <div className="mt-2 h-44 flex-shrink-0">
           <MyOrdersPro
             orders={myOrders}
             onCancelOrder={handleCancelOrder}

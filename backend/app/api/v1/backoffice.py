@@ -266,40 +266,6 @@ async def reject_user(
     return MessageResponse(message=f"User {user.email} has been rejected")
 
 
-@router.put("/users/{user_id}/fund", response_model=MessageResponse)
-async def fund_user(
-    user_id: str,
-    admin_user: User = Depends(get_admin_user),  # noqa: B008
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-):
-    """
-    Manually set user to FUNDING (e.g. after confirming first deposit).
-    Normally FUNDING is set automatically when user announces deposit.
-    Admin only.
-    """
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user.role != UserRole.APPROVED:
-        raise HTTPException(
-            status_code=400,
-            detail=f"User must be APPROVED to set FUNDING (current role: {user.role.value})",
-        )
-
-    user.role = UserRole.FUNDING
-    await db.commit()
-
-    try:
-        await email_service.send_account_funded(user.email, user.first_name)
-    except Exception:
-        pass
-
-    return MessageResponse(message=f"User {user.email} has been marked as funding")
-
-
 @router.get("/kyc-documents")
 async def get_all_kyc_documents(
     user_id: Optional[str] = None,
@@ -701,11 +667,10 @@ async def create_deposit(
     entity.balance_currency = deposit_currency
     entity.total_deposited = (entity.total_deposited or Decimal("0")) + deposit_amount
 
-    # Find users for this entity and upgrade to FUNDED if APPROVED
+    # Find users for this entity (for notification only; no role transitions on direct create)
     users_result = await db.execute(select(User).where(User.entity_id == entity.id))
     users = users_result.scalars().all()
 
-    # Role transitions defined later (no APPROVED->FUNDED for now)
     await db.commit()
 
     # Send notification email to entity users
@@ -718,7 +683,7 @@ async def create_deposit(
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"confirmed for {entity.name}. Users upgraded to FUNDED."
+            f"confirmed for {entity.name}."
         )
     )
 
@@ -784,8 +749,7 @@ async def confirm_pending_deposit(
 
     Use when the client has announced via POST /deposits/announce and the
     deposit is PENDING. Updates entity balance and transitions FUNDING → AML
-    (0010 §4.2). Alternative to POST /deposits/{id}/confirm (deposit_service,
-    which uses AML hold before clear). Admin only.
+    (client waits for AML investigation). Admin only.
     """
     # Get deposit with row lock
     result = await db.execute(
@@ -837,7 +801,7 @@ async def confirm_pending_deposit(
     entity.balance_currency = confirmed_currency
     entity.total_deposited = (entity.total_deposited or Decimal("0")) + confirmed_amount
 
-    # Role transition (0010 §4.2): FUNDING → AML when backoffice confirms transfer
+    # Role transition: FUNDING → AML when backoffice confirms transfer (client waits for AML)
     users_result = await db.execute(
         select(User).where(
             User.entity_id == entity.id,

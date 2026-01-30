@@ -22,6 +22,7 @@ import {
 import { adminApi, backofficeApi } from '../services/api';
 import { cn } from '../utils';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
+import { isPendingContactRequest } from '../utils/contactRequest';
 import { logger } from '../utils/logger';
 import type {
   ContactRequest,
@@ -53,7 +54,7 @@ type OnboardingSubpage = 'requests' | 'kyc' | 'deposits';
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
-  { path: 'deposits', label: 'Deposits', icon: Banknote },
+  { path: 'deposits', label: 'Deposits/AML', icon: Banknote },
 ];
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
@@ -75,19 +76,22 @@ export function BackofficeOnboardingPage() {
     refresh: refreshContactRequests,
   } = useBackofficeRealtime();
 
-  const contactRequests: ContactRequest[] = realtimeContactRequests.map(r => ({
+  const allMapped: ContactRequest[] = realtimeContactRequests.map(r => ({
     id: r.id,
     entity_name: r.entity_name,
     contact_email: r.contact_email,
     contact_name: r.contact_name,
     position: r.position || '',
-    request_type: r.request_type,
     nda_file_name: r.nda_file_name,
     submitter_ip: r.submitter_ip,
-    status: r.status,
+    user_role: ('user_role' in r ? r.user_role : (r as { status?: string }).status) ?? 'new',
     notes: r.notes,
     created_at: r.created_at,
   }));
+  // Only show pending requests (NDA, new); KYC and REJECTED disappear immediately after approval
+  const contactRequests: ContactRequest[] = allMapped.filter(r =>
+    isPendingContactRequest(r.user_role)
+  );
   const contactRequestsCount = contactRequests.length;
 
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
@@ -129,7 +133,6 @@ export function BackofficeOnboardingPage() {
         })));
       } else if (activeSubpage === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
-        // API response is transformed to camelCase by axios interceptor
         setPendingDeposits(deposits.map((d: PendingDepositResponse & Record<string, unknown>): PendingDeposit => ({
           id: d.id,
           entity_id: (d.entity_id ?? (d as Record<string, unknown>).entityId) as string,
@@ -211,7 +214,7 @@ export function BackofficeOnboardingPage() {
   const handleRejectRequest = async (requestId: string) => {
     setActionLoading(`reject-${requestId}`);
     try {
-      await adminApi.updateContactRequest(requestId, { status: 'REJECTED' });
+      await adminApi.updateContactRequest(requestId, { user_role: 'REJECTED' });
     } catch (err) {
       logger.error('Failed to reject request', err);
     } finally {

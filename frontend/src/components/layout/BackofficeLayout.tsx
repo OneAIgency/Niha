@@ -7,13 +7,12 @@ import {
   Bot,
   ShoppingCart,
   Zap,
-  Wallet,
   UserPlus,
 } from 'lucide-react';
 import { Subheader, SubSubHeader, SubheaderNavButton } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/deposits' | '/backoffice/logging' | '/users';
+type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/logging' | '/users';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -87,12 +86,6 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-amber-500',
     description: 'View comprehensive audit trail',
   },
-  '/backoffice/deposits': {
-    icon: Wallet,
-    iconBg: 'bg-emerald-500/20',
-    iconColor: 'text-emerald-500',
-    description: 'Manage deposits and AML checks',
-  },
   '/users': {
     icon: Users,
     iconBg: 'bg-blue-500/20',
@@ -106,7 +99,6 @@ const BACKOFFICE_NAV = [
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
   { to: '/backoffice/market-orders', label: 'Market Orders', icon: ShoppingCart },
   { to: '/backoffice/liquidity', label: 'Liquidity', icon: Zap },
-  { to: '/backoffice/deposits', label: 'Deposits', icon: Wallet },
   { to: '/backoffice/logging', label: 'Audit Logging', icon: Activity },
   { to: '/users', label: 'Users', icon: Users },
 ] as const;

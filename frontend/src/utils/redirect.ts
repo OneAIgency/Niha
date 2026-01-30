@@ -17,11 +17,6 @@ import type { User } from '../types';
  * ```
  */
 export function getPostLoginRedirect(user: User): string {
-  // Special case (pre-existing)
-  if (user.email === 'eu@eu.ro') {
-    return '/onboarding';
-  }
-
   // Rejected: no access
   if (user.role === 'REJECTED') {
     return '/login';
@@ -47,6 +42,6 @@ export function getPostLoginRedirect(user: User): string {
     return '/swap';
   }
 
-  // EUA, ADMIN: full access → dashboard
+  // MM (Market Maker), EUA, ADMIN: full access → dashboard
   return '/dashboard';
 }

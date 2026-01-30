@@ -50,14 +50,13 @@ async def create_contact_request(
     Submit a contact request to join the platform.
     An agent will follow up with the entity.
     """
-    # Create contact request
+    # Create contact request (user_role = NDA = first step in onboarding flow)
     contact = ContactRequest(
         entity_name=request.entity_name,
         contact_email=request.contact_email.lower(),
         contact_name=request.contact_name,
         position=request.position,
-        request_type=request.request_type,
-        status=ContactStatus.NDA,
+        user_role=ContactStatus.NDA,
     )
 
     try:
@@ -79,10 +78,9 @@ async def create_contact_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "request_type": contact.request_type or "join",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
-                "status": contact.status.value if contact.status else "new",
+                "user_role": contact.user_role.value if contact.user_role else "new",
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -132,18 +130,17 @@ async def create_nda_request(
     if len(content) > MAX_NDA_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-    # Create contact request with NDA - store PDF binary in database
+    # Create contact request with NDA - store PDF binary in database (user_role = NDA)
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
         contact_name=contact_name,
         position=position,
-        request_type="nda",
         nda_file_name=file.filename,
         nda_file_data=content,  # Store binary in database
         nda_file_mime_type="application/pdf",
         submitter_ip=submitter_ip,
-        status=ContactStatus.NDA,
+        user_role=ContactStatus.NDA,
     )
 
     try:
@@ -165,10 +162,9 @@ async def create_nda_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "request_type": "nda",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
-                "status": contact.status.value if contact.status else "new",
+                "user_role": contact.user_role.value if contact.user_role else "new",
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -189,7 +185,7 @@ async def create_nda_request(
 @router.get("/status/{email}", response_model=ContactRequestResponse)
 async def check_contact_status(email: str, db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
-    Check the status of a contact request by email.
+    Check the user_role of a contact request by email.
     """
     from sqlalchemy import select
 

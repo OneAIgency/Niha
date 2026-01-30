@@ -35,8 +35,9 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -337,7 +338,6 @@ class ContactRequest(Base):
     contact_email = Column(String(255), nullable=False)
     contact_name = Column(String(255), nullable=True)  # Person's name
     position = Column(String(100))
-    request_type = Column(String(50), default="join")  # 'join' or 'nda'
     nda_file_path = Column(
         String(500), nullable=True
     )  # Deprecated - kept for migration
@@ -345,7 +345,7 @@ class ContactRequest(Base):
     nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
-    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
+    user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

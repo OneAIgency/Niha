@@ -16,8 +16,9 @@ class Jurisdiction(str, Enum):
 
 
 class UserRole(str, Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -102,19 +103,19 @@ class ContactRequestCreate(BaseModel):
     contact_email: EmailStr
     contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
-    request_type: str = Field(default="join")  # 'join' or 'nda'
 
 
 class ContactRequestResponse(BaseModel):
+    """Contact request; client/request state is ONLY user_role (NDA, KYC, REJECTED). Do not use request_type."""
+
     id: UUID
     entity_name: str
     contact_email: str
     contact_name: Optional[str]
     position: Optional[str]
-    request_type: str
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None
-    status: str
+    user_role: str  # Sole source for request state; values NDA, KYC, REJECTED
     notes: Optional[str] = None
     created_at: datetime
 
@@ -335,18 +336,18 @@ VALID_CONTACT_STATUS = frozenset({"NDA", "REJECTED", "KYC"})
 
 
 class ContactRequestUpdate(BaseModel):
-    status: Optional[str] = None
+    user_role: Optional[str] = None
     notes: Optional[str] = None
     agent_id: Optional[UUID] = None
 
-    @field_validator("status")
+    @field_validator("user_role")
     @classmethod
-    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+    def validate_user_role(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
         if v not in VALID_CONTACT_STATUS:
             raise ValueError(
-                f"status must be one of {sorted(VALID_CONTACT_STATUS)}"
+                f"user_role must be one of {sorted(VALID_CONTACT_STATUS)}"
             )
         return v
 

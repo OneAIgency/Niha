@@ -622,7 +622,7 @@ Highlighting the button for the current page uses the same logic as Subheader (a
 
 #### Client status badge
 
-Use **`ClientStatusBadge`** (`components/common`) for deposit/client role display (Onboarding Deposits tab, AML tab, Backoffice Deposits page). Single source of truth: `user_role` from API (FUNDING when user announced transfer). Uses `clientStatusVariant` (`utils/roleBadge`) for role→Badge variant mapping; design tokens only.
+Use **`ClientStatusBadge`** (`components/common`) for deposit/client role display (Onboarding Deposits tab, AML tab, Backoffice Deposits page, Users list). Single source of truth: `user_role` from API (FUNDING when user announced transfer). Uses `clientStatusVariant` (`utils/roleBadge`) for role→Badge variant mapping; design tokens only. Supported roles include onboarding flow (NDA, KYC, … EUA), **MM** (Market Maker; maps to `info` variant), and **ADMIN**.
 
 ```tsx
 import { ClientStatusBadge } from '@/components/common';

@@ -18,9 +18,10 @@ describe('clientStatusVariant', () => {
     expect(clientStatusVariant('FUNDING')).toBe('warning');
   });
 
-  it('returns info for APPROVED and AML', () => {
+  it('returns info for APPROVED, AML and MM', () => {
     expect(clientStatusVariant('APPROVED')).toBe('info');
     expect(clientStatusVariant('AML')).toBe('info');
+    expect(clientStatusVariant('MM')).toBe('info');
   });
 
   it('returns warning for KYC and NDA', () => {
@@ -28,9 +29,12 @@ describe('clientStatusVariant', () => {
     expect(clientStatusVariant('NDA')).toBe('warning');
   });
 
+  it('returns success for EUA', () => {
+    expect(clientStatusVariant('EUA')).toBe('success');
+  });
+
   it('returns default for unknown roles', () => {
     expect(clientStatusVariant('ADMIN')).toBe('default');
-    expect(clientStatusVariant('EUA')).toBe('default');
     expect(clientStatusVariant('OTHER')).toBe('default');
   });
 });

@@ -7,8 +7,6 @@ import {
   Edit,
   Building2,
   Clock,
-  ChevronDown,
-  Check,
   RefreshCw,
   Trash2,
   Eye,
@@ -48,9 +46,7 @@ export function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all' | 'DISABLED'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithEntity | null>(null);
-  const [showRoleDropdown, setShowRoleDropdown] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 0 });
-  const [savingRole, setSavingRole] = useState<string | null>(null);
   const [savingUser, setSavingUser] = useState(false);
 
   // Create user form state
@@ -151,21 +147,6 @@ export function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
-    setSavingRole(userId);
-    try {
-      await adminApi.changeUserRole(userId, newRole);
-      setUsers(users.map(u =>
-        u.id === userId ? { ...u, role: newRole } : u
-      ));
-      setShowRoleDropdown(null);
-    } catch (error) {
-      console.error('Failed to change role:', error);
-    } finally {
-      setSavingRole(null);
-    }
-  };
-
   const handleCreateUser = async () => {
     if (!newUser.email || !newUser.first_name || !newUser.last_name) return;
     if (!useInvitation && !newUser.password) return;
@@ -178,6 +159,7 @@ export function UsersPage() {
         last_name: string;
         role: UserRole;
         password?: string;
+        position?: string;
       } = {
         email: newUser.email,
         first_name: newUser.first_name,
@@ -187,6 +169,9 @@ export function UsersPage() {
 
       if (!useInvitation && newUser.password) {
         userData.password = newUser.password;
+      }
+      if (newUser.position?.trim()) {
+        userData.position = newUser.position.trim();
       }
 
       const created = await adminApi.createUser(userData);
@@ -206,12 +191,17 @@ export function UsersPage() {
 
     setSavingUser(true);
     try {
-      const updated = await adminApi.updateUser(editingUser.id, {
+      const payload: import('../types').AdminUserUpdate = {
         first_name: editForm.first_name,
         last_name: editForm.last_name,
         position: editForm.position,
-        role: editForm.role,
-      });
+        is_active: editForm.is_active,
+      };
+      // MM users: admin can change role; backend allows role update when current or new role is MM
+      if (editingUser.role === 'MM' || editForm.role === 'MM') {
+        payload.role = editForm.role;
+      }
+      const updated = await adminApi.updateUserFull(editingUser.id, payload);
       setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...updated } : u));
       setEditingUser(null);
     } catch (error) {
@@ -344,17 +334,27 @@ export function UsersPage() {
     switch (role) {
       case 'ADMIN':
         return 'default';
+      case 'MM':
+        return 'info';
+      case 'EUA':
+        return 'success';
       case 'NDA':
+      case 'KYC':
+      case 'APPROVED':
+      case 'FUNDING':
+      case 'AML':
+      case 'CEA':
+      case 'CEA_SETTLE':
+      case 'SWAP':
+      case 'EUA_SETTLE':
         return 'warning';
+      case 'REJECTED':
       case 'DISABLED':
         return 'danger';
       default:
         return 'default';
     }
   };
-
-  /** All user roles for filter and role dropdown (same order as backend UserRole) */
-  const USER_ROLES: UserRole[] = ['ADMIN', 'NDA'];
 
   const getInitials = (firstName?: string, lastName?: string, email?: string) => {
     if (firstName && lastName) {
@@ -403,7 +403,18 @@ export function UsersPage() {
             >
               <option value="all">All Roles</option>
               <option value="ADMIN">Admin</option>
+              <option value="MM">MM (Market Maker)</option>
               <option value="NDA">NDA</option>
+              <option value="KYC">KYC</option>
+              <option value="APPROVED">Approved</option>
+              <option value="FUNDING">Funding</option>
+              <option value="AML">AML</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="CEA">CEA</option>
+              <option value="CEA_SETTLE">CEA Settle</option>
+              <option value="SWAP">Swap</option>
+              <option value="EUA_SETTLE">EUA Settle</option>
+              <option value="EUA">EUA</option>
               <option value="DISABLED">Disabled</option>
             </select>
             <Button variant="ghost" onClick={loadUsers} disabled={loading}>
@@ -455,7 +466,9 @@ export function UsersPage() {
                           'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm',
                           user.role === 'ADMIN'
                             ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                            : 'bg-gradient-to-br from-amber-500 to-amber-600'
+                            : user.role === 'MM'
+                              ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                              : 'bg-gradient-to-br from-amber-500 to-amber-600'
                         )}
                       >
                         {getInitials(user.first_name, user.last_name, user.email)}
@@ -485,43 +498,9 @@ export function UsersPage() {
                           DISABLED
                         </Badge>
                       ) : (
-                        <>
-                          <button
-                            onClick={() => setShowRoleDropdown(showRoleDropdown === user.id ? null : user.id)}
-                            className="flex items-center gap-1"
-                            disabled={savingRole === user.id}
-                          >
-                            {savingRole === user.id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
-                            ) : (
-                              <>
-                                <Badge variant={getRoleBadgeVariant(user.role)}>
-                                  {user.role.toUpperCase()}
-                                </Badge>
-                                <ChevronDown className="w-3 h-3 text-navy-400" />
-                              </>
-                            )}
-                          </button>
-                          {showRoleDropdown === user.id && (
-                            <div className="absolute z-10 mt-1 w-36 bg-white dark:bg-navy-800 rounded-lg shadow-xl border border-navy-100 dark:border-navy-700 overflow-hidden">
-                              {USER_ROLES.map((role) => (
-                                <button
-                                  key={role}
-                                  onClick={() => handleRoleChange(user.id, role)}
-                                  className={cn(
-                                    'w-full px-3 py-2 text-left text-sm hover:bg-navy-50 dark:hover:bg-navy-700 flex items-center justify-between',
-                                    user.role === role && 'bg-navy-50 dark:bg-navy-700'
-                                  )}
-                                >
-                                  <Badge variant={getRoleBadgeVariant(role)} className="text-xs">
-                                    {role.toUpperCase()}
-                                  </Badge>
-                                  {user.role === role && <Check className="w-3 h-3 text-emerald-500" />}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </>
+                        <Badge variant={getRoleBadgeVariant(user.role)}>
+                          {(user.role ?? (user as Record<string, unknown>).role as string)?.toUpperCase() ?? '—'}
+                        </Badge>
                       )}
                     </div>
                   </td>

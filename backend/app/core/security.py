@@ -268,11 +268,12 @@ async def get_admin_user(current_user=Depends(get_current_user)):  # noqa: B008
 
 
 async def get_funded_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires funded flow roles (CEA and beyond) or admin."""
+    """Dependency that requires funded flow roles (CEA and beyond), admin, or MM (Market Maker)."""
     from ..models.models import UserRole
 
     funded_roles = {
         UserRole.ADMIN,
+        UserRole.MM,
         UserRole.CEA,
         UserRole.CEA_SETTLE,
         UserRole.SWAP,
@@ -287,11 +288,12 @@ async def get_funded_user(current_user=Depends(get_current_user)):  # noqa: B008
 
 
 async def get_approved_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires approved or later (funding page, deposits) or admin."""
+    """Dependency that requires approved or later (funding page, deposits), admin, or MM (Market Maker)."""
     from ..models.models import UserRole
 
     funding_access_roles = {
         UserRole.ADMIN,
+        UserRole.MM,
         UserRole.APPROVED,
         UserRole.FUNDING,
         UserRole.AML,
@@ -309,11 +311,12 @@ async def get_approved_user(current_user=Depends(get_current_user)):  # noqa: B0
 
 
 async def get_swap_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires swap access (SWAP, EUA_SETTLE, EUA) or admin. 0010 plan §8."""
+    """Dependency that requires swap access (SWAP, EUA_SETTLE, EUA), admin, or MM (Market Maker). 0010 plan §8."""
     from ..models.models import UserRole
 
     swap_roles = {
         UserRole.ADMIN,
+        UserRole.MM,
         UserRole.SWAP,
         UserRole.EUA_SETTLE,
         UserRole.EUA,

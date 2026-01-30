@@ -28,6 +28,7 @@ from ...models.models import (
     KYCStatus,
     MailConfig,
     MailProvider,
+    MarketMakerClient,
     ScrapeLibrary,
     ScrapingSource,
     SwapRequest,
@@ -629,13 +630,31 @@ async def get_users(
     Get users with optional filters.
     Admin only. By default returns only active users. Use role=DISABLED to list
     deactivated users (soft-deleted; kept for ticketing, transactions, etc.).
+    Excludes Market Maker users (they have their own management page).
     """
+    # Subquery to find user IDs that are Market Makers
+    mm_user_ids = select(MarketMakerClient.user_id).where(
+        MarketMakerClient.user_id.isnot(None)
+    ).scalar_subquery()
+
     if role == "DISABLED":
-        query = select(User).where(User.is_active.is_(False)).order_by(User.created_at.desc())
-        count_query = select(func.count()).select_from(User).where(User.is_active.is_(False))
+        query = select(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        )
     else:
-        query = select(User).where(User.is_active.is_(True)).order_by(User.created_at.desc())
-        count_query = select(func.count()).select_from(User).where(User.is_active.is_(True))
+        query = select(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        )
         if role:
             query = query.where(User.role == UserRole(role))
             count_query = count_query.where(User.role == UserRole(role))

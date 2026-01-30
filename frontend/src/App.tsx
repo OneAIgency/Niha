@@ -68,7 +68,6 @@ const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.Ma
 const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
 const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
-const BackofficeDepositsPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeDepositsPage })));
 const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
 
 // Loading fallback component
@@ -211,17 +210,17 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 /** Funding page: APPROVED, FUNDING, AML, ADMIN. */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'ADMIN']}>
+    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
 }
 
-/** Cash market / funded flow: CEA and beyond, or ADMIN. */
+/** Cash market / funded flow: CEA and beyond, or ADMIN, or MM. */
 function FundedRoute({ children }: { children: React.ReactNode }) {
   return (
     <RoleProtectedRoute
-      allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN']}
+      allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}
       redirectTo={undefined}
     >
       {children}
@@ -229,10 +228,10 @@ function FundedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Dashboard: EUA (full access) or ADMIN. */
+/** Dashboard: EUA (full access), ADMIN, or MM. */
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['EUA', 'ADMIN']}>
+    <RoleProtectedRoute allowedRoles={['EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -385,7 +384,7 @@ function App() {
             <Route
               path="/swap"
               element={
-                <RoleProtectedRoute allowedRoles={['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN']}>
+                <RoleProtectedRoute allowedRoles={['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
                 </RoleProtectedRoute>
               }
@@ -518,16 +517,6 @@ function App() {
                 <AdminRoute>
                   <BackofficeErrorBoundary>
                     <CreateLiquidityPage />
-                  </BackofficeErrorBoundary>
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/backoffice/deposits"
-              element={
-                <AdminRoute>
-                  <BackofficeErrorBoundary>
-                    <BackofficeDepositsPage />
                   </BackofficeErrorBoundary>
                 </AdminRoute>
               }

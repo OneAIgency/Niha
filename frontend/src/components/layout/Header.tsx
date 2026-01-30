@@ -61,10 +61,10 @@ export function Header() {
     if (!role) return [];
 
     const links: { href: string; label: string }[] = [];
-    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN'].includes(role);
-    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
-    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
-    const canDashboard = ['EUA', 'ADMIN'].includes(role);
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN', 'MM'].includes(role);
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    const canDashboard = ['EUA', 'ADMIN', 'MM'].includes(role);
 
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard' });
     if (canFunding) links.push({ href: '/funding', label: 'Funding' });

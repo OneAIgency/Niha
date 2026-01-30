@@ -7,7 +7,7 @@
 
 ## 1. Summary of implementation quality
 
-The feature is **correctly implemented** and matches the plan. The approve → create-user flow works end-to-end: Approve on NDA/new requests opens the modal, manual vs invitation modes are supported, `POST /admin/users/create-from-request` creates entity + user and sets `contact_request.status = KYC`, invitation email is sent when applicable, and `request_updated` / `user_created` are broadcast. Error handling uses `handle_database_error` and standardized API errors; the frontend extracts `message`, `detail`, 422 `msg`, and `detail.error` + `details.hint` (with hint truncated ~150 chars) as specified. The realtime hook consumes `request_updated` and updates the contact-requests list.
+The feature is **correctly implemented** and matches the plan. The approve → create-user flow works end-to-end: Approve on NDA/new requests opens the modal, manual vs invitation modes are supported, `POST /admin/users/create-from-request` creates entity + user and sets `contact_request.user_role = KYC`, invitation email is sent when applicable, and `request_updated` / `user_created` are broadcast. Error handling uses `handle_database_error` and standardized API errors; the frontend extracts `message`, `detail`, 422 `msg`, and `detail.error` + `details.hint` (with hint truncated ~150 chars) as specified. The realtime hook consumes `request_updated` and updates the contact-requests list.
 
 **Strengths:**
 
@@ -64,7 +64,7 @@ The feature is **correctly implemented** and matches the plan. The approve → c
 | Modal "Approve & Create User" with `contactRequest` | Met |
 | `POST /admin/users/create-from-request` (Query params) | Met |
 | Manual vs invitation; email, first/last, position; password ≥8 manual | Met |
-| Entity create → user KYC → `contact_request.status = KYC` → commit | Met |
+| Entity create → user KYC → `contact_request.user_role = KYC` → commit | Met |
 | Invitation email after commit; log on failure, no rollback | Met |
 | Broadcast `request_updated` and `user_created` | Met |
 | `handle_database_error` + HTTPException rollback | Met |

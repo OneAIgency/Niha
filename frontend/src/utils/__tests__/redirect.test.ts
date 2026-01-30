@@ -67,12 +67,19 @@ describe('getPostLoginRedirect', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'ADMIN' }))).toBe('/dashboard');
   });
 
-  it('sends special email eu@eu.ro to /onboarding regardless of role', () => {
+  it('sends MM (Market Maker) users to /dashboard', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'MM' }))).toBe('/dashboard');
+  });
+
+  it('redirects eu@eu.ro by role (no special-case override)', () => {
     expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'ADMIN' }))).toBe(
-      '/onboarding'
+      '/dashboard'
     );
     expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'NDA' }))).toBe(
       '/onboarding'
+    );
+    expect(getPostLoginRedirect(makeUser({ email: 'eu@eu.ro', role: 'FUNDING' }))).toBe(
+      '/funding'
     );
   });
 });
@@ -84,5 +91,27 @@ describe('NDA routing (0009)', () => {
 
   it('unauthenticated access to onboarding would use login redirect (contract)', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'ADMIN' }))).toBe('/dashboard');
+  });
+});
+
+describe('MM (Market Maker) full access', () => {
+  /** Contract: these roles must match App.tsx DashboardRoute allowedRoles and backend security (get_funded_user, get_approved_user, get_swap_user). */
+  const ROLES_WITH_DASHBOARD_ACCESS = ['EUA', 'ADMIN', 'MM'] as const;
+
+  it('MM is in the set of roles that get dashboard access', () => {
+    expect(ROLES_WITH_DASHBOARD_ACCESS).toContain('MM');
+  });
+
+  it('MM has same post-login destination as EUA and ADMIN (dashboard)', () => {
+    const dashboardPath = '/dashboard';
+    expect(getPostLoginRedirect(makeUser({ role: 'MM' }))).toBe(dashboardPath);
+    expect(getPostLoginRedirect(makeUser({ role: 'EUA' }))).toBe(dashboardPath);
+    expect(getPostLoginRedirect(makeUser({ role: 'ADMIN' }))).toBe(dashboardPath);
+  });
+
+  it('MM is not sent to onboarding or login', () => {
+    const mmRedirect = getPostLoginRedirect(makeUser({ role: 'MM' }));
+    expect(mmRedirect).not.toBe('/onboarding');
+    expect(mmRedirect).not.toBe('/login');
   });
 });

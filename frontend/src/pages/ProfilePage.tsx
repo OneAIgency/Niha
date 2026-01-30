@@ -219,6 +219,8 @@ export function ProfilePage() {
     switch (role) {
       case 'ADMIN':
         return 'default';
+      case 'MM':
+        return 'info';
       case 'NDA':
         return 'warning';
       default:

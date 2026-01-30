@@ -60,7 +60,7 @@ When creating or reviewing components, verify:
 - Proper ARIA attributes
 - Responsive on mobile, tablet, and desktop
 - Handles loading, error, and empty states
-- **Client status badge:** Use `ClientStatusBadge` (or `clientStatusVariant` from `utils/roleBadge`) for deposit/client role display in cards and tables; design tokens only. See `frontend/docs/DESIGN_SYSTEM.md` § Badges → Client status badge.
+- **Client status badge:** Use `ClientStatusBadge` (or `clientStatusVariant` from `utils/roleBadge`) for deposit/client role display in cards and tables; design tokens only. See `frontend/docs/DESIGN_SYSTEM.md` § Badges → Client status badge. **Client state rule:** use ONLY `user.role` (users) or `request.user_role` (contact requests); never `request_type` or `request.status`. See `app_truth.md` §8.
 
 **Backoffice nav levels:** Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` from `frontend/src/styles/design-tokens.css`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; customize via CSS variables in the same file. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8–9.
 

@@ -20,7 +20,6 @@ export { MarketMakersPage } from './MarketMakersPage';
 export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';
 export { CreateLiquidityPage } from './CreateLiquidityPage';
-export { BackofficeDepositsPage } from './BackofficeDepositsPage';
 
 // Onboarding sub-pages
 export {

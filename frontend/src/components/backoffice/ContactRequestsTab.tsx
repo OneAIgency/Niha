@@ -30,6 +30,7 @@ import { motion } from 'framer-motion';
 import { Users, Eye, Trash2 } from 'lucide-react';
 import { Button, Badge } from '../common';
 import { Typography } from '../common/Typography';
+import { clientStatusVariant } from '../../utils/roleBadge';
 import { ApproveInviteModal } from './ApproveInviteModal';
 import { ContactRequestViewModal } from './ContactRequestViewModal';
 import { ConfirmationModal } from '../common/ConfirmationModal';
@@ -137,10 +138,10 @@ export function ContactRequestsTab({
                       </Typography>
                     </span>
                     <Badge
-                      variant={request.status === 'KYC' ? 'info' : request.request_type === 'nda' ? 'warning' : 'info'}
+                      variant={clientStatusVariant(request.user_role)}
                       className="shrink-0 text-xs"
                     >
-                      {request.status === 'KYC' ? 'KYC' : (request.request_type?.toUpperCase() || 'JOIN')}
+                      {request.user_role ?? '—'}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -152,7 +153,7 @@ export function ContactRequestsTab({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {(request.status === 'NDA' || request.status === 'new') && (
+                    {(request.user_role === 'NDA' || request.user_role === 'new') && (
                       <>
                         <Button
                           variant="primary"
@@ -206,7 +207,6 @@ export function ContactRequestsTab({
             contact_email: approveModalRequest.contact_email,
             contact_name: approveModalRequest.contact_name,
             position: approveModalRequest.position,
-            request_type: approveModalRequest.request_type ?? 'join',
             nda_file_name: approveModalRequest.nda_file_name,
             submitter_ip: approveModalRequest.submitter_ip,
             status: approveModalRequest.status,

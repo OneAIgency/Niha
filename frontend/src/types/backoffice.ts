@@ -6,8 +6,9 @@
 import type { CertificateType } from './index';
 
 /**
- * Contact Request interface
- * Used across BackofficeOnboardingPage and ContactRequestsTab
+ * Contact Request interface.
+ * Used across BackofficeOnboardingPage and ContactRequestsTab.
+ * Client/request state: use ONLY user_role (NDA, KYC, REJECTED). Do not use request_type.
  */
 export interface ContactRequest {
   id: string;
@@ -15,10 +16,10 @@ export interface ContactRequest {
   contact_email: string;
   contact_name?: string;
   position: string;
-  request_type: 'join' | 'nda';
   nda_file_name?: string;
   submitter_ip?: string;
-  status: string;
+  /** Sole source for request state; values NDA, KYC, REJECTED (aligned with UserRole). */
+  user_role: string;
   notes?: string;
   created_at: string;
 }
@@ -113,6 +114,7 @@ export interface KYCDocument {
 /**
  * Pending Deposit interface
  * Internal format used in PendingDepositsTab
+ * Client state: use ONLY user_role (or userRole from API); single source of truth.
  */
 export interface PendingDeposit {
   id: string;
@@ -120,6 +122,7 @@ export interface PendingDeposit {
   entity_name: string;
   user_email: string;
   user_role?: string;  // Reporting user's role (client status); FUNDING when announced
+  userRole?: string;   // camelCase from API; use user_role ?? userRole for display
   reported_amount: number | null;
   reported_currency: string | null;
   wire_reference: string | null;
