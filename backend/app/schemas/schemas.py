@@ -442,6 +442,28 @@ class ScrapingSourceCreate(BaseModel):
     config: Optional[Dict[str, Any]] = None
 
 
+# Exchange Rate Source Schemas
+class ExchangeRateSourceCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    from_currency: str = Field(..., min_length=3, max_length=3)
+    to_currency: str = Field(..., min_length=3, max_length=3)
+    url: str = Field(..., min_length=1, max_length=500)
+    scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
+    scrape_interval_minutes: int = Field(60, ge=1, le=1440)
+    is_primary: bool = False
+    config: Optional[Dict[str, Any]] = None
+
+
+class ExchangeRateSourceUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    url: Optional[str] = Field(None, min_length=1, max_length=500)
+    scrape_library: Optional[ScrapeLibrary] = None
+    is_active: Optional[bool] = None
+    is_primary: Optional[bool] = None
+    scrape_interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    config: Optional[Dict[str, Any]] = None
+
+
 # Mail config (admin Settings)
 class MailProvider(str, Enum):
     RESEND = "resend"

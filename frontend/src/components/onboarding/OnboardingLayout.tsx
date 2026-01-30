@@ -62,10 +62,14 @@ export default function OnboardingLayout({
   subtitle,
   showBreadcrumb = true,
 }: OnboardingLayoutProps) {
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [kycProgress, setKycProgress] = useState(0);
+
+  // Post-KYC users have already completed KYC - hide the KYC button for them
+  const POST_KYC_ROLES = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'];
+  const showKycButton = !POST_KYC_ROLES.includes(user?.role || '');
 
   // Load KYC progress from API so the floating button shows correct % (not just 0% until modal is opened)
   useEffect(() => {
@@ -236,64 +240,68 @@ export default function OnboardingLayout({
         </p>
       </footer>
 
-      {/* Floating KYC Button */}
-      <motion.button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
-        style={{
-          background: kycProgress >= 100
-            ? `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)`
-            : `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)`,
-        }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        animate={kycProgress < 100 ? {
-          boxShadow: [
-            '0 0 20px rgba(245, 158, 11, 0.4)',
-            '0 0 40px rgba(245, 158, 11, 0.6)',
-            '0 0 20px rgba(245, 158, 11, 0.4)',
-          ],
-        } : {}}
-        transition={kycProgress < 100 ? {
-          duration: 1.5,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        } : {}}
-      >
-        {kycProgress >= 100 ? (
-          <CheckCircle className="w-6 h-6 text-white" />
-        ) : (
-          <Upload className="w-6 h-6 text-white" />
-        )}
-        <div className="text-white">
-          <div className="text-sm font-semibold">
-            {kycProgress >= 100 ? 'Documents Complete' : 'Complete KYC'}
+      {/* Floating KYC Button - Hidden for APPROVED users (they've already completed KYC) */}
+      {showKycButton && (
+        <motion.button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl"
+          style={{
+            background: kycProgress >= 100
+              ? `linear-gradient(135deg, ${colors.success} 0%, ${colors.primary} 100%)`
+              : `linear-gradient(135deg, ${colors.accent} 0%, ${colors.danger} 100%)`,
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          animate={kycProgress < 100 ? {
+            boxShadow: [
+              '0 0 20px rgba(245, 158, 11, 0.4)',
+              '0 0 40px rgba(245, 158, 11, 0.6)',
+              '0 0 20px rgba(245, 158, 11, 0.4)',
+            ],
+          } : {}}
+          transition={kycProgress < 100 ? {
+            duration: 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          } : {}}
+        >
+          {kycProgress >= 100 ? (
+            <CheckCircle className="w-6 h-6 text-white" />
+          ) : (
+            <Upload className="w-6 h-6 text-white" />
+          )}
+          <div className="text-white">
+            <div className="text-sm font-semibold">
+              {kycProgress >= 100 ? 'Documents Complete' : 'Complete KYC'}
+            </div>
+            <div className="text-xs opacity-90">
+              {kycProgress}% uploaded
+            </div>
           </div>
-          <div className="text-xs opacity-90">
-            {kycProgress}% uploaded
-          </div>
-        </div>
-        {kycProgress < 100 && (
-          <motion.div
-            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white"
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [1, 0.7, 1],
-            }}
-            transition={{
-              duration: 1,
-              repeat: Infinity,
-            }}
-          />
-        )}
-      </motion.button>
+          {kycProgress < 100 && (
+            <motion.div
+              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white"
+              animate={{
+                scale: [1, 1.3, 1],
+                opacity: [1, 0.7, 1],
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+              }}
+            />
+          )}
+        </motion.button>
+      )}
 
-      {/* KYC Modal */}
-      <KycUploadModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onProgressChange={setKycProgress}
-      />
+      {/* KYC Modal - Only rendered when KYC button is visible */}
+      {showKycButton && (
+        <KycUploadModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onProgressChange={setKycProgress}
+        />
+      )}
     </div>
   );
 }

@@ -487,10 +487,36 @@ class ScrapingSource(Base):
     scrape_interval_minutes = Column(Integer, default=5)
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
-    last_price = Column(Numeric(18, 4), nullable=True)
+    last_price = Column(Numeric(18, 4), nullable=True)  # Raw price in source currency
+    last_price_eur = Column(Numeric(18, 4), nullable=True)  # Converted EUR price (for CEA)
+    last_exchange_rate = Column(Numeric(18, 8), nullable=True)  # Rate used for conversion
     config = Column(
         JSON, nullable=True
     )  # Additional scraper configuration (CSS selectors, etc.)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ExchangeRateSource(Base):
+    """Configuration for exchange rate scraping sources"""
+
+    __tablename__ = "exchange_rate_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    from_currency = Column(String(3), nullable=False)  # e.g., "EUR"
+    to_currency = Column(String(3), nullable=False)  # e.g., "CNY"
+    url = Column(String(500), nullable=False)
+    scrape_library = Column(SQLEnum(ScrapeLibrary), default=ScrapeLibrary.HTTPX)
+    is_active = Column(Boolean, default=True)
+    is_primary = Column(Boolean, default=False)  # Primary source for this pair
+    scrape_interval_minutes = Column(Integer, default=60)
+    last_rate = Column(Numeric(18, 8), nullable=True)
+    last_scraped_at = Column(DateTime, nullable=True)
+    last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
+    config = Column(
+        JSON, nullable=True
+    )  # Additional scraper configuration (CSS selectors, XPath, etc.)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

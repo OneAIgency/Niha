@@ -19,6 +19,8 @@ Hold Period Rules:
 """
 
 import logging
+import secrets
+import string
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -173,6 +175,10 @@ async def announce_deposit(
     Returns:
         Created Deposit record
     """
+    # Generate bank reference
+    chars = string.ascii_uppercase + string.digits
+    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
+
     deposit = Deposit(
         entity_id=entity_id,
         user_id=user_id,
@@ -182,6 +188,7 @@ async def announce_deposit(
         source_iban=source_iban,
         source_swift=source_swift,
         client_notes=client_notes,
+        bank_reference=bank_ref,
         status=DepositStatus.PENDING,
         aml_status=AMLStatus.PENDING.value,
         reported_at=datetime.utcnow(),

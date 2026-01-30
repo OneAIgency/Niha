@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
-import { Button, Card } from '../components/common';
+import { Zap, TrendingUp, TrendingDown, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Subheader } from '../components/common';
 import { LiquidityPreviewModal } from '../components/liquidity';
 import { liquidityApi } from '../services/api';
 import type { CertificateType } from '../types';
@@ -77,63 +77,61 @@ export function CreateLiquidityPage() {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-navy-900 dark:text-white">Create Liquidity</h1>
-          </div>
-          <p className="text-navy-600 dark:text-navy-300">
-            Add liquidity to the order book using Market Maker balances
-          </p>
-        </div>
+    <div className="min-h-screen bg-navy-950">
+      {/* Subheader */}
+      <Subheader
+        icon={<Zap className="w-5 h-5 text-purple-400" />}
+        title="Create Liquidity"
+        description="Add liquidity to the order book using Market Maker balances"
+        iconBg="bg-purple-500/20"
+      />
 
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Success Message */}
         {successMessage && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700 rounded-xl flex items-start gap-3"
+            className="mb-4 p-3 bg-emerald-900/30 border border-emerald-700 rounded-lg"
           >
-            <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                Liquidity Created Successfully!
-              </p>
-              <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
-                {successMessage.message}
-              </p>
-              <div className="grid grid-cols-3 gap-4 mt-3 text-xs">
-                <div>
-                  <span className="text-emerald-600 dark:text-emerald-400 block">Orders Created</span>
-                  <span className="font-bold text-emerald-900 dark:text-emerald-100">
-                    {successMessage.orders_created}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-emerald-600 dark:text-emerald-400 block">Market Makers Used</span>
-                  <span className="font-bold text-emerald-900 dark:text-emerald-100">
-                    {successMessage.market_makers_used}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-emerald-600 dark:text-emerald-400 block">Ticket ID</span>
-                  <span className="font-mono font-bold text-emerald-900 dark:text-emerald-100">
-                    {successMessage.ticket_id || 'N/A'}
-                  </span>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-emerald-100">
+                  Liquidity Created Successfully!
+                </p>
+                <p className="text-xs text-emerald-300 mt-1">
+                  {successMessage.message}
+                </p>
+                <div className="grid grid-cols-3 gap-3 mt-2 text-xs">
+                  <div>
+                    <span className="text-emerald-400 block">Orders Created</span>
+                    <span className="font-bold text-white">
+                      {successMessage.orders_created}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-emerald-400 block">Market Makers</span>
+                    <span className="font-bold text-white">
+                      {successMessage.market_makers_used}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-emerald-400 block">Ticket ID</span>
+                    <span className="font-mono font-bold text-white">
+                      {successMessage.ticket_id || 'N/A'}
+                    </span>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="p-1 hover:bg-emerald-800/50 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-emerald-400" />
+              </button>
             </div>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-800/30 rounded transition-colors"
-            >
-              <AlertCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            </button>
           </motion.div>
         )}
 
@@ -142,41 +140,43 @@ export function CreateLiquidityPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-xl flex items-start gap-3"
+            className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg"
           >
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-900 dark:text-red-100">Error</p>
-              <p className="text-xs text-red-700 dark:text-red-300 mt-1">{error}</p>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-100">Error</p>
+                <p className="text-xs text-red-300 mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="p-1 hover:bg-red-800/50 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-red-400" />
+              </button>
             </div>
-            <button
-              onClick={() => setError(null)}
-              className="p-1 hover:bg-red-100 dark:hover:bg-red-800/30 rounded transition-colors"
-            >
-              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
-            </button>
           </motion.div>
         )}
 
         {/* Main Form */}
-        <Card padding="lg">
-          <div className="space-y-6">
+        <div className="bg-navy-900 border border-navy-800 rounded-lg p-4">
+          <div className="space-y-4">
             {/* Certificate Type Selector */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-3">
+              <label className="block text-xs font-medium text-navy-400 mb-2">
                 Certificate Type
               </label>
-              <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600">
+              <div className="grid grid-cols-2 gap-1 p-1 bg-navy-950 rounded-lg">
                 {(['EUA', 'CEA'] as CertificateType[]).map((type) => (
                   <button
                     key={type}
                     onClick={() => setCertificateType(type)}
-                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                    className={`py-2 text-sm font-semibold rounded-md transition-colors ${
                       certificateType === type
                         ? type === 'EUA'
                           ? 'bg-blue-500 text-white'
                           : 'bg-amber-500 text-white'
-                        : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
+                        : 'text-navy-400 hover:text-white hover:bg-navy-800'
                     }`}
                   >
                     {type}
@@ -186,11 +186,11 @@ export function CreateLiquidityPage() {
             </div>
 
             {/* Amount Inputs Grid */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               {/* BID EUR Amount */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <label className="flex items-center gap-2 text-xs font-medium text-navy-400 mb-2">
+                  <TrendingUp className="w-3 h-3 text-emerald-400" />
                   BID Total Value (EUR)
                 </label>
                 <input
@@ -199,18 +199,18 @@ export function CreateLiquidityPage() {
                   min="0"
                   value={bidEur}
                   onChange={(e) => setBidEur(e.target.value)}
-                  placeholder="Enter BID amount in EUR"
-                  className="w-full px-4 py-3 rounded-lg border-2 border-green-200 dark:border-green-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter BID amount"
+                  className="w-full px-3 py-2.5 rounded-lg border border-emerald-700/50 bg-navy-950 text-white text-sm font-mono placeholder-navy-600 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none"
                 />
-                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                  Total EUR to allocate for BUY orders
+                <p className="text-[10px] text-navy-500 mt-1">
+                  Total EUR for BUY orders
                 </p>
               </div>
 
               {/* ASK EUR Amount */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <label className="flex items-center gap-2 text-xs font-medium text-navy-400 mb-2">
+                  <TrendingDown className="w-3 h-3 text-red-400" />
                   ASK Total Value (EUR)
                 </label>
                 <input
@@ -219,21 +219,21 @@ export function CreateLiquidityPage() {
                   min="0"
                   value={askEur}
                   onChange={(e) => setAskEur(e.target.value)}
-                  placeholder="Enter ASK amount in EUR"
-                  className="w-full px-4 py-3 rounded-lg border-2 border-red-200 dark:border-red-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Enter ASK amount"
+                  className="w-full px-3 py-2.5 rounded-lg border border-red-700/50 bg-navy-950 text-white text-sm font-mono placeholder-navy-600 focus:ring-1 focus:ring-red-500 focus:border-red-500 focus:outline-none"
                 />
-                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                  Total EUR to allocate for SELL orders
+                <p className="text-[10px] text-navy-500 mt-1">
+                  Total EUR for SELL orders
                 </p>
               </div>
             </div>
 
             {/* Info Box */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl">
-              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-2">
+            <div className="p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+              <p className="text-xs text-blue-300 font-medium mb-1.5">
                 How Liquidity Creation Works:
               </p>
-              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+              <ul className="text-[10px] text-blue-400 space-y-0.5 list-disc list-inside">
                 <li>Distribute BID and ASK values across active Market Makers</li>
                 <li>Create multiple price levels for realistic order book depth</li>
                 <li>Match orders immediately if counterparty exists</li>
@@ -242,25 +242,27 @@ export function CreateLiquidityPage() {
             </div>
 
             {/* Preview Button */}
-            <Button
-              variant="primary"
-              size="lg"
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={handlePreview}
-              loading={isLoadingPreview}
               disabled={isLoadingPreview || isCreating}
-              className="w-full"
+              className="w-full py-3 rounded-lg font-bold text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 flex items-center justify-center gap-2"
             >
               {isLoadingPreview ? (
-                'Loading Preview...'
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Loading Preview...
+                </>
               ) : (
                 <>
-                  <Zap className="w-5 h-5" />
+                  <Zap className="w-4 h-4" />
                   Preview Liquidity
                 </>
               )}
-            </Button>
+            </motion.button>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Preview Modal */}

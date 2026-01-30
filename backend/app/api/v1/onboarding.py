@@ -14,8 +14,10 @@ from ...models.models import (
     DocumentType,
     Entity,
     KYCDocument,
+    TicketStatus,
     User,
 )
+from ...services.ticket_service import TicketService
 from ...schemas.schemas import (
     KYCDocumentResponse,
     MessageResponse,
@@ -181,6 +183,28 @@ async def upload_document(
     )
 
     db.add(document)
+
+    # Create audit ticket for document upload
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="KYC_DOCUMENT_UPLOADED",
+        entity_type="KYCDocument",
+        entity_id=document.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "document_type": doc_type.value,
+            "file_name": file.filename,
+            "file_size": len(content),
+            "mime_type": file.content_type,
+        },
+        response_data={
+            "document_id": str(document.id),
+            "status": document.status.value,
+        },
+        tags=["kyc", "document", "upload"],
+    )
+
     await db.commit()
     await db.refresh(document)
 
@@ -194,6 +218,7 @@ async def upload_document(
             "document_type": document.document_type.value,
             "file_name": document.file_name,
             "status": document.status.value,
+            "ticket_id": ticket.ticket_id,
             "created_at": document.created_at.isoformat()
             if document.created_at
             else None,
@@ -305,11 +330,29 @@ async def submit_for_review(
         if entity:
             entity.kyc_submitted_at = datetime.utcnow()
 
+    # Create audit ticket for KYC submission
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="KYC_SUBMITTED",
+        entity_type="User",
+        entity_id=current_user.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "documents_count": len(documents),
+            "document_types": [d.document_type.value for d in documents],
+        },
+        response_data={
+            "submission_time": datetime.utcnow().isoformat(),
+        },
+        tags=["kyc", "submission"],
+    )
+
     await db.commit()
 
     return MessageResponse(
         message=(
-            "KYC documents submitted for review. "
-            "You will be notified once reviewed."
+            f"KYC documents submitted for review. "
+            f"Ticket: {ticket.ticket_id}. You will be notified once reviewed."
         )
     )

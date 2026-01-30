@@ -20,10 +20,13 @@ from ...models.models import (
     Deposit,
     DepositStatus,
     Entity,
+    TicketStatus,
     User,
     UserRole,
     UserSession,
 )
+from ...services import deposit_service
+from ...services.ticket_service import TicketService
 from ...schemas.schemas import (
     ActivityLogResponse,
     MessageResponse,
@@ -243,6 +246,7 @@ async def report_deposit(
     """
     Report a wire transfer deposit (APPROVED or ADMIN users).
     Creates a pending deposit that backoffice will confirm when funds arrive.
+    Also transitions APPROVED users to FUNDING role.
     """
     # APPROVED and ADMIN can report deposits; others must complete KYC first
     if current_user.role not in (UserRole.APPROVED, UserRole.ADMIN):
@@ -260,29 +264,54 @@ async def report_deposit(
             detail="User must be associated with an entity to report deposits",
         )
 
-    # Generate bank reference
-    chars = string.ascii_uppercase + string.digits
-    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
+    # Capture before state for audit
+    before_state = await TicketService.get_entity_state(db, "User", current_user.id)
 
-    # Create pending deposit (link to reporting user for backoffice display)
-    deposit = Deposit(
+    # Use deposit_service which handles role transition APPROVED → FUNDING
+    deposit = await deposit_service.announce_deposit(
+        db=db,
         entity_id=current_user.entity_id,
         user_id=current_user.id,
         reported_amount=Decimal(str(deposit_data.amount)),
         reported_currency=Currency(deposit_data.currency.value),
-        wire_reference=deposit_data.wire_reference,
-        bank_reference=bank_ref,
-        status=DepositStatus.PENDING,
-        reported_at=datetime.utcnow(),
+        source_bank=None,
+        source_iban=None,
+        source_swift=None,
+        client_notes=deposit_data.wire_reference,
     )
 
-    db.add(deposit)
+    # Capture after state
+    after_state = await TicketService.get_entity_state(db, "User", current_user.id)
+
+    # Create audit ticket
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="DEPOSIT_ANNOUNCED",
+        entity_type="Deposit",
+        entity_id=deposit.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "amount": float(deposit_data.amount),
+            "currency": deposit_data.currency.value,
+            "wire_reference": deposit_data.wire_reference,
+        },
+        response_data={
+            "deposit_id": str(deposit.id),
+            "bank_reference": deposit.bank_reference,
+        },
+        before_state=before_state,
+        after_state=after_state,
+        tags=["deposit", "funding"],
+    )
+
     await db.commit()
 
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"reported. Reference: {bank_ref}. Awaiting confirmation."
+            f"reported. Reference: {deposit.bank_reference}. "
+            f"Ticket: {ticket.ticket_id}. Awaiting confirmation."
         )
     )
 

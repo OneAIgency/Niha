@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
+import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown, Palette, BookOpen } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
@@ -56,20 +56,23 @@ export function Header() {
   // Build navigation links based on user role (0010 flow)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
-      return [{ href: '/contact', label: 'Contact' }];
+      return [{ href: '/contact', label: 'Contact', icon: null }];
     }
     if (!role) return [];
 
-    const links: { href: string; label: string }[] = [];
+    const links: { href: string; label: string; icon: typeof BookOpen | null }[] = [];
     const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN'].includes(role);
     const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
     const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
-    const canDashboard = ['EUA', 'ADMIN'].includes(role);
+    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN'].includes(role);
+    // Post-KYC users can access onboarding docs via "Mechanism" link (they've completed KYC)
+    const canMechanism = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'].includes(role);
 
-    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard' });
-    if (canFunding) links.push({ href: '/funding', label: 'Funding' });
-    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market' });
-    if (canSwap) links.push({ href: '/swap', label: 'Swap Center' });
+    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
+    if (canMechanism) links.push({ href: '/onboarding', label: 'Mechanism', icon: BookOpen });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'Cash Market', icon: null });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap Center', icon: null });
 
     return links;
   }, [isAuthenticated, role]);
@@ -101,22 +104,26 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  isLandingPage || isDark
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-navy-600 hover:text-navy-900',
-                  location.pathname === link.href &&
-                    (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    'text-sm font-medium transition-colors flex items-center gap-1.5',
+                    isLandingPage || isDark
+                      ? 'text-white/80 hover:text-white'
+                      : 'text-navy-600 hover:text-navy-900',
+                    location.pathname === link.href &&
+                      (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
+                  )}
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  {link.label}
+                </Link>
+              );
+            })}
 
             {/* Theme Toggle */}
             <button
@@ -317,19 +324,23 @@ export function Header() {
             isDark ? 'border-navy-700' : 'border-white/10'
           )}>
             <nav className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    'text-lg font-medium',
-                    isLandingPage || isDark ? 'text-white' : 'text-navy-900'
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={cn(
+                      'text-lg font-medium flex items-center gap-2',
+                      isLandingPage || isDark ? 'text-white' : 'text-navy-900'
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {Icon && <Icon className="w-5 h-5" />}
+                    {link.label}
+                  </Link>
+                );
+              })}
               {!isAuthenticated && (
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" className="w-full">

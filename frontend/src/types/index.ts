@@ -155,9 +155,30 @@ export interface ScrapingSource {
   last_scrape_at?: string;
   last_scrape_status?: 'success' | 'failed' | 'timeout';
   last_price?: number;
+  lastPriceEur?: number;  // EUR-converted price (for CEA)
+  lastExchangeRate?: number;  // EUR/CNY rate used for conversion
   config?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+// Exchange Rate Source
+export interface ExchangeRateSource {
+  id: string;
+  name: string;
+  fromCurrency: string;
+  toCurrency: string;
+  url: string;
+  scrapeLibrary?: ScrapeLibrary;
+  isActive: boolean;
+  isPrimary: boolean;
+  scrapeIntervalMinutes: number;
+  lastRate?: number;
+  lastScrapedAt?: string;
+  lastScrapeStatus?: 'success' | 'failed' | 'timeout';
+  config?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Mail & Auth Settings (admin Settings page)
