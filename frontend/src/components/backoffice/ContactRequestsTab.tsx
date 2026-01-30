@@ -209,7 +209,7 @@ export function ContactRequestsTab({
             position: approveModalRequest.position,
             nda_file_name: approveModalRequest.nda_file_name,
             submitter_ip: approveModalRequest.submitter_ip,
-            status: approveModalRequest.status,
+            user_role: approveModalRequest.user_role,
             notes: approveModalRequest.notes,
             created_at: approveModalRequest.created_at,
           }}
@@ -243,7 +243,7 @@ export function ContactRequestsTab({
         details={deleteConfirmRequest ? [
           { label: 'Company', value: deleteConfirmRequest.entity_name },
           { label: 'Contact', value: deleteConfirmRequest.contact_email },
-          { label: 'Status', value: deleteConfirmRequest.status },
+          { label: 'Status', value: deleteConfirmRequest.user_role },
           { label: 'Submitted', value: formatRelativeTime(deleteConfirmRequest.created_at) },
         ] : []}
         loading={actionLoading === `delete-${deleteConfirmRequest?.id}`}

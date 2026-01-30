@@ -27,7 +27,6 @@ import { logger } from '../utils/logger';
 import type {
   ContactRequest,
   PendingUserResponse,
-  PendingDepositResponse,
   KYCUser,
   KYCDocument,
   PendingDeposit,
@@ -125,28 +124,33 @@ export function BackofficeOnboardingPage() {
           created_at: u.created_at ?? u.createdAt ?? new Date().toISOString(),
         })));
         // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
-        setKycDocuments((docs as Array<Record<string, unknown>>).map(d => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setKycDocuments((docs as any[]).map((d: any) => ({
           ...d,
+          id: d.id,
+          status: d.status,
+          created_at: d.created_at ?? d.createdAt,
           user_id: d.user_id ?? d.userId,
           document_type: d.document_type ?? d.documentType,
           file_name: d.file_name ?? d.fileName,
         })));
       } else if (activeSubpage === 'deposits') {
         const deposits = await backofficeApi.getPendingDeposits();
-        setPendingDeposits(deposits.map((d: PendingDepositResponse & Record<string, unknown>): PendingDeposit => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setPendingDeposits(deposits.map((d: any): PendingDeposit => ({
           id: d.id,
-          entity_id: (d.entity_id ?? (d as Record<string, unknown>).entityId) as string,
-          entity_name: ((d.entity_name ?? (d as Record<string, unknown>).entityName) as string) || '',
-          user_email: ((d.user_email ?? (d as Record<string, unknown>).userEmail) as string) || '',
-          user_role: (d.user_role ?? (d as Record<string, unknown>).userRole) as string | undefined,
-          reported_amount: (d.reported_amount ?? (d as Record<string, unknown>).reportedAmount) ?? null,
-          reported_currency: (d.reported_currency ?? (d as Record<string, unknown>).reportedCurrency) ?? null,
-          wire_reference: (d.wire_reference ?? (d as Record<string, unknown>).wireReference) ?? null,
-          bank_reference: (d.bank_reference ?? (d as Record<string, unknown>).bankReference) ?? null,
+          entity_id: d.entity_id ?? d.entityId ?? '',
+          entity_name: d.entity_name ?? d.entityName ?? '',
+          user_email: d.user_email ?? d.userEmail ?? '',
+          user_role: d.user_role ?? d.userRole,
+          reported_amount: d.reported_amount ?? d.reportedAmount ?? null,
+          reported_currency: d.reported_currency ?? d.reportedCurrency ?? null,
+          wire_reference: d.wire_reference ?? d.wireReference ?? null,
+          bank_reference: d.bank_reference ?? d.bankReference ?? null,
           status: d.status,
-          reported_at: (d.reported_at ?? (d as Record<string, unknown>).reportedAt) ?? null,
-          notes: (d.notes ?? (d as Record<string, unknown>).notes) ?? null,
-          created_at: (d.created_at ?? (d as Record<string, unknown>).createdAt) as string,
+          reported_at: d.reported_at ?? d.reportedAt ?? null,
+          notes: d.notes ?? null,
+          created_at: d.created_at ?? d.createdAt ?? '',
         })));
       }
     } catch (err) {

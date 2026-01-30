@@ -387,6 +387,8 @@ export interface OrderBook {
   last_price: number | null;
   volume_24h: number;
   change_24h: number;
+  high_24h: number | null;
+  low_24h: number | null;
 }
 
 export interface MarketDepthPoint {

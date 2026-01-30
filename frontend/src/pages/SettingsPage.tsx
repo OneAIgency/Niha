@@ -173,10 +173,10 @@ export function SettingsPage() {
   const handleIntervalChange = async (sourceId: string, interval: number) => {
     setError(null);
     try {
-      await adminApi.updateScrapingSource(sourceId, { scrapeIntervalMinutes: interval });
+      await adminApi.updateScrapingSource(sourceId, { scrape_interval_minutes: interval });
       setSources(sources.map(s =>
         s.id === sourceId
-          ? { ...s, scrapeIntervalMinutes: interval }
+          ? { ...s, scrape_interval_minutes: interval }
           : s
       ));
     } catch (e) {
@@ -188,10 +188,10 @@ export function SettingsPage() {
   const handleLibraryChange = async (sourceId: string, library: ScrapeLibrary) => {
     setError(null);
     try {
-      await adminApi.updateScrapingSource(sourceId, { scrapeLibrary: library });
+      await adminApi.updateScrapingSource(sourceId, { scrape_library: library });
       setSources(sources.map(s =>
         s.id === sourceId
-          ? { ...s, scrapeLibrary: library }
+          ? { ...s, scrape_library: library }
           : s
       ));
     } catch (e) {
@@ -469,13 +469,13 @@ export function SettingsPage() {
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            <Badge variant={source.certificateType === 'EUA' ? 'info' : 'warning'}>
-                              {source.certificateType}
+                            <Badge variant={source.certificate_type === 'EUA' ? 'info' : 'warning'}>
+                              {source.certificate_type}
                             </Badge>
                           </td>
                           <td className="py-4 px-4">
                             <select
-                              value={source.scrapeLibrary || 'HTTPX'}
+                              value={source.scrape_library || 'HTTPX'}
                               onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
                               className="px-2 py-1 text-sm rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
                             >
@@ -487,7 +487,7 @@ export function SettingsPage() {
                           </td>
                           <td className="py-4 px-4">
                             <select
-                              value={source.scrapeIntervalMinutes}
+                              value={source.scrape_interval_minutes}
                               onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value))}
                               className="px-2 py-1 text-sm rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
                             >
@@ -500,16 +500,16 @@ export function SettingsPage() {
                           </td>
                           <td className="py-4 px-4">
                             <span className="text-sm text-navy-600 dark:text-navy-300">
-                              {formatTimeAgo(source.lastScrapeAt)}
+                              {formatTimeAgo(source.last_scrape_at)}
                             </span>
                           </td>
                           <td className="py-4 px-4">
-                            {source.lastPrice ? (
+                            {source.last_price ? (
                               <div className="flex flex-col">
                                 <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                  {source.certificateType === 'EUA' ? '€' : '¥'}{source.lastPrice.toFixed(2)}
+                                  {source.certificate_type === 'EUA' ? '€' : '¥'}{source.last_price.toFixed(2)}
                                 </span>
-                                {source.certificateType === 'CEA' && source.lastPriceEur && (
+                                {source.certificate_type === 'CEA' && source.lastPriceEur && (
                                   <span className="text-xs text-navy-500 dark:text-navy-400">
                                     ≈ €{source.lastPriceEur.toFixed(2)}
                                     {source.lastExchangeRate && (
@@ -525,15 +525,15 @@ export function SettingsPage() {
                             )}
                             {testResult?.sourceId === source.id && testResult.price && (
                               <span className="ml-2 text-xs text-blue-500">
-                                (Test: {source.certificateType === 'EUA' ? '€' : '¥'}{testResult.price.toFixed(2)})
+                                (Test: {source.certificate_type === 'EUA' ? '€' : '¥'}{testResult.price.toFixed(2)})
                               </span>
                             )}
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2">
-                              {getStatusIcon(source.lastScrapeStatus)}
+                              {getStatusIcon(source.last_scrape_status)}
                               <span className="text-sm capitalize text-navy-600 dark:text-navy-300">
-                                {source.lastScrapeStatus || 'Unknown'}
+                                {source.last_scrape_status || 'Unknown'}
                               </span>
                             </div>
                           </td>

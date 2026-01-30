@@ -499,7 +499,7 @@ export function UsersPage() {
                         </Badge>
                       ) : (
                         <Badge variant={getRoleBadgeVariant(user.role)}>
-                          {(user.role ?? (user as Record<string, unknown>).role as string)?.toUpperCase() ?? '—'}
+                          {(user.role ?? (user as unknown as Record<string, unknown>).role as string)?.toUpperCase() ?? '—'}
                         </Badge>
                       )}
                     </div>
