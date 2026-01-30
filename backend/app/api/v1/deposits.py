@@ -201,8 +201,14 @@ class HoldCalculationResponse(BaseModel):
 # ============== Helper Functions ==============
 
 
-def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailResponse:
-    """Convert Deposit model to DepositDetailResponse. Sets user_role from deposit.user.role when present (client status; FUNDING when announced)."""
+def deposit_to_response(deposit, include_entity: bool = True, include_relations: bool = True) -> DepositDetailResponse:
+    """Convert Deposit model to DepositDetailResponse. Sets user_role from deposit.user.role when present (client status; FUNDING when announced).
+
+    Args:
+        deposit: Deposit model instance
+        include_entity: Include entity name in response
+        include_relations: If False, skip all relationship access (avoids async lazy loading issues)
+    """
     entity_name = None
     user_email = None
     user_role = None
@@ -210,21 +216,23 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
     cleared_by_name = None
     rejected_by_name = None
 
-    if include_entity and hasattr(deposit, "entity") and deposit.entity:
-        entity_name = deposit.entity.name
+    # Only access relationships if include_relations is True (they must be eager loaded)
+    if include_relations:
+        if include_entity and hasattr(deposit, "entity") and deposit.entity:
+            entity_name = deposit.entity.name
 
-    if hasattr(deposit, "user") and deposit.user:
-        user_email = deposit.user.email
-        user_role = deposit.user.role.value
+        if hasattr(deposit, "user") and deposit.user:
+            user_email = deposit.user.email
+            user_role = deposit.user.role.value
 
-    if hasattr(deposit, "confirmed_by_user") and deposit.confirmed_by_user:
-        confirmed_by_name = deposit.confirmed_by_user.email
+        if hasattr(deposit, "confirmed_by_user") and deposit.confirmed_by_user:
+            confirmed_by_name = deposit.confirmed_by_user.email
 
-    if hasattr(deposit, "cleared_by_admin") and deposit.cleared_by_admin:
-        cleared_by_name = deposit.cleared_by_admin.email
+        if hasattr(deposit, "cleared_by_admin") and deposit.cleared_by_admin:
+            cleared_by_name = deposit.cleared_by_admin.email
 
-    if hasattr(deposit, "rejected_by_admin") and deposit.rejected_by_admin:
-        rejected_by_name = deposit.rejected_by_admin.email
+        if hasattr(deposit, "rejected_by_admin") and deposit.rejected_by_admin:
+            rejected_by_name = deposit.rejected_by_admin.email
 
     return DepositDetailResponse(
         id=str(deposit.id),
@@ -327,7 +335,7 @@ async def announce_deposit(
         },
     )
 
-    return deposit_to_response(deposit, include_entity=False)
+    return deposit_to_response(deposit, include_entity=False, include_relations=False)
 
 
 @router.get("/my-deposits", response_model=DepositListResponse)

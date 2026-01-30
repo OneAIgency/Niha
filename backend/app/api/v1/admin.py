@@ -78,12 +78,12 @@ async def get_contact_requests(
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
-        query = query.where(ContactRequest.status == ContactStatus(status))
+        query = query.where(ContactRequest.user_role == ContactStatus(status))
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
-        count_query = count_query.where(ContactRequest.status == ContactStatus(status))
+        count_query = count_query.where(ContactRequest.user_role == ContactStatus(status))
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -102,10 +102,9 @@ async def get_contact_requests(
                 "contact_email": r.contact_email,
                 "contact_name": r.contact_name,
                 "position": r.position,
-                "request_type": r.request_type or "join",
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,
-                "status": r.status.value if r.status else "new",
+                "user_role": r.user_role.value if r.user_role else "NDA",
                 "notes": r.notes,
                 "created_at": (r.created_at.isoformat() + "Z")
                 if r.created_at
@@ -144,7 +143,7 @@ async def update_contact_request(
 
     if update.status:
         new_status = ContactStatus(update.status)
-        contact.status = new_status
+        contact.user_role = new_status
         # When rejecting NDA, also set linked user to REJECTED if one exists (created from this request)
         if new_status == ContactStatus.REJECTED:
             user_result = await db.execute(
@@ -175,10 +174,9 @@ async def update_contact_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "request_type": contact.request_type or "join",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
-                "status": contact.status.value if contact.status else "new",
+                "user_role": contact.user_role.value if contact.user_role else "NDA",
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -329,8 +327,8 @@ async def create_user_from_contact_request(
 
         db.add(user)
 
-        # Update contact request status to KYC (approved, user created)
-        contact_request.status = ContactStatus.KYC
+        # Update contact request user_role to KYC (approved, user created)
+        contact_request.user_role = ContactStatus.KYC
 
         await db.commit()
         await db.refresh(user)
@@ -385,10 +383,9 @@ async def create_user_from_contact_request(
                 "contact_email": contact_request.contact_email,
                 "contact_name": contact_request.contact_name,
                 "position": contact_request.position,
-                "request_type": contact_request.request_type or "join",
                 "nda_file_name": contact_request.nda_file_name,
                 "submitter_ip": contact_request.submitter_ip,
-                "status": contact_request.status.value if contact_request.status else "new",
+                "user_role": contact_request.user_role.value if contact_request.user_role else "NDA",
                 "notes": contact_request.notes,
                 "created_at": (contact_request.created_at.isoformat() + "Z")
                 if contact_request.created_at
@@ -524,11 +521,11 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
     Get admin dashboard statistics.
     """
-    # Contact requests by status
+    # Contact requests by user_role
     new_contacts = await db.execute(
         select(func.count())
         .select_from(ContactRequest)
-        .where(ContactRequest.status == ContactStatus.NDA)
+        .where(ContactRequest.user_role == ContactStatus.NDA)
     )
     new_count = new_contacts.scalar()
 
