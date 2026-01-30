@@ -1,14 +1,19 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface OrderBookSpreadIndicatorProps {
-  bestBid: number;
-  bestAsk: number;
-  spread: number;
+  bestBid: number | null | undefined;
+  bestAsk: number | null | undefined;
+  spread: number | null | undefined;
 }
 
 export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBookSpreadIndicatorProps) {
-  const midpoint = (bestBid + bestAsk) / 2;
-  const spreadPercentage = ((spread / midpoint) * 100).toFixed(2);
+  // Handle null/undefined values
+  const safeBid = bestBid ?? 0;
+  const safeAsk = bestAsk ?? 0;
+  const safeSpread = spread ?? 0;
+
+  const midpoint = (safeBid + safeAsk) / 2;
+  const spreadPercentage = midpoint > 0 ? ((safeSpread / midpoint) * 100).toFixed(2) : '0.00';
 
   return (
     <div className="border-y-2 border-navy-300 dark:border-navy-600 bg-gradient-to-r from-emerald-50 via-navy-50 to-red-50 dark:from-emerald-900/20 dark:via-navy-800 dark:to-red-900/20">
@@ -21,7 +26,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
               Best Bid
             </span>
             <span className="font-mono font-bold text-sm md:text-base text-emerald-600 dark:text-emerald-400">
-              €{bestBid.toFixed(2)}
+              €{safeBid.toFixed(2)}
             </span>
           </div>
         </div>
@@ -33,7 +38,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
               Best Ask
             </span>
             <span className="font-mono font-bold text-sm md:text-base text-red-600 dark:text-red-400">
-              €{bestAsk.toFixed(2)}
+              €{safeAsk.toFixed(2)}
             </span>
           </div>
           <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
@@ -45,7 +50,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
         <div className="text-[10px] text-navy-600 dark:text-navy-400">
           <span className="font-medium">Spread: </span>
           <span className="font-mono font-semibold text-navy-900 dark:text-white">
-            €{spread.toFixed(2)}
+            €{safeSpread.toFixed(2)}
           </span>
           <span className="ml-1 text-navy-500 dark:text-navy-500">
             ({spreadPercentage}%)
