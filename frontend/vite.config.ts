@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    allowedHosts: ['.ngrok-free.dev', '.ngrok.io', 'platonos.mooo.com'],
     proxy: {
       '/api': {
         // Use Docker service name - frontend runs in Docker alongside backend

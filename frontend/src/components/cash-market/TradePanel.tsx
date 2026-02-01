@@ -106,11 +106,11 @@ export function TradePanel({
           </div>
           <input
             type="number"
-            step="0.01"
+            step="0.1"
             min="0"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="0.00"
+            placeholder="0.0"
             className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
         </div>

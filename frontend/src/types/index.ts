@@ -941,3 +941,28 @@ export interface EffectiveFeeResponse {
   is_override: boolean;
   entity_id?: string;
 }
+
+// =============================================================================
+// Market Maker Order Types (Individual Orders, not aggregated)
+// =============================================================================
+
+export interface MarketMakerOrder {
+  id: string;
+  market_maker_id: string;
+  market_maker_name: string;
+  certificate_type: CertificateType;
+  side: 'BUY' | 'SELL';
+  price: number;
+  quantity: number;
+  filled_quantity: number;
+  remaining_quantity: number;
+  status: OrderStatus;
+  created_at: string;
+  updated_at?: string;
+  ticket_id?: string;
+}
+
+export interface MarketMakerOrderUpdate {
+  price?: number;
+  quantity?: number;
+}

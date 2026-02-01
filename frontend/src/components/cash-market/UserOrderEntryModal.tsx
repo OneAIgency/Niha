@@ -266,11 +266,11 @@ export function UserOrderEntryModal({
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="0.1"
                 min="0"
                 value={limitPrice}
                 onChange={(e) => setLimitPrice(e.target.value)}
-                placeholder={bestAskPrice ? `${bestAskPrice.toFixed(2)}` : '0.00'}
+                placeholder={bestAskPrice ? `${bestAskPrice.toFixed(1)}` : '0.0'}
                 className="w-full px-3 py-2.5 rounded-lg border-2 border-purple-200 dark:border-purple-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
               {bestAskPrice && (

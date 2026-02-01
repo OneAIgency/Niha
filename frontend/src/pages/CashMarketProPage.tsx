@@ -40,7 +40,7 @@ function ProfessionalOrderBook({
   asks,
   spread,
   bestBid,
-  bestAsk,
+  bestAsk: _bestAsk,
   onPriceClick,
 }: ProfessionalOrderBookProps) {
   // Calculate total liquidity for BID and ASK sides
@@ -310,7 +310,7 @@ function TradePanelPro({
             </div>
             <input
               type="number"
-              step="0.001"
+              step="0.1"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0.000"
