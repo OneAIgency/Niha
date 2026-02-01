@@ -445,17 +445,10 @@ async def get_market_maker_balances(
     # Get balances
     balances = await MarketMakerService.get_balances(db, market_maker_id)
 
-    # Format for response
+    # Format for response - balances already includes EUR with locked amounts calculated
     formatted_balances = {
         cert_type: MarketMakerBalance(**balance_data).model_dump()
         for cert_type, balance_data in balances.items()
-    }
-
-    # Add EUR balance from MM client (for CEA_BUYER validation)
-    formatted_balances["EUR"] = {
-        "available": float(mm.eur_balance),
-        "locked": 0,
-        "total": float(mm.eur_balance),
     }
 
     return formatted_balances

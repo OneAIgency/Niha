@@ -537,7 +537,13 @@ async def get_on_hold_deposits(
     """Get deposits currently on hold."""
     query = (
         select(Deposit)
-        .options(selectinload(Deposit.entity), selectinload(Deposit.user))
+        .options(
+            selectinload(Deposit.entity),
+            selectinload(Deposit.user),
+            selectinload(Deposit.confirmed_by_user),
+            selectinload(Deposit.cleared_by_admin),
+            selectinload(Deposit.rejected_by_admin),
+        )
         .where(Deposit.status == DepositStatus.ON_HOLD)
     )
 

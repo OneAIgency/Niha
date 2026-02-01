@@ -208,8 +208,8 @@ class MarketMakerService:
         market_maker_id: uuid.UUID,
     ) -> Dict[str, Dict[str, Decimal]]:
         """
-        Get current balances (available, locked, total) for all certificate types
-        Returns: {CEA: {available: 5000, locked: 1500, total: 6500}, ...}
+        Get current balances (available, locked, total) for all certificate types and EUR
+        Returns: {CEA: {available: 5000, locked: 1500, total: 6500}, EUR: {...}, ...}
         """
         balances = {}
 
@@ -249,6 +249,39 @@ class MarketMakerService:
                 "locked": locked,
                 "total": total,
             }
+
+        # Calculate EUR balance and locked amount from BUY orders
+        # EUR locked = sum of (price * remaining_quantity) for all active BUY orders
+        result = await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(Order.price * (Order.quantity - Order.filled_quantity)), 0
+                )
+            ).where(
+                and_(
+                    Order.market_maker_id == market_maker_id,
+                    Order.side == OrderSide.BUY,
+                    Order.status.in_(
+                        [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]
+                    ),
+                )
+            )
+        )
+        eur_locked = result.scalar() or Decimal("0")
+
+        # Get EUR total from market maker record
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+        )
+        mm = mm_result.scalar_one_or_none()
+        eur_total = Decimal(str(mm.eur_balance)) if mm else Decimal("0")
+        eur_available = eur_total - eur_locked
+
+        balances["EUR"] = {
+            "available": eur_available,
+            "locked": eur_locked,
+            "total": eur_total,
+        }
 
         return balances
 

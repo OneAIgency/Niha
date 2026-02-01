@@ -140,11 +140,11 @@ class OrderStatus(str, enum.Enum):
 
 
 class DepositStatus(str, enum.Enum):
-    PENDING = "pending"  # User announced wire transfer
-    CONFIRMED = "confirmed"  # Backoffice confirmed receipt, now ON_HOLD
-    ON_HOLD = "on_hold"  # AML hold period active
-    CLEARED = "cleared"  # AML hold passed, funds available
-    REJECTED = "rejected"  # Wire not received or AML rejected
+    PENDING = "PENDING"  # User announced wire transfer
+    CONFIRMED = "CONFIRMED"  # Backoffice confirmed receipt, now ON_HOLD
+    ON_HOLD = "ON_HOLD"  # AML hold period active
+    CLEARED = "CLEARED"  # AML hold passed, funds available
+    REJECTED = "REJECTED"  # Wire not received or AML rejected
 
 
 class HoldType(str, enum.Enum):
