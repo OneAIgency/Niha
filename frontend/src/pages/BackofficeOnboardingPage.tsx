@@ -32,6 +32,7 @@ import type {
   PendingDeposit,
   DocumentViewerState,
 } from '../types/backoffice';
+import type { Deposit } from '../types';
 
 interface IPLookupResult {
   ip: string;
@@ -104,6 +105,7 @@ export function BackofficeOnboardingPage() {
   const [showIpModal, setShowIpModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
+  const [onHoldDeposits, setOnHoldDeposits] = useState<Deposit[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -135,9 +137,12 @@ export function BackofficeOnboardingPage() {
           file_name: d.file_name ?? d.fileName,
         })));
       } else if (activeSubpage === 'deposits') {
-        const deposits = await backofficeApi.getPendingDeposits();
+        const [pendingRes, onHoldRes] = await Promise.all([
+          backofficeApi.getPendingDeposits(),
+          backofficeApi.getOnHoldDeposits({ include_expired: true }),
+        ]);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setPendingDeposits(deposits.map((d: any): PendingDeposit => ({
+        setPendingDeposits(pendingRes.map((d: any): PendingDeposit => ({
           id: d.id,
           entity_id: d.entity_id ?? d.entityId ?? '',
           entity_name: d.entity_name ?? d.entityName ?? '',
@@ -152,6 +157,7 @@ export function BackofficeOnboardingPage() {
           notes: d.notes ?? null,
           created_at: d.created_at ?? d.createdAt ?? '',
         })));
+        setOnHoldDeposits(onHoldRes.deposits || []);
       }
     } catch (err) {
       logger.error('Failed to load data', err);
@@ -268,6 +274,19 @@ export function BackofficeOnboardingPage() {
     }
   };
 
+  const handleClearDeposit = async (depositId: string, forceClear?: boolean, notes?: string) => {
+    setActionLoading(`clear-${depositId}`);
+    try {
+      await backofficeApi.clearDeposit(depositId, { force_clear: forceClear, admin_notes: notes });
+      setOnHoldDeposits(prev => prev.filter(d => d.id !== depositId));
+    } catch (err) {
+      logger.error('Failed to clear deposit', err);
+      setError('Failed to clear deposit');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const loadDocumentContent = async (documentId: string) => {
     setDocumentLoading(true);
     setDocumentError(null);
@@ -357,7 +376,7 @@ export function BackofficeOnboardingPage() {
       {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
         const to = `/backoffice/onboarding/${path}`;
         const isActive = activeSubpage === path;
-        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : pendingDeposits.length;
+        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : (pendingDeposits.length + onHoldDeposits.length);
         return (
           <Link
             key={path}
@@ -470,9 +489,11 @@ export function BackofficeOnboardingPage() {
       {activeSubpage === 'deposits' && (
         <PendingDepositsTab
           pendingDeposits={pendingDeposits}
+          onHoldDeposits={onHoldDeposits}
           loading={loading}
           onConfirm={handleConfirmDeposit}
           onReject={handleRejectDeposit}
+          onClear={handleClearDeposit}
           actionLoading={actionLoading}
         />
       )}

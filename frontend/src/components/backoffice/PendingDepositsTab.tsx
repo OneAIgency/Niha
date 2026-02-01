@@ -19,31 +19,71 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Banknote, Clock, CheckCircle, XCircle, DollarSign, X, AlertCircle } from 'lucide-react';
+import { Banknote, Clock, CheckCircle, XCircle, DollarSign, X, AlertCircle, Shield, Timer } from 'lucide-react';
 import { Button, Card, ClientStatusBadge } from '../common';
 import { formatCurrency, formatRelativeTime, cn } from '../../utils';
 import type { PendingDeposit } from '../../types/backoffice';
+import type { Deposit } from '../../types';
 
 interface PendingDepositsTabProps {
   pendingDeposits: PendingDeposit[];
+  onHoldDeposits?: Deposit[];
   loading: boolean;
   onConfirm: (depositId: string, amount: number, currency: string, notes?: string) => Promise<void>;
   onReject: (depositId: string) => Promise<void>;
+  onClear?: (depositId: string, forceClear?: boolean, notes?: string) => Promise<void>;
   actionLoading: string | null;
 }
 
 export function PendingDepositsTab({
   pendingDeposits,
+  onHoldDeposits = [],
   loading,
   onConfirm,
   onReject,
+  onClear,
   actionLoading,
 }: PendingDepositsTabProps) {
   const [confirmDepositModal, setConfirmDepositModal] = useState<PendingDeposit | null>(null);
+  const [clearDepositModal, setClearDepositModal] = useState<Deposit | null>(null);
   const [confirmAmount, setConfirmAmount] = useState('');
   const [confirmCurrency, setConfirmCurrency] = useState('EUR');
   const [confirmNotes, setConfirmNotes] = useState('');
+  const [clearNotes, setClearNotes] = useState('');
+  const [forceClear, setForceClear] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const getHoldTimeRemaining = (expiresAt: string | undefined): string => {
+    if (!expiresAt) return 'Unknown';
+    const expires = new Date(expiresAt);
+    const now = new Date();
+    const diff = expires.getTime() - now.getTime();
+
+    if (diff <= 0) return 'Expired';
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h remaining`;
+    return `${hours}h remaining`;
+  };
+
+  const isHoldExpired = (expiresAt: string | undefined): boolean => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) <= new Date();
+  };
+
+  const handleClearDeposit = async () => {
+    if (!clearDepositModal || !onClear) return;
+    try {
+      await onClear(clearDepositModal.id, forceClear, clearNotes || undefined);
+      setClearDepositModal(null);
+      setClearNotes('');
+      setForceClear(false);
+    } catch (error) {
+      setValidationError('Failed to clear deposit. Please try again.');
+    }
+  };
 
   const handleOpenConfirmDeposit = (deposit: PendingDeposit) => {
     setConfirmDepositModal(deposit);
@@ -77,6 +117,130 @@ export function PendingDepositsTab({
 
   return (
     <>
+      {/* AML On Hold Section */}
+      {onHoldDeposits.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card>
+            <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-500" />
+              AML Hold - Awaiting Approval
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm rounded-full">
+                {onHoldDeposits.length}
+              </span>
+            </h2>
+
+            <div className="space-y-4">
+              {onHoldDeposits.map((deposit) => {
+                // Handle both snake_case and camelCase from API response
+                const depositAny = deposit as unknown as {
+                  confirmedAt?: string;
+                  holdExpiresAt?: string;
+                };
+                const confirmedAtValue = deposit.confirmed_at ?? depositAny.confirmedAt;
+                const holdExpiresAtValue = deposit.hold_expires_at ?? depositAny.holdExpiresAt;
+
+                const daysPassed = confirmedAtValue
+                  ? Math.floor((Date.now() - new Date(confirmedAtValue).getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
+                const confirmedDate = confirmedAtValue
+                  ? new Date(confirmedAtValue).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : 'N/A';
+                const expired = isHoldExpired(holdExpiresAtValue);
+
+                return (
+                  <div
+                    key={deposit.id}
+                    className={cn(
+                      "p-4 rounded-xl border",
+                      expired
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
+                        : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                    )}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                            {deposit.entity_name ?? (deposit as unknown as { entityName?: string }).entityName}
+                          </h3>
+                          <ClientStatusBadge role={deposit.user_role ?? (deposit as unknown as { userRole?: string }).userRole} />
+                          {expired && (
+                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs rounded-full">
+                              Ready to Clear
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Amount:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                              {deposit.amount ? formatCurrency(Number(deposit.amount)) : 'N/A'} {deposit.currency || 'EUR'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.user_email ?? (deposit as unknown as { userEmail?: string }).userEmail}</span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Confirmed:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200">{confirmedDate}</span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Hold Status:</span>
+                            <span className={cn(
+                              "ml-2 font-medium",
+                              expired ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                            )}>
+                              {getHoldTimeRemaining(holdExpiresAtValue)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="flex items-center gap-2 mt-3">
+                          <Timer className="w-4 h-4 text-navy-400" />
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: Math.max(daysPassed, 1) }).map((_, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "w-2 h-3 rounded-sm",
+                                  expired ? "bg-emerald-500" : "bg-blue-500"
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs text-navy-500">{daysPassed} days in hold</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setClearDepositModal(deposit);
+                            setForceClear(!expired);
+                            setClearNotes('');
+                          }}
+                          className={expired ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          {expired ? 'Clear Deposit' : 'Force Clear'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Pending Deposits Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -330,6 +494,114 @@ export function PendingDepositsTab({
                 >
                   <CheckCircle className="w-4 h-4" />
                   Confirm Deposit
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Clear Deposit Modal */}
+      {clearDepositModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
+              <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-emerald-500" />
+                Clear AML Hold
+              </h3>
+              <button
+                onClick={() => {
+                  setClearDepositModal(null);
+                  setClearNotes('');
+                  setForceClear(false);
+                }}
+                className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Entity/User Info */}
+              <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+                <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
+                <p className="font-semibold text-navy-900 dark:text-white">{clearDepositModal.entity_name}</p>
+                <p className="text-xs text-navy-400 mt-1">{clearDepositModal.user_email}</p>
+              </div>
+
+              {/* Amount */}
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">Amount to Clear</p>
+                <p className="font-semibold text-emerald-900 dark:text-emerald-200 text-xl">
+                  {clearDepositModal.amount ? formatCurrency(Number(clearDepositModal.amount)) : 'N/A'} {clearDepositModal.currency || 'EUR'}
+                </p>
+              </div>
+
+              {/* Force clear warning */}
+              {forceClear && !isHoldExpired(clearDepositModal.hold_expires_at) && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Hold period has not expired yet
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                    {getHoldTimeRemaining(clearDepositModal.hold_expires_at)}
+                  </p>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                  Admin Notes (optional)
+                </label>
+                <textarea
+                  value={clearNotes}
+                  onChange={(e) => setClearNotes(e.target.value)}
+                  placeholder="Add any notes..."
+                  rows={2}
+                  className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                />
+              </div>
+
+              {/* Info about what happens */}
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm">
+                <p className="text-emerald-700 dark:text-emerald-300">
+                  Clearing this deposit will:
+                </p>
+                <ul className="text-emerald-600 dark:text-emerald-400 text-xs mt-1 list-disc list-inside">
+                  <li>Credit funds to entity balance</li>
+                  <li>Upgrade users from AML to CEA status</li>
+                  <li>Grant full trading access</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setClearDepositModal(null);
+                    setClearNotes('');
+                    setForceClear(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                  onClick={handleClearDeposit}
+                  loading={actionLoading === `clear-${clearDepositModal.id}`}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Clear Deposit
                 </Button>
               </div>
             </div>
