@@ -219,6 +219,75 @@ async def create_market_maker(
     }
 
 
+@router.post("/reset-all", response_model=dict)
+async def reset_all_market_makers(
+    password: str = Query(..., description="Reset password for confirmation"),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Reset all Market Makers: zero balances and delete associated tickets/transactions.
+    Requires password confirmation.
+    Admin-only endpoint.
+    """
+    # Validate password
+    RESET_PASSWORD = "Niha010!"
+    if password != RESET_PASSWORD:
+        raise HTTPException(status_code=403, detail="Invalid reset password")
+
+    from ...models.models import TicketLog
+
+    # Get all market maker IDs
+    mm_result = await db.execute(select(MarketMakerClient.id))
+    mm_ids = [row[0] for row in mm_result.fetchall()]
+
+    if not mm_ids:
+        return {"message": "No market makers to reset", "reset_count": 0}
+
+    # Delete asset transactions for all MMs
+    await db.execute(
+        AssetTransaction.__table__.delete().where(
+            AssetTransaction.market_maker_id.in_(mm_ids)
+        )
+    )
+
+    # Delete ticket logs for MM-related tickets
+    await db.execute(
+        TicketLog.__table__.delete().where(TicketLog.market_maker_id.in_(mm_ids))
+    )
+
+    # Reset balances for all MMs
+    await db.execute(
+        MarketMakerClient.__table__.update()
+        .where(MarketMakerClient.id.in_(mm_ids))
+        .values(eur_balance=0)
+    )
+
+    await db.commit()
+
+    # Create audit ticket for the reset action (not linked to any specific MM)
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="MM_RESET_ALL",
+        entity_type="System",
+        entity_id=admin_user.id,
+        status=TicketStatus.SUCCESS,
+        user_id=admin_user.id,
+        request_payload={"action": "reset_all_market_makers", "mm_count": len(mm_ids)},
+        tags=["market_maker", "reset", "admin"],
+    )
+
+    logger.info(
+        f"Admin {admin_user.email} reset all Market Makers ({len(mm_ids)} total)"
+    )
+
+    return {
+        "message": f"Successfully reset {len(mm_ids)} market makers",
+        "reset_count": len(mm_ids),
+        "ticket_id": ticket.ticket_id,
+    }
+
+
 @router.get("/{market_maker_id}", response_model=MarketMakerResponse)
 async def get_market_maker(
     market_maker_id: UUID,

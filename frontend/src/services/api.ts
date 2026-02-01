@@ -1617,6 +1617,15 @@ export const deleteMarketMaker = async (id: string): Promise<MessageResponse> =>
   return data;
 };
 
+export const resetAllMarketMakers = async (password: string): Promise<{
+  message: string;
+  reset_count: number;
+  ticket_id: string;
+}> => {
+  const { data } = await api.post(`/admin/market-makers/reset-all?password=${encodeURIComponent(password)}`);
+  return data;
+};
+
 export interface MarketMakerTransactionQueryParams {
   page?: number;
   per_page?: number;
