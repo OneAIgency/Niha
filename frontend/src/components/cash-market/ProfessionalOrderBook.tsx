@@ -24,7 +24,7 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
   }, [orderBook]);
 
   return (
-    <div className="card_back overflow-hidden p-0 text-[11px]">
+    <div className="content_wrapper_last p-0 text-[11px]">
       {/* Header */}
       <div className="px-4 py-2 border-b border-navy-200 dark:border-navy-700">
         <div className="flex items-center justify-between">
