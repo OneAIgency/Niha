@@ -73,7 +73,7 @@ import type {
   LiquidityCreationResponse,
 } from '../types/liquidity';
 import { logger } from '../utils/logger';
-import { transformKeysToCamelCase } from '../utils/dataTransform';
+import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
 import { TOKEN_KEY } from '../constants/auth';
 import { useAuthStore } from '../stores/useStore';
 
@@ -890,9 +890,29 @@ export const adminApi = {
   },
 
   // Scraping Sources
+  // Note: Vite proxy converts snake_case to camelCase
+  // Our types also use snake_case for most fields, but some computed fields use camelCase
+  // We manually map the fields to ensure consistency with TypeScript types
   getScrapingSources: async (): Promise<ScrapingSource[]> => {
     const { data } = await api.get('/admin/scraping-sources');
-    return data;
+    // Map camelCase API response to our ScrapingSource type (mostly snake_case)
+    return (data as Record<string, unknown>[]).map(item => ({
+      id: item.id as string,
+      name: item.name as string,
+      url: item.url as string,
+      certificate_type: item.certificateType as ScrapingSource['certificate_type'],
+      scrape_library: item.scrapeLibrary as ScrapingSource['scrape_library'],
+      is_active: item.isActive as boolean,
+      scrape_interval_minutes: item.scrapeIntervalMinutes as number,
+      last_scrape_at: item.lastScrapeAt as string | undefined,
+      last_scrape_status: item.lastScrapeStatus as ScrapingSource['last_scrape_status'],
+      last_price: item.lastPrice as number | undefined,
+      lastPriceEur: item.lastPriceEur as number | undefined,
+      lastExchangeRate: item.lastExchangeRate as number | undefined,
+      config: item.config as Record<string, unknown> | undefined,
+      created_at: item.createdAt as string,
+      updated_at: item.updatedAt as string,
+    })) as ScrapingSource[];
   },
 
   updateScrapingSource: async (id: string, update: Partial<ScrapingSource>): Promise<ScrapingSource> => {
@@ -1107,7 +1127,7 @@ export const backofficeApi = {
   // Get all pending deposits (legacy - use new AML endpoints)
   getPendingDeposits: async (): Promise<Deposit[]> => {
     const { data } = await api.get('/backoffice/deposits', {
-      params: { status: 'pending' },
+      params: { status: 'PENDING' },
     });
     return data;
   },
@@ -1391,7 +1411,13 @@ export const cashMarketApi = {
     eua_balance: number;
   }> => {
     const { data } = await api.get('/cash-market/user/balances');
-    return data;
+    // Handle both snake_case (direct API) and camelCase (Vite proxy converted) responses
+    return {
+      entity_id: data.entity_id ?? data.entityId ?? null,
+      eur_balance: data.eur_balance ?? data.eurBalance ?? 0,
+      cea_balance: data.cea_balance ?? data.ceaBalance ?? 0,
+      eua_balance: data.eua_balance ?? data.euaBalance ?? 0,
+    };
   },
 
   getRealOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
@@ -1671,8 +1697,36 @@ export const getMarketMakerBalances = async (id: string): Promise<{
 };
 
 // Market Orders API (Admin)
-export const getAdminOrderBook = (certificateType: string) =>
-  api.get(`/admin/market-orders/orderbook/${certificateType}`);
+export const getAdminOrderBook = async (certificateType: string) => {
+  const { data } = await api.get(`/admin/market-orders/orderbook/${certificateType}`);
+  // Transform camelCase response to snake_case for frontend types
+  // Vite proxy may auto-convert snake_case to camelCase
+  return {
+    data: {
+      certificate_type: data.certificateType || data.certificate_type,
+      bids: (data.bids || []).map((b: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
+        price: b.price,
+        quantity: b.quantity,
+        order_count: b.orderCount ?? b.order_count ?? 0,
+        cumulative_quantity: b.cumulativeQuantity ?? b.cumulative_quantity ?? 0,
+      })),
+      asks: (data.asks || []).map((a: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
+        price: a.price,
+        quantity: a.quantity,
+        order_count: a.orderCount ?? a.order_count ?? 0,
+        cumulative_quantity: a.cumulativeQuantity ?? a.cumulative_quantity ?? 0,
+      })),
+      spread: data.spread,
+      best_bid: data.bestBid ?? data.best_bid,
+      best_ask: data.bestAsk ?? data.best_ask,
+      last_price: data.lastPrice ?? data.last_price,
+      volume_24h: data.volume24h ?? data.volume_24h ?? 0,
+      change_24h: data.change24h ?? data.change_24h ?? 0,
+      high_24h: data.high24h ?? data.high_24h ?? null,
+      low_24h: data.low24h ?? data.low_24h ?? null,
+    },
+  };
+};
 
 export const placeMarketMakerOrder = (data: {
   market_maker_id: string;
@@ -1685,11 +1739,53 @@ export const placeMarketMakerOrder = (data: {
 // Alias for consistency
 export const placeAdminMarketOrder = placeMarketMakerOrder;
 
-export const getMarketMakerOrders = (params?: {
+export const getMarketMakerOrders = async (params?: {
   market_maker_id?: string;
   status?: string;
   certificate_type?: string;
-}) => api.get('/admin/market-orders', { params });
+}) => {
+  const { data } = await api.get('/admin/market-orders', { params });
+  // Transform camelCase response to snake_case for frontend types
+  return {
+    data: (data || []).map((order: {
+      id: string;
+      marketMakerId?: string;
+      market_maker_id?: string;
+      marketMakerName?: string;
+      market_maker_name?: string;
+      certificateType?: string;
+      certificate_type?: string;
+      side: string;
+      price: number;
+      quantity: number;
+      filledQuantity?: number;
+      filled_quantity?: number;
+      remainingQuantity?: number;
+      remaining_quantity?: number;
+      status: string;
+      createdAt?: string;
+      created_at?: string;
+      updatedAt?: string;
+      updated_at?: string;
+      ticketId?: string;
+      ticket_id?: string;
+    }) => ({
+      id: order.id,
+      market_maker_id: order.marketMakerId ?? order.market_maker_id,
+      market_maker_name: order.marketMakerName ?? order.market_maker_name,
+      certificate_type: order.certificateType ?? order.certificate_type,
+      side: order.side,
+      price: order.price,
+      quantity: order.quantity,
+      filled_quantity: order.filledQuantity ?? order.filled_quantity ?? 0,
+      remaining_quantity: order.remainingQuantity ?? order.remaining_quantity ?? (order.quantity - (order.filledQuantity ?? order.filled_quantity ?? 0)),
+      status: order.status,
+      created_at: order.createdAt ?? order.created_at,
+      updated_at: order.updatedAt ?? order.updated_at,
+      ticket_id: order.ticketId ?? order.ticket_id,
+    })),
+  };
+};
 
 export const cancelMarketMakerOrder = (orderId: string) =>
   api.delete(`/admin/market-orders/${orderId}`);

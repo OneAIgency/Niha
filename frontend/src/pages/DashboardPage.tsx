@@ -247,7 +247,10 @@ export function DashboardPage() {
    * @returns Promise<boolean> - true if fetch succeeded, false otherwise
    */
   const fetchBalance = useCallback(async (): Promise<boolean> => {
-    if (user?.role === 'ADMIN') {
+    // Allow balance fetch for all funded roles (CEA, EUA, SWAP, MM, ADMIN, etc.)
+    // These roles have access to the /cash-market/user/balances endpoint
+    const fundedRoles = ['ADMIN', 'MM', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'];
+    if (user?.role && fundedRoles.includes(user.role)) {
       // Prevent overlapping calls using ref to avoid dependency issues
       if (isRefreshingBalanceRef.current) {
         return false;
