@@ -10,7 +10,7 @@
 |--------------|--------|-----|
 | **Variabile CSS** (culori, spațieri, raze, umbre, tipografie, z-index, subheader, onboarding) | `src/styles/design-tokens.css` | Sursa canonică pentru `var(--...)`. Folosit de componente, override-uri și clase din `index.css`. |
 | **Paletă Tailwind** (navy, emerald, primary) + fonturi, animații, keyframes, backgroundImage | `tailwind.config.js` | Sursa pentru clase utilitare (`bg-navy-800`, `text-emerald-500`, etc.). Păstrează paleta aliniată cu valorile din `design-tokens.css` (vezi comentariile din config). |
-| **Clase de componentă** (card_back, page-container, butoane, tabele, badge-uri, etc.) | `src/index.css` | `@layer components`: folosesc atât variabile CSS cât și clase Tailwind. Importă `design-tokens.css` la început. |
+| **Clase de componentă** (content_wrapper_last, page-container, butoane, tabele, badge-uri, etc.) | `src/index.css` | `@layer components`: folosesc atât variabile CSS cât și clase Tailwind. Importă `design-tokens.css` la început. |
 | **Mod light/dark** + override-uri pentru tokeni | `src/stores/useStore.ts` | `useUIStore`: `theme`, `setTheme`, `toggleTheme`. `useThemeTokenStore`: override-uri persistente pentru variabile CSS. |
 | **Aplicarea override-urilor** | `src/components/theme/ThemeTokenOverridesStyle.tsx` | Injectează override-urile din store ca proprietăți CSS pe `:root`. |
 | **Lista de tokeni** (nume variabile, grupuri pentru UI override) | `src/theme/tokens.ts` | Exportă chei de variabile CSS; folosit de Theme Containers și pentru consistență. |

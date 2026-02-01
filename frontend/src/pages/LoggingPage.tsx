@@ -29,7 +29,7 @@ export default function LoggingPage() {
   return (
     <BackofficeLayout>
       {/* Tab Navigation */}
-      <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 mb-6 overflow-hidden">
+      <div className="content_wrapper_last mb-6">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;

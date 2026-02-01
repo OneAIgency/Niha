@@ -49,8 +49,8 @@ export const THEME_ELEMENT_CONFIG: Record<string, ThemeElementConfig> = {
       { key: '--content-wrapper-padding', label: 'Padding', type: 'length' },
     ],
   },
-  card_back: {
-    label: '.card_back',
+  content_wrapper_last: {
+    label: '.content_wrapper_last',
     params: [
       { key: '--color-card-back-bg', label: 'Background', type: 'color' },
       { key: '--color-card-back-border', label: 'Border', type: 'color' },

@@ -51,7 +51,7 @@ export function StatCard({
 }: StatCardProps) {
   if (loading) {
     return (
-      <div className={cn(variant === 'default' ? 'card_back p-4' : 'bg-navy-900/50 rounded-xl p-5', className)}>
+      <div className={cn(variant === 'default' ? 'content_wrapper_last p-4' : 'bg-navy-900/50 rounded-xl p-5', className)}>
         <div className="flex items-center gap-3 mb-3">
           <Skeleton variant="avatar" width={40} height={40} />
           <Skeleton variant="text" width="60%" />
@@ -93,7 +93,7 @@ export function StatCard({
   }
 
   return (
-    <div className={cn('card_back p-4', className)}>
+    <div className={cn('content_wrapper_last p-4', className)}>
       <div className="flex items-center gap-3">
         {icon && (
           <div className={cn('stat-card-icon', iconColorStyles[iconColor])}>

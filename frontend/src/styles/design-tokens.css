@@ -495,8 +495,14 @@
 /* Sticky wrapper for Subheader + optional SubSubHeader (use in layouts for fixed headers on scroll) */
 .page-section-header-sticky {
   position: sticky;
-  top: 0;
+  top: 4rem; /* h-16 = 64px = 4rem (header height on mobile) */
   z-index: var(--z-elevated);
+}
+
+@media (min-width: 768px) {
+  .page-section-header-sticky {
+    top: 5rem; /* h-20 = 80px = 5rem (header height on desktop) */
+  }
 }
 
 /* Glass Effect */

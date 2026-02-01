@@ -202,28 +202,28 @@ export function ThemeContainersPage() {
               <div
                 role="button"
                 tabIndex={0}
-                data-theme-element="card_back"
-                onClick={() => handleElementClick('card_back')}
-                onKeyDown={(e) => e.key === 'Enter' && handleElementClick('card_back')}
-                className={`card_back cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  selectedElement === 'card_back' ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-navy-900' : ''
+                data-theme-element="content_wrapper_last"
+                onClick={() => handleElementClick('content_wrapper_last')}
+                onKeyDown={(e) => e.key === 'Enter' && handleElementClick('content_wrapper_last')}
+                className={`content_wrapper_last cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                  selectedElement === 'content_wrapper_last' ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-navy-900' : ''
                 }`}
-                aria-label="Edit card_back"
+                aria-label="Edit content_wrapper_last"
               >
                 <p className={`text-sm ${textSecondary}`}>Placeholder content</p>
               </div>
-              <p className={`font-mono text-sm ${textPrimary}`}>.card_back</p>
+              <p className={`font-mono text-sm ${textPrimary}`}>.content_wrapper_last</p>
               <p className={`text-sm ${textSecondary}`}>
                 Section/card wrapper (theme vars). Card, StatCard. Click to edit.
               </p>
             </div>
             <div className="space-y-2">
-              <div className="card_back-hover cursor-pointer" aria-hidden>
+              <div className="content_wrapper_last-hover cursor-pointer" aria-hidden>
                 <p className={`text-sm ${textSecondary}`}>Hover for elevation</p>
               </div>
-              <p className={`font-mono text-sm ${textPrimary}`}>.card_back-hover</p>
+              <p className={`font-mono text-sm ${textPrimary}`}>.content_wrapper_last-hover</p>
               <p className={`text-sm ${textSecondary}`}>
-                card_back with hover (shadow, translate). Interactive cards.
+                content_wrapper_last with hover (shadow, translate). Interactive cards.
               </p>
             </div>
             <div className="space-y-2">
@@ -232,7 +232,7 @@ export function ThemeContainersPage() {
               </Card>
               <p className={`font-mono text-sm ${textPrimary}`}>{'<Card />'}</p>
               <p className={`text-sm ${textSecondary}`}>
-                Component using card_back. Variants: default, glass, hover.
+                Component using content_wrapper_last. Variants: default, glass, hover.
               </p>
             </div>
           </div>

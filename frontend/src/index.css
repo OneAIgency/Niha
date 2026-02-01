@@ -28,17 +28,13 @@
     @apply bg-navy-900/80 backdrop-blur-lg border border-white/10;
   }
 
-  /* Card back: section/card wrapper. Params in design-tokens.css (--color-card-back-bg, --color-card-back-border, --radius-card-back). */
-  .card_back {
-    background-color: var(--color-card-back-bg);
-    border: 1px solid var(--color-card-back-border);
-    border-radius: var(--radius-card-back);
-    box-shadow: var(--shadow-lg);
-    padding: var(--space-6);
+  /* Content wrapper: panel container with header/content sections, overflow hidden for child borders */
+  .content_wrapper_last {
+    @apply bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden;
   }
 
-  .card_back-hover {
-    @apply card_back transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5;
+  .content_wrapper_last-hover {
+    @apply content_wrapper_last transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5;
   }
 
   /* Contact request list row: compact card for Entitate, Nume, Data completării + actions */

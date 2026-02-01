@@ -223,7 +223,7 @@ export function CeaSwapMarketPage() {
             <div className="grid grid-cols-12 gap-6">
               {/* Swap Offers */}
               <div className="col-span-12 lg:col-span-5">
-                <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+                <div className="content_wrapper_last">
                   <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                     <h2 className="font-semibold text-white">Available Swap Offers</h2>
                     <p className="text-xs text-navy-500 dark:text-navy-500">AI Agent Providers</p>
@@ -278,7 +278,7 @@ export function CeaSwapMarketPage() {
 
               {/* Swap Panel */}
               <div className="col-span-12 lg:col-span-7">
-                <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+                <div className="content_wrapper_last">
                   <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                     <h2 className="font-semibold text-white">Your Swap</h2>
                   </div>
@@ -368,7 +368,7 @@ export function CeaSwapMarketPage() {
             </div>
 
             {/* Recent Swaps */}
-            <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden">
+            <div className="content_wrapper_last">
               <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
                 <h2 className="font-semibold text-white">Recent Swaps</h2>
               </div>
