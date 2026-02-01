@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { Users, RefreshCw, AlertCircle, X } from 'lucide-react';
 import { Button, Card } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { MarketMakersList } from '../components/backoffice/MarketMakersList';
-import { CreateMarketMakerModal } from '../components/backoffice/CreateMarketMakerModal';
+import { CreateMarketMakersModal } from '../components/backoffice/CreateMarketMakersModal';
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
 import { getMarketMakers } from '../services/api';
 import { cn } from '../utils';
@@ -65,9 +65,9 @@ export function MarketMakersPage() {
           <Button
             variant="primary"
             onClick={() => setShowCreateModal(true)}
-            icon={<Plus className="w-4 h-4" />}
+            icon={<Users className="w-4 h-4" />}
           >
-            Create Market Maker
+            Create Market Makers
           </Button>
           <Button
             variant="ghost"
@@ -105,13 +105,12 @@ export function MarketMakersPage() {
         </Card>
       </motion.div>
 
-      {/* Create Market Maker Modal */}
+      {/* Create Market Makers Modal */}
       {showCreateModal && (
-        <CreateMarketMakerModal
+        <CreateMarketMakersModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleCreateSuccess}
-          currentMMCount={marketMakers.length}
         />
       )}
 
