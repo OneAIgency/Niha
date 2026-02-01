@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sun,
@@ -19,9 +20,15 @@ import {
   RefreshCw,
   BarChart3,
   Activity,
+  X,
+  ChevronDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  CreditCard,
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
-import { Card, PageHeader, Button } from '../components/common';
+import { Card, PageHeader, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
 
 /**
  * Theme sample page – Admin only.
@@ -30,6 +37,13 @@ import { Card, PageHeader, Button } from '../components/common';
 export function ThemePage() {
   const { theme } = useUIStore();
   const isDark = theme === 'dark';
+
+  // State for interactive components
+  const [activeTab, setActiveTab] = useState('tab1');
+  const [activeToggle, setActiveToggle] = useState('option1');
+  const [activeCertToggle, setActiveCertToggle] = useState('eua');
+  const [activeTradeToggle, setActiveTradeToggle] = useState('buy');
+  const [showModal, setShowModal] = useState(false);
 
   const sectionCls = isDark
     ? 'border-navy-700 bg-navy-800'
@@ -251,6 +265,416 @@ export function ThemePage() {
                 <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                   3
                 </span>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Badge Component */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Badge Component
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Status Variants</p>
+              <div className="flex flex-wrap gap-3">
+                <Badge variant="default">Default</Badge>
+                <Badge variant="success">Success</Badge>
+                <Badge variant="warning">Warning</Badge>
+                <Badge variant="danger">Danger</Badge>
+                <Badge variant="info">Info</Badge>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Color Variants</p>
+              <div className="flex flex-wrap gap-3">
+                <Badge variant="eua">EUA</Badge>
+                <Badge variant="cea">CEA</Badge>
+                <Badge variant="blue">Blue</Badge>
+                <Badge variant="purple">Purple</Badge>
+                <Badge variant="amber">Amber</Badge>
+                <Badge variant="emerald">Emerald</Badge>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Tabs */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Tabs
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-8">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default Variant</p>
+              <Tabs
+                tabs={[
+                  { id: 'tab1', label: 'Overview' },
+                  { id: 'tab2', label: 'Analytics', badge: 5 },
+                  { id: 'tab3', label: 'Reports' },
+                  { id: 'tab4', label: 'Disabled', disabled: true },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+              />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Pills Variant</p>
+              <Tabs
+                tabs={[
+                  { id: 'tab1', label: 'Overview' },
+                  { id: 'tab2', label: 'Analytics' },
+                  { id: 'tab3', label: 'Reports' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="pills"
+              />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Underline Variant</p>
+              <Tabs
+                tabs={[
+                  { id: 'tab1', label: 'Overview' },
+                  { id: 'tab2', label: 'Analytics' },
+                  { id: 'tab3', label: 'Reports' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="underline"
+              />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Toggle Variant (Full Width)</p>
+              <Tabs
+                tabs={[
+                  { id: 'tab1', label: 'Overview' },
+                  { id: 'tab2', label: 'Analytics' },
+                  { id: 'tab3', label: 'Reports' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                variant="toggle"
+                fullWidth
+              />
+            </div>
+          </Card>
+        </section>
+
+        {/* Toggle Groups */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Toggle Groups
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-8">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default Toggle</p>
+              <ToggleGroup
+                options={[
+                  { value: 'option1', label: 'Option 1' },
+                  { value: 'option2', label: 'Option 2' },
+                  { value: 'option3', label: 'Option 3' },
+                ]}
+                value={activeToggle}
+                onChange={setActiveToggle}
+              />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Certificate Toggle (EUA / CEA)</p>
+              <ToggleGroup
+                options={[
+                  { value: 'eua', label: 'EUA', colorScheme: 'eua', icon: <Leaf className="w-4 h-4" /> },
+                  { value: 'cea', label: 'CEA', colorScheme: 'cea', icon: <Wind className="w-4 h-4" /> },
+                ]}
+                value={activeCertToggle}
+                onChange={setActiveCertToggle}
+              />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Trade Toggle (Buy / Sell)</p>
+              <ToggleGroup
+                options={[
+                  { value: 'buy', label: 'Buy', colorScheme: 'buy', icon: <ArrowUpRight className="w-4 h-4" /> },
+                  { value: 'sell', label: 'Sell', colorScheme: 'sell', icon: <ArrowDownRight className="w-4 h-4" /> },
+                ]}
+                value={activeTradeToggle}
+                onChange={setActiveTradeToggle}
+              />
+            </div>
+          </Card>
+        </section>
+
+        {/* Progress Bars */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Progress Bars
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default</p>
+              <ProgressBar value={65} />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>With Label</p>
+              <ProgressBar value={45} showLabel label="Completion Progress" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Gradient</p>
+              <ProgressBar value={80} variant="gradient" size="lg" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Status Variants</p>
+              <div className="space-y-4">
+                <ProgressBar value={100} variant="success" showLabel label="Success" />
+                <ProgressBar value={75} variant="warning" showLabel label="Warning" />
+                <ProgressBar value={30} variant="danger" showLabel label="Danger" />
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Sizes</p>
+              <div className="space-y-4">
+                <ProgressBar value={60} size="sm" />
+                <ProgressBar value={60} size="md" />
+                <ProgressBar value={60} size="lg" />
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Skeleton Loaders */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Skeleton Loaders
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Text Variants</p>
+              <div className="space-y-4">
+                <Skeleton variant="text" />
+                <Skeleton variant="text" lines={3} />
+                <Skeleton variant="textLg" />
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Shape Variants</p>
+              <div className="flex items-center gap-4">
+                <Skeleton variant="circular" width={48} height={48} />
+                <Skeleton variant="avatar" />
+                <Skeleton variant="rectangular" width={100} height={60} />
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Card Skeleton</p>
+              <Skeleton variant="card" />
+            </div>
+          </Card>
+        </section>
+
+        {/* Stat Cards */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Stat Cards
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StatCard
+              icon={<Wallet className="w-5 h-5" />}
+              iconColor="emerald"
+              title="Total Balance"
+              value="€1,234,567.89"
+              trend={{ value: 12.5, direction: 'up' }}
+              subtitle="Updated just now"
+            />
+            <StatCard
+              icon={<Leaf className="w-5 h-5" />}
+              iconColor="blue"
+              title="EUA Holdings"
+              value="5,000"
+              trend={{ value: 2.3, direction: 'down' }}
+              subtitle="Certificates"
+            />
+            <StatCard
+              icon={<Wind className="w-5 h-5" />}
+              iconColor="amber"
+              title="CEA Holdings"
+              value="10,000"
+              trend={{ value: 5.7, direction: 'up' }}
+              subtitle="Certificates"
+            />
+            <StatCard
+              icon={<CreditCard className="w-5 h-5" />}
+              iconColor="purple"
+              title="Pending Orders"
+              value="23"
+              subtitle="Active in market"
+            />
+            <StatCard
+              title="Minimal Variant"
+              value="€99.50"
+              valueColor="emerald"
+              subtitle="Current price"
+              variant="minimal"
+            />
+            <StatCard
+              icon={<Activity className="w-5 h-5" />}
+              iconColor="emerald"
+              title="Loading State"
+              value="..."
+              loading
+            />
+          </div>
+        </section>
+
+        {/* Modals */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Modals
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Confirmation Modal</p>
+              <div className="flex flex-wrap gap-4">
+                <Button variant="primary" onClick={() => setShowModal(true)}>
+                  Open Confirmation Modal
+                </Button>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Modal Variants Preview</p>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className={`rounded-xl p-4 border ${isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'}`}>
+                  <div className="flex items-center gap-2 text-red-500 mb-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    <span className="font-semibold">Danger</span>
+                  </div>
+                  <p className={`text-sm ${textSecondary}`}>For destructive actions</p>
+                </div>
+                <div className={`rounded-xl p-4 border ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-2 text-amber-500 mb-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    <span className="font-semibold">Warning</span>
+                  </div>
+                  <p className={`text-sm ${textSecondary}`}>For important warnings</p>
+                </div>
+                <div className={`rounded-xl p-4 border ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'}`}>
+                  <div className="flex items-center gap-2 text-blue-500 mb-2">
+                    <Info className="w-5 h-5" />
+                    <span className="font-semibold">Info</span>
+                  </div>
+                  <p className={`text-sm ${textSecondary}`}>For informational dialogs</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+          <ConfirmationModal
+            isOpen={showModal}
+            onClose={() => setShowModal(false)}
+            onConfirm={() => setShowModal(false)}
+            title="Confirm Action"
+            message="Are you sure you want to proceed with this action? This cannot be undone."
+            confirmText="Confirm"
+            cancelText="Cancel"
+            variant="danger"
+            details={[
+              { label: 'Order ID', value: 'ORD-12345' },
+              { label: 'Amount', value: '€1,234.56' },
+            ]}
+          />
+        </section>
+
+        {/* Alerts & Toasts */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Alerts & Notifications
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-4">
+            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-emerald-50 border border-emerald-200'}`}>
+              <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+              <div className="flex-1">
+                <p className={`font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>Success</p>
+                <p className={`text-sm ${isDark ? 'text-emerald-400/80' : 'text-emerald-600'}`}>Your order has been placed successfully.</p>
+              </div>
+              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-emerald-500/20 text-emerald-400' : 'hover:bg-emerald-100 text-emerald-600'}`}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-amber-50 border border-amber-200'}`}>
+              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+              <div className="flex-1">
+                <p className={`font-semibold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>Warning</p>
+                <p className={`text-sm ${isDark ? 'text-amber-400/80' : 'text-amber-600'}`}>Your session will expire in 5 minutes.</p>
+              </div>
+              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-amber-500/20 text-amber-400' : 'hover:bg-amber-100 text-amber-600'}`}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200'}`}>
+              <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+              <div className="flex-1">
+                <p className={`font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>Error</p>
+                <p className={`text-sm ${isDark ? 'text-red-400/80' : 'text-red-600'}`}>Failed to process your request. Please try again.</p>
+              </div>
+              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-100 text-red-600'}`}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
+              <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+              <div className="flex-1">
+                <p className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>Info</p>
+                <p className={`text-sm ${isDark ? 'text-blue-400/80' : 'text-blue-600'}`}>Market will close in 30 minutes for maintenance.</p>
+              </div>
+              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-blue-500/20 text-blue-400' : 'hover:bg-blue-100 text-blue-600'}`}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </Card>
+        </section>
+
+        {/* Select / Dropdown */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Select / Dropdown
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-4">
+            <div>
+              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
+                Default Select
+              </label>
+              <div className="relative">
+                <select
+                  className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}
+                >
+                  <option>Select an option...</option>
+                  <option>Option 1</option>
+                  <option>Option 2</option>
+                  <option>Option 3</option>
+                </select>
+                <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
+              </div>
+            </div>
+            <div>
+              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
+                Certificate Select
+              </label>
+              <div className="relative">
+                <select
+                  className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}
+                >
+                  <option>Select certificate type...</option>
+                  <option>EUA - EU Allowance</option>
+                  <option>CEA - China Allowance</option>
+                </select>
+                <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
               </div>
             </div>
           </Card>
@@ -501,6 +925,96 @@ export function ThemePage() {
                   <span className={`text-xs ${textSecondary}`}>{name}</span>
                 </div>
               ))}
+            </div>
+          </Card>
+        </section>
+
+        {/* Dividers */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Dividers
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Horizontal Divider</p>
+              <div className={`h-px w-full ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Divider with Text</p>
+              <div className="flex items-center gap-4">
+                <div className={`h-px flex-1 ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
+                <span className={`text-sm ${textMuted}`}>OR</span>
+                <div className={`h-px flex-1 ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Gradient Divider</p>
+              <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-amber-500 rounded-full" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Vertical Divider (inline)</p>
+              <div className="flex items-center gap-4">
+                <span className={textSecondary}>Item 1</span>
+                <div className={`w-px h-6 ${isDark ? 'bg-navy-600' : 'bg-navy-300'}`} />
+                <span className={textSecondary}>Item 2</span>
+                <div className={`w-px h-6 ${isDark ? 'bg-navy-600' : 'bg-navy-300'}`} />
+                <span className={textSecondary}>Item 3</span>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Loading States */}
+        <section>
+          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
+            Loading States
+          </h2>
+          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+          <Card className="p-6 space-y-6">
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Spinners</p>
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+                  <span className={`text-xs ${textMuted}`}>Border Spin</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                  <span className={`text-xs ${textMuted}`}>Icon Spin</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="animate-spin h-8 w-8 text-amber-500" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className={`text-xs ${textMuted}`}>SVG Spinner</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Dots</p>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Button Loading States</p>
+              <div className="flex flex-wrap gap-4">
+                <Button variant="primary" size="md" disabled>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing...
+                </Button>
+                <Button variant="secondary" size="md" disabled>
+                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                  Loading...
+                </Button>
+              </div>
             </div>
           </Card>
         </section>

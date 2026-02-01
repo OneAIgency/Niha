@@ -420,32 +420,29 @@ export function SettingsPage() {
                 </Button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="w-full">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[25%]">
                         Source
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
                         Library
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
                         Interval
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
                         Last Scrape
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[18%]">
                         Last Price
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
                         Status
                       </th>
-                      <th className="text-right py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[21%]">
                         Actions
                       </th>
                     </tr>
@@ -453,98 +450,93 @@ export function SettingsPage() {
                   <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
                     {sources.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
+                        <td colSpan={7} className="py-8 text-center text-navy-500 dark:text-navy-400">
                           No scraping sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
                     ) : (
                       sources.map((source) => (
                         <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
-                          <td className="py-4 px-4">
-                            <div>
-                              <p className="font-medium text-navy-900 dark:text-white">{source.name}</p>
-                              <p className="text-xs text-navy-500 dark:text-navy-400 truncate max-w-xs">
+                          <td className="py-2 px-2">
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-1.5">
+                                <Badge variant={source.certificate_type === 'EUA' ? 'info' : 'warning'} className="text-[10px] px-1.5 py-0.5">
+                                  {source.certificate_type}
+                                </Badge>
+                              </p>
+                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate">
                                 {source.url}
                               </p>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <Badge variant={source.certificate_type === 'EUA' ? 'info' : 'warning'}>
-                              {source.certificate_type}
-                            </Badge>
-                          </td>
-                          <td className="py-4 px-4">
+                          <td className="py-2 px-2">
                             <select
                               value={source.scrape_library || 'HTTPX'}
                               onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
-                              className="px-2 py-1 text-sm rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
+                              className="px-1 py-0.5 text-xs rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white w-full"
                             >
                               <option value="HTTPX">HTTPX</option>
-                              <option value="BEAUTIFULSOUP">BeautifulSoup</option>
+                              <option value="BEAUTIFULSOUP">BS4</option>
                               <option value="SELENIUM">Selenium</option>
                               <option value="PLAYWRIGHT">Playwright</option>
                             </select>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-2 px-2">
                             <select
                               value={source.scrape_interval_minutes}
                               onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value))}
-                              className="px-2 py-1 text-sm rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
+                              className="px-1 py-0.5 text-xs rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white w-full"
                             >
-                              <option value={5}>5 min</option>
-                              <option value={10}>10 min</option>
-                              <option value={15}>15 min</option>
-                              <option value={30}>30 min</option>
-                              <option value={60}>1 hour</option>
+                              <option value={5}>5m</option>
+                              <option value={10}>10m</option>
+                              <option value={15}>15m</option>
+                              <option value={30}>30m</option>
+                              <option value={60}>1h</option>
                             </select>
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="text-sm text-navy-600 dark:text-navy-300">
+                          <td className="py-2 px-2">
+                            <span className="text-xs text-navy-600 dark:text-navy-300">
                               {formatTimeAgo(source.last_scrape_at)}
                             </span>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-2 px-2">
                             {source.last_price ? (
                               <div className="flex flex-col">
-                                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                   {source.certificate_type === 'EUA' ? '€' : '¥'}{source.last_price.toFixed(2)}
                                 </span>
                                 {source.certificate_type === 'CEA' && source.lastPriceEur && (
-                                  <span className="text-xs text-navy-500 dark:text-navy-400">
+                                  <span className="text-[10px] text-navy-500 dark:text-navy-400">
                                     ≈ €{source.lastPriceEur.toFixed(2)}
-                                    {source.lastExchangeRate && (
-                                      <span className="text-navy-400 dark:text-navy-500">
-                                        {' '}(1€ = ¥{source.lastExchangeRate.toFixed(2)})
-                                      </span>
-                                    )}
                                   </span>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-navy-400">-</span>
+                              <span className="text-xs text-navy-400">-</span>
                             )}
                             {testResult?.sourceId === source.id && testResult.price && (
-                              <span className="ml-2 text-xs text-blue-500">
-                                (Test: {source.certificate_type === 'EUA' ? '€' : '¥'}{testResult.price.toFixed(2)})
-                              </span>
+                              <div className="text-[10px] text-blue-500 mt-0.5">
+                                Test: {source.certificate_type === 'EUA' ? '€' : '¥'}{testResult.price.toFixed(2)}
+                              </div>
                             )}
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-1">
                               {getStatusIcon(source.last_scrape_status)}
-                              <span className="text-sm capitalize text-navy-600 dark:text-navy-300">
+                              <span className="text-[10px] capitalize text-navy-600 dark:text-navy-300">
                                 {source.last_scrape_status || 'Unknown'}
                               </span>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex justify-end gap-2">
+                          <td className="py-2 px-2">
+                            <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleTestSource(source.id)}
                                 loading={testingSource === source.id}
                                 icon={testingSource === source.id ? undefined : <Play className="w-3 h-3" />}
+                                className="text-xs px-2 py-1"
                               >
                                 Test
                               </Button>
@@ -554,6 +546,7 @@ export function SettingsPage() {
                                 onClick={() => handleRefreshSource(source.id)}
                                 loading={refreshingSource === source.id}
                                 icon={refreshingSource === source.id ? undefined : <RefreshCw className="w-3 h-3" />}
+                                className="text-xs px-2 py-1"
                               >
                                 Refresh
                               </Button>
@@ -562,7 +555,7 @@ export function SettingsPage() {
                                 size="sm"
                                 onClick={() => handleDeleteSource(source.id)}
                                 loading={deletingSource === source.id}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 py-1"
                                 icon={<Trash2 className="w-3 h-3" />}
                               >
                                 Delete
