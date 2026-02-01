@@ -112,7 +112,14 @@ export function PlaceOrder({
 
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
-  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number; eur_balance: number } | null>(null);
+  const [balances, setBalances] = useState<{
+    cea_balance: number;
+    eua_balance: number;
+    eur_balance: number;
+    cea_available: number;
+    eua_available: number;
+    eur_available: number;
+  } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
   const [quantity, setQuantity] = useState(prefilledQuantity?.toString() || '');
   const [loading, setLoading] = useState(false);
@@ -239,7 +246,11 @@ export function PlaceOrder({
         // Determine market type based on certificate type
         const market = certificateType === 'CEA' ? 'CEA_CASH' : 'SWAP';
         const response = await feesApi.getEffectiveFee(market, side);
-        setFeeRate(response.fee_rate);
+        // Ensure fee_rate is a valid number, otherwise use default
+        const rate = typeof response.fee_rate === 'number' && !isNaN(response.fee_rate)
+          ? response.fee_rate
+          : DEFAULT_FEE_RATE;
+        setFeeRate(rate);
       } catch (err) {
         console.error('Failed to load fee rate:', err);
         // Use default fee rate if API call fails
@@ -274,18 +285,20 @@ export function PlaceOrder({
     }
 
     // Balance validation for ASK orders (selling certificates)
+    // Use available balance (total - locked by pending orders)
     if (side === 'ASK' && balances) {
-      const availableBalance = certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance;
+      const availableBalance = certificateType === 'CEA' ? balances.cea_available : balances.eua_available;
       if (quantityNum > availableBalance) {
         return `Insufficient ${certificateType} balance. Available: ${formatQuantity(availableBalance)}`;
       }
     }
 
     // Balance validation for BID orders (buying - need EUR)
+    // Use available EUR (total - locked by pending BID orders)
     if (side === 'BID' && balances) {
       const totalCost = priceNum * quantityNum;
-      if (totalCost > balances.eur_balance) {
-        return `Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_balance)}`;
+      if (totalCost > balances.eur_available) {
+        return `Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_available)}`;
       }
     }
 
@@ -343,32 +356,24 @@ export function PlaceOrder({
 
   const total = price && quantity ? parseFloat(price) * parseFloat(quantity) : 0;
   const selectedMMObj = marketMakers.find(mm => mm.id === selectedMM);
+  // Use available balance (not total) for display
   const availableBalance = balances
     ? certificateType === 'CEA'
-      ? balances.cea_balance
-      : balances.eua_balance
+      ? balances.cea_available
+      : balances.eua_available
     : 0;
 
   /**
    * Generates display text for market maker dropdown options.
-   * Shows relevant balance based on MM type and order side.
+   * Shows MM name only - detailed balances shown after selection.
+   * Note: We don't show EUR balance in dropdown because it shows total,
+   * not available (which requires a separate API call after selection).
    *
    * @param mm - Market maker object
    * @returns Formatted display string
    */
   const getMMDisplayText = (mm: MarketMaker) => {
-    const formatBalance = (value: number) =>
-      Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-    // Show the relevant balance based on MM type
-    if (mm.mm_type === 'CEA_SELLER') {
-      return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA`;
-    } else if (mm.mm_type === 'CEA_BUYER') {
-      return `${mm.name} - €${formatBalance(mm.eur_balance)}`;
-    } else if (mm.mm_type === 'EUA_OFFER') {
-      // For EUA_OFFER, show both CEA and EUA
-      return `${mm.name} - ${formatBalance(mm.cea_balance)} CEA / ${formatBalance(mm.eua_balance)} EUA`;
-    }
+    // Just show the name - available balances are shown in Current Balances section after selection
     return mm.name;
   };
 
@@ -427,24 +432,39 @@ export function PlaceOrder({
           </div>
 
           {balances ? (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
-                <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">EUR</div>
-                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(balances.eur_balance)}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
+                <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">EUR (Available)</div>
+                <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 truncate">
+                  {formatCurrency(balances.eur_available)}
                 </div>
+                {balances.eur_balance !== balances.eur_available && (
+                  <div className="text-[9px] text-navy-400 mt-0.5 truncate">
+                    Total: {formatCurrency(balances.eur_balance)}
+                  </div>
+                )}
               </div>
-              <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
-                <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">CEA</div>
-                <div className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                  {formatQuantity(balances.cea_balance)}
+              <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
+                <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">CEA (Available)</div>
+                <div className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400 truncate">
+                  {formatQuantity(balances.cea_available)}
                 </div>
+                {balances.cea_balance !== balances.cea_available && (
+                  <div className="text-[9px] text-navy-400 mt-0.5 truncate">
+                    Total: {formatQuantity(balances.cea_balance)}
+                  </div>
+                )}
               </div>
-              <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
-                <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">EUA</div>
-                <div className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                  {formatQuantity(balances.eua_balance)}
+              <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
+                <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">EUA (Available)</div>
+                <div className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 truncate">
+                  {formatQuantity(balances.eua_available)}
                 </div>
+                {balances.eua_balance !== balances.eua_available && (
+                  <div className="text-[9px] text-navy-400 mt-0.5 truncate">
+                    Total: {formatQuantity(balances.eua_balance)}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -485,9 +505,14 @@ export function PlaceOrder({
               Available EUR Balance
             </span>
             <span className={`${compact ? 'text-base' : 'text-lg'} font-bold font-mono text-emerald-900 dark:text-emerald-100`}>
-              {formatCurrency(balances.eur_balance)}
+              {formatCurrency(balances.eur_available)}
             </span>
           </div>
+          {balances.eur_balance !== balances.eur_available && (
+            <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+              {formatCurrency(balances.eur_balance - balances.eur_available)} locked in pending orders
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -522,8 +547,8 @@ export function PlaceOrder({
           type="number"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="0.00"
-          step="0.01"
+          placeholder="0.0"
+          step="0.1"
           min="0"
           className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono`}
           required
@@ -561,7 +586,7 @@ export function PlaceOrder({
         />
         {side === 'ASK' && balances && (
           <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-            Available: {formatQuantity(certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance)} {certificateType}
+            Available: {formatQuantity(certificateType === 'CEA' ? balances.cea_available : balances.eua_available)} {certificateType}
           </p>
         )}
       </div>

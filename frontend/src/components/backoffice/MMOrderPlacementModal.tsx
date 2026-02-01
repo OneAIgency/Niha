@@ -317,8 +317,8 @@ export function MMOrderPlacementModal({
                   type="number"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
+                  placeholder="0.0"
+                  step="0.1"
                   min="0"
                   className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   required

@@ -19,3 +19,5 @@ export { UserDetailsTab } from './UserDetailsTab';
 export { IPLookupModal } from './IPLookupModal';
 export { WithdrawalsTab } from './WithdrawalsTab';
 export { WithdrawalRequestModal } from './WithdrawalRequestModal';
+export { EditOrderModal } from './EditOrderModal';
+export { IndividualOrdersTable } from './IndividualOrdersTable';

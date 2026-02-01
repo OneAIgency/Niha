@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { RefreshCw, TrendingDown, TrendingUp, X, List } from 'lucide-react';
 import { Button } from '../components/common';
 import { AdminOrderBookSection, type OrderBookData } from '../components/backoffice/AdminOrderBookSection';
 import { PlaceOrder } from '../components/backoffice/PlaceOrder';
+import { EditOrderModal } from '../components/backoffice/EditOrderModal';
+import { IndividualOrdersTable } from '../components/backoffice/IndividualOrdersTable';
 import { BackofficeLayout } from '../components/layout';
-import { placeMarketMakerOrder } from '../services/api';
-import type { CertificateType } from '../types';
+import { placeMarketMakerOrder, cancelMarketMakerOrder, backofficeApi } from '../services/api';
+import type { CertificateType, MarketMakerOrder } from '../types';
 import { cn } from '../utils';
 
 const REFRESH_TIMEOUT_MS = 500;
@@ -38,6 +40,9 @@ export function MarketOrdersPage() {
   const [askPrefilledQuantity, setAskPrefilledQuantity] = useState<number | undefined>(undefined);
   const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'aggregated' | 'individual'>('aggregated');
+  const [editingOrder, setEditingOrder] = useState<MarketMakerOrder | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const askDialogRef = useRef<HTMLDivElement>(null);
   const bidDialogRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +146,43 @@ export function MarketOrdersPage() {
     closeBid();
   };
 
+  /**
+   * Handle clicking on an individual order to edit it
+   */
+  const handleEditOrder = (order: MarketMakerOrder) => {
+    setEditingOrder(order);
+    setEditModalOpen(true);
+  };
+
+  /**
+   * Close edit modal
+   */
+  const closeEditModal = useCallback(() => {
+    setEditModalOpen(false);
+    setEditingOrder(null);
+  }, []);
+
+  /**
+   * Update order via API
+   */
+  const handleUpdateOrder = async (orderId: string, update: { price?: number; quantity?: number }) => {
+    await backofficeApi.adminUpdateOrder(orderId, update);
+  };
+
+  /**
+   * Cancel order via API
+   */
+  const handleCancelOrder = async (orderId: string) => {
+    await cancelMarketMakerOrder(orderId);
+  };
+
+  /**
+   * Called after successful edit/cancel
+   */
+  const handleEditSuccess = () => {
+    handleOrderPlaced(); // Refresh both views
+  };
+
   // Escape key: close whichever modal is open
   useEffect(() => {
     if (!askModalOpen && !bidModalOpen) return;
@@ -234,6 +276,34 @@ export function MarketOrdersPage() {
       }
       subSubHeader={
         <>
+          {/* View Toggle */}
+          <div className="inline-flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 mr-2">
+            <button
+              onClick={() => setViewMode('aggregated')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'aggregated'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
+              )}
+              title="Aggregated order book view"
+            >
+              Aggregated
+            </button>
+            <button
+              onClick={() => setViewMode('individual')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1',
+                viewMode === 'individual'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
+              )}
+              title="Individual orders view - click to edit"
+            >
+              <List className="w-3.5 h-3.5" />
+              Orders
+            </button>
+          </div>
           {certificateType === 'CEA' && (
             <Button
               variant="primary"
@@ -269,20 +339,30 @@ export function MarketOrdersPage() {
       <div className="max-w-[1600px] mx-auto">
         {/* Order book section */}
         <motion.div
-          key={certificateType}
+          key={`${certificateType}-${viewMode}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Order Book */}
-          <div className="h-[600px] lg:h-[700px] xl:h-[800px]">
-            <AdminOrderBookSection
-              key={`orderbook-${refreshKey}`}
+          {viewMode === 'aggregated' ? (
+            /* Aggregated Order Book */
+            <div className="h-[600px] lg:h-[700px] xl:h-[800px]">
+              <AdminOrderBookSection
+                key={`orderbook-${refreshKey}`}
+                certificateType={certificateType}
+                onPriceClick={handlePriceClick}
+                onOrderBookData={handleOrderBookData}
+              />
+            </div>
+          ) : (
+            /* Individual Orders Table */
+            <IndividualOrdersTable
+              key={`orders-${refreshKey}`}
               certificateType={certificateType}
-              onPriceClick={handlePriceClick}
-              onOrderBookData={handleOrderBookData}
+              onEditOrder={handleEditOrder}
+              refreshKey={refreshKey}
             />
-          </div>
+          )}
         </motion.div>
       </div>
 
@@ -403,6 +483,16 @@ export function MarketOrdersPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Order Modal */}
+      <EditOrderModal
+        order={editingOrder}
+        isOpen={editModalOpen}
+        onClose={closeEditModal}
+        onUpdate={handleUpdateOrder}
+        onCancel={handleCancelOrder}
+        onSuccess={handleEditSuccess}
+      />
     </BackofficeLayout>
   );
 }
