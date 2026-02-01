@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Users, TrendingUp, TrendingDown, ArrowLeftRight, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { Button, Input, Card } from '../common';
+import { Button, Input, NumberInput, Card } from '../common';
 import { usePrices } from '../../hooks/usePrices';
 import { createMarketMaker, type CreateMarketMakerRequest } from '../../services/api';
 import { cn } from '../../utils';
@@ -278,12 +278,13 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
 
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
-                    <Input
+                    <NumberInput
                       label="EUR Balance"
-                      type="number"
                       value={ceaBuyer.eurValue}
-                      onChange={(e) => handleCeaBuyerEurChange(e.target.value)}
+                      onChange={handleCeaBuyerEurChange}
                       placeholder="Enter EUR amount"
+                      suffix="EUR"
+                      decimals={2}
                       disabled={ceaBuyer.isCreated || ceaBuyer.isCreating}
                     />
                   </div>
@@ -348,12 +349,13 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
 
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
-                    <Input
+                    <NumberInput
                       label="EUR Value of CEA"
-                      type="number"
                       value={ceaSeller.eurValue}
-                      onChange={(e) => handleCeaSellerEurChange(e.target.value)}
+                      onChange={handleCeaSellerEurChange}
                       placeholder="Enter EUR value"
+                      suffix="EUR"
+                      decimals={2}
                       disabled={ceaSeller.isCreated || ceaSeller.isCreating}
                     />
                   </div>
@@ -421,12 +423,13 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
 
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
-                    <Input
+                    <NumberInput
                       label="EUR Value of EUA"
-                      type="number"
                       value={swapper.eurValue}
-                      onChange={(e) => handleSwapperEurChange(e.target.value)}
+                      onChange={handleSwapperEurChange}
                       placeholder="Enter EUR value"
+                      suffix="EUR"
+                      decimals={2}
                       disabled={swapper.isCreated || swapper.isCreating}
                     />
                   </div>

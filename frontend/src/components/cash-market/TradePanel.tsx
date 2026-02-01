@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../common/Card';
+import { NumberInput } from '../common/NumberInput';
 import type { CertificateType, OrderSide } from '../../types';
 
 interface TradePanelProps {
@@ -92,9 +93,9 @@ export function TradePanel({
         {/* Price Input */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="text-sm text-navy-600 dark:text-navy-400">
+            <span className="text-sm text-navy-600 dark:text-navy-400">
               Price (EUR)
-            </label>
+            </span>
             <button
               type="button"
               onClick={setMarketPrice}
@@ -104,32 +105,24 @@ export function TradePanel({
               {side === 'BUY' ? 'Best Ask' : 'Best Bid'}
             </button>
           </div>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
+          <NumberInput
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={setPrice}
             placeholder="0.0"
-            className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            suffix="EUR"
+            decimals={2}
           />
         </div>
 
         {/* Quantity Input */}
         <div>
-          <label className="text-sm text-navy-600 dark:text-navy-400 block mb-1">
-            Quantity ({certificateType})
-          </label>
-          <input
-            type="number"
-            step="1"
-            min="0"
+          <NumberInput
+            label={`Quantity (${certificateType})`}
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onChange={setQuantity}
             placeholder="0"
-            className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            aria-label={`Quantity in ${certificateType}`}
-            aria-required="true"
+            suffix={certificateType}
+            decimals={0}
           />
         </div>
 

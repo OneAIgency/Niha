@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Card } from '../common/Card';
-import { Button } from '../common';
+import { Button, NumberInput } from '../common';
 import { getMarketMakers, getMarketMakerBalances, placeMarketMakerOrder } from '../../services/api';
 import type { CertificateType } from '../../types';
 import { MarketMakerOrdersList } from './MarketMakerOrdersList';
@@ -224,35 +224,25 @@ export function PlaceMarketOrderSection({
 
           {/* Price */}
           <div>
-            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
-              Price (EUR) *
-            </label>
-            <input
-              type="number"
+            <NumberInput
+              label="Price (EUR) *"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              step="0.1"
-              min="0.1"
+              onChange={setPrice}
               placeholder="0.0"
-              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-              required
+              suffix="EUR"
+              decimals={2}
             />
           </div>
 
           {/* Quantity */}
           <div>
-            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
-              Quantity ({certificateType}) *
-            </label>
-            <input
-              type="number"
+            <NumberInput
+              label={`Quantity (${certificateType}) *`}
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              step="1"
-              min="1"
+              onChange={setQuantity}
               placeholder="0"
-              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-              required
+              suffix={certificateType}
+              decimals={0}
             />
           </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, AlertCircle, Leaf, Wind, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { Button } from '../common';
+import { Button, NumberInput } from '../common';
 import { createTransaction } from '../../services/api';
 import { cn } from '../../utils';
 
@@ -204,29 +204,15 @@ export function TransactionForm({
 
             {/* Amount */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                Amount *
-              </label>
-              <input
-                type="number"
+              <NumberInput
+                label="Amount *"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={setAmount}
                 placeholder="0"
-                min="0"
-                step="1"
-                className={cn(
-                  'w-full px-3 py-2 rounded-lg border bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 transition-all',
-                  insufficientBalance
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-navy-200 dark:border-navy-700 focus:ring-purple-500'
-                )}
-                autoFocus
+                suffix={certificateType}
+                decimals={0}
+                error={insufficientBalance ? `Insufficient balance. Maximum: ${currentBalance.toLocaleString()}` : undefined}
               />
-              {insufficientBalance && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  Insufficient balance. Maximum: {currentBalance}
-                </p>
-              )}
             </div>
 
             {/* Notes */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, TrendingUp, Loader2, AlertCircle } from 'lucide-react';
 import { Card } from '../common/Card';
+import { NumberInput } from '../common/NumberInput';
 import { cashMarketApi } from '../../services/api';
 import type { CertificateType } from '../../types';
 
@@ -233,45 +234,35 @@ export function UserOrderEntryModal({
               Amount (EUR)
             </label>
             <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max={availableBalance}
+              <NumberInput
                 value={amountEur}
-                onChange={(e) => setAmountEur(e.target.value)}
+                onChange={setAmountEur}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 pr-16 rounded-lg border-2 border-purple-200 dark:border-purple-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                suffix="EUR"
+                decimals={2}
+                error={parseFloat(amountEur) > availableBalance ? 'Insufficient balance' : undefined}
+                className="pr-16"
               />
               <button
                 type="button"
                 onClick={handleMaxClick}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors"
+                className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors z-10"
               >
                 MAX
               </button>
             </div>
-            {parseFloat(amountEur) > availableBalance && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                Insufficient balance
-              </p>
-            )}
           </div>
 
           {/* Limit Price Input (only for LIMIT orders) */}
           {orderType === 'LIMIT' && (
             <div>
-              <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
-                Limit Price (EUR)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
+              <NumberInput
+                label="Limit Price (EUR)"
                 value={limitPrice}
-                onChange={(e) => setLimitPrice(e.target.value)}
+                onChange={setLimitPrice}
                 placeholder={bestAskPrice ? `${bestAskPrice.toFixed(1)}` : '0.0'}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-purple-200 dark:border-purple-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                suffix="EUR"
+                decimals={2}
               />
               {bestAskPrice && (
                 <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useId } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle, Loader2, Info } from 'lucide-react';
-import { Button } from '../common';
+import { Button, NumberInput } from '../common';
 import { getMarketMakers, getMarketMakerBalances, feesApi } from '../../services/api';
 import { formatCurrency, formatQuantity } from '../../utils';
 import type { CertificateType } from '../../types';
@@ -106,8 +106,6 @@ export function PlaceOrder({
   // Generate unique IDs for accessibility
   const errorId = useId();
   const successId = useId();
-  const priceErrorId = useId();
-  const quantityErrorId = useId();
   const mmErrorId = useId();
 
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
@@ -536,53 +534,31 @@ export function PlaceOrder({
 
       {/* Price Input */}
       <div>
-        <label 
-          htmlFor="price-input"
-          className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 mb-2`}
-        >
-          Price (EUR) *
-        </label>
-        <input
+        <NumberInput
           id="price-input"
-          type="number"
+          label="Price (EUR) *"
           value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          onChange={setPrice}
           placeholder="0.0"
-          step="0.1"
-          min="0"
-          className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono`}
-          required
+          suffix="EUR"
+          decimals={2}
           disabled={loading}
-          aria-required="true"
-          aria-invalid={error?.includes('Price') ? 'true' : 'false'}
-          aria-describedby={error?.includes('Price') ? priceErrorId : undefined}
-          aria-busy={loading}
+          error={error?.includes('Price') ? error : undefined}
         />
       </div>
 
       {/* Quantity Input */}
       <div>
-        <label 
-          htmlFor="quantity-input"
-          className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 mb-2`}
-        >
-          Quantity ({certificateType}) *
-        </label>
-        <input
+        <NumberInput
           id="quantity-input"
-          type="number"
+          label={`Quantity (${certificateType}) *`}
           value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          onChange={setQuantity}
           placeholder="0"
-          step="1"
-          min="0"
-          className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono`}
-          required
+          suffix={certificateType}
+          decimals={0}
           disabled={loading}
-          aria-required="true"
-          aria-invalid={error && (error.includes('Quantity') || error.includes('balance')) ? 'true' : 'false'}
-          aria-describedby={error && (error.includes('Quantity') || error.includes('balance')) ? quantityErrorId : undefined}
-          aria-busy={loading}
+          error={error && (error.includes('Quantity') || error.includes('balance')) ? error : undefined}
         />
         {side === 'ASK' && balances && (
           <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
