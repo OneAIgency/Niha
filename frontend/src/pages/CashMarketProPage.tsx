@@ -40,13 +40,18 @@ function ProfessionalOrderBook({
   asks,
   spread,
   bestBid,
-  bestAsk: _bestAsk,
+  bestAsk,
   onPriceClick,
 }: ProfessionalOrderBookProps) {
-  const maxCumulative = useMemo(() => {
-    const maxBid = Math.max(...bids.map(b => b.cumulative_quantity), 0);
-    const maxAsk = Math.max(...asks.map(a => a.cumulative_quantity), 0);
-    return Math.max(maxBid, maxAsk);
+  // Calculate total liquidity for BID and ASK sides
+  const { totalBidQty, totalBidEur, totalAskQty, totalAskEur } = useMemo(() => {
+    const bidQty = bids.reduce((sum, b) => sum + b.quantity, 0);
+    const askQty = asks.reduce((sum, a) => sum + a.quantity, 0);
+    // For BID: value = sum of (quantity * price) for each level
+    const bidEur = bids.reduce((sum, b) => sum + b.quantity * b.price, 0);
+    // For ASK: value = sum of (quantity * price) for each level
+    const askEur = asks.reduce((sum, a) => sum + a.quantity * a.price, 0);
+    return { totalBidQty: bidQty, totalBidEur: bidEur, totalAskQty: askQty, totalAskEur: askEur };
   }, [bids, asks]);
 
   const formatPrice = (price: number) => price.toFixed(3);
@@ -77,16 +82,18 @@ function ProfessionalOrderBook({
       </div>
 
       {/* Column Headers */}
-      <div className="grid grid-cols-2 border-b border-navy-800">
+      <div className="flex border-b border-navy-800">
         {/* Bids Header */}
-        <div className="grid grid-cols-4 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider border-r border-navy-800">
+        <div className="flex-1 grid grid-cols-4 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider">
           <span>Cnt</span>
           <span className="text-right">Total</span>
           <span className="text-right">Size</span>
           <span className="text-right">Bid</span>
         </div>
+        {/* Separator */}
+        <div className="w-px bg-navy-700/50" />
         {/* Asks Header */}
-        <div className="grid grid-cols-4 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider">
+        <div className="flex-1 grid grid-cols-4 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider">
           <span>Ask</span>
           <span>Size</span>
           <span>Total</span>
@@ -95,23 +102,17 @@ function ProfessionalOrderBook({
       </div>
 
       {/* Order Book Grid */}
-      <div className="grid grid-cols-2 flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Bids */}
-        <div className="border-r border-navy-800 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col">
           {bids.map((bid, idx) => {
-            const depthPercent = maxCumulative > 0 ? (bid.cumulative_quantity / maxCumulative) * 100 : 0;
             return (
               <div
                 key={`bid-${idx}`}
                 onClick={() => onPriceClick?.(bid.price)}
-                className="grid grid-cols-4 px-2 py-[2px] text-[11px] font-mono cursor-pointer relative hover:bg-emerald-900/20 transition-colors"
+                className="grid grid-cols-4 px-2 py-[2px] text-[11px] font-mono cursor-pointer relative bg-emerald-500/15 hover:bg-emerald-500/25 transition-colors"
                 style={{ height: '20px', minHeight: '20px' }}
               >
-                {/* Depth Bar */}
-                <div
-                  className="absolute right-0 top-0 bottom-0 bg-emerald-500/15 transition-all"
-                  style={{ width: `${depthPercent}%` }}
-                />
                 <span className="relative z-10 text-navy-500">{bid.order_count}</span>
                 <span className="relative z-10 text-right text-navy-400">{formatQuantity(bid.cumulative_quantity)}</span>
                 <span className="relative z-10 text-right text-white">{formatQuantity(bid.quantity)}</span>
@@ -121,22 +122,19 @@ function ProfessionalOrderBook({
           })}
         </div>
 
+        {/* Separator */}
+        <div className="w-px bg-navy-700/50" />
+
         {/* Asks */}
-        <div className="overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col">
           {asks.map((ask, idx) => {
-            const depthPercent = maxCumulative > 0 ? (ask.cumulative_quantity / maxCumulative) * 100 : 0;
             return (
               <div
                 key={`ask-${idx}`}
                 onClick={() => onPriceClick?.(ask.price)}
-                className="grid grid-cols-4 px-2 py-[2px] text-[11px] font-mono cursor-pointer relative hover:bg-red-900/20 transition-colors"
+                className="grid grid-cols-4 px-2 py-[2px] text-[11px] font-mono cursor-pointer relative bg-red-500/15 hover:bg-red-500/25 transition-colors"
                 style={{ height: '20px', minHeight: '20px' }}
               >
-                {/* Depth Bar */}
-                <div
-                  className="absolute left-0 top-0 bottom-0 bg-red-500/15 transition-all"
-                  style={{ width: `${depthPercent}%` }}
-                />
                 <span className="relative z-10 font-medium text-red-400">{formatPrice(ask.price)}</span>
                 <span className="relative z-10 text-white">{formatQuantity(ask.quantity)}</span>
                 <span className="relative z-10 text-navy-400">{formatQuantity(ask.cumulative_quantity)}</span>
@@ -153,6 +151,36 @@ function ProfessionalOrderBook({
         <span className="font-mono font-medium text-[11px] text-amber-400">
           €{spread?.toFixed(3) || '0.000'} ({spread && bestBid ? ((spread / bestBid) * 100).toFixed(3) : '0.000'}%)
         </span>
+      </div>
+
+      {/* Full Liquidity Summary */}
+      <div className="flex border-t border-navy-800 bg-navy-800/50">
+        {/* BID Liquidity */}
+        <div className="flex-1 px-2 py-1.5">
+          <div className="text-[9px] text-navy-500 uppercase tracking-wider mb-0.5">Total BID Liquidity</div>
+          <div className="flex justify-between items-baseline">
+            <span className="font-mono text-[11px] text-emerald-400 font-medium">
+              {totalBidQty.toLocaleString()} <span className="text-navy-500 text-[9px]">CEA</span>
+            </span>
+            <span className="font-mono text-[10px] text-navy-400">
+              €{totalBidEur.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+        {/* Separator */}
+        <div className="w-px bg-navy-700/50" />
+        {/* ASK Liquidity */}
+        <div className="flex-1 px-2 py-1.5">
+          <div className="text-[9px] text-navy-500 uppercase tracking-wider mb-0.5">Total ASK Liquidity</div>
+          <div className="flex justify-between items-baseline">
+            <span className="font-mono text-[11px] text-red-400 font-medium">
+              {totalAskQty.toLocaleString()} <span className="text-navy-500 text-[9px]">CEA</span>
+            </span>
+            <span className="font-mono text-[10px] text-navy-400">
+              €{totalAskEur.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

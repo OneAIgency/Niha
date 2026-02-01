@@ -60,6 +60,8 @@ export function ProfilePage() {
    * Fetches fresh data from API to ensure up-to-date information.
    */
   useEffect(() => {
+    if (!user) return; // Skip if user not loaded yet
+
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
@@ -88,7 +90,7 @@ export function ProfilePage() {
     };
 
     loadData();
-  }, []);
+  }, [user]);
 
   // Update form data when user changes (from auth store)
   useEffect(() => {
@@ -101,6 +103,15 @@ export function ProfilePage() {
       });
     }
   }, [user]);
+
+  // Early return if user is not loaded yet (after all hooks)
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
 
   /**
    * Save profile changes to the backend.
@@ -476,8 +487,8 @@ export function ProfilePage() {
                     <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
                       KYC Status
                     </label>
-                    <Badge variant={getKycBadgeVariant(entity.kyc_status)}>
-                      {entity.kyc_status.toUpperCase()}
+                    <Badge variant={getKycBadgeVariant(entity.kyc_status || 'pending')}>
+                      {(entity.kyc_status || 'pending').toUpperCase()}
                     </Badge>
                   </div>
                 </div>
