@@ -1,0 +1,154 @@
+# CLAUDE.md - NIHA Carbon Platform
+
+## Quick Start
+
+```bash
+# Start all services
+docker compose up -d
+
+# Run migrations
+docker compose exec backend alembic upgrade head
+
+# Access
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
+
+## Commands
+
+| Task | Command |
+|------|---------|
+| Start | `docker compose up -d` |
+| Stop | `docker compose down` |
+| Rebuild (no cache) | `./rebuild.sh` |
+| Quick restart | `./restart.sh` |
+| Backend tests | `docker compose exec backend pytest` |
+| Frontend tests | `cd frontend && npm test` |
+| Migrations | `docker compose exec backend alembic upgrade head` |
+| Lint backend | `cd backend && ruff check .` |
+| Format backend | `cd backend && ruff format` |
+
+## Key Documentation
+
+| Document | Purpose |
+|----------|---------|
+| `app_truth.md` | **SSOT** - roles, routes, ports, business rules |
+| `docs/ROLE_TRANSITIONS.md` | User role flow (NDA → KYC → ... → EUA) |
+| `frontend/docs/DESIGN_SYSTEM.md` | UI components, tokens, patterns |
+| `project-goals.md` | Current sprint goals and priorities |
+
+## Architecture
+
+```
+backend/
+├── app/
+│   ├── api/v1/          # FastAPI endpoints
+│   ├── models/          # SQLAlchemy models
+│   ├── services/        # Business logic
+│   ├── schemas/         # Pydantic schemas
+│   └── core/            # Config, security, database
+└── alembic/             # DB migrations
+
+frontend/
+├── src/
+│   ├── components/      # React components
+│   ├── pages/           # Page components
+│   ├── services/api.ts  # API client
+│   ├── stores/          # Zustand state
+│   ├── types/           # TypeScript types
+│   └── styles/          # CSS tokens
+```
+
+## Tech Stack
+
+- **Backend**: FastAPI, SQLAlchemy (async), PostgreSQL, Redis
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Zustand
+- **Infra**: Docker Compose (project: `niha_platform`)
+
+## Ports
+
+| Service | Port |
+|---------|------|
+| Frontend | 5173 |
+| Backend | 8000 |
+| PostgreSQL | 5433 (host) / 5432 (internal) |
+| Redis | 6379 |
+
+## Code Style
+
+### Backend
+- Use `ruff` for linting and formatting
+- Use `datetime.now(timezone.utc)` (not `datetime.utcnow()`)
+- Always use try/except with `await db.rollback()` for DB operations
+- Use `handle_database_error` from `app/core/exceptions`
+
+### Frontend
+- Use Tailwind tokens: `navy-*`, `emerald-*`, `amber-*`, `blue-*`
+- Never use `slate-*`, `gray-*`, or hardcoded hex colors
+- Use components from `src/components/common/`
+- Use `ClientStatusBadge` for role/status display
+
+## Critical Rules
+
+### Frozen Files (Do Not Refactor)
+See `app_truth.md` §10. These files are locked:
+- `frontend/src/pages/onboarding/*` (all onboarding pages)
+- `frontend/src/pages/LoginPage.tsx`
+- `frontend/src/pages/LoginPageAnimations.tsx`
+- `frontend/src/pages/Onboarding1Page.tsx`
+
+**Allowed**: Bug fixes, security fixes only.
+
+### User Role is SSOT
+- Client state comes ONLY from `User.role` or `ContactRequest.user_role`
+- Never use `request_type` or `status` for user state
+- Role transitions follow `docs/ROLE_TRANSITIONS.md` strictly
+
+### MM (Market Maker) Users
+- Admin-only creation (no contact request flow)
+- Created via Backoffice → Users → Create User
+- Same access as EUA/ADMIN (dashboard, funding, cash market, swap)
+
+## Gotchas
+
+1. **PostgreSQL port**: Host uses 5433 to avoid conflicts with local Postgres
+2. **Migrations**: Current head is `2026_01_30_add_mm` - new migrations use this as `down_revision`
+3. **WebSocket**: Backoffice uses realtime updates - normalize payloads to snake_case
+4. **Deposits**: APPROVED→FUNDING only via first `announce_deposit` (no manual "fund user")
+5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list
+6. **Swap market ratio**: `Order.price` = **CEA/EUA ratio** (NOT EUR price!). The ratio represents how many EUA you get per 1 CEA. Example: ratio 0.1177 means 1 CEA → 0.1177 EUA. See `app_truth.md` §5 for full specs
+
+## Testing
+
+```bash
+# Backend - all tests
+docker compose exec backend pytest
+
+# Backend - with coverage
+docker compose exec backend pytest --cov=app tests/
+
+# Frontend
+cd frontend && npm test
+```
+
+## Debugging
+
+```bash
+# Backend logs
+docker compose logs backend -f
+
+# Check settlement processor
+docker compose logs backend | grep "Settlement processor"
+
+# Database shell
+docker compose exec db psql -U niha_user -d niha_carbon
+```
+
+## Known Technical Debt
+
+- [ ] Token storage should migrate to httpOnly cookies (XSS risk) - `frontend/src/services/api.ts:86-94`
+- [ ] N+1 queries in `liquidity_service.get_asset_holders()` - documented in code, needs join refactor
+- [ ] TOCTOU race condition in liquidity preview/execute flow - documented in code (line 424)
+- [ ] ~80 remaining `datetime.utcnow()` calls need migration to `datetime.now(timezone.utc)`
+- [ ] XSS sanitization for user-generated content (notes, entity names) - add DOMPurify

@@ -9,7 +9,7 @@ import asyncio
 import logging
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal, ROUND_DOWN
 from typing import Dict, List, Optional, Tuple
 
@@ -17,10 +17,14 @@ from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from sqlalchemy import func
+
 from app.models.models import (
+    AutoTradeMarketSettings,
     AutoTradePriceMode,
     AutoTradeQuantityMode,
     AutoTradeRule,
+    AutoTradeSettings,
     CashMarketTrade,
     CertificateType,
     MarketMakerClient,
@@ -62,7 +66,8 @@ class AutoTradeExecutor:
         - Its market maker is active
         - Its next_execution_at is in the past or null (never executed)
         """
-        now = datetime.utcnow()
+        # Naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         result = await db.execute(
             select(AutoTradeRule)
@@ -86,17 +91,30 @@ class AutoTradeExecutor:
         """
         Calculate the next execution time based on interval mode.
         For random mode, picks a random interval between min and max.
+        Prefers seconds-based intervals if set, otherwise falls back to minutes.
         """
-        now = datetime.utcnow()
+        # Naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if rule.interval_mode == "random":
-            min_mins = rule.interval_min_minutes or 1
-            max_mins = rule.interval_max_minutes or 30
-            interval_mins = random.randint(min_mins, max_mins)
+            # Prefer seconds-based intervals
+            if rule.interval_min_seconds is not None and rule.interval_max_seconds is not None:
+                min_secs = rule.interval_min_seconds
+                max_secs = rule.interval_max_seconds
+                interval_secs = random.randint(min_secs, max_secs)
+            else:
+                # Fall back to minutes
+                min_mins = rule.interval_min_minutes or 1
+                max_mins = rule.interval_max_minutes or 30
+                interval_secs = random.randint(min_mins, max_mins) * 60
         else:
-            interval_mins = rule.interval_minutes or 5
+            # Fixed mode - prefer seconds
+            if rule.interval_seconds is not None:
+                interval_secs = rule.interval_seconds
+            else:
+                interval_secs = (rule.interval_minutes or 5) * 60
 
-        return now + timedelta(minutes=interval_mins)
+        return now + timedelta(seconds=interval_secs)
 
     @staticmethod
     async def get_market_price(
@@ -115,6 +133,32 @@ class AutoTradeExecutor:
             return None
         except Exception as e:
             logger.error(f"Failed to get market price: {e}")
+            return None
+
+    @staticmethod
+    async def get_swap_ratio() -> Optional[Decimal]:
+        """
+        Get the current CEA/EUA swap ratio.
+
+        IMPORTANT: In the swap market, Order.price is the ratio CEA/EUA
+        (how many EUA you get per 1 CEA), NOT a EUR price!
+
+        Example: CEA=9.85 EUR, EUA=83.72 EUR
+        Ratio = 9.85/83.72 = 0.1177 (1 CEA → 0.1177 EUA)
+
+        Returns: Decimal ratio or None if unavailable.
+        """
+        try:
+            prices = await price_scraper.get_current_prices()
+            cea_price = prices.get("cea", {}).get("price")
+            eua_price = prices.get("eua", {}).get("price")
+
+            if cea_price and eua_price and eua_price > 0:
+                ratio = Decimal(str(cea_price)) / Decimal(str(eua_price))
+                return ratio.quantize(Decimal("0.0001"))
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get swap ratio: {e}")
             return None
 
     @staticmethod
@@ -174,6 +218,444 @@ class AutoTradeExecutor:
 
         result = await db.execute(query)
         return len(result.scalars().all())
+
+    @staticmethod
+    async def get_liquidity_settings(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+    ) -> Optional["AutoTradeSettings"]:
+        """Get liquidity settings for a certificate type."""
+        result = await db.execute(
+            select(AutoTradeSettings).where(
+                AutoTradeSettings.certificate_type == certificate_type.value
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    def determine_market_key(market_maker: MarketMakerClient) -> str:
+        """
+        Determine market key for AutoTradeMarketSettings based on market maker type.
+
+        Mapping:
+        - CEA_BUYER -> CEA_BID (buying CEA)
+        - CEA_SELLER -> CEA_ASK (selling CEA)
+        - EUA_OFFER -> EUA_SWAP (swap market)
+        """
+        if market_maker.mm_type == MarketMakerType.CEA_BUYER:
+            return "CEA_BID"
+        elif market_maker.mm_type == MarketMakerType.CEA_SELLER:
+            return "CEA_ASK"
+        elif market_maker.mm_type == MarketMakerType.EUA_OFFER:
+            return "EUA_SWAP"
+        else:
+            # Default fallback
+            return "CEA_BID"
+
+    @staticmethod
+    async def get_market_settings(
+        db: AsyncSession,
+        market_key: str,
+    ) -> Optional[AutoTradeMarketSettings]:
+        """Get market settings for a specific market key."""
+        result = await db.execute(
+            select(AutoTradeMarketSettings).where(
+                AutoTradeMarketSettings.market_key == market_key
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    def calculate_order_volume_with_variety(
+        min_volume_eur: Decimal,
+        volume_variety: int,
+        target_liquidity: Optional[Decimal],
+        current_liquidity: Decimal,
+        avg_order_count: int,
+    ) -> Decimal:
+        """
+        Calculate order volume based on variety setting and liquidity needs.
+
+        Args:
+            min_volume_eur: Minimum order volume in EUR
+            volume_variety: 1-10 scale (1=uniform, 10=very diverse)
+            target_liquidity: Target liquidity in EUR
+            current_liquidity: Current liquidity in EUR
+            avg_order_count: Target number of orders
+
+        Returns:
+            Order volume in EUR
+        """
+        # Calculate how much liquidity we need to add
+        if target_liquidity and target_liquidity > current_liquidity:
+            needed_liquidity = target_liquidity - current_liquidity
+            # Estimate order size based on target order count
+            base_volume = needed_liquidity / Decimal(str(max(avg_order_count, 1)))
+        else:
+            # No target or at/above target, use minimum
+            base_volume = min_volume_eur
+
+        # Ensure we're at least at minimum volume
+        base_volume = max(base_volume, min_volume_eur)
+
+        # Apply variety factor
+        # variety=1: orders are exactly base_volume (uniform)
+        # variety=10: orders range from 0.5x to 3x base_volume
+        if volume_variety <= 1:
+            # Uniform - no variation
+            return base_volume
+        else:
+            # Calculate variation range based on variety (1-10 scale)
+            # At variety=5: range is 0.75x to 1.5x
+            # At variety=10: range is 0.5x to 3x
+            variation_factor = (volume_variety - 1) / 9.0  # 0.0 to 1.0
+            min_multiplier = Decimal(str(1.0 - 0.5 * variation_factor))  # 1.0 down to 0.5
+            max_multiplier = Decimal(str(1.0 + 2.0 * variation_factor))  # 1.0 up to 3.0
+
+            # Random multiplier within range
+            random_factor = Decimal(str(random.random()))
+            multiplier = min_multiplier + random_factor * (max_multiplier - min_multiplier)
+
+            varied_volume = base_volume * multiplier
+
+            # Ensure we're still at minimum
+            return max(varied_volume, min_volume_eur)
+
+    @staticmethod
+    def calculate_price_with_deviation(
+        best_price: Decimal,
+        price_deviation_pct: Decimal,
+        side: OrderSide,
+        is_swap_market: bool = False,
+    ) -> Decimal:
+        """
+        Calculate order price with deviation from best price.
+
+        For BUY orders: price is below best ask (or best bid if no asks)
+        For SELL orders: price is above best bid (or best ask if no bids)
+
+        The deviation is applied to create spread in the order book.
+
+        For SWAP market, the price is a ratio (CEA/EUA), not EUR,
+        so we round to 4 decimals instead of 0.1 EUR steps.
+        """
+        # Calculate deviation as percentage
+        deviation = best_price * (price_deviation_pct / Decimal("100"))
+
+        # Apply random factor within the deviation range
+        random_deviation = Decimal(str(random.random())) * deviation
+
+        if side == OrderSide.BUY:
+            # BUY: place below reference price
+            price = best_price - random_deviation
+        else:
+            # SELL: place above reference price
+            price = best_price + random_deviation
+
+        if is_swap_market:
+            # For swap market, ratio is typically 0.1xxx - round to 4 decimals
+            price = price.quantize(Decimal("0.0001"))
+            return max(price, Decimal("0.0001"))
+        else:
+            # For cash market, round to 0.1 EUR step
+            price = (price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+            return max(price, Decimal("0.10"))
+
+    @staticmethod
+    async def calculate_current_liquidity(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        market_type: Optional[MarketType] = None,
+    ) -> Decimal:
+        """
+        Calculate current liquidity (EUR value) for a side.
+
+        For CEA_CASH market: Liquidity = SUM(price * remaining_quantity)
+        For SWAP market: Liquidity = SUM(remaining_quantity * eua_eur_price)
+            because Order.price is ratio (CEA/EUA), not EUR price!
+        """
+        if market_type == MarketType.SWAP:
+            # For swap market, quantity is in EUA, price is ratio (not EUR)
+            # Get total EUA available
+            result = await db.execute(
+                select(func.sum(Order.quantity - Order.filled_quantity))
+                .where(
+                    and_(
+                        Order.certificate_type == certificate_type,
+                        Order.market == MarketType.SWAP,
+                        Order.side == side,
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        Order.market_maker_id.isnot(None),
+                    )
+                )
+            )
+            total_eua = Decimal(str(result.scalar() or 0))
+
+            # Convert to EUR using current EUA price
+            eua_eur_price = await AutoTradeExecutor.get_market_price("EUA")
+            if eua_eur_price and eua_eur_price > 0:
+                return total_eua * eua_eur_price
+            return Decimal("0")
+        else:
+            # For CEA cash market, price is in EUR
+            result = await db.execute(
+                select(func.sum(Order.price * (Order.quantity - Order.filled_quantity)))
+                .where(
+                    and_(
+                        Order.certificate_type == certificate_type,
+                        Order.side == side,
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        Order.market_maker_id.isnot(None),  # Only MM orders
+                    )
+                )
+            )
+            return Decimal(str(result.scalar() or 0))
+
+    @staticmethod
+    async def get_liquidity_status(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        market_type: Optional[MarketType] = None,
+    ) -> Tuple[str, Optional[Decimal], Optional[Decimal]]:
+        """
+        Check liquidity status relative to target.
+        Returns: (status, current_liquidity, target_liquidity)
+
+        Status can be:
+        - "below_target": need to place new orders
+        - "at_target": within 5% tolerance, do nothing
+        - "above_target": need to consume orders via internal trades
+        - "no_target": no target set, do nothing
+        """
+        settings = await AutoTradeExecutor.get_liquidity_settings(db, certificate_type)
+
+        if not settings or not settings.liquidity_limit_enabled:
+            return "no_target", None, None
+
+        current = await AutoTradeExecutor.calculate_current_liquidity(
+            db, certificate_type, side, market_type
+        )
+
+        if side == OrderSide.SELL:
+            target = settings.target_ask_liquidity
+        else:
+            target = settings.target_bid_liquidity
+
+        if target is None or target <= 0:
+            return "no_target", current, None
+
+        # 5% tolerance band around target
+        tolerance = target * Decimal("0.05")
+
+        if current < target - tolerance:
+            return "below_target", current, target
+        elif current > target + tolerance:
+            return "above_target", current, target
+        else:
+            return "at_target", current, target
+
+    @staticmethod
+    async def get_liquidity_status_v2(
+        db: AsyncSession,
+        market_key: str,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        market_type: Optional[MarketType] = None,
+    ) -> Tuple[str, Optional[Decimal], Optional[Decimal], Optional[AutoTradeMarketSettings]]:
+        """
+        Check liquidity status using the new AutoTradeMarketSettings.
+        Returns: (status, current_liquidity, target_liquidity, market_settings)
+
+        Status can be:
+        - "below_target": need to place new orders
+        - "at_target": within 5% tolerance, do nothing
+        - "above_target": need to consume orders via internal trades
+        - "no_target": no target set or market disabled
+        """
+        market_settings = await AutoTradeExecutor.get_market_settings(db, market_key)
+
+        if not market_settings or not market_settings.enabled:
+            return "no_target", None, None, market_settings
+
+        current = await AutoTradeExecutor.calculate_current_liquidity(
+            db, certificate_type, side, market_type
+        )
+
+        target = market_settings.target_liquidity
+
+        if target is None or target <= 0:
+            return "no_target", current, None, market_settings
+
+        # 5% tolerance band around target
+        tolerance = target * Decimal("0.05")
+
+        if current < target - tolerance:
+            return "below_target", current, target, market_settings
+        elif current > target + tolerance:
+            return "above_target", current, target, market_settings
+        else:
+            return "at_target", current, target, market_settings
+
+    @staticmethod
+    async def execute_internal_trade(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        admin_user_id: uuid.UUID,
+    ) -> Dict:
+        """
+        Execute an internal trade between market makers.
+        Used when liquidity limit is reached - consumes existing orders.
+
+        1. Find best bid and best ask
+        2. Calculate random price within spread
+        3. Match a BUY order with a SELL order
+        4. Create trade record
+
+        Returns: dict with trade details or error
+        """
+        result = {
+            "success": False,
+            "trade_id": None,
+            "price": None,
+            "quantity": None,
+            "reason": None,
+        }
+
+        try:
+            # Get best prices
+            best_bid, best_ask = await AutoTradeExecutor.get_best_prices(
+                db, certificate_type
+            )
+
+            if not best_bid or not best_ask:
+                result["reason"] = "no_spread_available"
+                return result
+
+            if best_bid >= best_ask:
+                result["reason"] = "no_spread_to_trade_in"
+                return result
+
+            # Calculate random price within spread (rounded to 0.1 EUR)
+            spread = best_ask - best_bid
+            random_offset = Decimal(str(random.random())) * spread
+            trade_price = best_bid + random_offset
+            trade_price = (trade_price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+
+            # Ensure price is within spread
+            trade_price = max(trade_price, best_bid + Decimal("0.1"))
+            trade_price = min(trade_price, best_ask - Decimal("0.1"))
+
+            # If spread is too tight (<=0.1), use mid price
+            if trade_price <= best_bid or trade_price >= best_ask:
+                trade_price = (best_bid + best_ask) / 2
+                trade_price = (trade_price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+
+            # Find a SELL order to consume (best ask = lowest price first, oldest first)
+            # We take the best ask order regardless of trade_price - the trade_price is just
+            # for recording the trade, not for filtering orders
+            sell_result = await db.execute(
+                select(Order)
+                .where(
+                    and_(
+                        Order.certificate_type == certificate_type,
+                        Order.side == OrderSide.SELL,
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        Order.market_maker_id.isnot(None),
+                    )
+                )
+                .order_by(Order.price.asc(), Order.created_at.asc())
+                .limit(1)
+            )
+            sell_order = sell_result.scalar_one_or_none()
+
+            # Find a BUY order to consume (best bid = highest price first, oldest first)
+            buy_result = await db.execute(
+                select(Order)
+                .where(
+                    and_(
+                        Order.certificate_type == certificate_type,
+                        Order.side == OrderSide.BUY,
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        Order.market_maker_id.isnot(None),
+                    )
+                )
+                .order_by(Order.price.desc(), Order.created_at.asc())
+                .limit(1)
+            )
+            buy_order = buy_result.scalar_one_or_none()
+
+            if not sell_order or not buy_order:
+                result["reason"] = "no_matching_orders_found"
+                return result
+
+            # Don't match same market maker
+            if sell_order.market_maker_id == buy_order.market_maker_id:
+                result["reason"] = "only_same_mm_orders_available"
+                return result
+
+            # Calculate match quantity (smaller of remaining quantities)
+            sell_remaining = sell_order.quantity - sell_order.filled_quantity
+            buy_remaining = buy_order.quantity - buy_order.filled_quantity
+            match_qty = min(sell_remaining, buy_remaining)
+
+            # Round to integer
+            match_qty = match_qty.quantize(Decimal("1"), rounding=ROUND_DOWN)
+
+            if match_qty <= 0:
+                result["reason"] = "no_quantity_to_match"
+                return result
+
+            # Create trade
+            trade = CashMarketTrade(
+                buy_order_id=buy_order.id,
+                sell_order_id=sell_order.id,
+                market_maker_id=buy_order.market_maker_id,
+                certificate_type=certificate_type,
+                price=trade_price,
+                quantity=match_qty,
+                executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            )
+            db.add(trade)
+
+            # Update buy order
+            buy_order.filled_quantity = buy_order.filled_quantity + match_qty
+            if buy_order.filled_quantity >= buy_order.quantity:
+                buy_order.status = OrderStatus.FILLED
+            else:
+                buy_order.status = OrderStatus.PARTIALLY_FILLED
+            buy_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            # Update sell order
+            sell_order.filled_quantity = sell_order.filled_quantity + match_qty
+            if sell_order.filled_quantity >= sell_order.quantity:
+                sell_order.status = OrderStatus.FILLED
+            else:
+                sell_order.status = OrderStatus.PARTIALLY_FILLED
+            sell_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            await db.commit()
+
+            logger.info(
+                f"Internal trade executed: {match_qty} {certificate_type.value} @ {trade_price} "
+                f"(BUY {buy_order.id} <-> SELL {sell_order.id})"
+            )
+
+            result["success"] = True
+            result["trade_id"] = str(trade.id) if hasattr(trade, 'id') else None
+            result["price"] = str(trade_price)
+            result["quantity"] = str(match_qty)
+            result["buy_order_id"] = str(buy_order.id)
+            result["sell_order_id"] = str(sell_order.id)
+
+            return result
+
+        except Exception as e:
+            logger.exception(f"Error executing internal trade: {e}")
+            await db.rollback()
+            result["reason"] = f"exception: {str(e)}"
+            return result
 
     @staticmethod
     def determine_certificate_type(
@@ -509,8 +991,8 @@ class AutoTradeExecutor:
             # Update order with ticket ID
             order.ticket_id = order_ticket.ticket_id
 
-            # Update rule execution tracking
-            rule.last_executed_at = datetime.utcnow()
+            # Update rule execution tracking (naive UTC for asyncpg)
+            rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
             rule.execution_count = (rule.execution_count or 0) + 1
 
@@ -606,8 +1088,14 @@ class AutoTradeExecutor:
                 if match_qty <= 0:
                     continue
 
-                # Trade at the sell price, rounded to 0.1 EUR step
-                trade_price = (sell_order.price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+                # Trade price: use sell price if it's a limit order, otherwise use buy price
+                # This handles MARKET orders which have price=0
+                if sell_order.price and sell_order.price > 0:
+                    trade_price = sell_order.price
+                else:
+                    trade_price = buy_order.price
+                # Round to 0.1 EUR step
+                trade_price = (trade_price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
 
                 # Create trade
                 trade = CashMarketTrade(
@@ -617,7 +1105,7 @@ class AutoTradeExecutor:
                     certificate_type=certificate_type,
                     price=trade_price,
                     quantity=match_qty,
-                    executed_at=datetime.utcnow(),
+                    executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 db.add(trade)
 
@@ -627,7 +1115,7 @@ class AutoTradeExecutor:
                     buy_order.status = OrderStatus.FILLED
                 else:
                     buy_order.status = OrderStatus.PARTIALLY_FILLED
-                buy_order.updated_at = datetime.utcnow()
+                buy_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 # Update sell order
                 sell_order.filled_quantity = sell_order.filled_quantity + match_qty
@@ -635,7 +1123,7 @@ class AutoTradeExecutor:
                     sell_order.status = OrderStatus.FILLED
                 else:
                     sell_order.status = OrderStatus.PARTIALLY_FILLED
-                sell_order.updated_at = datetime.utcnow()
+                sell_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 trades_created += 1
                 buy_remaining -= match_qty
@@ -661,7 +1149,13 @@ class AutoTradeExecutor:
         admin_user_id: uuid.UUID,
     ) -> Dict:
         """
-        Execute a single auto-trade rule.
+        Execute a single auto-trade rule with target-based liquidity management.
+
+        Behavior based on liquidity status:
+        - below_target: Place new orders to refill liquidity
+        - at_target: Skip execution (maintain current level)
+        - above_target: Execute internal trades to consume excess
+        - no_target: Place orders normally (no liquidity management)
 
         Returns a dict with execution result details.
         """
@@ -683,17 +1177,127 @@ class AutoTradeExecutor:
             # Determine certificate and market types
             certificate_type = AutoTradeExecutor.determine_certificate_type(market_maker)
             market_type = AutoTradeExecutor.determine_market_type(market_maker)
+            market_key = AutoTradeExecutor.determine_market_key(market_maker)
 
-            # Get market price
-            market_price = await AutoTradeExecutor.get_market_price(certificate_type.value)
+            # Check liquidity status using new v2 method (AutoTradeMarketSettings)
+            status, current_liq, target_liq, market_settings = await AutoTradeExecutor.get_liquidity_status_v2(
+                db, market_key, certificate_type, rule.side, market_type
+            )
+
+            result["liquidity_status"] = {
+                "status": status,
+                "current": str(current_liq) if current_liq else None,
+                "target": str(target_liq) if target_liq else None,
+                "market_key": market_key,
+            }
+
+            # Include market settings params in result for debugging
+            if market_settings:
+                result["market_settings"] = {
+                    "price_deviation_pct": str(market_settings.price_deviation_pct),
+                    "avg_order_count": market_settings.avg_order_count,
+                    "min_order_volume_eur": str(market_settings.min_order_volume_eur),
+                    "volume_variety": market_settings.volume_variety,
+                }
+
+            # Handle based on liquidity status
+            if status == "at_target":
+                # Liquidity is at target level - skip this execution
+                logger.debug(
+                    f"Rule {rule.name}: Liquidity at target ({current_liq}/{target_liq} EUR) - skipping"
+                )
+                result["reason"] = "liquidity_at_target"
+                result["action"] = "skipped"
+                # Schedule next execution
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                await db.commit()
+                return result
+
+            if status == "above_target":
+                # Liquidity exceeds target - consume via internal trade
+                logger.info(
+                    f"Rule {rule.name}: Liquidity above target ({current_liq}/{target_liq} EUR) - "
+                    f"executing internal trade to consume excess"
+                )
+
+                internal_result = await AutoTradeExecutor.execute_internal_trade(
+                    db, certificate_type, admin_user_id
+                )
+
+                # Update rule execution tracking
+                rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.execution_count = (rule.execution_count or 0) + 1
+                await db.commit()
+
+                result["success"] = internal_result["success"]
+                result["action"] = "internal_trade"
+                result["internal_trade"] = internal_result
+
+                if internal_result["success"]:
+                    logger.info(
+                        f"Rule {rule.name} executed internal trade: "
+                        f"{internal_result['quantity']} @ {internal_result['price']}"
+                    )
+                else:
+                    result["reason"] = f"internal_trade_failed: {internal_result['reason']}"
+                    logger.warning(f"Rule {rule.name} internal trade failed: {internal_result['reason']}")
+
+                return result
+
+            # status == "below_target" or "no_target" - place new orders
+            if status == "below_target":
+                logger.info(
+                    f"Rule {rule.name}: Liquidity below target ({current_liq}/{target_liq} EUR) - "
+                    f"placing order to refill"
+                )
+                result["action"] = "place_order_refill"
+            else:
+                result["action"] = "place_order_normal"
+
+            # Get market price (or swap ratio for SWAP market)
+            # IMPORTANT: For SWAP market, Order.price is the ratio CEA/EUA, NOT EUR price!
+            if market_type == MarketType.SWAP:
+                # For swap market, use the CEA/EUA ratio as the "market price"
+                market_price = await AutoTradeExecutor.get_swap_ratio()
+                logger.info(f"Swap market: using ratio {market_price} as reference price")
+            else:
+                market_price = await AutoTradeExecutor.get_market_price(certificate_type.value)
 
             # Get balances
             balances = await MarketMakerService.get_balances(db, market_maker.id)
 
-            # Calculate price
-            price, price_reason = await AutoTradeExecutor.calculate_order_price(
-                db, rule, certificate_type, market_price
-            )
+            # Get best prices for price calculation
+            best_bid, best_ask = await AutoTradeExecutor.get_best_prices(db, certificate_type)
+
+            # Calculate price - use market settings if available
+            if market_settings and best_bid and rule.order_type == "LIMIT":
+                # Use new price deviation setting
+                # For BUY: use best_ask as reference (we want to buy below it)
+                # For SELL: use best_bid as reference (we want to sell above it)
+                if rule.side == OrderSide.BUY:
+                    reference_price = best_ask if best_ask else (best_bid if best_bid else market_price)
+                else:
+                    reference_price = best_bid if best_bid else (best_ask if best_ask else market_price)
+
+                if reference_price:
+                    price = AutoTradeExecutor.calculate_price_with_deviation(
+                        reference_price,
+                        market_settings.price_deviation_pct,
+                        rule.side,
+                        is_swap_market=(market_type == MarketType.SWAP),
+                    )
+                    price_reason = f"market_settings_deviation ({market_settings.price_deviation_pct}%)"
+                else:
+                    # Fall back to rule-based calculation
+                    price, price_reason = await AutoTradeExecutor.calculate_order_price(
+                        db, rule, certificate_type, market_price
+                    )
+            else:
+                # Use rule-based calculation
+                price, price_reason = await AutoTradeExecutor.calculate_order_price(
+                    db, rule, certificate_type, market_price
+                )
 
             if price is None and rule.order_type == "LIMIT":
                 result["reason"] = f"price_calculation_failed: {price_reason}"
@@ -702,10 +1306,36 @@ class AutoTradeExecutor:
                 await db.commit()
                 return result
 
-            # Calculate quantity
-            quantity, qty_reason = await AutoTradeExecutor.calculate_order_quantity(
-                db, rule, balances, certificate_type, price
-            )
+            # Calculate quantity - use market settings for volume variety if available
+            if market_settings and price and price > 0:
+                # Calculate volume in EUR with variety
+                volume_eur = AutoTradeExecutor.calculate_order_volume_with_variety(
+                    market_settings.min_order_volume_eur,
+                    market_settings.volume_variety,
+                    target_liq,
+                    current_liq or Decimal("0"),
+                    market_settings.avg_order_count,
+                )
+                # Convert EUR volume to quantity (certificates)
+                # IMPORTANT: For SWAP market, price is ratio (CEA/EUA), not EUR price!
+                # We need to use the actual EUA EUR price to calculate quantity
+                if market_type == MarketType.SWAP:
+                    # For swap: quantity is in EUA, so divide by EUA EUR price
+                    eua_eur_price = await AutoTradeExecutor.get_market_price("EUA")
+                    if eua_eur_price and eua_eur_price > 0:
+                        quantity = (volume_eur / eua_eur_price).quantize(Decimal("1"), rounding=ROUND_DOWN)
+                        qty_reason = f"swap_volume (vol={volume_eur:.0f} EUR / {eua_eur_price} EUR/EUA = {quantity} EUA)"
+                    else:
+                        quantity = Decimal("0")
+                        qty_reason = "eua_price_unavailable"
+                else:
+                    quantity = (volume_eur / price).quantize(Decimal("1"), rounding=ROUND_DOWN)
+                    qty_reason = f"market_settings_variety (vol={volume_eur:.0f} EUR, variety={market_settings.volume_variety})"
+            else:
+                # Use rule-based calculation
+                quantity, qty_reason = await AutoTradeExecutor.calculate_order_quantity(
+                    db, rule, balances, certificate_type, price
+                )
 
             if quantity is None or quantity <= 0:
                 result["reason"] = f"quantity_calculation_failed: {qty_reason}"

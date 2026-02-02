@@ -45,13 +45,45 @@ Configuration is managed via Pydantic Settings in `backend/app/core/config.py`.
 - **Scraping**: Updates every 300s (5 mins)
 
 ## 5. Business Logic Truths
-- **Settlement Cycle**: T+3 Business Days for CEA purchases.
+- **Settlement Cycle**: T+3 Business Days for CEA purchases, T+10-14 for EUA swaps.
 - **Currencies**:
   - Base: EUR / CNY
   - Conversions: `EUR_TO_USD=1.08`, `CNY_TO_USD=0.14` (Default static values)
 - **Market Defaults**:
   - EUA Price: €75.00
   - CEA Price: ¥100.00
+
+### Swap Market Specifications (CEA → EUA)
+The swap market allows users with CEA role (or higher) to exchange CEA for EUA.
+
+**CRITICAL: Ratio Definition**
+- `Order.price` in SWAP market = **CEA/EUA ratio** (NOT EUR price!)
+- The ratio represents: **how many EUA you receive per 1 CEA**
+- Formula: `ratio = CEA_price_EUR / EUA_price_EUR`
+- Example: If CEA = €9.85 and EUA = €83.72, then ratio = 9.85 / 83.72 = **0.1177**
+- This means: **1 CEA → 0.1177 EUA** (user gives 1 CEA, receives 0.1177 EUA)
+- Inverse: **1 EUA = 8.50 CEA** (1 / 0.1177 ≈ 8.50)
+
+**Order Book Interpretation**
+| Field | Meaning |
+|-------|---------|
+| `Order.price` | Ratio CEA/EUA (e.g., 0.1177) — EUA output per 1 CEA input |
+| `Order.quantity` | EUA available at this ratio |
+| `Order.filled_quantity` | EUA already swapped |
+| CEA needed | `Order.quantity / Order.price` |
+
+**Example Calculation**
+- User has 1,000,000 CEA
+- Best ratio available: 0.1177 CEA/EUA
+- User receives: 1,000,000 × 0.1177 = **117,700 EUA** (before fees)
+- Platform fee: 0.5%
+- Net EUA: 117,700 × 0.995 = **117,112 EUA**
+
+**API Endpoints**
+- `GET /api/v1/swaps/rate` — Returns `eua_to_cea` (e.g., 8.50) and `cea_to_eua` (e.g., 0.1177)
+- `GET /api/v1/swaps/orderbook` — Returns asks (EUA offers) with ratio and quantity
+- `POST /api/v1/swaps` — Create swap request
+- `POST /api/v1/swaps/{id}/execute` — Execute swap against orderbook
 
 ## 6. Development Standards
 - **Linter**: `ruff` (run with `ruff check .`)

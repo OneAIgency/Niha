@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Banknote, ArrowLeftRight, TrendingUp, TrendingDown, RefreshCw, Loader2, Zap, AlertCircle } from 'lucide-react';
+import { Banknote, ArrowLeftRight, TrendingUp, TrendingDown, RefreshCw, Loader2, Zap, AlertCircle, Wind, Trash2 } from 'lucide-react';
 import { BackofficeLayout } from '../components/layout/BackofficeLayout';
 import { Button, NumberInput } from '../components/common';
 import { cn } from '../utils';
-import { cashMarketApi, getMarketMakers, getMarketMakerBalances, pricesApi, placeMarketMakerOrder } from '../services/api';
+import { cashMarketApi, getMarketMakers, getMarketMakerBalances, pricesApi, placeMarketMakerOrder, swapsApi } from '../services/api';
 import type { MarketMaker } from '../types';
 
 type LiquidityMarket = 'cash' | 'swap';
@@ -40,6 +40,26 @@ interface LiquidityPreview {
   side: 'BID' | 'ASK';
 }
 
+interface SwapMarketMaker extends MarketMaker {
+  eua_available: number;
+}
+
+interface GeneratedSwapOffer {
+  market_maker_id: string;
+  market_maker_name: string;
+  ratio: number;           // CEA/EUA ratio (how much EUA user gets per CEA)
+  eua_quantity: number;    // Amount of EUA offered
+  eur_value: number;       // EUR value of the offer
+}
+
+interface SwapLiquidityPreview {
+  offers: GeneratedSwapOffer[];
+  totalEur: number;
+  totalEua: number;
+  baseRatio: number;
+  worstRatio: number;
+}
+
 export function CreateLiquidityPage() {
   const [activeMarket, setActiveMarket] = useState<LiquidityMarket>('cash');
   const [loading, setLoading] = useState(true);
@@ -71,6 +91,34 @@ export function CreateLiquidityPage() {
   const [creatingOrders, setCreatingOrders] = useState(false);
   const [creationProgress, setCreationProgress] = useState<{ current: number; total: number; logs: string[] }>({ current: 0, total: 0, logs: [] });
   const [error, setError] = useState<string | null>(null);
+
+  // Swap Market State
+  const [swapRatio, setSwapRatio] = useState<number | null>(null);
+  const [euaPrice, setEuaPrice] = useState<number>(0);
+  const [ceaPrice, setCeaPrice] = useState<number>(0);
+  const [swapMMs, setSwapMMs] = useState<SwapMarketMaker[]>([]);
+  const [loadingSwap, setLoadingSwap] = useState(false);
+
+  // Swap liquidity creation inputs
+  const [swapTargetEur, setSwapTargetEur] = useState<string>('');
+  const [swapMinOrder, setSwapMinOrder] = useState<string>('100000');
+  const [swapMaxOrder, setSwapMaxOrder] = useState<string>('10000000');
+  const [swapOrderCount, setSwapOrderCount] = useState<string>('50');
+  const [swapRatioSpread, setSwapRatioSpread] = useState<string>('5'); // % spread around base ratio
+
+  // Swap preview and creation state
+  const [swapPreview, setSwapPreview] = useState<SwapLiquidityPreview | null>(null);
+  const [showSwapPreviewModal, setShowSwapPreviewModal] = useState(false);
+  const [generatingSwapPreview, setGeneratingSwapPreview] = useState(false);
+  const [creatingSwapOffers, setCreatingSwapOffers] = useState(false);
+  const [swapCreationProgress, setSwapCreationProgress] = useState<{ current: number; total: number; logs: string[] }>({ current: 0, total: 0, logs: [] });
+  const [swapError, setSwapError] = useState<string | null>(null);
+
+  // Reset liquidity state
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetConfirmationCode, setResetConfirmationCode] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const fetchCashMarketStats = async () => {
     setLoading(true);
@@ -151,14 +199,65 @@ export function CreateLiquidityPage() {
     }
   }, []);
 
+  // Fetch swap market data
+  const fetchSwapMarketData = useCallback(async () => {
+    setLoadingSwap(true);
+    try {
+      // Fetch swap rate and prices
+      const [rateData, mms] = await Promise.all([
+        swapsApi.getRate(),
+        getMarketMakers({ is_active: true }),
+      ]);
+
+      // Get prices from rate data (API transforms to camelCase via interceptor)
+      const euaPriceVal = (rateData as Record<string, unknown>).euaPriceEur as number || 0;
+      const ceaPriceVal = (rateData as Record<string, unknown>).ceaPriceEur as number || 0;
+      setEuaPrice(euaPriceVal);
+      setCeaPrice(ceaPriceVal);
+
+      // Calculate ratio: CEA price / EUA price
+      // This represents how many EUA a user gets for 1 CEA they offer
+      // Example: CEA €9.78 / EUA €82.60 = 0.1184 (user gets 0.1184 EUA per CEA)
+      const calculatedRatio = (rateData as Record<string, unknown>).ceaToEua as number ||
+        (euaPriceVal && ceaPriceVal ? ceaPriceVal / euaPriceVal : null);
+      setSwapRatio(calculatedRatio);
+
+      // Fetch balances for EUA_OFFER market makers
+      const euaOffers: SwapMarketMaker[] = [];
+      const euaOfferMMs = mms.filter(mm => mm.mm_type === 'EUA_OFFER');
+
+      for (const mm of euaOfferMMs) {
+        try {
+          const balances = await getMarketMakerBalances(mm.id);
+          euaOffers.push({
+            ...mm,
+            eua_available: Number(balances.eua_available) || 0,
+          });
+        } catch (err) {
+          console.error(`Failed to fetch balances for MM ${mm.id}:`, err);
+        }
+      }
+
+      setSwapMMs(euaOffers);
+    } catch (error) {
+      console.error('Failed to fetch swap market data:', error);
+    } finally {
+      setLoadingSwap(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeMarket === 'cash') {
       fetchCashMarketStats();
       fetchMarketMakers();
       const interval = setInterval(fetchCashMarketStats, 30000);
       return () => clearInterval(interval);
+    } else if (activeMarket === 'swap') {
+      fetchSwapMarketData();
+      const interval = setInterval(fetchSwapMarketData, 30000);
+      return () => clearInterval(interval);
     }
-  }, [activeMarket, fetchMarketMakers]);
+  }, [activeMarket, fetchMarketMakers, fetchSwapMarketData]);
 
   const formatEur = (value: number) => {
     return new Intl.NumberFormat('en-EU', {
@@ -490,6 +589,231 @@ export function CreateLiquidityPage() {
     setCreatingOrders(false);
   };
 
+  // Generate swap offers similar to cash market order generation
+  const generateSwapOffers = (
+    totalEurNeeded: number,
+    minOrder: number,
+    maxOrder: number,
+    ratioSpread: number, // percentage spread from base ratio
+    baseRatio: number,
+    marketMakers: SwapMarketMaker[],
+    targetOfferCount: number
+  ): GeneratedSwapOffer[] => {
+    if (totalEurNeeded <= 0 || marketMakers.length === 0 || targetOfferCount <= 0 || baseRatio <= 0) {
+      return [];
+    }
+
+    // Calculate ratio range: base ratio is BEST for user (highest CEA/EUA)
+    // Worst ratio = baseRatio * (1 - spread/100)
+    const worstRatio = baseRatio * (1 - ratioSpread / 100);
+
+    // Generate ratio levels across the spread
+    const ratioLevels: number[] = [];
+    const ratioStep = (baseRatio - worstRatio) / Math.max(1, targetOfferCount - 1);
+
+    for (let i = 0; i < targetOfferCount; i++) {
+      const ratio = baseRatio - (ratioStep * i);
+      ratioLevels.push(Math.round(ratio * 10000) / 10000); // 4 decimal precision
+    }
+
+    const offers: GeneratedSwapOffer[] = [];
+    const shuffledMMs = [...marketMakers].sort(() => Math.random() - 0.5);
+    let mmIndex = 0;
+
+    // Calculate target EUR per offer
+    const avgOfferEur = totalEurNeeded / targetOfferCount;
+    const variationPercent = 0.3; // 30% variation for diversity
+
+    let remainingEur = totalEurNeeded;
+
+    for (const ratio of ratioLevels) {
+      if (remainingEur <= minOrder) break;
+
+      const mm = shuffledMMs[mmIndex % shuffledMMs.length];
+      mmIndex++;
+
+      // Check MM's available EUA balance
+      const mmEuaValueInEur = mm.eua_available * euaPrice;
+      if (mmEuaValueInEur < minOrder) continue;
+
+      // Calculate offer size with variation
+      const minForThis = Math.max(minOrder, avgOfferEur * (1 - variationPercent));
+      const maxForThis = Math.min(maxOrder, remainingEur, mmEuaValueInEur, avgOfferEur * (1 + variationPercent));
+
+      if (maxForThis < minForThis) continue;
+
+      const offerEur = minForThis + Math.random() * (maxForThis - minForThis);
+      const euaQuantity = offerEur / euaPrice;
+
+      offers.push({
+        market_maker_id: mm.id,
+        market_maker_name: mm.name,
+        ratio: ratio,
+        eua_quantity: Math.round(euaQuantity * 100) / 100,
+        eur_value: Math.round(offerEur * 100) / 100,
+      });
+
+      remainingEur -= offerEur;
+
+      if (offers.length >= 200) break; // Safety limit
+    }
+
+    // Sort by ratio descending (best for user first)
+    offers.sort((a, b) => b.ratio - a.ratio);
+
+    return offers;
+  };
+
+  const handleGenerateSwapPreview = () => {
+    setSwapError(null);
+    setGeneratingSwapPreview(true);
+
+    try {
+      const targetEur = parseFloat(swapTargetEur.replace(/,/g, '')) || 0;
+      const minOrderVal = parseFloat(swapMinOrder.replace(/,/g, '')) || 100000;
+      const maxOrderVal = parseFloat(swapMaxOrder.replace(/,/g, '')) || 10000000;
+      const spreadVal = parseFloat(swapRatioSpread) || 5;
+      const orderCountVal = parseInt(swapOrderCount.replace(/,/g, '')) || 50;
+
+      if (targetEur <= 0) {
+        setSwapError('Target EUR value must be greater than 0');
+        setGeneratingSwapPreview(false);
+        return;
+      }
+
+      const totalEuaAvailable = swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0);
+      const totalEuaValueInEur = totalEuaAvailable * euaPrice;
+
+      if (targetEur > totalEuaValueInEur) {
+        setSwapError(`Insufficient EUA balance. Need ${formatEur(targetEur)}, available ${formatEur(totalEuaValueInEur)}`);
+        setGeneratingSwapPreview(false);
+        return;
+      }
+
+      if (!swapRatio || swapRatio <= 0) {
+        setSwapError('Invalid swap ratio. Please refresh market data.');
+        setGeneratingSwapPreview(false);
+        return;
+      }
+
+      const offers = generateSwapOffers(
+        targetEur,
+        minOrderVal,
+        maxOrderVal,
+        spreadVal,
+        swapRatio,
+        swapMMs,
+        orderCountVal
+      );
+
+      if (offers.length === 0) {
+        setSwapError('Could not generate any offers. Check market maker balances.');
+        setGeneratingSwapPreview(false);
+        return;
+      }
+
+      const worstRatio = swapRatio * (1 - spreadVal / 100);
+
+      setSwapPreview({
+        offers,
+        totalEur: offers.reduce((sum, o) => sum + o.eur_value, 0),
+        totalEua: offers.reduce((sum, o) => sum + o.eua_quantity, 0),
+        baseRatio: swapRatio,
+        worstRatio,
+      });
+      setShowSwapPreviewModal(true);
+    } catch (err) {
+      setSwapError('Failed to generate preview');
+      console.error(err);
+    } finally {
+      setGeneratingSwapPreview(false);
+    }
+  };
+
+  const handleResetSwapLiquidity = async () => {
+    if (!resetConfirmationCode) {
+      setSwapError('Please enter confirmation code');
+      return;
+    }
+
+    setIsResetting(true);
+    setResetResult(null);
+
+    try {
+      const result = await swapsApi.resetSwapLiquidity(resetConfirmationCode);
+      setResetResult({ success: true, message: result.message });
+
+      // Refresh swap market data
+      await fetchSwapMarketData();
+
+      // Close dialog after 2 seconds on success
+      setTimeout(() => {
+        setShowResetDialog(false);
+        setResetConfirmationCode('');
+        setResetResult(null);
+      }, 2000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to reset liquidity';
+      setResetResult({ success: false, message: errorMsg });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleCreateSwapOffers = async () => {
+    if (!swapPreview || swapPreview.offers.length === 0) return;
+
+    setCreatingSwapOffers(true);
+    setSwapCreationProgress({ current: 0, total: swapPreview.offers.length, logs: [] });
+
+    const logs: string[] = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    logs.push('Creating swap offers in database...\n');
+
+    for (let i = 0; i < swapPreview.offers.length; i++) {
+      const offer = swapPreview.offers[i];
+      const offerNum = i + 1;
+
+      try {
+        // Real API call to create swap offer
+        const result = await swapsApi.createSwapOffer({
+          market_maker_id: offer.market_maker_id,
+          ratio: offer.ratio,
+          eua_quantity: offer.eua_quantity,
+        });
+
+        const logEntry = `✓ #${offerNum} | ${offer.market_maker_name} | ${offer.ratio.toFixed(4)} CEA/EUA | ${offer.eua_quantity.toFixed(2)} EUA | ID: ${result.order_id}`;
+        logs.push(logEntry);
+        successCount++;
+
+        console.log(`[SwapLiquidity] Offer created:`, { offer, result });
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        const logEntry = `✗ #${offerNum} | ${offer.market_maker_name} | FAILED: ${errorMsg}`;
+        logs.push(logEntry);
+        failCount++;
+        console.error(`[SwapLiquidity] Offer failed:`, { offer, error: err });
+      }
+
+      setSwapCreationProgress({ current: i + 1, total: swapPreview.offers.length, logs: [...logs] });
+    }
+
+    // Final summary
+    const summary = `\n━━━ Summary ━━━\nCreated: ${successCount} | Failed: ${failCount} | Total: ${swapPreview.offers.length}`;
+    logs.push(summary);
+    if (successCount > 0) {
+      logs.push('\n✓ Swap offers saved to database');
+    }
+    setSwapCreationProgress(prev => ({ ...prev, logs: [...logs] }));
+
+    // Refresh swap market data
+    await fetchSwapMarketData();
+
+    setCreatingSwapOffers(false);
+  };
+
   // SubSubHeader left content - market tabs
   const subSubHeaderLeft = (
     <nav className="flex items-center gap-2" aria-label="Liquidity markets">
@@ -524,6 +848,20 @@ export function CreateLiquidityPage() {
       title="Refresh"
     >
       {(loading || loadingMMs) ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <RefreshCw className="w-4 h-4" />
+      )}
+      <span>Refresh</span>
+    </button>
+  ) : activeMarket === 'swap' ? (
+    <button
+      onClick={fetchSwapMarketData}
+      disabled={loadingSwap}
+      className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-navy-400 hover:text-navy-300 transition-colors"
+      title="Refresh"
+    >
+      {loadingSwap ? (
         <Loader2 className="w-4 h-4 animate-spin" />
       ) : (
         <RefreshCw className="w-4 h-4" />
@@ -931,12 +1269,233 @@ export function CreateLiquidityPage() {
 
       {/* Swap Market Content */}
       {activeMarket === 'swap' && (
-        <div>
-          {/* TODO: Swap Market content will be added here */}
+        <div className="space-y-6">
+          {/* Error Message */}
+          {swapError && (
+            <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3 text-red-400">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm">{swapError}</span>
+              <button onClick={() => setSwapError(null)} className="ml-auto text-red-400 hover:text-red-300">×</button>
+            </div>
+          )}
+
+          {/* Create Swap Liquidity */}
+          <div className="content_wrapper_last p-5">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">
+                  Create Swap Liquidity
+                </h3>
+                <p className="text-xs text-navy-400 dark:text-navy-500">Generate EUA offers for CEA swaps</p>
+              </div>
+            </div>
+
+            {loadingSwap ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-navy-400" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left: Current Market Info */}
+                <div className="space-y-4">
+                  <div className="p-4 bg-navy-50 dark:bg-navy-900/50 rounded-xl">
+                    <h4 className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase mb-3">
+                      Market Prices (Scrapped)
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-navy-400">EUA Price</p>
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                          {formatPrice(euaPrice)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-navy-400">CEA Price</p>
+                        <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                          {formatPrice(ceaPrice)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/50">
+                    <h4 className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase mb-3">
+                      Swap Ratio (User perspective)
+                    </h4>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        1 CEA → {swapRatio?.toFixed(4) || '—'} EUA
+                      </span>
+                    </div>
+                    <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
+                      Calculated: €{ceaPrice.toFixed(2)} / €{euaPrice.toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-navy-50 dark:bg-navy-900/50 rounded-xl">
+                    <h4 className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase mb-3">
+                      EUA_OFFER Market Makers
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wind className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm text-navy-600 dark:text-navy-300">
+                          {swapMMs.length} active
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400">
+                          {swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} EUA
+                        </p>
+                        <p className="text-xs text-navy-400">
+                          ≈ {formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Reset Liquidity Button */}
+                    <button
+                      onClick={() => setShowResetDialog(true)}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Reset Liquidity
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: Liquidity Creation Form */}
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800/50">
+                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-4 flex items-center gap-2">
+                    <ArrowLeftRight className="w-4 h-4" />
+                    CEA → EUA Swap Offers
+                  </h4>
+                  <p className="text-xs text-navy-400 dark:text-navy-500 -mt-3 mb-4">
+                    Users offer CEA, receive EUA at these ratios
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                        Target Total Value (EUR)
+                      </label>
+                      <NumberInput
+                        value={swapTargetEur}
+                        onChange={setSwapTargetEur}
+                        placeholder={formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                        suffix="EUR"
+                        decimals={0}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                          Min Order (EUR)
+                        </label>
+                        <NumberInput
+                          value={swapMinOrder}
+                          onChange={setSwapMinOrder}
+                          suffix="EUR"
+                          decimals={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                          Max Order (EUR)
+                        </label>
+                        <NumberInput
+                          value={swapMaxOrder}
+                          onChange={setSwapMaxOrder}
+                          suffix="EUR"
+                          decimals={0}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                          Ratio Spread (%)
+                        </label>
+                        <NumberInput
+                          value={swapRatioSpread}
+                          onChange={setSwapRatioSpread}
+                          suffix="%"
+                          decimals={1}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                          # Orders
+                        </label>
+                        <NumberInput
+                          value={swapOrderCount}
+                          onChange={setSwapOrderCount}
+                          decimals={0}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Ratio Range Preview */}
+                    {swapRatio && (
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <p className="text-xs text-navy-500 dark:text-navy-400">
+                          Ratio range:{' '}
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            {swapRatio.toFixed(4)}
+                          </span>
+                          {' → '}
+                          <span className="font-medium text-blue-700 dark:text-blue-300">
+                            {(swapRatio * (1 - parseFloat(swapRatioSpread || '0') / 100)).toFixed(4)}
+                          </span>
+                          <span className="text-navy-400 dark:text-navy-500"> CEA/EUA (best → worst for user)</span>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-blue-200 dark:border-blue-800/50">
+                      <p className="text-xs text-navy-500 dark:text-navy-400">
+                        Available:{' '}
+                        <span className="font-medium text-blue-600">
+                          {formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                        </span>
+                        <span className="text-navy-400 dark:text-navy-500"> ({swapMMs.length} providers)</span>
+                      </p>
+                    </div>
+
+                    {/* Warnings */}
+                    {swapMMs.length === 0 && (
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-300 dark:border-amber-700">
+                        <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          No EUA_OFFER market makers found
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={handleGenerateSwapPreview}
+                      disabled={generatingSwapPreview || !swapRatio || swapMMs.length === 0 || !swapTargetEur}
+                      loading={generatingSwapPreview}
+                    >
+                      Generate Swap Offers
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Preview Modal */}
+      {/* Cash Market Preview Modal */}
       {showPreviewModal && (previewBid || previewAsk) && (
         <LiquidityPreviewModal
           preview={showPreviewModal === 'bid' ? previewBid : previewAsk}
@@ -954,11 +1513,234 @@ export function CreateLiquidityPage() {
           progress={creationProgress}
         />
       )}
+
+      {/* Swap Market Preview Modal */}
+      {showSwapPreviewModal && swapPreview && (
+        <SwapLiquidityPreviewModal
+          preview={swapPreview}
+          onClose={() => {
+            setShowSwapPreviewModal(false);
+            setSwapCreationProgress({ current: 0, total: 0, logs: [] });
+          }}
+          onConfirm={handleCreateSwapOffers}
+          isCreating={creatingSwapOffers}
+          progress={swapCreationProgress}
+        />
+      )}
+
+      {/* Reset Liquidity Confirmation Dialog */}
+      {showResetDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+              <h2 className="text-lg font-semibold text-red-900 dark:text-red-100 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Reset Swap Liquidity
+              </h2>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                This will cancel all open swap offers
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Warning:</strong> This action will cancel all OPEN and PARTIALLY_FILLED swap orders in the market. This cannot be undone.
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  Enter confirmation code to proceed:
+                </label>
+                <input
+                  type="password"
+                  value={resetConfirmationCode}
+                  onChange={(e) => setResetConfirmationCode(e.target.value)}
+                  placeholder="Enter code..."
+                  className="w-full px-4 py-2 border border-navy-200 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={isResetting}
+                />
+              </div>
+
+              {resetResult && (
+                <div className={cn(
+                  'p-3 rounded-lg text-sm',
+                  resetResult.success
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700'
+                )}>
+                  {resetResult.message}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-navy-50 dark:bg-navy-900/50 border-t border-navy-200 dark:border-navy-700 flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowResetDialog(false);
+                  setResetConfirmationCode('');
+                  setResetResult(null);
+                }}
+                disabled={isResetting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={handleResetSwapLiquidity}
+                disabled={isResetting || !resetConfirmationCode}
+                loading={isResetting}
+              >
+                Reset All Offers
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </BackofficeLayout>
   );
 }
 
-// Preview Modal Component
+// Swap Preview Modal Component
+function SwapLiquidityPreviewModal({
+  preview,
+  onClose,
+  onConfirm,
+  isCreating,
+  progress,
+}: {
+  preview: SwapLiquidityPreview;
+  onClose: () => void;
+  onConfirm: () => void;
+  isCreating?: boolean;
+  progress?: { current: number; total: number; logs: string[] };
+}) {
+  const hasLogs = progress && progress.logs.length > 0;
+  const isComplete = progress && progress.current === progress.total && progress.total > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 border-b bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+            {hasLogs ? (isComplete ? 'Swap Offers Created' : 'Creating Swap Offers...') : 'Swap Offers Preview'}
+          </h2>
+          <p className="text-sm text-navy-500 dark:text-navy-400">
+            {hasLogs
+              ? `${progress.current} / ${progress.total} offers processed`
+              : `${preview.offers.length} offers totaling €${preview.totalEur.toLocaleString()} (${preview.totalEua.toFixed(2)} EUA)`
+            }
+          </p>
+          <p className="text-xs text-navy-400 dark:text-navy-500 mt-1">
+            Ratio range: {preview.baseRatio.toFixed(4)} → {preview.worstRatio.toFixed(4)} CEA/EUA
+          </p>
+          {/* Progress bar */}
+          {isCreating && progress && progress.total > 0 && (
+            <div className="mt-2 w-full bg-navy-200 dark:bg-navy-700 rounded-full h-2">
+              <div
+                className="h-2 rounded-full transition-all duration-300 bg-blue-500"
+                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Content: Offers Table or Logs */}
+        {hasLogs ? (
+          /* Logs View */
+          <div className="overflow-auto max-h-96 p-4 bg-navy-900 dark:bg-navy-950">
+            <pre className="text-xs font-mono text-navy-100 whitespace-pre-wrap">
+              {progress.logs.map((log, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    'py-1',
+                    log.startsWith('✓') && 'text-emerald-400',
+                    log.startsWith('✗') && 'text-red-400',
+                    log.includes('━━━') && 'text-amber-400 font-bold mt-2'
+                  )}
+                >
+                  {log}
+                </div>
+              ))}
+              {isCreating && <span className="animate-pulse">▌</span>}
+            </pre>
+          </div>
+        ) : (
+          /* Offers Table */
+          <div className="overflow-auto max-h-96">
+            <table className="w-full text-sm">
+              <thead className="bg-navy-50 dark:bg-navy-900/50 sticky top-0">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-navy-500 dark:text-navy-400 uppercase">
+                    Market Maker
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-navy-500 dark:text-navy-400 uppercase">
+                    Ratio (CEA/EUA)
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-navy-500 dark:text-navy-400 uppercase">
+                    EUA Offered
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-navy-500 dark:text-navy-400 uppercase">
+                    EUR Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
+                {preview.offers.map((offer, idx) => (
+                  <tr key={idx} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
+                    <td className="px-4 py-2 text-navy-900 dark:text-white">
+                      {offer.market_maker_name}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-blue-600 dark:text-blue-400">
+                      {offer.ratio.toFixed(4)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-navy-700 dark:text-navy-300">
+                      {offer.eua_quantity.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono font-medium text-blue-600 dark:text-blue-400">
+                      €{offer.eur_value.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-navy-50 dark:bg-navy-900/50 border-t border-navy-200 dark:border-navy-700 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose} disabled={isCreating}>
+            {isComplete ? 'Close' : 'Cancel'}
+          </Button>
+          {!hasLogs && (
+            <Button
+              variant="primary"
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={onConfirm}
+              disabled={isCreating}
+              loading={isCreating}
+            >
+              Create {preview.offers.length} Offers
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cash Market Preview Modal Component
 function LiquidityPreviewModal({
   preview,
   onClose,

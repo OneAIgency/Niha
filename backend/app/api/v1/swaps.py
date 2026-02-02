@@ -230,7 +230,7 @@ class CreateSwapOfferRequest(BaseModel):
     """Request model for creating a swap offer (market maker liquidity)."""
 
     market_maker_id: UUID = Field(..., description="Market maker ID (must be EUA_OFFER type)")
-    ratio: float = Field(..., gt=0, description="EUA per CEA ratio (e.g., 0.1182 means 1 CEA = 0.1182 EUA)")
+    ratio: float = Field(..., gt=0, description="CEA/EUA ratio (e.g., 0.1182 means 1 CEA = 0.1182 EUA)")
     eua_quantity: float = Field(..., gt=0, description="Amount of EUA to offer")
 
 
@@ -284,7 +284,7 @@ async def get_swap_offers(
         if remaining > 0:
             offers_by_mm[mm_id]["offers"].append({
                 "order_id": str(order.id),
-                "ratio": float(order.price),  # price = EUA/CEA ratio
+                "ratio": float(order.price),  # price = CEA/EUA ratio
                 "eua_available": remaining,
                 "created_at": order.created_at.isoformat() if order.created_at else None,
             })
@@ -336,7 +336,7 @@ async def get_swap_orderbook(
                 Order.quantity > Order.filled_quantity,
             )
         )
-        .order_by(Order.price.desc())  # Best ratio first (highest EUA per CEA)
+        .order_by(Order.price.desc())  # Best ratio first (highest CEA/EUA = more EUA per CEA)
     )
     orders = result.scalars().unique().all()
 
@@ -389,7 +389,7 @@ async def create_swap_offer(
     Create a single swap offer (admin/backoffice only).
 
     Creates an order in the SWAP market representing EUA available for swap.
-    The ratio is stored in the price field (EUA per CEA).
+    The ratio is stored in the price field (CEA/EUA ratio).
     """
     from ...core.security import get_admin_user
 
@@ -434,7 +434,7 @@ async def create_swap_offer(
         market_maker_id=request.market_maker_id,
         certificate_type=CertificateType.EUA,  # Offering EUA
         side=OrderSide.SELL,  # MM is selling EUA
-        price=Decimal(str(request.ratio)),  # ratio = EUA/CEA
+        price=Decimal(str(request.ratio)),  # ratio = CEA/EUA
         quantity=Decimal(str(request.eua_quantity)),
         filled_quantity=Decimal("0"),
         status=OrderStatus.OPEN,
@@ -521,7 +521,7 @@ async def reset_swap_liquidity(
         )
         .values(
             status=OrderStatus.CANCELLED,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
     )
 
@@ -856,7 +856,7 @@ async def execute_swap(
         )
 
     # Find available SWAP orders sorted by best ratio (highest first = best for user)
-    # price field stores the ratio (EUA per CEA)
+    # price field stores the ratio (CEA/EUA)
     result = await db.execute(
         select(Order)
         .where(
@@ -886,7 +886,7 @@ async def execute_swap(
         if remaining_cea <= 0:
             break
 
-        ratio = float(order.price)  # EUA per CEA
+        ratio = float(order.price)  # CEA/EUA ratio
         available_eua = float(order.quantity) - float(order.filled_quantity)
 
         # How much CEA can this order handle?
@@ -940,7 +940,7 @@ async def execute_swap(
         else:
             order.status = OrderStatus.PARTIALLY_FILLED
 
-        order.updated_at = datetime.utcnow()
+        order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Deduct CEA from user's holdings
     cea_holding.quantity = Decimal(str(float(cea_holding.quantity) - cea_quantity))
@@ -951,7 +951,7 @@ async def execute_swap(
 
     # Create settlement batch for EUA delivery (T+10-14 days)
     # Use naive datetime for DB compatibility (model uses datetime.utcnow which is naive)
-    expected_settlement = datetime.utcnow().replace(
+    expected_settlement = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
     expected_settlement = expected_settlement + timedelta(days=14)
@@ -986,7 +986,7 @@ async def execute_swap(
 
     # Update swap status
     swap.status = SwapStatus.COMPLETED
-    swap.updated_at = datetime.utcnow()
+    swap.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update user role from SWAP to EUA_SETTLE
     from ...models.models import UserRole

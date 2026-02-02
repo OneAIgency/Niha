@@ -34,10 +34,15 @@ interface UserBalances {
 
 interface OrderbookLevel {
   ratio: number;
-  euaQuantity: number;
-  ordersCount: number;
-  cumulativeEua: number;
-  depthPct: number;
+  // Support both camelCase (from api.ts transform) and snake_case (raw API)
+  euaQuantity?: number;
+  eua_quantity?: number;
+  ordersCount?: number;
+  orders_count?: number;
+  cumulativeEua?: number;
+  cumulative_eua?: number;
+  depthPct?: number;
+  depth_pct?: number;
 }
 
 export function CeaSwapMarketPage() {
@@ -126,7 +131,7 @@ export function CeaSwapMarketPage() {
   const platformFeePct = swapRate?.platformFeePct ?? 0.5;
 
   // Calculate weighted average ratio from orderbook for the user's CEA amount
-  // Orderbook ratio = EUA/CEA (e.g., 0.1182 means 1 CEA gets you 0.1182 EUA, or 1 EUA = 8.46 CEA)
+  // Orderbook ratio = CEA/EUA (e.g., 0.1182 means 1 CEA gets you 0.1182 EUA, or 1 EUA = 8.46 CEA)
   const calculateWeightedRatio = (ceaAmount: number): { avgRatio: number; totalEua: number } => {
     if (orderbook.length === 0 || ceaAmount <= 0) {
       return { avgRatio: ceaToEuaRate, totalEua: 0 };
@@ -136,22 +141,25 @@ export function CeaSwapMarketPage() {
     let totalEuaReceived = 0;
     let weightedRatioSum = 0; // sum of (ratio * euaFromThisLevel)
 
-    // Traverse orderbook from best ratio (highest EUA/CEA = best for user) to worst
+    // Traverse orderbook from best ratio (highest CEA/EUA = best for user) to worst
     // Note: orderbook is sorted with best offers first (highest ratio)
     for (const level of orderbook) {
       if (remainingCea <= 0) break;
 
-      // CEA needed for this level's EUA = EUA / ratio (since ratio = EUA/CEA)
-      const ceaNeededForLevel = level.ratio > 0 ? level.euaQuantity / level.ratio : 0;
+      // Handle both camelCase and snake_case
+      const euaQty = level.euaQuantity ?? level.eua_quantity ?? 0;
+
+      // CEA needed for this level's EUA = EUA / ratio (since ratio = CEA/EUA)
+      const ceaNeededForLevel = level.ratio > 0 ? euaQty / level.ratio : 0;
 
       if (remainingCea >= ceaNeededForLevel) {
         // Take all EUA from this level
-        totalEuaReceived += level.euaQuantity;
-        weightedRatioSum += level.ratio * level.euaQuantity;
+        totalEuaReceived += euaQty;
+        weightedRatioSum += level.ratio * euaQty;
         remainingCea -= ceaNeededForLevel;
       } else {
         // Partial fill - take only what we can afford
-        // EUA we can buy = remainingCea * ratio (since ratio = EUA/CEA)
+        // EUA we can buy = remainingCea * ratio (since ratio = CEA/EUA)
         const euaWeCanBuy = remainingCea * level.ratio;
         totalEuaReceived += euaWeCanBuy;
         weightedRatioSum += level.ratio * euaWeCanBuy;
@@ -159,7 +167,7 @@ export function CeaSwapMarketPage() {
       }
     }
 
-    // Calculate weighted average ratio (EUA/CEA) - weighted by EUA received at each level
+    // Calculate weighted average ratio (CEA/EUA) - weighted by EUA received at each level
     const avgRatio = totalEuaReceived > 0 ? weightedRatioSum / totalEuaReceived : ceaToEuaRate;
 
     return { avgRatio, totalEua: totalEuaReceived };
@@ -376,11 +384,11 @@ export function CeaSwapMarketPage() {
                     <div className="grid grid-cols-8 gap-1 px-2 py-1 text-xs text-navy-500 border-b border-navy-700">
                       <div>Ratio</div>
                       <div className="text-right">EUA</div>
-                      <div className="text-right">Tot EUA</div>
+                      <div className="text-right">Σ EUA</div>
                       <div className="text-right">CEA</div>
-                      <div className="text-right">Tot CEA</div>
-                      <div className="text-right">EUR</div>
-                      <div className="text-right">Tot EUR</div>
+                      <div className="text-right">Σ CEA</div>
+                      <div className="text-right">Val €</div>
+                      <div className="text-right">Σ Val €</div>
                       <div className="text-right">#</div>
                     </div>
 
@@ -395,16 +403,22 @@ export function CeaSwapMarketPage() {
                           let cumulativeCea = 0;
                           let cumulativeEua = 0;
                           let cumulativeEur = 0;
-                          const euaPrice = swapRate?.euaPriceEur || 0;
+                          const euaPrice = swapRate?.euaPriceEur ?? 83.72; // Fallback to ~current EUA price
 
                           return orderbook.map((level, index) => {
-                            // CEA needed = EUA / ratio (since ratio = EUA/CEA)
-                            const ceaNeeded = level.ratio > 0 ? level.euaQuantity / level.ratio : 0;
-                            const eurValue = level.euaQuantity * euaPrice;
+                            // CEA needed = EUA / ratio (since ratio = CEA/EUA)
+                            // Handle both camelCase (transformed) and snake_case (raw) responses
+                            const euaQty = level.euaQuantity ?? level.eua_quantity ?? 0;
+                            const ceaNeeded = level.ratio > 0 ? euaQty / level.ratio : 0;
+                            const eurValue = euaQty * euaPrice;
                             const prevCumulativeCea = cumulativeCea;
-                            cumulativeEua += level.euaQuantity;
+                            cumulativeEua += euaQty;
                             cumulativeCea += ceaNeeded;
                             cumulativeEur += eurValue;
+
+                            // Also get ordersCount with fallback
+                            const ordersCount = level.ordersCount ?? level.orders_count ?? 0;
+                            const depthPct = level.depthPct ?? level.depth_pct ?? 0;
 
                             // Determine if this level will be filled by user's CEA
                             // Full fill: cumulative CEA <= user's CEA balance
@@ -423,13 +437,13 @@ export function CeaSwapMarketPage() {
                                 {/* Depth visualization background */}
                                 <div
                                   className={`absolute inset-0 ${isFilled ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}
-                                  style={{ width: `${level.depthPct}%` }}
+                                  style={{ width: `${depthPct}%` }}
                                 />
                                 <div className="relative text-blue-400 font-mono">
                                   {level.ratio.toFixed(4)}
                                 </div>
                                 <div className="relative text-right text-white font-mono">
-                                  {formatNumber(level.euaQuantity, 0)}
+                                  {formatNumber(euaQty, 0)}
                                 </div>
                                 <div className="relative text-right text-white/70 font-mono">
                                   {formatNumber(cumulativeEua, 0)}
@@ -447,7 +461,7 @@ export function CeaSwapMarketPage() {
                                   {formatNumber(cumulativeEur / 1000000, 1)}M
                                 </div>
                                 <div className="relative text-right text-navy-400">
-                                  {level.ordersCount}
+                                  {ordersCount}
                                 </div>
                               </div>
                             );
