@@ -430,7 +430,9 @@ function RecentTrades({ trades }: RecentTradesProps) {
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
-      const date = new Date(dateStr);
+      // Backend returns UTC time without 'Z' suffix, so we add it to ensure proper timezone conversion
+      const utcDateStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+      const date = new Date(utcDateStr);
       if (isNaN(date.getTime())) return '-';
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
@@ -453,9 +455,10 @@ function RecentTrades({ trades }: RecentTradesProps) {
       </div>
 
       {/* Header */}
-      <div className="grid grid-cols-3 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider border-b border-navy-800">
+      <div className="grid grid-cols-4 px-2 py-1 text-[9px] text-navy-500 uppercase tracking-wider border-b border-navy-800">
         <span>Price</span>
         <span className="text-right">Volume</span>
+        <span className="text-right">Value</span>
         <span className="text-right">Time</span>
       </div>
 
@@ -466,25 +469,31 @@ function RecentTrades({ trades }: RecentTradesProps) {
             No recent trades
           </div>
         ) : (
-          trades.map((trade) => (
-            <div
-              key={trade.id}
-              className="grid grid-cols-3 px-2 py-[2px] text-[11px] font-mono border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors"
-              style={{ height: '20px', minHeight: '20px' }}
-            >
-              <span className={`font-medium ${
-                trade.side === 'BUY'
-                  ? 'text-emerald-400'
-                  : 'text-red-400'
-              }`}>
-                {trade.price.toFixed(1)}
-              </span>
-              <span className="text-right text-white">{Math.round(trade.quantity).toLocaleString()}</span>
-              <span className="text-right text-navy-500 text-[10px]">
-                {trade.executed_at ? formatTime(trade.executed_at) : '-'}
-              </span>
-            </div>
-          ))
+          trades.map((trade) => {
+            const tradeValue = trade.price * trade.quantity;
+            return (
+              <div
+                key={trade.id}
+                className="grid grid-cols-4 px-2 py-[2px] text-[11px] font-mono border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors"
+                style={{ height: '20px', minHeight: '20px' }}
+              >
+                <span className={`font-medium ${
+                  trade.side === 'BUY'
+                    ? 'text-emerald-400'
+                    : 'text-red-400'
+                }`}>
+                  {trade.price.toFixed(1)}
+                </span>
+                <span className="text-right text-white">{Math.round(trade.quantity).toLocaleString()}</span>
+                <span className="text-right text-navy-400 text-[10px]">
+                  {tradeValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+                <span className="text-right text-navy-500 text-[10px]">
+                  {trade.executedAt ? formatTime(trade.executedAt) : '-'}
+                </span>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

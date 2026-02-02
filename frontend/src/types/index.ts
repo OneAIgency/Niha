@@ -404,11 +404,11 @@ export interface MarketDepth {
 
 export interface CashMarketTrade {
   id: string;
-  certificate_type: CertificateType;
+  certificateType: CertificateType;
   price: number;
   quantity: number;
   side: OrderSide;
-  executed_at: string;
+  executedAt: string;
 }
 
 export interface CashMarketStats {

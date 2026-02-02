@@ -47,13 +47,31 @@ export function IndividualOrdersTable({
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await getAllOrders({
-        certificate_type: certificateType,
-        status: 'OPEN',
-        per_page: 500, // Get more orders to show full book
-      });
+      // Fetch both OPEN and PARTIALLY_FILLED orders to match aggregated view
+      const [openResponse, partiallyFilledResponse] = await Promise.all([
+        getAllOrders({
+          certificate_type: certificateType,
+          status: 'OPEN',
+          per_page: 500,
+        }),
+        getAllOrders({
+          certificate_type: certificateType,
+          status: 'PARTIALLY_FILLED',
+          per_page: 500,
+        }),
+      ]);
+
+      // Combine both responses
+      const openOrders = openResponse.data || [];
+      const partiallyFilledOrders = partiallyFilledResponse.data || [];
+      const allOrdersData = [...openOrders, ...partiallyFilledOrders];
+
+      // Deduplicate by order ID (in case any order appears in both)
+      const orderMap = new Map();
+      allOrdersData.forEach(order => orderMap.set(order.id, order));
+      const response = { data: Array.from(orderMap.values()) };
       // Transform backend response to frontend types
-      const ordersData = response.data || [];
+      const ordersData = response.data;
       const transformedOrders: AllOrder[] = ordersData.map((order: {
         id: string;
         entity_id?: string;
