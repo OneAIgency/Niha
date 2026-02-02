@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
-  TradingOrderBook,
+  ProfessionalOrderBook,
   MyOrders,
   UserOrderEntryModal,
 } from '../components/cash-market';
@@ -235,18 +235,20 @@ export function CashMarketPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Trading Order Book with Depth Chart */}
-            <div className="w-full">
-              {orderBook && (
-                <TradingOrderBook
-                  bids={orderBook.bids}
-                  asks={orderBook.asks}
-                  spread={orderBook.spread}
-                  bestBid={orderBook.best_bid}
-                  bestAsk={orderBook.best_ask}
-                />
-              )}
-            </div>
+            {/* Order Book with Market Depth Visualization - Same style as backoffice */}
+            {orderBook && (
+              <ProfessionalOrderBook
+                orderBook={{
+                  bids: orderBook.bids,
+                  asks: orderBook.asks,
+                  spread: orderBook.spread,
+                  best_bid: orderBook.best_bid,
+                  best_ask: orderBook.best_ask,
+                }}
+                showFullBook={true}
+                maxHeight="calc(100vh - 350px)"
+              />
+            )}
 
             {/* My Orders - Full Width */}
             <div className="w-full">

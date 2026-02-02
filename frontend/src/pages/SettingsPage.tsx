@@ -592,17 +592,17 @@ export function SettingsPage() {
                 Configure exchange rate sources for currency conversion. CEA prices are converted from CNY to EUR using scraped rates.
               </p>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="w-full">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Source</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Pair</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Interval</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Last Scrape</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Rate</th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Status</th>
-                      <th className="text-right py-3 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">Actions</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[25%]">Source</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Pair</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Interval</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Last Scrape</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Rate</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Status</th>
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[27%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
@@ -615,54 +615,57 @@ export function SettingsPage() {
                     ) : (
                       exchangeRateSources.map((source) => (
                         <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
-                          <td className="py-4 px-4">
-                            <div>
-                              <p className="font-medium text-navy-900 dark:text-white flex items-center gap-2">
-                                {source.name}
+                          <td className="py-2 px-2">
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                                <span className="truncate">{source.name}</span>
                                 {source.isPrimary && (
-                                  <Badge variant="success">Primary</Badge>
+                                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">Primary</Badge>
                                 )}
                               </p>
-                              <p className="text-xs text-navy-500 dark:text-navy-400 truncate max-w-xs">{source.url}</p>
+                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate">{source.url}</p>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <Badge variant="info">{source.fromCurrency}/{source.toCurrency}</Badge>
+                          <td className="py-2 px-2">
+                            <Badge variant="info" className="text-[10px] px-1.5 py-0.5">{source.fromCurrency}/{source.toCurrency}</Badge>
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="text-sm text-navy-600 dark:text-navy-300">{source.scrapeIntervalMinutes}m</span>
+                          <td className="py-2 px-2">
+                            <span className="text-xs text-navy-600 dark:text-navy-300">{source.scrapeIntervalMinutes}m</span>
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="text-sm text-navy-600 dark:text-navy-300">{formatTimeAgo(source.lastScrapedAt)}</span>
+                          <td className="py-2 px-2">
+                            <span className="text-xs text-navy-600 dark:text-navy-300">{formatTimeAgo(source.lastScrapedAt)}</span>
                           </td>
-                          <td className="py-4 px-4">
-                            {source.lastRate ? (
-                              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                {source.lastRate.toFixed(4)}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-navy-400">-</span>
-                            )}
-                            {exchangeTestResult?.sourceId === source.id && exchangeTestResult.rate && (
-                              <span className="ml-2 text-xs text-blue-500">(Test: {exchangeTestResult.rate.toFixed(4)})</span>
-                            )}
+                          <td className="py-2 px-2">
+                            <div className="flex flex-col">
+                              {source.lastRate ? (
+                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                  {source.lastRate.toFixed(4)}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-navy-400">-</span>
+                              )}
+                              {exchangeTestResult?.sourceId === source.id && exchangeTestResult.rate && (
+                                <span className="text-[10px] text-blue-500">Test: {exchangeTestResult.rate.toFixed(4)}</span>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-1">
                               {getStatusIcon(source.lastScrapeStatus)}
-                              <span className="text-sm capitalize text-navy-600 dark:text-navy-300">
+                              <span className="text-[10px] capitalize text-navy-600 dark:text-navy-300">
                                 {source.lastScrapeStatus || 'pending'}
                               </span>
                             </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <div className="flex justify-end gap-2">
+                          <td className="py-2 px-2">
+                            <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleTestExchangeSource(source.id)}
                                 loading={testingExchangeSource === source.id}
-                                icon={<Play className="w-3 h-3" />}
+                                icon={testingExchangeSource === source.id ? undefined : <Play className="w-3 h-3" />}
+                                className="text-xs px-2 py-1"
                               >
                                 Test
                               </Button>
@@ -671,7 +674,8 @@ export function SettingsPage() {
                                 size="sm"
                                 onClick={() => handleRefreshExchangeSource(source.id)}
                                 loading={refreshingExchangeSource === source.id}
-                                icon={<RefreshCw className="w-3 h-3" />}
+                                icon={refreshingExchangeSource === source.id ? undefined : <RefreshCw className="w-3 h-3" />}
+                                className="text-xs px-2 py-1"
                               >
                                 Refresh
                               </Button>
@@ -680,7 +684,7 @@ export function SettingsPage() {
                                 size="sm"
                                 onClick={() => handleDeleteExchangeSource(source.id)}
                                 loading={deletingExchangeSource === source.id}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 py-1"
                                 icon={<Trash2 className="w-3 h-3" />}
                               >
                                 Delete

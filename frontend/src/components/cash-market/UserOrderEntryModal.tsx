@@ -171,12 +171,12 @@ export function UserOrderEntryModal({
 
   return (
     <Card
-      className="w-full bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-200 dark:border-purple-700"
+      className="w-full"
       padding="lg"
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-purple-500 rounded-lg">
+        <div className="p-2 bg-emerald-500 rounded-lg">
           <ShoppingCart className="w-5 h-5 text-white" />
         </div>
         <div>
@@ -195,14 +195,14 @@ export function UserOrderEntryModal({
           <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
             Order Type
           </label>
-          <div className="flex rounded-lg overflow-hidden border-2 border-purple-300 dark:border-purple-600">
+          <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600">
             <button
               type="button"
               onClick={() => setOrderType('MARKET')}
               className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
                 orderType === 'MARKET'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
               }`}
             >
               Market Order
@@ -212,8 +212,8 @@ export function UserOrderEntryModal({
               onClick={() => setOrderType('LIMIT')}
               className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
                 orderType === 'LIMIT'
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
               }`}
             >
               Limit Order
@@ -246,7 +246,7 @@ export function UserOrderEntryModal({
               <button
                 type="button"
                 onClick={handleMaxClick}
-                className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors z-10"
+                className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors z-10"
               >
                 MAX
               </button>
@@ -277,9 +277,9 @@ export function UserOrderEntryModal({
             <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
               Est. Quantity
             </label>
-            <div className="px-3 py-2.5 rounded-lg border-2 border-purple-200 dark:border-purple-600 bg-navy-50 dark:bg-navy-900 text-navy-900 dark:text-white font-mono flex items-center justify-between">
+            <div className="px-3 py-2.5 rounded-lg border-2 border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900 text-navy-900 dark:text-white font-mono flex items-center justify-between">
               {isLoadingPreview ? (
-                <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
               ) : preview ? (
                 <span>{preview.total_quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               ) : (
@@ -292,8 +292,8 @@ export function UserOrderEntryModal({
 
         {/* Preview Section */}
         {isLoadingPreview && (
-          <div className="flex items-center justify-center py-6 bg-white dark:bg-navy-800 rounded-lg border-2 border-purple-200 dark:border-purple-600">
-            <Loader2 className="w-6 h-6 animate-spin text-purple-500 mr-2" />
+          <div className="flex items-center justify-center py-6 bg-white dark:bg-navy-800 rounded-lg border-2 border-navy-200 dark:border-navy-600">
+            <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mr-2" />
             <span className="text-sm text-navy-600 dark:text-navy-400">Loading preview...</span>
           </div>
         )}
@@ -313,7 +313,7 @@ export function UserOrderEntryModal({
         )}
 
         {preview && !isLoadingPreview && (
-          <div className="p-4 bg-white dark:bg-navy-800 rounded-lg border-2 border-purple-200 dark:border-purple-600 space-y-3">
+          <div className="p-4 bg-white dark:bg-navy-800 rounded-lg border-2 border-navy-200 dark:border-navy-600 space-y-3">
             <h3 className="text-sm font-semibold text-navy-900 dark:text-white mb-2">
               Order Preview
             </h3>
@@ -348,17 +348,17 @@ export function UserOrderEntryModal({
                 <span className="text-navy-600 dark:text-navy-400">
                   Platform Fee ({(preview.platform_fee_rate * 100).toFixed(2)}%)
                 </span>
-                <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                <span className="font-mono font-semibold text-navy-600 dark:text-navy-400">
                   €{preview.platform_fee_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               {/* Divider */}
-              <div className="border-t-2 border-purple-200 dark:border-purple-600 pt-2 mt-2">
+              <div className="border-t-2 border-navy-200 dark:border-navy-600 pt-2 mt-2">
                 {/* Total Cost */}
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-navy-900 dark:text-white">Total Cost</span>
-                  <span className="font-mono font-bold text-lg text-purple-600 dark:text-purple-400">
+                  <span className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400">
                     €{preview.total_cost_net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -375,9 +375,9 @@ export function UserOrderEntryModal({
 
             {/* Execution Message */}
             {!preview.can_execute && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-300 dark:border-amber-700">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900 dark:text-amber-100">
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-300 dark:border-red-700">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-900 dark:text-red-100">
                   {preview.execution_message}
                 </p>
               </div>
@@ -400,9 +400,9 @@ export function UserOrderEntryModal({
           whileTap={canSubmit ? { scale: 0.99 } : {}}
           type="submit"
           disabled={!canSubmit}
-          className={`w-full py-3.5 rounded-lg font-semibold text-white transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full py-3.5 rounded-xl font-semibold text-white transition-colors flex items-center justify-center gap-2 ${
             canSubmit
-              ? 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25'
               : 'bg-navy-300 dark:bg-navy-700 cursor-not-allowed'
           }`}
         >

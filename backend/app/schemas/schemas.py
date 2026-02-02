@@ -1261,6 +1261,148 @@ class MarketMakerTransactionResponse(BaseModel):
         from_attributes = True
 
 
+# =============================================================================
+# Auto Trade Rule Schemas
+# =============================================================================
+
+
+class AutoTradePriceMode(str, Enum):
+    FIXED = "fixed"
+    SPREAD_FROM_BEST = "spread_from_best"
+    RANDOM_SPREAD = "random_spread"
+    PERCENTAGE_FROM_MARKET = "percentage_from_market"
+
+
+class AutoTradeQuantityMode(str, Enum):
+    FIXED = "fixed"
+    PERCENTAGE_OF_BALANCE = "percentage_of_balance"
+    RANDOM_RANGE = "random_range"
+
+
+class AutoTradeRuleCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    enabled: bool = False
+    side: OrderSide
+    order_type: str = Field(default="LIMIT", pattern="^(LIMIT|MARKET)$")
+
+    # Price settings
+    price_mode: AutoTradePriceMode = AutoTradePriceMode.SPREAD_FROM_BEST
+    fixed_price: Optional[Decimal] = Field(None, gt=0)
+    spread_from_best: Optional[Decimal] = Field(None, ge=0)
+    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
+    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)  # Max % deviation from scraped price
+
+    # Quantity settings
+    quantity_mode: AutoTradeQuantityMode = AutoTradeQuantityMode.FIXED
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
+    min_quantity: Optional[Decimal] = Field(None, gt=0)
+    max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    # Timing
+    interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$")
+    interval_minutes: int = Field(default=5, ge=1, le=1440)  # Used when interval_mode='fixed'
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Min interval when mode='random'
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Max interval when mode='random'
+
+    # Conditions
+    min_balance: Optional[Decimal] = Field(None, ge=0)
+    max_active_orders: Optional[int] = Field(None, ge=1)
+
+
+class AutoTradeRuleUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    enabled: Optional[bool] = None
+    side: Optional[OrderSide] = None
+    order_type: Optional[str] = Field(None, pattern="^(LIMIT|MARKET)$")
+
+    # Price settings
+    price_mode: Optional[AutoTradePriceMode] = None
+    fixed_price: Optional[Decimal] = Field(None, gt=0)
+    spread_from_best: Optional[Decimal] = Field(None, ge=0)
+    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
+    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)
+
+    # Quantity settings
+    quantity_mode: Optional[AutoTradeQuantityMode] = None
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
+    min_quantity: Optional[Decimal] = Field(None, gt=0)
+    max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    # Timing
+    interval_mode: Optional[str] = Field(None, pattern="^(fixed|random)$")
+    interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)
+
+    # Conditions
+    min_balance: Optional[Decimal] = Field(None, ge=0)
+    max_active_orders: Optional[int] = Field(None, ge=1)
+
+
+class AutoTradeRuleResponse(BaseModel):
+    id: UUID
+    market_maker_id: UUID
+    name: str
+    enabled: bool
+    side: str
+    order_type: str
+
+    # Price settings
+    price_mode: str
+    fixed_price: Optional[Decimal]
+    spread_from_best: Optional[Decimal]
+    spread_min: Optional[Decimal]
+    spread_max: Optional[Decimal]
+    percentage_from_market: Optional[Decimal]
+    max_price_deviation: Optional[Decimal]
+
+    # Quantity settings
+    quantity_mode: str
+    fixed_quantity: Optional[Decimal]
+    percentage_of_balance: Optional[Decimal]
+    min_quantity: Optional[Decimal]
+    max_quantity: Optional[Decimal]
+
+    # Timing
+    interval_mode: str
+    interval_minutes: int
+    interval_min_minutes: Optional[int]
+    interval_max_minutes: Optional[int]
+
+    # Conditions
+    min_balance: Optional[Decimal]
+    max_active_orders: Optional[int]
+
+    # Execution tracking
+    last_executed_at: Optional[datetime]
+    next_execution_at: Optional[datetime]
+    execution_count: int
+
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeConfigResponse(BaseModel):
+    """Response for market maker auto trade configuration"""
+    enabled: bool
+    rules: List[AutoTradeRuleResponse]
+
+
+class AutoTradeConfigUpdate(BaseModel):
+    """Update the global enabled state for auto trade"""
+    enabled: bool
+
+
 # Market Order (Admin) Schemas
 class MarketOrderCreate(BaseModel):
     market_maker_id: UUID

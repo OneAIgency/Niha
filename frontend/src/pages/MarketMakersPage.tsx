@@ -77,7 +77,13 @@ export function MarketMakersPage() {
       setResetPassword('');
       loadMarketMakers();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Reset failed';
+      // Handle both Error objects and API standardized error responses
+      let errorMessage = 'Reset failed';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = (err as { message: string }).message;
+      }
       if (errorMessage.includes('403') || errorMessage.includes('Invalid')) {
         setResetError('Invalid password');
       } else {
@@ -103,7 +109,7 @@ export function MarketMakersPage() {
             onClick={() => setShowCreateModal(true)}
             icon={<Users className="w-4 h-4" />}
           >
-            Create Market Makers
+            Refund Market Makers
           </Button>
           <Button
             variant="danger"
@@ -208,9 +214,14 @@ export function MarketMakersPage() {
                 </p>
                 <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside space-y-1">
                   <li>Zero all balances (EUR, CEA, EUA)</li>
+                  <li>Delete all MM orders (from order book)</li>
+                  <li>Delete all cash market trades</li>
                   <li>Delete all asset transactions</li>
                   <li>Delete all audit tickets</li>
                 </ul>
+                <p className="mt-3 text-sm text-red-700 dark:text-red-300">
+                  Market Maker accounts will be kept. Use <strong>Refund Market Makers</strong> to add new balances.
+                </p>
               </div>
 
               <div>

@@ -8,7 +8,27 @@ import { EditOrderModal } from '../components/backoffice/EditOrderModal';
 import { IndividualOrdersTable } from '../components/backoffice/IndividualOrdersTable';
 import { BackofficeLayout } from '../components/layout';
 import { placeMarketMakerOrder, cancelMarketMakerOrder, backofficeApi } from '../services/api';
-import type { CertificateType, MarketMakerOrder } from '../types';
+import type { CertificateType } from '../types';
+
+// Extended order type that includes both entity and market maker orders
+interface AllOrder {
+  id: string;
+  entity_id?: string;
+  entity_name?: string;
+  market_maker_id?: string;
+  market_maker_name?: string;
+  certificate_type: CertificateType;
+  side: 'BUY' | 'SELL';
+  price: number;
+  quantity: number;
+  filled_quantity: number;
+  remaining_quantity: number;
+  status: 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
+  created_at: string;
+  updated_at?: string;
+  ticket_id?: string;
+  order_type: 'entity' | 'market_maker';
+}
 import { cn } from '../utils';
 
 const REFRESH_TIMEOUT_MS = 500;
@@ -41,7 +61,7 @@ export function MarketOrdersPage() {
   const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<'aggregated' | 'individual'>('aggregated');
-  const [editingOrder, setEditingOrder] = useState<MarketMakerOrder | null>(null);
+  const [editingOrder, setEditingOrder] = useState<AllOrder | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const askDialogRef = useRef<HTMLDivElement>(null);
   const bidDialogRef = useRef<HTMLDivElement>(null);
@@ -149,7 +169,7 @@ export function MarketOrdersPage() {
   /**
    * Handle clicking on an individual order to edit it
    */
-  const handleEditOrder = (order: MarketMakerOrder) => {
+  const handleEditOrder = (order: AllOrder) => {
     setEditingOrder(order);
     setEditModalOpen(true);
   };
@@ -345,13 +365,15 @@ export function MarketOrdersPage() {
           transition={{ duration: 0.3 }}
         >
           {viewMode === 'aggregated' ? (
-            /* Aggregated Order Book */
-            <div className="h-[600px] lg:h-[700px] xl:h-[800px]">
+            /* Aggregated Order Book - Full book with scroll for CEA Cash */
+            <div className="min-h-[400px]">
               <AdminOrderBookSection
                 key={`orderbook-${refreshKey}`}
                 certificateType={certificateType}
                 onPriceClick={handlePriceClick}
                 onOrderBookData={handleOrderBookData}
+                showFullBook={certificateType === 'CEA'}
+                maxHeight="calc(100vh - 280px)"
               />
             </div>
           ) : (

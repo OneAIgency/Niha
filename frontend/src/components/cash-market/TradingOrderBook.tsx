@@ -21,6 +21,10 @@ interface TradingOrderBookProps {
   isLoading?: boolean;
   /** Callback function invoked when a price level is clicked */
   onPriceClick?: (price: number) => void;
+  /** Show all orders with scrolling instead of limiting rows */
+  showFullBook?: boolean;
+  /** Max height for scrollable area when showFullBook is true */
+  maxHeight?: string;
 }
 
 /**
@@ -92,6 +96,8 @@ export function TradingOrderBook({
   bestAsk,
   isLoading = false,
   onPriceClick,
+  showFullBook = false,
+  maxHeight = '500px',
 }: TradingOrderBookProps) {
   // Note: bestBid and bestAsk props are kept for interface compatibility but not used in simplified layout
   void bestBid;
@@ -118,6 +124,13 @@ export function TradingOrderBook({
     const totalValue = safeAsks.reduce((sum, level) => sum + (level.quantity * level.price), 0);
     return { volume: Math.round(totalVolume), value: totalValue };
   }, [safeAsks]);
+
+  // Calculate max cumulative quantity for depth visualization
+  const maxCumulativeQuantity = useMemo(() => {
+    const bidMax = safeBids.length > 0 ? Math.max(...safeBids.map((b) => b.cumulative_quantity)) : 0;
+    const askMax = safeAsks.length > 0 ? Math.max(...safeAsks.map((a) => a.cumulative_quantity)) : 0;
+    return Math.max(bidMax, askMax);
+  }, [safeBids, safeAsks]);
 
   // Calculate cumulative EUR values for bids
   const bidsWithCumulativeValues = useMemo(() => {
@@ -169,8 +182,8 @@ export function TradingOrderBook({
    * @returns Formatted price string (e.g., "81.500")
    */
   const formatPrice = (price: number) => {
-    if (!isFinite(price) || price <= 0) return '0.000';
-    return price.toFixed(3);
+    if (!isFinite(price) || price <= 0) return '0.0';
+    return price.toFixed(1);
   };
 
   /**
@@ -187,9 +200,9 @@ export function TradingOrderBook({
     });
   };
 
-  // Take top 5 levels for each side (merged layout)
-  const displayBids = bidsWithCumulativeValues.slice(0, 5);
-  const displayAsks = asksWithCumulativeValues.slice(0, 5);
+  // Take levels for display - either all (with scroll) or top 5 (merged layout)
+  const displayBids = showFullBook ? bidsWithCumulativeValues : bidsWithCumulativeValues.slice(0, 5);
+  const displayAsks = showFullBook ? asksWithCumulativeValues : asksWithCumulativeValues.slice(0, 5);
 
   // Extract best bid/ask for center row
   const bestBidData = displayBids[0] || null;
@@ -267,35 +280,52 @@ export function TradingOrderBook({
         </div>
 
         {/* Orders Container - Single column merged layout */}
-        <div className="space-y-0">
+        <div
+          className="space-y-0"
+          style={showFullBook ? { maxHeight, overflowY: 'auto' } : undefined}
+        >
           {/* Ask Orders Section - Above center row */}
           <div className="space-y-0.5 mb-2">
-            {displayAsks.map((level, idx) => (
-              <div
-                key={`ask-${level.price}-${idx}`}
-                role="row"
-                tabIndex={0}
-                aria-label={`Ask order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
-                className="grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
-                onClick={() => onPriceClick?.(level.price)}
-                onKeyDown={(e) => handleKeyDown(e, level.price)}
-              >
-                {/* Price */}
-                <div className="text-sm text-red-600 dark:text-red-400 font-semibold font-mono tabular-nums text-left">
-                  {formatPrice(level.price)}
-                </div>
+            {displayAsks.map((level, idx) => {
+              // Calculate depth percentage for visual bar
+              const depthPercentage = maxCumulativeQuantity > 0
+                ? (level.cumulative_quantity / maxCumulativeQuantity) * 100
+                : 0;
 
-                {/* Volume */}
-                <div className="text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
-                  {formatNumber(level.quantity)}
-                </div>
+              return (
+                <div
+                  key={`ask-${level.price}-${idx}`}
+                  role="row"
+                  tabIndex={0}
+                  aria-label={`Ask order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
+                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                  onClick={() => onPriceClick?.(level.price)}
+                  onKeyDown={(e) => handleKeyDown(e, level.price)}
+                >
+                  {/* Depth Visualization - Red bar growing from left */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 bg-red-500/15 dark:bg-red-500/25 rounded-l transition-all"
+                    style={{ width: `${depthPercentage}%` }}
+                    aria-hidden="true"
+                  />
 
-                {/* Total (EUR) */}
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
-                  {formatEurValue(level.orderValue)}
+                  {/* Price */}
+                  <div className="relative text-sm text-red-600 dark:text-red-400 font-semibold font-mono tabular-nums text-left">
+                    {formatPrice(level.price)}
+                  </div>
+
+                  {/* Volume */}
+                  <div className="relative text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
+                    {formatNumber(level.quantity)}
+                  </div>
+
+                  {/* Total (EUR) */}
+                  <div className="relative text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
+                    {formatEurValue(level.orderValue)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Center Highlight Row - Best Bid and Best Ask */}
@@ -360,32 +390,46 @@ export function TradingOrderBook({
 
           {/* Bid Orders Section - Below center row */}
           <div className="space-y-0.5 mt-2">
-            {displayBids.map((level, idx) => (
-              <div
-                key={`bid-${level.price}-${idx}`}
-                role="row"
-                tabIndex={0}
-                aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
-                className="grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                onClick={() => onPriceClick?.(level.price)}
-                onKeyDown={(e) => handleKeyDown(e, level.price)}
-              >
-                {/* Price */}
-                <div className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold font-mono tabular-nums text-left">
-                  {formatPrice(level.price)}
-                </div>
+            {displayBids.map((level, idx) => {
+              // Calculate depth percentage for visual bar
+              const depthPercentage = maxCumulativeQuantity > 0
+                ? (level.cumulative_quantity / maxCumulativeQuantity) * 100
+                : 0;
 
-                {/* Volume */}
-                <div className="text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
-                  {formatNumber(level.quantity)}
-                </div>
+              return (
+                <div
+                  key={`bid-${level.price}-${idx}`}
+                  role="row"
+                  tabIndex={0}
+                  aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
+                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                  onClick={() => onPriceClick?.(level.price)}
+                  onKeyDown={(e) => handleKeyDown(e, level.price)}
+                >
+                  {/* Depth Visualization - Green bar growing from left */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 bg-emerald-500/15 dark:bg-emerald-500/25 rounded-l transition-all"
+                    style={{ width: `${depthPercentage}%` }}
+                    aria-hidden="true"
+                  />
 
-                {/* Total (EUR) */}
-                <div className="text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
-                  {formatEurValue(level.orderValue)}
+                  {/* Price */}
+                  <div className="relative text-sm text-emerald-600 dark:text-emerald-400 font-semibold font-mono tabular-nums text-left">
+                    {formatPrice(level.price)}
+                  </div>
+
+                  {/* Volume */}
+                  <div className="relative text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
+                    {formatNumber(level.quantity)}
+                  </div>
+
+                  {/* Total (EUR) */}
+                  <div className="relative text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
+                    {formatEurValue(level.orderValue)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -434,10 +478,26 @@ export function TradingOrderBook({
           </div>
         )}
 
-        {/* Depth Chart */}
-        <div className="mt-8">
-          <DepthChart bids={safeBids} asks={safeAsks} />
-        </div>
+        {/* Order Count Footer - shown when full book is enabled */}
+        {showFullBook && (
+          <div className="mt-4 pt-3 border-t border-navy-200 dark:border-navy-700">
+            <div className="flex items-center justify-between text-xs text-navy-500 dark:text-navy-400">
+              <span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{safeBids.length}</span> bid levels
+              </span>
+              <span>
+                <span className="font-semibold text-red-600 dark:text-red-400">{safeAsks.length}</span> ask levels
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Depth Chart - hidden when full book is shown to save space */}
+        {!showFullBook && (
+          <div className="mt-8">
+            <DepthChart bids={safeBids} asks={safeAsks} />
+          </div>
+        )}
       </div>
     </Card>
   );

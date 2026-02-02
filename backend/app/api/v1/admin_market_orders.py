@@ -6,6 +6,18 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
+# Price step for CEA cash market (0.1 EUR)
+PRICE_STEP = Decimal("0.1")
+
+
+def validate_price_step(price: Decimal) -> bool:
+    """
+    Validate that price respects the quote step of 0.1 EUR.
+    Returns True if price is a valid multiple of 0.1.
+    """
+    remainder = price % PRICE_STEP
+    return remainder == Decimal("0")
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
@@ -15,6 +27,7 @@ from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
     CertificateType,
+    Entity,
     MarketMakerClient,
     Order,
     OrderSide,
@@ -27,6 +40,7 @@ from ...schemas.schemas import (
     OrderBookLevel,
     OrderBookResponse,
 )
+from ...services.limit_order_matching import LimitOrderMatcher
 from ...services.market_maker_service import MarketMakerService
 from ...services.order_service import determine_order_market
 from ...services.ticket_service import TicketService
@@ -55,6 +69,11 @@ class AdminOrderResponse(BaseModel):
     message: str
     locked_amount: float
     balance_after: float
+    # Matching info
+    trades_matched: int = 0
+    filled_quantity: float = 0.0
+    remaining_quantity: float = 0.0
+    order_status: str = "OPEN"
 
 
 class MarketMakerOrderResponse(BaseModel):
@@ -73,6 +92,27 @@ class MarketMakerOrderResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     ticket_id: Optional[str]
+
+
+class AllOrderResponse(BaseModel):
+    """Order details for any order (entity or market maker)"""
+
+    id: UUID
+    entity_id: Optional[UUID] = None
+    entity_name: Optional[str] = None
+    market_maker_id: Optional[UUID] = None
+    market_maker_name: Optional[str] = None
+    certificate_type: str
+    side: str
+    price: float
+    quantity: float
+    filled_quantity: float
+    remaining_quantity: float
+    status: str
+    created_at: datetime
+    updated_at: Optional[datetime]
+    ticket_id: Optional[str]
+    order_type: str  # "entity" or "market_maker"
 
 
 @router.get("/orderbook/{certificate_type}", response_model=OrderBookResponse)
@@ -191,6 +231,115 @@ async def get_orderbook_replica(
     )
 
 
+@router.get("/all", response_model=List[AllOrderResponse])
+async def list_all_orders(
+    certificate_type: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = Query(1, ge=1),  # noqa: B008
+    per_page: int = Query(100, ge=1, le=500),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    List ALL orders (both entity orders and market maker orders).
+    Admin-only endpoint.
+
+    This endpoint provides a unified view of all orders in the system,
+    matching what's shown in the aggregated order book.
+
+    Filters:
+    - certificate_type: Filter by EUA or CEA
+    - status: Filter by OPEN, FILLED, CANCELLED, etc.
+    """
+    from sqlalchemy.orm import selectinload
+
+    # Build base query for all orders
+    query = select(Order)
+
+    # Apply certificate type filter
+    if certificate_type:
+        try:
+            cert_type = CertificateType(certificate_type)
+            query = query.where(Order.certificate_type == cert_type)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+            ) from e
+
+    # Apply status filter
+    if status:
+        try:
+            status_enum = OrderStatus(status)
+            query = query.where(Order.status == status_enum)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid status: {status}"
+            ) from e
+
+    # Order by most recent first
+    query = query.order_by(Order.created_at.desc())
+
+    # Pagination
+    offset = (page - 1) * per_page
+    query = query.offset(offset).limit(per_page)
+
+    result = await db.execute(query)
+    orders = result.scalars().all()
+
+    # Fetch related entities and market makers
+    entity_ids = [o.entity_id for o in orders if o.entity_id]
+    mm_ids = [o.market_maker_id for o in orders if o.market_maker_id]
+
+    # Fetch entities
+    entities_map = {}
+    if entity_ids:
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id.in_(entity_ids))
+        )
+        for entity in entity_result.scalars().all():
+            entities_map[entity.id] = entity
+
+    # Fetch market makers
+    mm_map = {}
+    if mm_ids:
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(MarketMakerClient.id.in_(mm_ids))
+        )
+        for mm in mm_result.scalars().all():
+            mm_map[mm.id] = mm
+
+    # Build response
+    response_orders = []
+    for order in orders:
+        entity = entities_map.get(order.entity_id) if order.entity_id else None
+        mm = mm_map.get(order.market_maker_id) if order.market_maker_id else None
+
+        order_type = "market_maker" if order.market_maker_id else "entity"
+
+        response_orders.append(
+            AllOrderResponse(
+                id=order.id,
+                entity_id=order.entity_id,
+                entity_name=entity.legal_name if entity else None,
+                market_maker_id=order.market_maker_id,
+                market_maker_name=mm.name if mm else None,
+                certificate_type=order.certificate_type.value,
+                side=order.side.value,
+                price=float(order.price),
+                quantity=float(order.quantity),
+                filled_quantity=float(order.filled_quantity),
+                remaining_quantity=float(order.quantity - order.filled_quantity),
+                status=order.status.value,
+                created_at=order.created_at,
+                updated_at=order.updated_at,
+                ticket_id=order.ticket_id,
+                order_type=order_type,
+            )
+        )
+
+    return response_orders
+
+
 @router.post("", response_model=AdminOrderResponse)
 async def create_market_order(
     data: AdminOrderCreate,
@@ -243,6 +392,13 @@ async def create_market_order(
     # Convert to Decimal
     price = Decimal(str(data.price))
     quantity = Decimal(str(data.quantity))
+
+    # Validate price step (0.1 EUR)
+    if not validate_price_step(price):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {data.price}, expected values like 9.30, 9.40, 9.50, etc."
+        )
 
     # Balance validation and asset locking (only for ASK/SELL orders)
     trans_ticket_id = None
@@ -330,20 +486,41 @@ async def create_market_order(
     # Update order with ticket_id
     order.ticket_id = ticket.ticket_id
 
+    # Try to match the order against the book immediately
+    # This ensures we never have crossing orders (negative spread)
+    match_result = await LimitOrderMatcher.match_incoming_order(
+        db=db,
+        incoming_order=order,
+        user_id=admin_user.id,
+    )
+
     await db.commit()
     await db.refresh(order)
 
+    match_info = ""
+    if match_result.trades_created > 0:
+        match_info = f" | Matched {match_result.trades_created} trade(s), filled {match_result.total_filled}"
+
     logger.info(
         f"Admin {admin_user.email} placed {side_display} order for MM {mm.name}: "
-        f"{quantity} {cert_type.value} at {price}"
+        f"{quantity} {cert_type.value} at {price}{match_info}"
     )
+
+    # Build message with match info
+    message = f"{side_display} order placed: {quantity} {cert_type.value} at {price}"
+    if match_result.trades_created > 0:
+        message += f" | {match_result.trades_created} trade(s) executed, {match_result.total_filled} filled"
 
     return AdminOrderResponse(
         order_id=order.id,
         ticket_id=ticket.ticket_id,
-        message=f"{side_display} order placed: {quantity} {cert_type.value} at {price}",
+        message=message,
         locked_amount=locked_amount,
         balance_after=balance_after,
+        trades_matched=match_result.trades_created,
+        filled_quantity=float(match_result.total_filled),
+        remaining_quantity=float(match_result.remaining_quantity),
+        order_status=order.status.value,
     )
 
 
@@ -541,4 +718,106 @@ async def cancel_market_order(
         if order.side == OrderSide.SELL
         else 0.0,
         "release_ticket_id": trans_ticket_id,
+    }
+
+
+@router.post("/match-crossing/{certificate_type}", response_model=dict)
+async def match_crossing_orders(
+    certificate_type: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Manually trigger matching of all crossing orders in the order book.
+
+    This endpoint should be called to clean up any existing crossing orders
+    (orders where bid price >= ask price) that weren't matched automatically.
+
+    In a properly functioning market, this should return 0 trades as all
+    crossing orders should be matched immediately upon placement.
+    """
+    try:
+        cert_type = CertificateType(certificate_type)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+        ) from e
+
+    trades_created = await LimitOrderMatcher.match_all_crossing_orders(
+        db=db,
+        certificate_type=cert_type,
+    )
+
+    logger.info(
+        f"Admin {admin_user.email} triggered crossing order matching for {certificate_type}: "
+        f"{trades_created} trades created"
+    )
+
+    return {
+        "certificate_type": certificate_type,
+        "trades_created": trades_created,
+        "message": f"Matched {trades_created} crossing order(s)" if trades_created > 0 else "No crossing orders found",
+    }
+
+
+@router.post("/cleanup-dust/{certificate_type}", response_model=dict)
+async def cleanup_dust_orders(
+    certificate_type: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Clean up "dust" orders - orders with remaining quantity < 1 certificate.
+
+    These fractional remainders can cause display issues (negative spread)
+    when they appear in the order book but can't actually be matched.
+
+    Marks such orders as FILLED since the fractional remainder is negligible.
+    """
+    from decimal import Decimal
+
+    try:
+        cert_type = CertificateType(certificate_type)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid certificate_type: {certificate_type}"
+        ) from e
+
+    # Find orders with remaining < 1
+    result = await db.execute(
+        select(Order)
+        .where(
+            and_(
+                Order.certificate_type == cert_type,
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                (Order.quantity - Order.filled_quantity) < Decimal("1"),
+                (Order.quantity - Order.filled_quantity) > Decimal("0"),
+            )
+        )
+    )
+    dust_orders = list(result.scalars().all())
+
+    cleaned_count = 0
+    for order in dust_orders:
+        remaining = order.quantity - order.filled_quantity
+        # Mark as filled (set filled_quantity = quantity)
+        order.filled_quantity = order.quantity
+        order.status = OrderStatus.FILLED
+        order.updated_at = datetime.utcnow()
+        cleaned_count += 1
+        logger.info(
+            f"Cleaned dust order {order.id}: {order.side.value} {remaining} {cert_type.value} @ {order.price}"
+        )
+
+    if cleaned_count > 0:
+        await db.commit()
+
+    logger.info(
+        f"Admin {admin_user.email} cleaned up {cleaned_count} dust orders for {certificate_type}"
+    )
+
+    return {
+        "certificate_type": certificate_type,
+        "orders_cleaned": cleaned_count,
+        "message": f"Cleaned {cleaned_count} dust order(s)" if cleaned_count > 0 else "No dust orders found",
     }

@@ -17,9 +17,13 @@ interface AdminOrderBookSectionProps {
   onPriceClick?: (price: number, side: 'BUY' | 'SELL') => void;
   /** Called when orderbook data is updated - provides best prices and volumes for auto-fill */
   onOrderBookData?: (data: OrderBookData) => void;
+  /** Show all orders with scrolling instead of limiting to 7 rows */
+  showFullBook?: boolean;
+  /** Max height for scrollable area when showFullBook is true */
+  maxHeight?: string;
 }
 
-export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBookData }: AdminOrderBookSectionProps) {
+export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBookData, showFullBook = false, maxHeight = '600px' }: AdminOrderBookSectionProps) {
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -86,6 +90,8 @@ export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBo
             best_ask: orderBook.best_ask,
           }}
           onPriceClick={onPriceClick != null ? handlePriceClick : undefined}
+          showFullBook={showFullBook}
+          maxHeight={maxHeight}
         />
       )}
       <div className="flex items-center justify-center text-xs text-navy-500 dark:text-navy-400">

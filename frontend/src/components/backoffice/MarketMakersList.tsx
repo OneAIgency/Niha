@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { DataTable, Badge, Card, type Column } from '../common';
-import { CheckCircle, XCircle, Leaf, Wind, Activity, Wallet, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Leaf, Wind, Activity, Wallet, TrendingUp, Lock } from 'lucide-react';
 import { formatQuantity, formatCurrency } from '../../utils';
 import { usePrices } from '../../hooks/usePrices';
+import { getMarketMakerBalances } from '../../services/api';
 import type { MarketMaker } from '../../types';
 import { MARKETS, MARKET_MAKER_TYPES } from '../../types';
 
@@ -11,8 +13,57 @@ interface MarketMakersListProps {
   onSelectMM: (mm: MarketMaker) => void;
 }
 
+interface DetailedBalances {
+  [marketMakerId: string]: {
+    eur: { available: number; locked: number; total: number };
+    cea: { available: number; locked: number; total: number };
+    eua: { available: number; locked: number; total: number };
+  };
+}
+
 export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMakersListProps) {
   const { prices } = usePrices();
+  const [detailedBalances, setDetailedBalances] = useState<DetailedBalances>({});
+  const [loadingBalances, setLoadingBalances] = useState(false);
+
+  // Fetch detailed balances for all market makers
+  useEffect(() => {
+    const fetchAllBalances = async () => {
+      if (marketMakers.length === 0) return;
+
+      setLoadingBalances(true);
+      const balances: DetailedBalances = {};
+
+      await Promise.all(
+        marketMakers.map(async (mm) => {
+          try {
+            const data = await getMarketMakerBalances(mm.id);
+            balances[mm.id] = {
+              eur: { available: data.eur_available, locked: data.eur_locked, total: data.eur_balance },
+              cea: { available: data.cea_available, locked: data.cea_locked, total: data.cea_balance },
+              eua: { available: data.eua_available, locked: data.eua_locked, total: data.eua_balance },
+            };
+          } catch (err) {
+            // Fallback to total balances if fetch fails
+            balances[mm.id] = {
+              eur: { available: mm.eur_balance, locked: 0, total: mm.eur_balance },
+              cea: { available: mm.cea_balance, locked: 0, total: mm.cea_balance },
+              eua: { available: mm.eua_balance, locked: 0, total: mm.eua_balance },
+            };
+          }
+        })
+      );
+
+      setDetailedBalances(balances);
+      setLoadingBalances(false);
+    };
+
+    fetchAllBalances();
+  }, [marketMakers]);
+
+  const getBalance = (mmId: string, type: 'eur' | 'cea' | 'eua') => {
+    return detailedBalances[mmId]?.[type] || { available: 0, locked: 0, total: 0 };
+  };
 
   const columns: Column<MarketMaker>[] = [
     {
@@ -61,35 +112,93 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     },
     {
       key: 'balance',
-      header: 'Balance',
-      width: '18%',
+      header: 'Available Balance',
+      width: '22%',
       align: 'right',
       render: (_, row) => {
+        const eurBal = getBalance(row.id, 'eur');
+        const ceaBal = getBalance(row.id, 'cea');
+        const euaBal = getBalance(row.id, 'eua');
+
         if (row.mm_type === 'CEA_BUYER') {
           return (
-            <div className="flex items-center justify-end font-mono font-bold text-emerald-600">
-              {formatCurrency(row.eur_balance, 'EUR')}
+            <div className="text-right">
+              {/* Available - Highlighted */}
+              <div className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                {loadingBalances ? '...' : formatCurrency(eurBal.available, 'EUR')}
+              </div>
+              {/* Initial & Locked - Secondary, stacked */}
+              {!loadingBalances && eurBal.locked > 0 && (
+                <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                  <div>Initial: {formatCurrency(eurBal.total, 'EUR')}</div>
+                  <div className="flex items-center justify-end gap-1">
+                    <Lock className="w-3 h-3" />
+                    {formatCurrency(eurBal.locked, 'EUR')}
+                  </div>
+                </div>
+              )}
             </div>
           );
         } else if (row.mm_type === 'CEA_SELLER') {
           return (
-            <div className="flex items-center justify-end gap-2">
-              <Leaf className="w-4 h-4 text-amber-500" />
-              <span className="font-mono text-navy-900 dark:text-white">
-                {formatQuantity(row.cea_balance)} CEA
-              </span>
+            <div className="text-right">
+              {/* Available - Highlighted */}
+              <div className="flex items-center justify-end gap-2">
+                <Leaf className="w-4 h-4 text-amber-500" />
+                <span className="font-mono font-bold text-lg text-amber-600 dark:text-amber-400">
+                  {loadingBalances ? '...' : formatQuantity(ceaBal.available)} CEA
+                </span>
+              </div>
+              {/* Initial & Locked - Secondary, stacked */}
+              {!loadingBalances && ceaBal.locked > 0 && (
+                <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                  <div>Initial: {formatQuantity(ceaBal.total)} CEA</div>
+                  <div className="flex items-center justify-end gap-1">
+                    <Lock className="w-3 h-3" />
+                    {formatQuantity(ceaBal.locked)} CEA
+                  </div>
+                </div>
+              )}
             </div>
           );
         } else { // EUA_OFFER
           return (
-            <div className="space-y-1">
-              <div className="flex items-center justify-end gap-2">
-                <Leaf className="w-4 h-4 text-amber-500" />
-                <span className="text-xs font-mono">{formatQuantity(row.cea_balance)} CEA</span>
+            <div className="space-y-3">
+              {/* CEA Available */}
+              <div className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Leaf className="w-4 h-4 text-amber-500" />
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                    {loadingBalances ? '...' : formatQuantity(ceaBal.available)} CEA
+                  </span>
+                </div>
+                {!loadingBalances && ceaBal.locked > 0 && (
+                  <div className="mt-0.5 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                    <div>Init: {formatQuantity(ceaBal.total)}</div>
+                    <div className="flex items-center justify-end gap-1">
+                      <Lock className="w-3 h-3" />
+                      {formatQuantity(ceaBal.locked)}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center justify-end gap-2">
-                <Wind className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-mono">{formatQuantity(row.eua_balance)} EUA</span>
+              {/* EUA Available */}
+              <div className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Wind className="w-4 h-4 text-blue-500" />
+                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                    {loadingBalances ? '...' : formatQuantity(euaBal.available)} EUA
+                  </span>
+                </div>
+                {!loadingBalances && euaBal.locked > 0 && (
+                  <div className="mt-0.5 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                    <div>Init: {formatQuantity(euaBal.total)}</div>
+                    <div className="flex items-center justify-end gap-1">
+                      <Lock className="w-3 h-3" />
+                      {formatQuantity(euaBal.locked)}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -99,7 +208,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     {
       key: 'is_active',
       header: 'Status',
-      width: '12%',
+      width: '10%',
       align: 'center',
       render: (value) => (
         <Badge variant={value ? 'success' : 'danger'}>
@@ -119,8 +228,8 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     },
     {
       key: 'total_orders',
-      header: 'Total Orders',
-      width: '10%',
+      header: 'Orders',
+      width: '8%',
       align: 'center',
       render: (value) => (
         <div className="flex items-center justify-center gap-2">
@@ -143,6 +252,13 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
     },
   ];
 
+  // Calculate totals using available balances
+  const getTotalAvailable = (type: 'eur' | 'cea' | 'eua', filterFn?: (mm: MarketMaker) => boolean) => {
+    return marketMakers
+      .filter(filterFn || (() => true))
+      .reduce((sum, mm) => sum + (detailedBalances[mm.id]?.[type]?.available || 0), 0);
+  };
+
   return (
     <div>
       <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6">
@@ -159,7 +275,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       />
 
       {/* Market-Based Portfolio Summary */}
-      {marketMakers.length > 0 && prices && (
+      {marketMakers.length > 0 && prices && !loadingBalances && (
         <div className="mt-4 space-y-3">
           {/* CEA Cash Market Summary */}
           {(() => {
@@ -167,10 +283,10 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             const cashBuyers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_BUYER');
             const ceaSellers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_SELLER');
 
-            const totalEUR = cashBuyers.reduce((sum, mm) => sum + mm.eur_balance, 0);
-            const totalCEA = ceaSellers.reduce((sum, mm) => sum + mm.cea_balance, 0);
-            const ceaValue = totalCEA * prices.cea.price;
-            const ceaCashTotal = totalEUR + ceaValue;
+            const totalEURAvailable = getTotalAvailable('eur', mm => mm.mm_type === 'CEA_BUYER');
+            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'CEA_SELLER');
+            const ceaValue = totalCEAAvailable * prices.cea.price;
+            const ceaCashTotal = totalEURAvailable + ceaValue;
 
             return ceaCashMMs.length > 0 ? (
               <Card className="overflow-hidden">
@@ -186,11 +302,11 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                           <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.CEA_CASH.name}</span>
                           <Badge variant="purple" className="text-xs">{ceaCashMMs.length} MMs</Badge>
                         </div>
-                        <div className="text-xs text-navy-500 dark:text-navy-400">Market Liquidity Overview</div>
+                        <div className="text-xs text-navy-500 dark:text-navy-400">Available Liquidity</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Market Total</div>
+                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
                       <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
                         {formatCurrency(ceaCashTotal, 'EUR')}
                       </div>
@@ -204,13 +320,13 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                   <div className="p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <Wallet className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">Cash Buyers</span>
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">Cash Available</span>
                     </div>
                     <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(totalEUR, 'EUR')}
+                      {formatCurrency(totalEURAvailable, 'EUR')}
                     </div>
                     <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {cashBuyers.length} Market Maker{cashBuyers.length !== 1 ? 's' : ''}
+                      {cashBuyers.length} Cash Buyer{cashBuyers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
 
@@ -218,13 +334,13 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                   <div className="p-5 text-right">
                     <div className="flex items-center justify-end gap-2 mb-2">
                       <Leaf className="w-4 h-4 text-amber-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Inventory</span>
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
                     </div>
                     <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {formatQuantity(totalCEA)} CEA
+                      {formatQuantity(totalCEAAvailable)} CEA
                     </div>
                     <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {formatCurrency(ceaValue, 'EUR')} · {ceaSellers.length} Market Maker{ceaSellers.length !== 1 ? 's' : ''}
+                      {formatCurrency(ceaValue, 'EUR')} · {ceaSellers.length} Seller{ceaSellers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
@@ -235,53 +351,65 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
           {/* Swap Market Summary */}
           {(() => {
             const swapMMs = marketMakers.filter(mm => mm.mm_type === 'EUA_OFFER');
-            const totalCEA = swapMMs.reduce((sum, mm) => sum + mm.cea_balance, 0);
-            const totalEUA = swapMMs.reduce((sum, mm) => sum + mm.eua_balance, 0);
-            const ceaValue = totalCEA * prices.cea.price;
-            const euaValue = totalEUA * prices.eua.price;
+            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'EUA_OFFER');
+            const totalEUAAvailable = getTotalAvailable('eua', mm => mm.mm_type === 'EUA_OFFER');
+            const ceaValue = totalCEAAvailable * prices.cea.price;
+            const euaValue = totalEUAAvailable * prices.eua.price;
             const swapTotal = ceaValue + euaValue;
 
             return swapMMs.length > 0 ? (
-              <Card>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="blue">{MARKETS.SWAP.name}</Badge>
-                      <span className="text-sm text-navy-600 dark:text-navy-400">
-                        ({swapMMs.length} Market Makers)
-                      </span>
+              <Card className="overflow-hidden">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-blue-200 dark:border-blue-800/50 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.SWAP.name}</span>
+                          <Badge variant="blue" className="text-xs">{swapMMs.length} MMs</Badge>
+                        </div>
+                        <div className="text-xs text-navy-500 dark:text-navy-400">Available Liquidity</div>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-navy-500 dark:text-navy-400">Market Total</div>
-                      <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">
+                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
+                      <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
                         {formatCurrency(swapTotal, 'EUR')}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex-1 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Leaf className="w-4 h-4 text-amber-500" />
-                        <div className="text-xs text-navy-500 dark:text-navy-400">CEA Inventory</div>
-                      </div>
-                      <div className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
-                        {formatQuantity(totalCEA)} CEA
-                      </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">
-                        {formatCurrency(ceaValue, 'EUR')}
-                      </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 divide-x divide-navy-200 dark:divide-navy-700">
+                  {/* CEA */}
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Leaf className="w-4 h-4 text-amber-500" />
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
                     </div>
-                    <div className="flex-1 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Wind className="w-4 h-4 text-blue-500" />
-                        <div className="text-xs text-navy-500 dark:text-navy-400">EUA Inventory</div>
-                      </div>
-                      <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400">
-                        {formatQuantity(totalEUA)} EUA
-                      </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">
-                        {formatCurrency(euaValue, 'EUR')}
-                      </div>
+                    <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                      {formatQuantity(totalCEAAvailable)} CEA
+                    </div>
+                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      {formatCurrency(ceaValue, 'EUR')}
+                    </div>
+                  </div>
+
+                  {/* EUA */}
+                  <div className="p-5 text-right">
+                    <div className="flex items-center justify-end gap-2 mb-2">
+                      <Wind className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">EUA Available</span>
+                    </div>
+                    <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">
+                      {formatQuantity(totalEUAAvailable)} EUA
+                    </div>
+                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                      {formatCurrency(euaValue, 'EUR')}
                     </div>
                   </div>
                 </div>
@@ -293,19 +421,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
           <Card>
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20">
               <span className="text-sm font-semibold text-navy-700 dark:text-navy-300">
-                Total Portfolio Value
+                Total Available Portfolio Value
               </span>
               <div className="text-right">
                 <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(
                     marketMakers.reduce((sum, mm) => {
+                      const eurBal = detailedBalances[mm.id]?.eur?.available || 0;
+                      const ceaBal = detailedBalances[mm.id]?.cea?.available || 0;
+                      const euaBal = detailedBalances[mm.id]?.eua?.available || 0;
+
                       let value = sum;
                       // Add EUR for CEA_BUYER
                       if (mm.mm_type === 'CEA_BUYER') {
-                        value += mm.eur_balance;
+                        value += eurBal;
                       }
                       // Add CEA/EUA value for all types
-                      value += (mm.cea_balance * prices.cea.price) + (mm.eua_balance * prices.eua.price);
+                      value += (ceaBal * prices.cea.price) + (euaBal * prices.eua.price);
                       return value;
                     }, 0),
                     'EUR'

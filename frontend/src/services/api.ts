@@ -1620,10 +1620,47 @@ export const deleteMarketMaker = async (id: string): Promise<MessageResponse> =>
 export const resetAllMarketMakers = async (password: string): Promise<{
   message: string;
   reset_count: number;
+  orders_deleted: number;
   ticket_id: string;
 }> => {
   const { data } = await api.post(`/admin/market-makers/reset-all?password=${encodeURIComponent(password)}`);
   return data;
+};
+
+export interface CreateTransactionRequest {
+  certificate_type: 'CEA' | 'EUA';
+  transaction_type: 'DEPOSIT' | 'WITHDRAWAL';
+  amount: number;
+  notes?: string;
+}
+
+export const createMarketMakerTransaction = async (
+  marketMakerId: string,
+  data: CreateTransactionRequest
+): Promise<{
+  transaction_id: string;
+  ticket_id: string;
+  balance_after: number;
+  message: string;
+}> => {
+  const { data: response } = await api.post(`/admin/market-makers/${marketMakerId}/transactions`, data);
+  return response;
+};
+
+export const depositEurToMarketMaker = async (
+  marketMakerId: string,
+  amount: number,
+  notes?: string
+): Promise<{
+  balance_before: number;
+  balance_after: number;
+  ticket_id: string;
+  message: string;
+}> => {
+  const params = new URLSearchParams({ amount: String(amount) });
+  if (notes) params.append('notes', notes);
+  const { data: response } = await api.post(`/admin/market-makers/${marketMakerId}/eur-deposit?${params.toString()}`);
+  return response;
 };
 
 export interface MarketMakerTransactionQueryParams {
@@ -1687,6 +1724,7 @@ export const getMarketMakerBalances = async (id: string): Promise<{
   eur_available: number;
   cea_locked: number;
   eua_locked: number;
+  eur_locked: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
 
@@ -1702,7 +1740,126 @@ export const getMarketMakerBalances = async (id: string): Promise<{
     eur_available: data.EUR?.available ?? 0,
     cea_locked: data.CEA?.locked ?? 0,
     eua_locked: data.EUA?.locked ?? 0,
+    eur_locked: data.EUR?.locked ?? 0,
   };
+};
+
+// Auto Trade Rules API
+export interface AutoTradeRule {
+  id: string;
+  market_maker_id: string;
+  name: string;
+  enabled: boolean;
+  side: 'BUY' | 'SELL';
+  order_type: 'LIMIT' | 'MARKET';
+  price_mode: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixed_price?: number;
+  spread_from_best?: number;
+  spread_min?: number;
+  spread_max?: number;
+  percentage_from_market?: number;
+  max_price_deviation?: number;
+  quantity_mode: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixed_quantity?: number;
+  percentage_of_balance?: number;
+  min_quantity?: number;
+  max_quantity?: number;
+  interval_mode: 'fixed' | 'random';
+  interval_minutes: number;
+  interval_min_minutes?: number;
+  interval_max_minutes?: number;
+  min_balance?: number;
+  max_active_orders?: number;
+  last_executed_at?: string;
+  next_execution_at?: string;
+  execution_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutoTradeRuleCreate {
+  name: string;
+  enabled?: boolean;
+  side: 'BUY' | 'SELL';
+  order_type?: 'LIMIT' | 'MARKET';
+  price_mode?: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixed_price?: number;
+  spread_from_best?: number;
+  spread_min?: number;
+  spread_max?: number;
+  percentage_from_market?: number;
+  max_price_deviation?: number;
+  quantity_mode?: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixed_quantity?: number;
+  percentage_of_balance?: number;
+  min_quantity?: number;
+  max_quantity?: number;
+  interval_mode?: 'fixed' | 'random';
+  interval_minutes?: number;
+  interval_min_minutes?: number;
+  interval_max_minutes?: number;
+  min_balance?: number;
+  max_active_orders?: number;
+}
+
+export interface AutoTradeRuleUpdate {
+  name?: string;
+  enabled?: boolean;
+  side?: 'BUY' | 'SELL';
+  order_type?: 'LIMIT' | 'MARKET';
+  price_mode?: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixed_price?: number | null;
+  spread_from_best?: number | null;
+  spread_min?: number | null;
+  spread_max?: number | null;
+  percentage_from_market?: number | null;
+  max_price_deviation?: number | null;
+  quantity_mode?: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixed_quantity?: number | null;
+  percentage_of_balance?: number | null;
+  min_quantity?: number | null;
+  max_quantity?: number | null;
+  interval_mode?: 'fixed' | 'random';
+  interval_minutes?: number;
+  interval_min_minutes?: number | null;
+  interval_max_minutes?: number | null;
+  min_balance?: number | null;
+  max_active_orders?: number | null;
+}
+
+export const getAutoTradeRules = async (marketMakerId: string): Promise<AutoTradeRule[]> => {
+  const { data } = await api.get(`/admin/market-makers/${marketMakerId}/auto-trade-rules`);
+  return data;
+};
+
+export const createAutoTradeRule = async (
+  marketMakerId: string,
+  ruleData: AutoTradeRuleCreate
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post(`/admin/market-makers/${marketMakerId}/auto-trade-rules`, ruleData);
+  return data;
+};
+
+export const updateAutoTradeRule = async (
+  marketMakerId: string,
+  ruleId: string,
+  ruleData: AutoTradeRuleUpdate
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.put(
+    `/admin/market-makers/${marketMakerId}/auto-trade-rules/${ruleId}`,
+    ruleData
+  );
+  return data;
+};
+
+export const deleteAutoTradeRule = async (
+  marketMakerId: string,
+  ruleId: string
+): Promise<{ message: string }> => {
+  const { data } = await api.delete(
+    `/admin/market-makers/${marketMakerId}/auto-trade-rules/${ruleId}`
+  );
+  return data;
 };
 
 // Market Orders API (Admin)
@@ -1798,6 +1955,65 @@ export const getMarketMakerOrders = async (params?: {
 
 export const cancelMarketMakerOrder = (orderId: string) =>
   api.delete(`/admin/market-orders/${orderId}`);
+
+// Get ALL orders (both entity and market maker) - for unified order book view
+export const getAllOrders = async (params?: {
+  certificate_type?: string;
+  status?: string;
+  page?: number;
+  per_page?: number;
+}) => {
+  const { data } = await api.get('/admin/market-orders/all', { params });
+  // Transform camelCase response to snake_case for frontend types
+  return {
+    data: (data || []).map((order: {
+      id: string;
+      entityId?: string;
+      entity_id?: string;
+      entityName?: string;
+      entity_name?: string;
+      marketMakerId?: string;
+      market_maker_id?: string;
+      marketMakerName?: string;
+      market_maker_name?: string;
+      certificateType?: string;
+      certificate_type?: string;
+      side: string;
+      price: number;
+      quantity: number;
+      filledQuantity?: number;
+      filled_quantity?: number;
+      remainingQuantity?: number;
+      remaining_quantity?: number;
+      status: string;
+      createdAt?: string;
+      created_at?: string;
+      updatedAt?: string;
+      updated_at?: string;
+      ticketId?: string;
+      ticket_id?: string;
+      orderType?: string;
+      order_type?: string;
+    }) => ({
+      id: order.id,
+      entity_id: order.entityId ?? order.entity_id,
+      entity_name: order.entityName ?? order.entity_name,
+      market_maker_id: order.marketMakerId ?? order.market_maker_id,
+      market_maker_name: order.marketMakerName ?? order.market_maker_name,
+      certificate_type: order.certificateType ?? order.certificate_type,
+      side: order.side,
+      price: order.price,
+      quantity: order.quantity,
+      filled_quantity: order.filledQuantity ?? order.filled_quantity ?? 0,
+      remaining_quantity: order.remainingQuantity ?? order.remaining_quantity ?? (order.quantity - (order.filledQuantity ?? order.filled_quantity ?? 0)),
+      status: order.status,
+      created_at: order.createdAt ?? order.created_at,
+      updated_at: order.updatedAt ?? order.updated_at,
+      ticket_id: order.ticketId ?? order.ticket_id,
+      order_type: order.orderType ?? order.order_type,
+    })),
+  };
+};
 
 // Logging/Audit API
 export const getTickets = (params?: {

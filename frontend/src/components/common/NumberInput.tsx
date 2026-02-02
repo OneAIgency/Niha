@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef, useState, useCallback } from 'react';
+import { InputHTMLAttributes, forwardRef, useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '../../utils';
 
 interface NumberInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
@@ -61,6 +61,54 @@ export function formatNumberWithSeparators(
   return new Intl.NumberFormat(locale, options).format(numValue);
 }
 
+/**
+ * Format number as user types, preserving cursor position
+ */
+function formatWithCursor(
+  value: string,
+  cursorPos: number,
+  locale: string = 'en-US'
+): { formatted: string; newCursor: number } {
+  // Get thousand separator for locale
+  const thousandSeparator = new Intl.NumberFormat(locale).format(1000).charAt(1);
+
+  // Remove existing separators
+  const stripped = value.replace(new RegExp(`[${thousandSeparator}\\s]`, 'g'), '');
+
+  // Count digits before cursor in original
+  const beforeCursor = value.slice(0, cursorPos);
+  const digitsBeforeCursor = beforeCursor.replace(/[^\d.-]/g, '').length;
+
+  // Parse and format
+  const numValue = parseFloat(stripped);
+  if (isNaN(numValue) || stripped === '' || stripped === '-') {
+    return { formatted: stripped, newCursor: cursorPos };
+  }
+
+  // Split into integer and decimal parts
+  const parts = stripped.split('.');
+  const integerPart = parts[0];
+  const decimalPart = parts[1];
+
+  // Format integer part with separators
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSeparator);
+  const formatted = decimalPart !== undefined
+    ? `${formattedInteger}.${decimalPart}`
+    : formattedInteger;
+
+  // Find new cursor position
+  let digitCount = 0;
+  let newCursor = 0;
+  for (let i = 0; i < formatted.length && digitCount < digitsBeforeCursor; i++) {
+    newCursor = i + 1;
+    if (/[\d.-]/.test(formatted[i])) {
+      digitCount++;
+    }
+  }
+
+  return { formatted, newCursor };
+}
+
 export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
   ({
     className,
@@ -75,43 +123,77 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     placeholder,
     ...props
   }, ref) => {
-    const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const combinedRef = (node: HTMLInputElement | null) => {
+      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+      }
+    };
 
-    // Convert value to string for display
-    const rawValue = typeof value === 'number' ? value.toString() : value;
+    // Internal display value (always formatted)
+    const [displayValue, setDisplayValue] = useState(() => {
+      const raw = typeof value === 'number' ? value.toString() : value;
+      return formatNumberWithSeparators(raw, locale, decimals);
+    });
 
-    // Format value for display (only when not focused)
-    const displayValue = isFocused
-      ? rawValue
-      : formatNumberWithSeparators(rawValue, locale, decimals);
+    // Pending cursor position
+    const pendingCursor = useRef<number | null>(null);
+
+    // Sync external value changes
+    useEffect(() => {
+      const raw = typeof value === 'number' ? value.toString() : value;
+      // Only update if not currently focused to avoid interfering with typing
+      if (document.activeElement !== inputRef.current) {
+        setDisplayValue(formatNumberWithSeparators(raw, locale, decimals));
+      }
+    }, [value, locale, decimals]);
+
+    // Restore cursor after formatting
+    useEffect(() => {
+      if (pendingCursor.current !== null && inputRef.current) {
+        inputRef.current.setSelectionRange(pendingCursor.current, pendingCursor.current);
+        pendingCursor.current = null;
+      }
+    });
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
+      const cursorPosition = e.target.selectionStart || 0;
 
-      // When focused, allow raw input but filter invalid characters
+      // Parse out the raw number (removing separators)
       const cleaned = parseFormattedNumber(inputValue, locale);
 
       // Validate: allow empty, digits, single decimal point, leading minus
       const isValid = /^-?\d*\.?\d*$/.test(cleaned);
 
-      if (isValid) {
-        // Limit decimal places
-        const parts = cleaned.split('.');
-        if (parts[1] && parts[1].length > decimals) {
-          return; // Don't update if too many decimals
-        }
-        onChange(cleaned);
+      if (!isValid) return;
+
+      // Limit decimal places
+      const parts = cleaned.split('.');
+      if (parts[1] && parts[1].length > decimals) {
+        return; // Don't update if too many decimals
       }
+
+      // Format with cursor tracking
+      const { formatted, newCursor } = formatWithCursor(inputValue, cursorPosition, locale);
+
+      pendingCursor.current = newCursor;
+      setDisplayValue(formatted);
+      onChange(cleaned);
     }, [onChange, locale, decimals]);
 
-    const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-      setIsFocused(true);
-      props.onFocus?.(e);
-    }, [props]);
-
     const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-      setIsFocused(false);
+      // Re-format on blur to ensure consistent formatting
+      const raw = typeof value === 'number' ? value.toString() : value;
+      setDisplayValue(formatNumberWithSeparators(raw, locale, decimals));
       props.onBlur?.(e);
+    }, [value, locale, decimals, props]);
+
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+      props.onFocus?.(e);
     }, [props]);
 
     return (
@@ -128,7 +210,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             </div>
           )}
           <input
-            ref={ref}
+            ref={combinedRef}
             type="text"
             inputMode="decimal"
             value={displayValue}
@@ -137,7 +219,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             onBlur={handleBlur}
             placeholder={placeholder}
             className={cn(
-              'w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200',
+              'w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 font-mono',
               icon && 'pl-12',
               suffix && 'pr-16',
               error && 'border-red-500 focus:ring-red-500',

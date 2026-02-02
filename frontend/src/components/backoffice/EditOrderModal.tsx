@@ -3,11 +3,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '../common';
 import { formatCurrency, formatQuantity } from '../../utils';
-import type { MarketMakerOrder } from '../../types';
+import type { CertificateType } from '../../types';
+
+// Generic order interface that works with both MarketMakerOrder and AllOrder
+interface EditableOrder {
+  id: string;
+  entity_id?: string;
+  entity_name?: string;
+  market_maker_id?: string;
+  market_maker_name?: string;
+  certificate_type: CertificateType;
+  side: 'BUY' | 'SELL';
+  price: number;
+  quantity: number;
+  filled_quantity: number;
+  remaining_quantity: number;
+  status: string;
+  created_at: string;
+  updated_at?: string;
+  ticket_id?: string;
+  order_type?: 'entity' | 'market_maker';
+}
 
 interface EditOrderModalProps {
   /** The order to edit */
-  order: MarketMakerOrder | null;
+  order: EditableOrder | null;
   /** Whether the modal is open */
   isOpen: boolean;
   /** Called when modal should close */
@@ -206,6 +226,10 @@ export function EditOrderModal({
   const sideColor = order.side === 'BUY' ? 'emerald' : 'red';
   const sideLabel = order.side === 'BUY' ? 'BID' : 'ASK';
 
+  // Get display name for order owner (market maker or entity)
+  const ownerName = order.market_maker_name || order.entity_name || 'Unknown';
+  const ownerType = order.order_type === 'market_maker' || order.market_maker_id ? 'Market Maker' : 'Entity';
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -235,7 +259,7 @@ export function EditOrderModal({
                       Edit {sideLabel} Order
                     </h2>
                     <p className="text-sm text-navy-600 dark:text-navy-400">
-                      {order.certificate_type} • {order.market_maker_name}
+                      {order.certificate_type} • {ownerType}: {ownerName}
                     </p>
                   </div>
                 </div>

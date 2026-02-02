@@ -7,8 +7,21 @@ Trade CEA certificates with EUR.
 
 import uuid
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from typing import List, Optional
+
+# Price step for CEA cash market (0.1 EUR)
+PRICE_STEP = Decimal("0.1")
+
+
+def validate_price_step(price: Decimal) -> bool:
+    """
+    Validate that price respects the quote step of 0.1 EUR.
+    Returns True if price is a valid multiple of 0.1.
+    """
+    # Check if price divided by step is a whole number
+    remainder = price % PRICE_STEP
+    return remainder == Decimal("0")
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -28,6 +41,7 @@ from ...models.models import (
     TicketStatus,
     User,
 )
+from ...services.limit_order_matching import LimitOrderMatcher
 from ...services.ticket_service import TicketService
 from ...models.models import CertificateType as CertTypeEnum
 from ...models.models import OrderSide as OrderSideEnum
@@ -235,6 +249,14 @@ async def place_order(
             detail="Regular clients can only place BUY orders. SELL orders are reserved for Market Makers."
         )
 
+    # Validate price step (0.1 EUR)
+    price = Decimal(str(order.price))
+    if not validate_price_step(price):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {order.price}, expected values like 9.30, 9.40, 9.50, etc."
+        )
+
     # Create the order in database
     new_order = Order(
         market=MarketType.CEA_CASH,
@@ -269,6 +291,14 @@ async def place_order(
             "status": new_order.status.value,
         },
         tags=["order", "cash_market", order.side.value.lower()],
+    )
+
+    # Try to match the order against the book immediately
+    # This ensures we never have crossing orders (negative spread)
+    match_result = await LimitOrderMatcher.match_incoming_order(
+        db=db,
+        incoming_order=new_order,
+        user_id=current_user.id,
     )
 
     await db.commit()

@@ -369,6 +369,7 @@ class MarketMakerClient(Base):
     )
     transactions = relationship("AssetTransaction", back_populates="market_maker")
     orders = relationship("Order", back_populates="market_maker")
+    auto_trade_rules = relationship("AutoTradeRule", back_populates="market_maker", cascade="all, delete-orphan")
 
 
 class ContactRequest(Base):
@@ -1165,6 +1166,79 @@ class Withdrawal(Base):
     processed_by_user = relationship("User", foreign_keys=[processed_by])
     completed_by_user = relationship("User", foreign_keys=[completed_by])
     rejected_by_user = relationship("User", foreign_keys=[rejected_by])
+
+
+class AutoTradePriceMode(str, enum.Enum):
+    """Price strategy for auto trade rules"""
+    FIXED = "fixed"
+    SPREAD_FROM_BEST = "spread_from_best"
+    PERCENTAGE_FROM_MARKET = "percentage_from_market"
+    RANDOM_SPREAD = "random_spread"  # Random spread between min and max, respecting 0.1 step
+
+
+class AutoTradeQuantityMode(str, enum.Enum):
+    """Quantity strategy for auto trade rules"""
+    FIXED = "fixed"
+    PERCENTAGE_OF_BALANCE = "percentage_of_balance"
+    RANDOM_RANGE = "random_range"
+
+
+class AutoTradeRule(Base):
+    """Auto trade rules for market makers to automatically place orders"""
+
+    __tablename__ = "auto_trade_rules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String(100), nullable=False)
+    enabled = Column(Boolean, default=False, nullable=False)
+
+    # Order settings
+    side = Column(SQLEnum(OrderSide), nullable=False)
+    order_type = Column(String(20), nullable=False, default="LIMIT")  # LIMIT or MARKET
+
+    # Price settings
+    price_mode = Column(SQLEnum(AutoTradePriceMode), nullable=False, default=AutoTradePriceMode.SPREAD_FROM_BEST)
+    fixed_price = Column(Numeric(18, 4), nullable=True)
+    spread_from_best = Column(Numeric(18, 4), nullable=True)  # EUR spread from best bid/ask
+    spread_min = Column(Numeric(18, 4), nullable=True)  # Min spread for RANDOM_SPREAD mode (in EUR)
+    spread_max = Column(Numeric(18, 4), nullable=True)  # Max spread for RANDOM_SPREAD mode (in EUR)
+    percentage_from_market = Column(Numeric(8, 4), nullable=True)  # Percentage offset
+    max_price_deviation = Column(Numeric(8, 4), nullable=True)  # Max % deviation from scraped price allowed
+
+    # Quantity settings
+    quantity_mode = Column(SQLEnum(AutoTradeQuantityMode), nullable=False, default=AutoTradeQuantityMode.FIXED)
+    fixed_quantity = Column(Numeric(18, 2), nullable=True)
+    percentage_of_balance = Column(Numeric(8, 4), nullable=True)
+    min_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
+    max_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
+
+    # Timing
+    interval_mode = Column(String(20), nullable=False, default="fixed")  # 'fixed' or 'random'
+    interval_minutes = Column(Integer, nullable=False, default=5)  # Used when interval_mode='fixed'
+    interval_min_minutes = Column(Integer, nullable=True)  # Min interval when mode='random'
+    interval_max_minutes = Column(Integer, nullable=True)  # Max interval when mode='random'
+
+    # Conditions
+    min_balance = Column(Numeric(18, 2), nullable=True)  # Min balance required to place order
+    max_active_orders = Column(Integer, nullable=True)  # Max concurrent orders for this rule
+
+    # Execution tracking
+    last_executed_at = Column(DateTime, nullable=True)  # When this rule last placed an order
+    next_execution_at = Column(DateTime, nullable=True)  # When this rule should next execute
+    execution_count = Column(Integer, default=0, nullable=False)  # Total orders placed by this rule
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    market_maker = relationship("MarketMakerClient", back_populates="auto_trade_rules")
 
 
 class MailProvider(str, enum.Enum):

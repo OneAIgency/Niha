@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { cn } from '../../utils';
 import { MarketMakerDetailsTab } from './MarketMakerDetailsTab';
 import { MarketMakerTransactionsTab } from './MarketMakerTransactionsTab';
+import { MarketMakerAutoTradeTab } from './MarketMakerAutoTradeTab';
 import type { MarketMaker } from '../../types';
 
 interface EditMarketMakerModalProps {
@@ -14,7 +15,7 @@ interface EditMarketMakerModalProps {
 }
 
 export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }: EditMarketMakerModalProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'transactions'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'transactions' | 'autotrade'>('details');
 
   useEffect(() => {
     if (isOpen) {
@@ -79,6 +80,17 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
               >
                 Balances & Transactions
               </button>
+              <button
+                onClick={() => setActiveTab('autotrade')}
+                className={cn(
+                  'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                  activeTab === 'autotrade'
+                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                    : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                )}
+              >
+                Auto Trade
+              </button>
             </div>
           </div>
 
@@ -89,6 +101,9 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
             )}
             {activeTab === 'transactions' && (
               <MarketMakerTransactionsTab marketMakerId={marketMaker.id} />
+            )}
+            {activeTab === 'autotrade' && (
+              <MarketMakerAutoTradeTab marketMaker={marketMaker} />
             )}
           </div>
         </motion.div>

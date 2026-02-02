@@ -15,10 +15,14 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
   const [name, setName] = useState(marketMaker.name);
   const [description, setDescription] = useState(marketMaker.description || '');
   const [isActive, setIsActive] = useState(marketMaker.is_active);
-  const [balances, setBalances] = useState({
-    eur_balance: marketMaker.eur_balance,
-    cea_balance: marketMaker.cea_balance,
-    eua_balance: marketMaker.eua_balance,
+  const [balances, setBalances] = useState<{
+    EUR?: { available: number; locked: number; total: number };
+    CEA: { available: number; locked: number; total: number };
+    EUA: { available: number; locked: number; total: number };
+  }>({
+    EUR: marketMaker.eur_balance ? { available: marketMaker.eur_balance, locked: 0, total: marketMaker.eur_balance } : undefined,
+    CEA: { available: marketMaker.cea_balance, locked: 0, total: marketMaker.cea_balance },
+    EUA: { available: marketMaker.eua_balance, locked: 0, total: marketMaker.eua_balance },
   });
   const [loading, setLoading] = useState(false);
   const [loadingBalances, setLoadingBalances] = useState(false);
@@ -37,17 +41,29 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
     try {
       const data = await getMarketMakerBalances(marketMaker.id);
       setBalances({
-        eur_balance: marketMaker.eur_balance, // EUR is direct field from props, updated when parent refreshes
-        cea_balance: data.cea_balance,
-        eua_balance: data.eua_balance,
+        EUR: data.eur_balance > 0 ? {
+          available: data.eur_available,
+          locked: data.eur_locked,
+          total: data.eur_balance,
+        } : undefined,
+        CEA: {
+          available: data.cea_available,
+          locked: data.cea_locked,
+          total: data.cea_balance,
+        },
+        EUA: {
+          available: data.eua_available,
+          locked: data.eua_locked,
+          total: data.eua_balance,
+        },
       });
     } catch (err) {
       console.error('Failed to fetch balances:', err);
       // Use existing balances as fallback
       setBalances({
-        eur_balance: marketMaker.eur_balance,
-        cea_balance: marketMaker.cea_balance,
-        eua_balance: marketMaker.eua_balance,
+        EUR: marketMaker.eur_balance ? { available: marketMaker.eur_balance, locked: 0, total: marketMaker.eur_balance } : undefined,
+        CEA: { available: marketMaker.cea_balance, locked: 0, total: marketMaker.cea_balance },
+        EUA: { available: marketMaker.eua_balance, locked: 0, total: marketMaker.eua_balance },
       });
     } finally {
       setLoadingBalances(false);
@@ -97,7 +113,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
         <h3 className="text-sm font-medium text-navy-700 dark:text-navy-300 mb-3">
           Current Balances
         </h3>
-        <BalanceCards balances={balances} loading={loadingBalances} variant="simple" />
+        <BalanceCards balances={balances} loading={loadingBalances} variant="detailed" />
       </div>
 
       {/* Name */}

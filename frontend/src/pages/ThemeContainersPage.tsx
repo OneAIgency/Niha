@@ -135,6 +135,48 @@ export function ThemeContainersPage() {
               </p>
             </div>
           </div>
+
+          {/* SubSubHeader Navigation Buttons */}
+          <div className="mt-6 space-y-2">
+            <h3 className={`text-lg font-semibold ${textPrimary} mb-3`}>SubSubHeader Navigation Buttons</h3>
+            <div className="subsubheader-bar rounded-xl" aria-hidden>
+              <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
+                <nav className="flex items-center gap-2">
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-active">
+                    <span className="w-4 h-4 rounded bg-white/20" />
+                    <span>Active Tab</span>
+                    <span className="subsubheader-nav-badge">3</span>
+                  </button>
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">
+                    <span className="w-4 h-4 rounded bg-current opacity-50" />
+                    <span>Inactive Tab</span>
+                  </button>
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">
+                    <span className="w-4 h-4 rounded bg-current opacity-50" />
+                    <span>Another Tab</span>
+                    <span className="subsubheader-nav-badge">12</span>
+                  </button>
+                </nav>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-navy-400">Right actions</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-1">
+                <p className={`font-mono text-sm ${textPrimary}`}>.subsubheader-nav-btn</p>
+                <p className={`text-xs ${textSecondary}`}>Base class for navigation buttons in SubSubHeader.</p>
+              </div>
+              <div className="space-y-1">
+                <p className={`font-mono text-sm ${textPrimary}`}>.subsubheader-nav-btn-active</p>
+                <p className={`text-xs ${textSecondary}`}>Active state with <code className="font-mono text-xs">--color-subsubheader-nav-active-bg/text</code>.</p>
+              </div>
+              <div className="space-y-1">
+                <p className={`font-mono text-sm ${textPrimary}`}>.subsubheader-nav-badge</p>
+                <p className={`text-xs ${textSecondary}`}>Count badge (red bg). Use for pending/new items.</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* Page container (main content wrapper) */}

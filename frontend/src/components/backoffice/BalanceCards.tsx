@@ -1,4 +1,4 @@
-import { Leaf, Wind, Euro } from 'lucide-react';
+import { Leaf, Wind, Euro, Lock } from 'lucide-react';
 import { formatQuantity, formatCurrency } from '../../utils';
 
 interface SimpleBalances {
@@ -48,50 +48,143 @@ export function BalanceCards({ balances, loading = false, variant = 'simple' }: 
       {/* EUR Card - Only show if EUR balance exists */}
       {hasEurBalance && (
         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
-            <Euro className="w-4 h-4" />
-            <span className="text-xs uppercase tracking-wider font-medium">EUR Balance</span>
-          </div>
-          <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
-            {loading ? '...' : formatCurrency(eurBalance, 'EUR')}
-          </div>
-          {showDetailed && balances.EUR && (
-            <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400/80">
-              Available: {formatCurrency(balances.EUR.available, 'EUR')} | Locked: {formatCurrency(balances.EUR.locked, 'EUR')}
-            </div>
+          {showDetailed && balances.EUR ? (
+            <>
+              {/* Available - Most prominent */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                  <Euro className="w-5 h-5" />
+                  <span className="text-sm font-semibold uppercase tracking-wider">Available</span>
+                </div>
+                <div className="text-3xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                  {loading ? '...' : formatCurrency(balances.EUR.available, 'EUR')}
+                </div>
+              </div>
+
+              {/* Initial and Locked - Secondary info */}
+              <div className="pt-3 border-t border-emerald-200 dark:border-emerald-700 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-emerald-600 dark:text-emerald-400">Initial Balance</span>
+                  <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(balances.EUR.total, 'EUR')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <Lock className="w-3 h-3" />
+                    Locked in Orders
+                  </span>
+                  <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(balances.EUR.locked, 'EUR')}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                <Euro className="w-4 h-4" />
+                <span className="text-xs uppercase tracking-wider font-medium">EUR Balance</span>
+              </div>
+              <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                {loading ? '...' : formatCurrency(eurBalance, 'EUR')}
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* CEA Card */}
       <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
-          <Leaf className="w-4 h-4" />
-          <span className="text-xs uppercase tracking-wider font-medium">CEA Balance</span>
-        </div>
-        <div className="text-2xl font-bold font-mono text-amber-700 dark:text-amber-300">
-          {loading ? '...' : formatQuantity(ceaBalance)}
-        </div>
-        {showDetailed && (
-          <div className="mt-2 text-xs text-amber-600 dark:text-amber-400/80">
-            Available: {formatQuantity(balances.CEA.available)} | Locked: {formatQuantity(balances.CEA.locked)}
-          </div>
+        {showDetailed ? (
+          <>
+            {/* Available - Most prominent */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+                <Leaf className="w-5 h-5" />
+                <span className="text-sm font-semibold uppercase tracking-wider">CEA Available</span>
+              </div>
+              <div className="text-3xl font-bold font-mono text-amber-700 dark:text-amber-300">
+                {loading ? '...' : formatQuantity(balances.CEA.available)}
+              </div>
+            </div>
+
+            {/* Initial and Locked - Secondary info */}
+            <div className="pt-3 border-t border-amber-200 dark:border-amber-700 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-amber-600 dark:text-amber-400">Initial Balance</span>
+                <span className="font-mono font-medium text-amber-600 dark:text-amber-400">
+                  {formatQuantity(balances.CEA.total)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <Lock className="w-3 h-3" />
+                  Locked in Orders
+                </span>
+                <span className="font-mono font-medium text-amber-600 dark:text-amber-400">
+                  {formatQuantity(balances.CEA.locked)}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+              <Leaf className="w-4 h-4" />
+              <span className="text-xs uppercase tracking-wider font-medium">CEA Balance</span>
+            </div>
+            <div className="text-2xl font-bold font-mono text-amber-700 dark:text-amber-300">
+              {loading ? '...' : formatQuantity(ceaBalance)}
+            </div>
+          </>
         )}
       </div>
 
       {/* EUA Card */}
       <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-          <Wind className="w-4 h-4" />
-          <span className="text-xs uppercase tracking-wider font-medium">EUA Balance</span>
-        </div>
-        <div className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-300">
-          {loading ? '...' : formatQuantity(euaBalance)}
-        </div>
-        {showDetailed && (
-          <div className="mt-2 text-xs text-blue-600 dark:text-blue-400/80">
-            Available: {formatQuantity(balances.EUA.available)} | Locked: {formatQuantity(balances.EUA.locked)}
-          </div>
+        {showDetailed ? (
+          <>
+            {/* Available - Most prominent */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                <Wind className="w-5 h-5" />
+                <span className="text-sm font-semibold uppercase tracking-wider">EUA Available</span>
+              </div>
+              <div className="text-3xl font-bold font-mono text-blue-700 dark:text-blue-300">
+                {loading ? '...' : formatQuantity(balances.EUA.available)}
+              </div>
+            </div>
+
+            {/* Initial and Locked - Secondary info */}
+            <div className="pt-3 border-t border-blue-200 dark:border-blue-700 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-blue-600 dark:text-blue-400">Initial Balance</span>
+                <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
+                  {formatQuantity(balances.EUA.total)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                  <Lock className="w-3 h-3" />
+                  Locked in Orders
+                </span>
+                <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
+                  {formatQuantity(balances.EUA.locked)}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+              <Wind className="w-4 h-4" />
+              <span className="text-xs uppercase tracking-wider font-medium">EUA Balance</span>
+            </div>
+            <div className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-300">
+              {loading ? '...' : formatQuantity(euaBalance)}
+            </div>
+          </>
         )}
       </div>
     </div>

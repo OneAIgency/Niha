@@ -14,9 +14,13 @@ interface OrderBookData {
 interface ProfessionalOrderBookProps {
   orderBook: OrderBookData;
   onPriceClick?: (price: number, side: 'BUY' | 'SELL') => void;
+  /** Show all orders with scrolling instead of limiting to 7 rows */
+  showFullBook?: boolean;
+  /** Max height for scrollable area when showFullBook is true */
+  maxHeight?: string;
 }
 
-export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalOrderBookProps) {
+export function ProfessionalOrderBook({ orderBook, onPriceClick, showFullBook = false, maxHeight = '600px' }: ProfessionalOrderBookProps) {
   const maxQuantity = useMemo(() => {
     const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulative_quantity)) : 0;
     const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulative_quantity)) : 0;
@@ -25,13 +29,6 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
 
   return (
     <div className="content_wrapper_last p-0 text-[11px]">
-      {/* Header */}
-      <div className="px-4 py-2 border-b border-navy-200 dark:border-navy-700">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-navy-900 dark:text-white">Order Book</h2>
-        </div>
-      </div>
-
       {/* Column Headers */}
       <div className="grid grid-cols-1 md:grid-cols-2 border-b border-navy-200 dark:border-navy-700">
         {/* Bids Header */}
@@ -58,8 +55,11 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
       {/* Order Book Content */}
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Bids (Buy Orders) */}
-        <div className="border-r border-navy-200 dark:border-navy-700">
-          {orderBook.bids.slice(0, 7).map((level, idx) => (
+        <div
+          className="border-r border-navy-200 dark:border-navy-700"
+          style={showFullBook ? { maxHeight, overflowY: 'auto' } : undefined}
+        >
+          {(showFullBook ? orderBook.bids : orderBook.bids.slice(0, 7)).map((level, idx) => (
             <OrderBookRow
               key={`bid-${level.price}-${idx}`}
               level={level}
@@ -71,8 +71,11 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
         </div>
 
         {/* Asks (Sell Orders) */}
-        <div className="hidden md:block">
-          {orderBook.asks.slice(0, 7).map((level, idx) => (
+        <div
+          className="hidden md:block"
+          style={showFullBook ? { maxHeight, overflowY: 'auto' } : undefined}
+        >
+          {(showFullBook ? orderBook.asks : orderBook.asks.slice(0, 7)).map((level, idx) => (
             <OrderBookRow
               key={`ask-${level.price}-${idx}`}
               level={level}
@@ -84,13 +87,18 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
         </div>
       </div>
 
-      {/* Center Spread Line - Professional Trading Platform Style */}
-      {orderBook.best_bid !== null && orderBook.best_ask !== null && orderBook.spread !== null && (
-        <OrderBookSpreadIndicator
-          bestBid={orderBook.best_bid}
-          bestAsk={orderBook.best_ask}
-          spread={orderBook.spread}
-        />
+      {/* Order Count Footer - shown when full book is enabled */}
+      {showFullBook && (
+        <div className="px-4 py-2 border-t border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-900/30">
+          <div className="flex items-center justify-between text-[10px] text-navy-500 dark:text-navy-400">
+            <span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{orderBook.bids.length}</span> bid levels
+            </span>
+            <span>
+              <span className="font-semibold text-red-600 dark:text-red-400">{orderBook.asks.length}</span> ask levels
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

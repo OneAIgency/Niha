@@ -30,6 +30,7 @@ from .core.config import settings
 from .core.database import AsyncSessionLocal, init_db
 from .core.security import RedisManager
 from .services import deposit_service
+from .services.auto_trade_executor import AutoTradeExecutor
 from .services.settlement_monitoring import SettlementMonitoring
 from .services.settlement_processor import SettlementProcessor
 
@@ -134,7 +135,9 @@ async def lifespan(app: FastAPI):
                 async with AsyncSessionLocal() as db:
                     # Get all active scraping sources
                     result = await db.execute(
-                        select(ScrapingSource).where(ScrapingSource.is_active == True)
+                        select(ScrapingSource).where(
+                            ScrapingSource.is_active.is_(True)
+                        )
                     )
                     sources = result.scalars().all()
 
@@ -167,15 +170,112 @@ async def lifespan(app: FastAPI):
             # Check every 60 seconds
             await asyncio.sleep(60)
 
+    # Exchange rate scraping scheduler
+    async def exchange_rate_scraping_scheduler_loop():
+        """Run exchange rate scraping based on each source's configured interval"""
+        from datetime import datetime
+
+        from sqlalchemy import select
+
+        from .models.models import ExchangeRateSource
+        from .services.price_scraper import price_scraper
+
+        # Wait 45 seconds on startup before first check (stagger from price scraper)
+        await asyncio.sleep(45)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get all active exchange rate sources
+                    result = await db.execute(
+                        select(ExchangeRateSource).where(
+                            ExchangeRateSource.is_active.is_(True)
+                        )
+                    )
+                    sources = result.scalars().all()
+
+                    now = datetime.utcnow()
+                    for source in sources:
+                        # Check if it's time to scrape based on configured interval
+                        if source.last_scraped_at is None:
+                            should_scrape = True
+                        else:
+                            minutes_since_last = (
+                                now - source.last_scraped_at
+                            ).total_seconds() / 60
+                            should_scrape = (
+                                minutes_since_last >= source.scrape_interval_minutes
+                            )
+
+                        if should_scrape:
+                            try:
+                                await price_scraper.refresh_exchange_rate_source(
+                                    source, db
+                                )
+                                logger.info(
+                                    f"Auto-scraped exchange rate {source.name}: "
+                                    f"{source.last_rate}"
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Auto-scrape failed for exchange rate "
+                                    f"{source.name}: {e}"
+                                )
+            except Exception as e:
+                logger.error(
+                    f"Exchange rate scraping scheduler error: {e}", exc_info=True
+                )
+
+            # Check every 60 seconds
+            await asyncio.sleep(60)
+
+    # Auto-trade executor scheduler
+    async def auto_trade_executor_loop():
+        """Execute auto-trade rules based on their configured intervals"""
+        from sqlalchemy import select
+
+        from .models.models import User, UserRole
+
+        # Wait 60 seconds on startup before first check
+        await asyncio.sleep(60)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get a system admin for audit trail
+                    result = await db.execute(
+                        select(User).where(User.role == UserRole.ADMIN).limit(1)
+                    )
+                    admin = result.scalar_one_or_none()
+
+                    if admin:
+                        results = await AutoTradeExecutor.execute_all_ready_rules(
+                            db=db, admin_user_id=admin.id
+                        )
+                        successes = sum(1 for r in results if r.get("success"))
+                        if results:
+                            logger.info(
+                                f"Auto-trade cycle: {successes}/{len(results)} orders placed"
+                            )
+            except Exception as e:
+                logger.error(f"Auto-trade executor error: {e}", exc_info=True)
+
+            # Check every 30 seconds for rules ready to execute
+            await asyncio.sleep(30)
+
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())
     monitoring_task = asyncio.create_task(settlement_monitoring_loop())
     deposit_task = asyncio.create_task(deposit_hold_processor_loop())
     scraping_task = asyncio.create_task(price_scraping_scheduler_loop())
-    _background_tasks.extend([processor_task, monitoring_task, deposit_task, scraping_task])
+    exchange_rate_task = asyncio.create_task(exchange_rate_scraping_scheduler_loop())
+    auto_trade_task = asyncio.create_task(auto_trade_executor_loop())
+    _background_tasks.extend(
+        [processor_task, monitoring_task, deposit_task, scraping_task, exchange_rate_task, auto_trade_task]
+    )
     logger.info(
-        "Settlement processor, monitoring, deposit hold processor, and price scraping "
-        "scheduler started"
+        "Settlement processor, monitoring, deposit hold processor, price scraping, "
+        "exchange rate scraping, and auto-trade schedulers started"
     )
 
     yield
