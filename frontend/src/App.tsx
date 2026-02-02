@@ -208,21 +208,21 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Funding page: APPROVED, FUNDING, AML, ADMIN. */
+/** Funding page: APPROVED and beyond, ADMIN, MM. Users can add funds at any stage. */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'ADMIN', 'MM']}>
+    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
 }
 
-/** Cash market / funded flow: CEA and beyond, or ADMIN, or MM. */
+/** Cash market (CEA purchase): CEA and CEA_SETTLE only, or ADMIN, or MM. SWAP and beyond use /swap. */
 function FundedRoute({ children }: { children: React.ReactNode }) {
   return (
     <RoleProtectedRoute
-      allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}
-      redirectTo={undefined}
+      allowedRoles={['CEA', 'CEA_SETTLE', 'ADMIN', 'MM']}
+      redirectTo="/swap"
     >
       {children}
     </RoleProtectedRoute>
@@ -386,7 +386,7 @@ function App() {
             <Route
               path="/swap"
               element={
-                <RoleProtectedRoute allowedRoles={['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
+                <RoleProtectedRoute allowedRoles={['SWAP', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
                 </RoleProtectedRoute>
               }
@@ -483,6 +483,16 @@ function App() {
             />
             <Route
               path="/backoffice/onboarding/deposits"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/onboarding/aml"
               element={
                 <AdminRoute>
                   <BackofficeErrorBoundary>

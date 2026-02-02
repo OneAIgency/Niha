@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  TrendingUp,
-  TrendingDown,
   RefreshCw,
   ArrowRightLeft,
   AlertTriangle,
@@ -13,31 +11,43 @@ import {
   Shield,
   Leaf
 } from 'lucide-react';
-import { swapsApi } from '../services/api';
+import { swapsApi, cashMarketApi, usersApi } from '../services/api';
 import { Subheader } from '../components/common';
+import { useAuthStore } from '../stores/useStore';
+import type { SwapCalculation } from '../types';
 
-// Mock user balance - in production this would come from API
-const MOCK_USER_BALANCE = {
-  eur: 0,
-  cea: 443014,  // User has bought CEA and now wants to swap
-  eua: 0,
-};
+interface SwapRate {
+  euaToCea: number;
+  ceaToEua: number;
+  euaPriceEur: number;
+  ceaPriceEur: number;
+  platformFeePct: number;
+  effectiveRate: number;
+}
 
-// Mock swap offers from AI agents
-const MOCK_SWAP_OFFERS = [
-  { ratio: 11.2, euaAvailable: 50000 },
-  { ratio: 11.3, euaAvailable: 80000 },
-  { ratio: 11.4, euaAvailable: 120000 },
-  { ratio: 11.5, euaAvailable: 200000 },
-  { ratio: 11.6, euaAvailable: 150000 },
-];
+interface UserBalances {
+  entity_id: string | null;
+  eur_balance: number;
+  cea_balance: number;
+  eua_balance: number;
+}
+
+interface OrderbookLevel {
+  ratio: number;
+  euaQuantity: number;
+  ordersCount: number;
+  cumulativeEua: number;
+  depthPct: number;
+}
 
 export function CeaSwapMarketPage() {
-  const [swapOffers] = useState(MOCK_SWAP_OFFERS);
-  const [swapRate, setSwapRate] = useState<number | null>(null);
+  const [swapRate, setSwapRate] = useState<SwapRate | null>(null);
+  const [userBalances, setUserBalances] = useState<UserBalances | null>(null);
+  const [swapCalculation, setSwapCalculation] = useState<SwapCalculation | null>(null);
+  const [orderbook, setOrderbook] = useState<OrderbookLevel[]>([]);
+  const [totalEuaAvailable, setTotalEuaAvailable] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [userBalance] = useState(MOCK_USER_BALANCE);
-  const [rateChange24h] = useState(0.8);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // Confirmation dialog states
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
@@ -46,55 +56,136 @@ export function CeaSwapMarketPage() {
   const [isPlacingSwap, setIsPlacingSwap] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [swapReference, setSwapReference] = useState('');
+  const [swapError, setSwapError] = useState<string | null>(null);
 
-  // Fetch swap rate
+  // Fetch swap rate, user balances, and orderbook
   const fetchData = useCallback(async () => {
     try {
-      const rateData = await swapsApi.getRate();
-      // cea_to_eua is the ratio of CEA per EUA (e.g., 11.2 CEA = 1 EUA)
-      setSwapRate(rateData.cea_to_eua || 11.2);
+      setSwapError(null);
+      const [rateData, balancesData, orderbookData] = await Promise.all([
+        swapsApi.getRate(),
+        cashMarketApi.getUserBalances(),
+        swapsApi.getOrderbook(),
+      ]);
+      // Transform snake_case API response to camelCase interface
+      setSwapRate({
+        euaToCea: rateData.eua_to_cea,
+        ceaToEua: rateData.cea_to_eua,
+        euaPriceEur: rateData.eua_price_eur,
+        ceaPriceEur: rateData.cea_price_eur,
+        platformFeePct: rateData.platform_fee_pct,
+        effectiveRate: rateData.effective_rate,
+      });
+      setUserBalances(balancesData);
+      setOrderbook(orderbookData.asks);
+      setTotalEuaAvailable(orderbookData.totalEuaAvailable);
     } catch (error) {
-      console.error('Error fetching swap rate:', error);
-      // Use mock rate if API fails
-      setSwapRate(11.2);
+      console.error('Error fetching swap data:', error);
+      setSwapError('Failed to load swap data. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Calculate swap when CEA balance changes
+  const calculateSwap = useCallback(async (ceaAmount: number) => {
+    if (ceaAmount <= 0) {
+      setSwapCalculation(null);
+      return;
+    }
+
+    setIsCalculating(true);
+    try {
+      const calculation = await swapsApi.calculate('CEA', ceaAmount);
+      setSwapCalculation(calculation);
+    } catch (error) {
+      console.error('Error calculating swap:', error);
+    } finally {
+      setIsCalculating(false);
     }
   }, []);
 
   useEffect(() => {
     setIsLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Best available ratio (lowest is better for user)
-  const bestRatio = swapOffers.length > 0 ? swapOffers[0].ratio : (swapRate || 11.2);
+  // Calculate swap when balance is loaded
+  useEffect(() => {
+    if (userBalances?.cea_balance && userBalances.cea_balance > 0) {
+      calculateSwap(userBalances.cea_balance);
+    }
+  }, [userBalances?.cea_balance, calculateSwap]);
 
-  // Calculate swap details
-  const ceaToSwap = userBalance.cea;
-  const estimatedEua = ceaToSwap > 0 ? Math.floor(ceaToSwap / bestRatio) : 0;
-  const platformFeeEua = Math.floor(estimatedEua * 0.005); // 0.5% fee in EUA
-  const netEua = estimatedEua - platformFeeEua;
-  const euaValueEur = netEua * 80; // Approximate EUR value at €80/EUA
+  // Derived values
+  const ceaBalance = userBalances?.cea_balance ?? 0;
+  const ceaToEuaRate = swapRate?.ceaToEua ?? 0;
+  const euaToCeaRate = swapRate?.euaToCea ?? 0;
+  const platformFeePct = swapRate?.platformFeePct ?? 0.5;
+
+  // Calculate weighted average ratio from orderbook for the user's CEA amount
+  // Orderbook ratio = EUA/CEA (e.g., 0.1182 means 1 CEA gets you 0.1182 EUA, or 1 EUA = 8.46 CEA)
+  const calculateWeightedRatio = (ceaAmount: number): { avgRatio: number; totalEua: number } => {
+    if (orderbook.length === 0 || ceaAmount <= 0) {
+      return { avgRatio: ceaToEuaRate, totalEua: 0 };
+    }
+
+    let remainingCea = ceaAmount;
+    let totalEuaReceived = 0;
+    let weightedRatioSum = 0; // sum of (ratio * euaFromThisLevel)
+
+    // Traverse orderbook from best ratio (highest EUA/CEA = best for user) to worst
+    // Note: orderbook is sorted with best offers first (highest ratio)
+    for (const level of orderbook) {
+      if (remainingCea <= 0) break;
+
+      // CEA needed for this level's EUA = EUA / ratio (since ratio = EUA/CEA)
+      const ceaNeededForLevel = level.ratio > 0 ? level.euaQuantity / level.ratio : 0;
+
+      if (remainingCea >= ceaNeededForLevel) {
+        // Take all EUA from this level
+        totalEuaReceived += level.euaQuantity;
+        weightedRatioSum += level.ratio * level.euaQuantity;
+        remainingCea -= ceaNeededForLevel;
+      } else {
+        // Partial fill - take only what we can afford
+        // EUA we can buy = remainingCea * ratio (since ratio = EUA/CEA)
+        const euaWeCanBuy = remainingCea * level.ratio;
+        totalEuaReceived += euaWeCanBuy;
+        weightedRatioSum += level.ratio * euaWeCanBuy;
+        remainingCea = 0;
+      }
+    }
+
+    // Calculate weighted average ratio (EUA/CEA) - weighted by EUA received at each level
+    const avgRatio = totalEuaReceived > 0 ? weightedRatioSum / totalEuaReceived : ceaToEuaRate;
+
+    return { avgRatio, totalEua: totalEuaReceived };
+  };
+
+  const { avgRatio: weightedAvgRatio, totalEua: estimatedEuaFromOrderbook } = calculateWeightedRatio(ceaBalance);
+
+  // Use orderbook-based calculation for more accurate estimates
+  const estimatedEuaGross = ceaBalance > 0 && orderbook.length > 0
+    ? estimatedEuaFromOrderbook
+    : (swapCalculation?.output.quantity ?? (ceaBalance * ceaToEuaRate));
+  const platformFeeEua = estimatedEuaGross * platformFeePct / 100;
+  const netEua = estimatedEuaGross - platformFeeEua;
+  const euaValueEur = swapCalculation?.output.value_eur ?? (netEua * (swapRate?.euaPriceEur || 80));
 
   // Format helpers
-  const formatNumber = (num: number, decimals = 2) => {
+  const formatNumber = (num: number | undefined | null, decimals = 2) => {
+    if (num === undefined || num === null || isNaN(num)) return '0.00';
     return num.toLocaleString(undefined, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
   };
 
-  const formatCurrency = (amount: number, currency = '€') => {
+  const formatCurrency = (amount: number | undefined | null, currency = '€') => {
     return `${currency}${formatNumber(amount)}`;
-  };
-
-  // Handle swap flow
-  const handleSwapClick = () => {
-    if (userBalance.cea <= 0) return;
-    setShowPreviewDialog(true);
   };
 
   const handleContinueToFinal = () => {
@@ -105,18 +196,43 @@ export function CeaSwapMarketPage() {
 
   const handleConfirmSwap = async () => {
     setIsPlacingSwap(true);
+    setSwapError(null);
+
     try {
-      // In production, this would call the actual swap API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Create swap request
+      const swapRequest = await swapsApi.createSwapRequest({
+        from_type: 'CEA',
+        to_type: 'EUA',
+        quantity: ceaBalance,
+        desired_rate: ceaToEuaRate,
+      });
 
-      // Generate swap reference
-      const ref = `SWAP-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-      setSwapReference(ref);
+      // Execute the swap
+      const result = await swapsApi.executeSwap(swapRequest.id);
 
+      setSwapReference(result.swap_reference);
       setShowFinalDialog(false);
       setShowSuccessDialog(true);
-    } catch (error) {
+
+      // Refresh user data to get updated role (SWAP → EUA_SETTLE)
+      // This ensures the user can still access the swap page and dashboard
+      try {
+        const updatedUser = await usersApi.getProfile();
+        const token = sessionStorage.getItem('auth_token');
+        if (token) {
+          useAuthStore.getState().setAuth(updatedUser, token);
+        }
+      } catch (refreshErr) {
+        console.warn('Failed to refresh user data after swap:', refreshErr);
+        // Non-critical - user will get updated on next login
+      }
+
+      // Refresh balances after successful swap
+      await fetchData();
+    } catch (error: unknown) {
       console.error('Error placing swap:', error);
+      const err = error as { response?: { data?: { detail?: string } } };
+      setSwapError(err.response?.data?.detail || 'Failed to execute swap. Please try again.');
     } finally {
       setIsPlacingSwap(false);
     }
@@ -127,6 +243,7 @@ export function CeaSwapMarketPage() {
     setShowFinalDialog(false);
     setShowSuccessDialog(false);
     setTermsAccepted(false);
+    setSwapError(null);
   };
 
   return (
@@ -139,29 +256,24 @@ export function CeaSwapMarketPage() {
         iconBg="bg-violet-500/20"
       >
         <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">Best Ratio</span>
+          <span className="text-navy-600 dark:text-navy-400 mr-2">Rate</span>
           <span className="font-bold font-mono text-white text-lg">
-            1:{formatNumber(bestRatio, 1)}
+            {swapRate ? `1:${formatNumber(euaToCeaRate, 2)}` : '...'}
           </span>
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-navy-600 dark:text-navy-400">24h</span>
-          <span className={`flex items-center font-semibold ${
-            rateChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-          }`}>
-            {rateChange24h >= 0 ? (
-              <TrendingUp className="w-4 h-4 mr-1" />
-            ) : (
-              <TrendingDown className="w-4 h-4 mr-1" />
-            )}
-            {rateChange24h >= 0 ? '+' : ''}{rateChange24h.toFixed(2)}%
+          <span className="text-navy-600 dark:text-navy-400">EUA</span>
+          <span className="flex items-center font-semibold text-blue-400">
+            {swapRate ? formatCurrency(swapRate.euaPriceEur) : '...'}
           </span>
         </div>
 
-        <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">24h Swaps</span>
-          <span className="font-semibold text-navy-300 dark:text-navy-300 font-mono">12</span>
+        <div className="flex items-center gap-1">
+          <span className="text-navy-600 dark:text-navy-400">CEA</span>
+          <span className="flex items-center font-semibold text-amber-400">
+            {swapRate ? formatCurrency(swapRate.ceaPriceEur) : '...'}
+          </span>
         </div>
 
         <motion.button
@@ -180,6 +292,17 @@ export function CeaSwapMarketPage() {
           <div className="flex items-center justify-center h-96">
             <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
           </div>
+        ) : swapError && !swapRate ? (
+          <div className="flex flex-col items-center justify-center h-96 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
+            <p className="text-red-400 mb-4">{swapError}</p>
+            <button
+              onClick={fetchData}
+              className="px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-400 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Swap Visualization */}
@@ -191,20 +314,29 @@ export function CeaSwapMarketPage() {
                     <Leaf className="w-12 h-12 text-amber-500" />
                   </div>
                   <div className="text-amber-400 font-bold font-mono text-2xl">
-                    {formatNumber(ceaToSwap, 0)}
+                    {formatNumber(ceaBalance, 0)}
                   </div>
                   <div className="text-navy-600 dark:text-navy-400 text-sm">CEA (You give)</div>
                 </div>
 
                 {/* Arrow */}
                 <div className="flex flex-col items-center">
+                  <div className="text-navy-400 dark:text-navy-400 text-sm mb-2">
+                    1 CEA = {formatNumber(ceaBalance > 0 ? weightedAvgRatio : ceaToEuaRate, 4)} EUA
+                  </div>
                   <motion.div
                     animate={{ x: [0, 10, 0] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                   >
                     <ArrowRight className="w-12 h-12 text-violet-500" />
                   </motion.div>
-                  <div className="text-navy-500 dark:text-navy-500 text-sm mt-2">1 EUA = {bestRatio} CEA</div>
+                  <button
+                    onClick={() => setShowPreviewDialog(true)}
+                    disabled={ceaBalance <= 0 || isPlacingSwap || orderbook.length === 0}
+                    className="mt-3 px-8 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:from-navy-600 disabled:to-navy-600 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 transition-all duration-200"
+                  >
+                    SWAP
+                  </button>
                 </div>
 
                 {/* EUA Side */}
@@ -213,7 +345,7 @@ export function CeaSwapMarketPage() {
                     <span className="text-4xl">🇪🇺</span>
                   </div>
                   <div className="text-blue-400 font-bold font-mono text-2xl">
-                    {formatNumber(netEua, 0)}
+                    {isCalculating ? '...' : formatNumber(netEua, 0)}
                   </div>
                   <div className="text-navy-600 dark:text-navy-400 text-sm">EUA (You get)</div>
                 </div>
@@ -221,201 +353,115 @@ export function CeaSwapMarketPage() {
             </div>
 
             <div className="grid grid-cols-12 gap-6">
-              {/* Swap Offers */}
-              <div className="col-span-12 lg:col-span-5">
+              {/* Order Book - 100% width */}
+              <div className="col-span-12">
                 <div className="content_wrapper_last">
                   <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-                    <h2 className="font-semibold text-white">Available Swap Offers</h2>
-                    <p className="text-xs text-navy-500 dark:text-navy-500">AI Agent Providers</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="font-semibold text-white">Order Book</h2>
+                        <p className="text-xs text-navy-500 dark:text-navy-500">EUA Offers (Asks)</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-navy-500">Total Available</div>
+                        <div className="text-blue-400 font-mono font-bold">
+                          {formatNumber(totalEuaAvailable, 0)} EUA
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="p-4">
-                    <div className="text-xs text-navy-600 dark:text-navy-600 grid grid-cols-3 px-2 mb-2">
-                      <span>Ratio</span>
-                      <span className="text-center">EUA Available</span>
-                      <span className="text-right">Depth</span>
+                  <div className="p-2">
+                    {/* Order Book Header */}
+                    <div className="grid grid-cols-8 gap-1 px-2 py-1 text-xs text-navy-500 border-b border-navy-700">
+                      <div>Ratio</div>
+                      <div className="text-right">EUA</div>
+                      <div className="text-right">Tot EUA</div>
+                      <div className="text-right">CEA</div>
+                      <div className="text-right">Tot CEA</div>
+                      <div className="text-right">EUR</div>
+                      <div className="text-right">Tot EUR</div>
+                      <div className="text-right">#</div>
                     </div>
 
-                    <div className="space-y-1">
-                      {swapOffers.map((offer, idx) => {
-                        const maxEua = Math.max(...swapOffers.map(o => o.euaAvailable));
-                        const depthPercent = (offer.euaAvailable / maxEua) * 100;
-                        const isBest = idx === 0;
+                    {/* Order Book Rows */}
+                    <div className="flex flex-col">
+                      {orderbook.length === 0 ? (
+                        <div className="text-center py-8 text-navy-500">
+                          <p>No orders available</p>
+                        </div>
+                      ) : (
+                        (() => {
+                          let cumulativeCea = 0;
+                          let cumulativeEua = 0;
+                          let cumulativeEur = 0;
+                          const euaPrice = swapRate?.euaPriceEur || 0;
 
-                        return (
-                          <div
-                            key={idx}
-                            className={`relative grid grid-cols-3 px-2 py-2.5 rounded text-sm ${
-                              isBest ? 'bg-violet-500/10 border border-violet-500/30' : ''
-                            }`}
-                          >
-                            {/* Depth bar */}
-                            <div
-                              className="absolute inset-y-0 right-0 bg-blue-500/10 rounded"
-                              style={{ width: `${depthPercent}%` }}
-                            />
-                            <span className={`relative font-mono ${isBest ? 'text-violet-400 font-bold' : 'text-navy-300 dark:text-navy-300'}`}>
-                              1:{offer.ratio}
-                              {isBest && <span className="ml-2 text-xs text-violet-400">BEST</span>}
-                            </span>
-                            <span className="relative text-center text-navy-300 dark:text-navy-300 font-mono">
-                              {formatNumber(offer.euaAvailable, 0)}
-                            </span>
-                            <span className="relative text-right text-navy-500 dark:text-navy-500">
-                              {'█'.repeat(Math.ceil(depthPercent / 20))}
-                            </span>
-                          </div>
-                        );
-                      })}
+                          return orderbook.map((level, index) => {
+                            // CEA needed = EUA / ratio (since ratio = EUA/CEA)
+                            const ceaNeeded = level.ratio > 0 ? level.euaQuantity / level.ratio : 0;
+                            const eurValue = level.euaQuantity * euaPrice;
+                            const prevCumulativeCea = cumulativeCea;
+                            cumulativeEua += level.euaQuantity;
+                            cumulativeCea += ceaNeeded;
+                            cumulativeEur += eurValue;
+
+                            // Determine if this level will be filled by user's CEA
+                            // Full fill: cumulative CEA <= user's CEA balance
+                            // Partial fill: previous cumulative < user's CEA < current cumulative
+                            const isFullyFilled = ceaBalance > 0 && cumulativeCea <= ceaBalance;
+                            const isPartiallyFilled = ceaBalance > 0 && prevCumulativeCea < ceaBalance && cumulativeCea > ceaBalance;
+                            const isFilled = isFullyFilled || isPartiallyFilled;
+
+                            return (
+                              <div
+                                key={index}
+                                className={`grid grid-cols-8 gap-1 px-2 py-1 text-xs hover:bg-navy-700/50 relative ${
+                                  isFilled ? 'bg-emerald-500/20' : ''
+                                }`}
+                              >
+                                {/* Depth visualization background */}
+                                <div
+                                  className={`absolute inset-0 ${isFilled ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}
+                                  style={{ width: `${level.depthPct}%` }}
+                                />
+                                <div className="relative text-blue-400 font-mono">
+                                  {level.ratio.toFixed(4)}
+                                </div>
+                                <div className="relative text-right text-white font-mono">
+                                  {formatNumber(level.euaQuantity, 0)}
+                                </div>
+                                <div className="relative text-right text-white/70 font-mono">
+                                  {formatNumber(cumulativeEua, 0)}
+                                </div>
+                                <div className="relative text-right text-amber-400 font-mono">
+                                  {formatNumber(ceaNeeded, 0)}
+                                </div>
+                                <div className="relative text-right text-amber-300/70 font-mono">
+                                  {formatNumber(cumulativeCea, 0)}
+                                </div>
+                                <div className="relative text-right text-emerald-400 font-mono">
+                                  {formatNumber(eurValue / 1000, 0)}k
+                                </div>
+                                <div className="relative text-right text-emerald-300/70 font-mono">
+                                  {formatNumber(cumulativeEur / 1000000, 1)}M
+                                </div>
+                                <div className="relative text-right text-navy-400">
+                                  {level.ordersCount}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()
+                      )}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-navy-200 dark:border-navy-700 text-xs text-navy-500 dark:text-navy-500">
-                      Lower ratio = better for you (less CEA per EUA)
-                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Swap Panel */}
-              <div className="col-span-12 lg:col-span-7">
-                <div className="content_wrapper_last">
-                  <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-                    <h2 className="font-semibold text-white">Your Swap</h2>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    {/* CEA Balance */}
-                    <div className="bg-navy-100 dark:bg-navy-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-navy-600 dark:text-navy-400">Your CEA Balance</span>
-                        <Leaf className="w-4 h-4 text-amber-500" />
-                      </div>
-                      <div className="text-3xl font-bold text-amber-400 font-mono">
-                        {formatNumber(userBalance.cea, 0)} tonnes
-                      </div>
-                    </div>
-
-                    {/* Swap Preview */}
-                    <div className="bg-navy-100 dark:bg-navy-800/50 rounded-lg p-4 space-y-3">
-                      <h3 className="font-medium text-white mb-3">Swap Preview</h3>
-
-                      <div className="flex justify-between text-sm">
-                        <span className="text-navy-600 dark:text-navy-400">You give</span>
-                        <span className="text-amber-400 font-mono font-bold">{formatNumber(ceaToSwap, 0)} CEA</span>
-                      </div>
-
-                      <div className="flex justify-between text-sm">
-                        <span className="text-navy-600 dark:text-navy-400">Ratio (best available)</span>
-                        <span className="text-white font-mono">1:{bestRatio}</span>
-                      </div>
-
-                      <div className="flex justify-between text-sm">
-                        <span className="text-navy-600 dark:text-navy-400">You receive</span>
-                        <span className="text-white font-mono">{formatNumber(estimatedEua, 0)} EUA</span>
-                      </div>
-
-                      <div className="flex justify-between text-sm">
-                        <span className="text-navy-600 dark:text-navy-400">Platform Fee (0.5%)</span>
-                        <span className="text-violet-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
-                      </div>
-
-                      <div className="border-t border-navy-200 dark:border-navy-700 pt-3 mt-3">
-                        <div className="flex justify-between">
-                          <span className="text-navy-300 dark:text-navy-300 font-medium">Net EUA</span>
-                          <span className="text-xl font-bold text-blue-400 font-mono">
-                            {formatNumber(netEua, 0)} EUA
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm mt-1">
-                          <span className="text-navy-500 dark:text-navy-500">Estimated Value</span>
-                          <span className="text-navy-600 dark:text-navy-400 font-mono">~{formatCurrency(euaValueEur)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Swap Button */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleSwapClick}
-                      disabled={userBalance.cea <= 0}
-                      className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                        userBalance.cea > 0
-                          ? 'bg-gradient-to-r from-amber-500 to-blue-500 hover:from-amber-400 hover:to-blue-400 text-white'
-                          : 'bg-navy-200 dark:bg-navy-700 text-navy-500 dark:text-navy-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-3">
-                        <ArrowRightLeft className="w-5 h-5" />
-                        <span>SWAP CEA → EUA - FULL BALANCE</span>
-                      </div>
-                      <div className="text-sm font-normal mt-1 opacity-80">
-                        {formatNumber(ceaToSwap, 0)} CEA → {formatNumber(netEua, 0)} EUA
-                      </div>
-                    </motion.button>
-
-                    {/* Info Note */}
-                    <div className="flex items-start gap-3 text-xs text-navy-500 dark:text-navy-500">
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <p>
-                        Your CEA will be transferred immediately. EUA delivery: 10-14 business days
-                        via EU ETS registry. This swap cannot be reversed once confirmed.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Recent Swaps */}
-            <div className="content_wrapper_last">
-              <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-                <h2 className="font-semibold text-white">Recent Swaps</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-navy-500 dark:text-navy-500 border-b border-navy-200 dark:border-navy-700">
-                      <th className="text-left px-4 py-2 font-medium">Time</th>
-                      <th className="text-right px-4 py-2 font-medium">CEA Given</th>
-                      <th className="text-right px-4 py-2 font-medium">EUA Received</th>
-                      <th className="text-right px-4 py-2 font-medium">Ratio</th>
-                      <th className="text-right px-4 py-2 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { time: '14:32:05', cea: 500000, eua: 44642, ratio: 11.2, status: 'complete' },
-                      { time: '13:15:22', cea: 250000, eua: 22123, ratio: 11.3, status: 'complete' },
-                      { time: '12:45:10', cea: 1000000, eua: 88495, ratio: 11.3, status: 'pending' },
-                      { time: '11:20:45', cea: 750000, eua: 66964, ratio: 11.2, status: 'complete' },
-                    ].map((swap, idx) => (
-                      <tr key={idx} className="border-b border-navy-200 dark:border-navy-700/50">
-                        <td className="px-4 py-3 text-navy-600 dark:text-navy-400">{swap.time}</td>
-                        <td className="px-4 py-3 text-right font-mono text-amber-400">
-                          {formatNumber(swap.cea, 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-blue-400">
-                          {formatNumber(swap.eua, 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-navy-300 dark:text-navy-300">
-                          1:{swap.ratio}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {swap.status === 'complete' ? (
-                            <span className="text-emerald-400 text-xs">✓ Complete</span>
-                          ) : (
-                            <span className="text-amber-400 text-xs flex items-center justify-end gap-1">
-                              <Clock className="w-3 h-3" /> Pending
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -452,7 +498,7 @@ export function CeaSwapMarketPage() {
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center">
                     <div className="text-3xl mb-1">🌱</div>
-                    <div className="text-amber-400 font-bold font-mono">{formatNumber(ceaToSwap, 0)}</div>
+                    <div className="text-amber-400 font-bold font-mono">{formatNumber(ceaBalance, 0)}</div>
                     <div className="text-xs text-navy-500 dark:text-navy-500">CEA</div>
                   </div>
                   <ArrowRight className="w-8 h-8 text-violet-500" />
@@ -463,18 +509,18 @@ export function CeaSwapMarketPage() {
                   </div>
                 </div>
                 <div className="text-center text-sm text-navy-500 dark:text-navy-500 mt-4">
-                  Ratio: 1 EUA = {bestRatio} CEA
+                  Rate: 1 EUA = {formatNumber(euaToCeaRate, 2)} CEA
                 </div>
               </div>
 
               <div className="bg-navy-100 dark:bg-navy-800 rounded-lg p-4 space-y-2 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">You give</span>
-                  <span className="text-amber-400 font-mono">{formatNumber(ceaToSwap, 0)} CEA</span>
+                  <span className="text-amber-400 font-mono">{formatNumber(ceaBalance, 0)} CEA</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">You receive</span>
-                  <span className="text-white font-mono">{formatNumber(estimatedEua, 0)} EUA</span>
+                  <span className="text-white font-mono">{formatNumber(estimatedEuaGross, 0)} EUA</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">Platform fee</span>
@@ -505,6 +551,12 @@ export function CeaSwapMarketPage() {
                   </div>
                 </div>
               </div>
+
+              {swapError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6">
+                  <p className="text-sm text-red-400">{swapError}</p>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button
@@ -554,7 +606,7 @@ export function CeaSwapMarketPage() {
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center">
                     <div className="text-4xl mb-2">🌱</div>
-                    <div className="text-amber-400 font-bold font-mono text-xl">{formatNumber(ceaToSwap, 0)}</div>
+                    <div className="text-amber-400 font-bold font-mono text-xl">{formatNumber(ceaBalance, 0)}</div>
                     <div className="text-navy-500 dark:text-navy-500 text-sm">CEA (China ETS)</div>
                   </div>
                   <div className="text-violet-500">
@@ -581,6 +633,12 @@ export function CeaSwapMarketPage() {
                   this swap cannot be reversed once confirmed, and EUA will be used for EU ETS compliance.
                 </span>
               </label>
+
+              {swapError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6">
+                  <p className="text-sm text-red-400">{swapError}</p>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button
@@ -643,15 +701,15 @@ export function CeaSwapMarketPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">CEA Transferred</span>
-                  <span className="text-amber-400 font-mono">{formatNumber(ceaToSwap, 0)} tonnes</span>
+                  <span className="text-amber-400 font-mono">{formatNumber(ceaBalance, 0)} tonnes</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">EUA to Receive</span>
                   <span className="text-blue-400 font-mono">{formatNumber(netEua, 0)} tonnes</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-navy-600 dark:text-navy-400">Ratio</span>
-                  <span className="text-white font-mono">1:{bestRatio}</span>
+                  <span className="text-navy-600 dark:text-navy-400">Rate</span>
+                  <span className="text-white font-mono">1:{formatNumber(euaToCeaRate, 2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">Status</span>
@@ -675,7 +733,7 @@ export function CeaSwapMarketPage() {
                   onClick={closeAllDialogs}
                   className="flex-1 py-3 rounded-lg border border-navy-200 dark:border-navy-600 text-navy-300 dark:text-navy-300 hover:bg-navy-100 dark:bg-navy-800 transition-colors"
                 >
-                  View Swap
+                  Close
                 </button>
                 <button
                   onClick={() => window.location.href = '/dashboard'}

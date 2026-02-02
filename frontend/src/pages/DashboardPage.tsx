@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 import { usePrices } from '../hooks/usePrices';
-import { usersApi, cashMarketApi, swapsApi } from '../services/api';
+import { usersApi, cashMarketApi, swapsApi, settlementApi } from '../services/api';
 import {
   DataTable,
   Tabs,
@@ -189,6 +189,8 @@ export function DashboardPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedSettlement, setSelectedSettlement] = useState<SettlementBatch | null>(null);
+  const [pendingCeaSettlements, setPendingCeaSettlements] = useState<SettlementBatch[]>([]);
+  const [pendingEuaSettlements, setPendingEuaSettlements] = useState<SettlementBatch[]>([]);
   const lastLocationRef = useRef<string>('');
   const isRefreshingBalanceRef = useRef<boolean>(false);
 
@@ -328,19 +330,42 @@ export function DashboardPage() {
     }
   }, []);
 
+  /**
+   * Fetches pending settlements for display in the Holdings cards.
+   * Shows CEA amounts (T+3 settlement cycle) and EUA amounts (T+14 swap settlement).
+   */
+  const fetchSettlements = useCallback(async () => {
+    try {
+      const result = await settlementApi.getPendingSettlements();
+      // Filter for CEA settlements that are not yet settled
+      const ceaSettlements = result.data.filter(
+        (s: SettlementBatch) => s.assetType === 'CEA' && s.status !== 'SETTLED' && s.status !== 'FAILED'
+      );
+      // Filter for EUA settlements from swaps that are not yet settled
+      const euaSettlements = result.data.filter(
+        (s: SettlementBatch) => s.assetType === 'EUA' && s.status !== 'SETTLED' && s.status !== 'FAILED'
+      );
+      setPendingCeaSettlements(ceaSettlements);
+      setPendingEuaSettlements(euaSettlements);
+    } catch (err) {
+      console.error('Failed to fetch settlements:', err);
+      // Non-critical, don't block the UI
+    }
+  }, []);
+
   // Initial fetch on mount
   useEffect(() => {
     const init = async () => {
       setLoadingBalance(true);
       setLoadingOrders(true);
-      await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
+      await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps(), fetchSettlements()]);
       setLoadingBalance(false);
       setLoadingOrders(false);
     };
     init();
     lastLocationRef.current = location.pathname;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchBalance, fetchOrders, fetchSwaps]);
+  }, [fetchBalance, fetchOrders, fetchSwaps, fetchSettlements]);
 
   /**
    * Listens for balance update events triggered after trade execution.
@@ -414,9 +439,9 @@ export function DashboardPage() {
   // Refresh handler
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
+    await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps(), fetchSettlements()]);
     setIsRefreshing(false);
-  }, [fetchBalance, fetchOrders, fetchSwaps]);
+  }, [fetchBalance, fetchOrders, fetchSwaps, fetchSettlements]);
 
   // Format helpers
   const formatNumber = (num: number, decimals = 0) => {
@@ -659,70 +684,202 @@ export function DashboardPage() {
           </motion.div>
 
           {/* CEA Holdings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="content_wrapper"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">CEA Holdings</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <Leaf className="w-4 h-4 text-amber-400" />
-              </div>
-            </div>
-            {isLoading ? (
-              <Skeleton variant="textLg" width="40%" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
-                  {formatNumber(portfolio.cea_total)}
-                  <span className="text-sm text-navy-500 ml-1">tCO₂</span>
-                </div>
-                {portfolio.cea_locked > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded flex items-center gap-1">
-                      <ArrowRightLeft className="w-3 h-3" />
-                      {formatNumber(portfolio.cea_locked)} in swap
+          {pendingCeaSettlements.length > 0 ? (
+            // Settling state - clickable card with reduced opacity
+            pendingCeaSettlements.map((settlement) => {
+              const expectedDate = new Date(settlement.expectedSettlementDate);
+              const createdDate = new Date(settlement.createdAt);
+              const now = new Date();
+              const totalDuration = expectedDate.getTime() - createdDate.getTime();
+              const elapsed = now.getTime() - createdDate.getTime();
+              const progressPercent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+
+              return (
+                <motion.div
+                  key={settlement.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    borderColor: ['rgba(245, 158, 11, 0.3)', 'rgba(245, 158, 11, 0.8)', 'rgba(245, 158, 11, 0.3)'],
+                  }}
+                  transition={{
+                    delay: 0.1,
+                    borderColor: {
+                      duration: 3.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  }}
+                  className="content_wrapper relative cursor-pointer border-2 border-amber-500/30 hover:border-amber-500 overflow-hidden"
+                  onClick={() => setSelectedSettlement(settlement)}
+                >
+                  {/* Progress bar as card background */}
+                  <div
+                    className="absolute inset-0 bg-amber-500/15"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+
+                  {/* Card content with reduced opacity */}
+                  <div className="relative opacity-30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-navy-400">CEA Holdings</span>
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <Leaf className="w-4 h-4 text-amber-400" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                      {formatNumber(settlement.quantity, 2)}
+                      <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                    </div>
+                  </div>
+
+                  {/* SETTLING badge and click hint */}
+                  <div className="relative flex items-center justify-between mt-2">
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-semibold flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      SETTLING
+                    </span>
+                    <span className="text-xs text-navy-400 hover:text-amber-400 transition-colors">
+                      Click for details →
                     </span>
                   </div>
-                )}
-              </>
-            )}
-          </motion.div>
+                </motion.div>
+              );
+            })
+          ) : (
+            // Normal state - no pending settlements
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="content_wrapper"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-navy-400">CEA Holdings</span>
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <Leaf className="w-4 h-4 text-amber-400" />
+                </div>
+              </div>
+              {isLoading ? (
+                <Skeleton variant="textLg" width="40%" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                    {formatNumber(portfolio.cea_total)}
+                    <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                  </div>
+                  {portfolio.cea_locked > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded flex items-center gap-1">
+                        <ArrowRightLeft className="w-3 h-3" />
+                        {formatNumber(portfolio.cea_locked)} in swap
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
 
           {/* EUA Holdings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="content_wrapper"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">EUA Holdings</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Wind className="w-4 h-4 text-blue-400" />
-              </div>
-            </div>
-            {isLoading ? (
-              <Skeleton variant="textLg" width="40%" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
-                  {formatNumber(portfolio.eua_total)}
-                  <span className="text-sm text-navy-500 ml-1">tCO₂</span>
-                </div>
-                {portfolio.eua_pending > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
+          {pendingEuaSettlements.length > 0 ? (
+            // Settling state - clickable card with reduced opacity (same as CEA)
+            pendingEuaSettlements.map((settlement) => {
+              const expectedDate = new Date(settlement.expectedSettlementDate);
+              const createdDate = new Date(settlement.createdAt);
+              const now = new Date();
+              const totalDuration = expectedDate.getTime() - createdDate.getTime();
+              const elapsed = now.getTime() - createdDate.getTime();
+              const progressPercent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+
+              return (
+                <motion.div
+                  key={settlement.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    borderColor: ['rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.8)', 'rgba(59, 130, 246, 0.3)'],
+                  }}
+                  transition={{
+                    delay: 0.15,
+                    borderColor: {
+                      duration: 3.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  }}
+                  className="content_wrapper relative cursor-pointer border-2 border-blue-500/30 hover:border-blue-500 overflow-hidden"
+                  onClick={() => setSelectedSettlement(settlement)}
+                >
+                  {/* Progress bar as card background */}
+                  <div
+                    className="absolute inset-0 bg-blue-500/15"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+
+                  {/* Card content with reduced opacity */}
+                  <div className="relative opacity-30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-navy-400">EUA Holdings</span>
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <Wind className="w-4 h-4 text-blue-400" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                      {formatNumber(settlement.quantity, 2)}
+                      <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                    </div>
+                  </div>
+
+                  {/* SETTLING badge and click hint */}
+                  <div className="relative flex items-center justify-between mt-2">
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
-                      +{formatNumber(portfolio.eua_pending)} pending
+                      SETTLING
+                    </span>
+                    <span className="text-xs text-navy-400 hover:text-blue-400 transition-colors">
+                      Click for details →
                     </span>
                   </div>
-                )}
-              </>
-            )}
-          </motion.div>
+                </motion.div>
+              );
+            })
+          ) : (
+            // Normal state - no pending EUA settlements
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="content_wrapper"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-navy-400">EUA Holdings</span>
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Wind className="w-4 h-4 text-blue-400" />
+                </div>
+              </div>
+              {isLoading ? (
+                <Skeleton variant="textLg" width="40%" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                    {formatNumber(portfolio.eua_total)}
+                    <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                  </div>
+                  {portfolio.eua_pending > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        +{formatNumber(portfolio.eua_pending)} pending
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
         </div>
 
         {/* Holdings Breakdown & Active Orders */}

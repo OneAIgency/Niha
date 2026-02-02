@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
@@ -56,9 +56,9 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode.update({"exp": expire})
@@ -311,15 +311,17 @@ async def get_approved_user(current_user=Depends(get_current_user)):  # noqa: B0
 
 
 async def get_swap_user(current_user=Depends(get_current_user)):  # noqa: B008
-    """Dependency that requires swap access (SWAP, EUA_SETTLE, EUA), admin, or MM (Market Maker). 0010 plan §8."""
+    """Dependency that requires swap access (SWAP only), admin, or MM (Market Maker). 0010 plan §8.
+
+    Note: EUA_SETTLE and EUA roles do NOT have swap access - after completing a swap,
+    the user role changes to EUA_SETTLE and they wait for EUA delivery on the dashboard.
+    """
     from ..models.models import UserRole
 
     swap_roles = {
         UserRole.ADMIN,
         UserRole.MM,
         UserRole.SWAP,
-        UserRole.EUA_SETTLE,
-        UserRole.EUA,
     }
     if current_user.role not in swap_roles:
         raise HTTPException(

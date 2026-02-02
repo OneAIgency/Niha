@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown, Palette, BookOpen } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
@@ -22,7 +23,7 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, user, logout } = useAuthStore();
   const { prices } = usePricesStore();
-  const { theme, toggleTheme } = useUIStore();
+  const { theme } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -60,17 +61,14 @@ export function Header() {
     }
     if (!role) return [];
 
-    const links: { href: string; label: string; icon: typeof BookOpen | null }[] = [];
-    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'ADMIN', 'MM'].includes(role);
-    const canCashMarket = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
-    const canSwap = ['SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+    const links: { href: string; label: string; icon: LucideIcon | null }[] = [];
+    // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + ADMIN/MM
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'ADMIN', 'MM'].includes(role);
+    // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + ADMIN/MM
+    const canSwap = ['SWAP', 'ADMIN', 'MM'].includes(role);
     const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
-    // Post-KYC users can access onboarding docs via "Mechanism" link (they've completed KYC)
-    const canMechanism = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'].includes(role);
 
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
-    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
-    if (canMechanism) links.push({ href: '/onboarding', label: 'Mechanism', icon: BookOpen });
     if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
     if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
 
@@ -124,24 +122,6 @@ export function Header() {
                 </Link>
               );
             })}
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={cn(
-                'p-2 rounded-lg transition-all duration-200',
-                isLandingPage || isDark
-                  ? 'text-white/80 hover:text-white hover:bg-white/10'
-                  : 'text-navy-600 hover:text-navy-900 hover:bg-navy-100'
-              )}
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
 
             {isAuthenticated ? (
               <div className="relative" ref={dropdownRef}>
@@ -288,22 +268,6 @@ export function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Mobile Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={cn(
-                'p-2 rounded-lg transition-all duration-200',
-                isLandingPage || isDark
-                  ? 'text-white/80 hover:text-white'
-                  : 'text-navy-600 hover:text-navy-900'
-              )}
-            >
-              {isDark ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
             <button
               className="p-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

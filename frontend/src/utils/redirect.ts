@@ -32,14 +32,19 @@ export function getPostLoginRedirect(user: User): string {
     return '/funding';
   }
 
-  // CEA, CEA_SETTLE: cash market (CEA)
+  // CEA, CEA_SETTLE: dashboard
   if (user.role === 'CEA' || user.role === 'CEA_SETTLE') {
-    return '/cash-market';
+    return '/dashboard';
   }
 
-  // SWAP, EUA_SETTLE: swap page
-  if (user.role === 'SWAP' || user.role === 'EUA_SETTLE') {
+  // SWAP: swap page (can execute CEA→EUA swap)
+  if (user.role === 'SWAP') {
     return '/swap';
+  }
+
+  // EUA_SETTLE: dashboard (waiting for EUA settlement, no swap access)
+  if (user.role === 'EUA_SETTLE') {
+    return '/dashboard';
   }
 
   // MM (Market Maker), EUA, ADMIN: full access → dashboard
