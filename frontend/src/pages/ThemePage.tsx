@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Check,
   AlertCircle,
@@ -19,13 +19,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
-  Palette,
-  Type,
-  Square,
-  Table2,
-  Layers,
-  Loader2,
   Menu,
+  Loader2,
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
 import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
@@ -33,31 +28,13 @@ import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard
 /**
  * Theme Sample Page - Design System Showcase
  *
- * Organized sections with sticky tab navigation for easy browsing.
- * Shows all standardized components in the current theme (light/dark).
+ * Section navigation is in the Subheader (ThemeLayout).
+ * Each section has an id attribute for hash navigation.
  */
-
-const SECTIONS = [
-  { id: 'layout', label: 'Page Layout', icon: Layers },
-  { id: 'colors', label: 'Colors', icon: Palette },
-  { id: 'typography', label: 'Typography', icon: Type },
-  { id: 'buttons', label: 'Buttons', icon: Square },
-  { id: 'inputs', label: 'Inputs', icon: Square },
-  { id: 'badges', label: 'Badges', icon: Layers },
-  { id: 'tabs', label: 'Tabs & Toggles', icon: Layers },
-  { id: 'cards', label: 'Cards', icon: Square },
-  { id: 'tables', label: 'Tables', icon: Table2 },
-  { id: 'feedback', label: 'Feedback', icon: AlertCircle },
-  { id: 'loading', label: 'Loading', icon: Loader2 },
-] as const;
-
-type SectionId = typeof SECTIONS[number]['id'];
 
 export function ThemePage() {
   const { theme } = useUIStore();
   const isDark = theme === 'dark';
-  const [activeSection, setActiveSection] = useState<SectionId>('colors');
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // State for interactive components
   const [activeTab, setActiveTab] = useState('tab1');
@@ -69,66 +46,10 @@ export function ThemePage() {
   const textSecondary = isDark ? 'text-navy-400' : 'text-navy-600';
   const textMuted = isDark ? 'text-navy-500' : 'text-navy-500';
 
-  // Scroll to section when tab is clicked
-  const scrollToSection = (sectionId: SectionId) => {
-    setActiveSection(sectionId);
-    const element = sectionRefs.current[sectionId];
-    if (element) {
-      const offset = 140; // Account for sticky header
-      const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
-  };
-
-  // Update active section based on scroll position
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200;
-
-      for (const section of SECTIONS) {
-        const element = sectionRefs.current[section.id];
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section.id);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
     <div className="relative">
-      {/* Sticky Section Navigation */}
-      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-navy-50/95 dark:bg-navy-950/95 backdrop-blur-sm border-b border-navy-200 dark:border-navy-800">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {SECTIONS.map((section) => {
-            const Icon = section.icon;
-            const isActive = activeSection === section.id;
-            return (
-              <button
-                key={section.id}
-                onClick={() => scrollToSection(section.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-emerald-500 text-white shadow-md'
-                    : 'text-navy-600 dark:text-navy-400 hover:bg-navy-200 dark:hover:bg-navy-800'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {section.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Page Header */}
-      <div className="mt-6 mb-8">
+      <div className="mb-8">
         <h1 className={`text-2xl font-bold ${textPrimary}`}>Design System Sample</h1>
         <p className={`mt-1 text-sm ${textSecondary}`}>
           All standardized components displayed in {theme} mode. Click section tabs above to navigate.
@@ -139,7 +60,6 @@ export function ThemePage() {
         {/* PAGE LAYOUT SECTION */}
         <section
           id="layout"
-          ref={(el) => { sectionRefs.current['layout'] = el; }}
         >
           <SectionHeader title="Standard Page Layout" />
           <p className={`text-sm ${textSecondary} mb-6`}>
@@ -158,58 +78,60 @@ export function ThemePage() {
               Fixed at top, z-50, height h-16 (mobile) / h-20 (desktop). Contains logo, price ticker, navigation, and user menu.
             </p>
 
-            {/* Header - REAL STYLING */}
-            <header className="bg-navy-900/80 backdrop-blur-lg border-b border-navy-700">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16 md:h-20">
-                  {/* Logo */}
-                  <div className="flex-shrink-0 flex items-center gap-1">
-                    <span className="text-xl font-bold text-white">NIHAO</span>
-                    <span className="text-xl font-bold text-emerald-400">GROUP</span>
-                  </div>
-
-                  {/* Price Ticker (Desktop) */}
-                  <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-lg bg-navy-800/50 border border-navy-700">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-blue-400">E</span>
-                      </div>
-                      <span className="text-sm font-medium text-white font-mono">€72.45</span>
-                      <span className="text-xs text-emerald-400">+1.2%</span>
+            {/* Header - REAL STYLING (contained in rounded wrapper) */}
+            <div className="rounded-xl overflow-hidden">
+              <header className="bg-navy-900/80 backdrop-blur-lg border-b border-navy-700">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex items-center justify-between h-16 md:h-20">
+                    {/* Logo */}
+                    <div className="flex-shrink-0 flex items-center gap-1">
+                      <span className="text-xl font-bold text-white">NIHAO</span>
+                      <span className="text-xl font-bold text-emerald-400">GROUP</span>
                     </div>
-                    <div className="w-px h-4 bg-navy-600" />
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-amber-400">C</span>
+
+                    {/* Price Ticker (Desktop) */}
+                    <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-lg bg-navy-800/50 border border-navy-700">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-blue-400">E</span>
+                        </div>
+                        <span className="text-sm font-medium text-white font-mono">€72.45</span>
+                        <span className="text-xs text-emerald-400">+1.2%</span>
                       </div>
-                      <span className="text-sm font-medium text-white font-mono">€48.30</span>
-                      <span className="text-xs text-red-400">-0.5%</span>
-                    </div>
-                  </div>
-
-                  {/* Desktop Navigation */}
-                  <nav className="hidden md:flex items-center gap-6">
-                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Dashboard</span>
-                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Funding</span>
-                    <span className="text-sm font-medium text-white cursor-pointer">CEA Cash</span>
-                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Swap</span>
-
-                    {/* User Avatar */}
-                    <div className="flex items-center gap-2 p-1 rounded-full">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                        AU
+                      <div className="w-px h-4 bg-navy-600" />
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-amber-400">C</span>
+                        </div>
+                        <span className="text-sm font-medium text-white font-mono">€48.30</span>
+                        <span className="text-xs text-red-400">-0.5%</span>
                       </div>
-                      <ChevronDown className="w-4 h-4 text-white" />
                     </div>
-                  </nav>
 
-                  {/* Mobile menu button */}
-                  <div className="md:hidden p-2 rounded-lg border border-navy-700">
-                    <Menu className="w-6 h-6 text-white" />
+                    {/* Desktop Navigation */}
+                    <nav className="hidden md:flex items-center gap-6">
+                      <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Dashboard</span>
+                      <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Funding</span>
+                      <span className="text-sm font-medium text-white cursor-pointer">CEA Cash</span>
+                      <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Swap</span>
+
+                      {/* User Avatar */}
+                      <div className="flex items-center gap-2 p-1 rounded-full">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                          AU
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-white" />
+                      </div>
+                    </nav>
+
+                    {/* Mobile menu button */}
+                    <div className="md:hidden p-2 rounded-lg border border-navy-700">
+                      <Menu className="w-6 h-6 text-white" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </header>
+              </header>
+            </div>
 
             {/* Header Specs */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -263,33 +185,35 @@ export function ThemePage() {
               Fixed below header, z-40. Contains page icon, title, description, and optional right-side content (tabs, buttons, stats).
             </p>
 
-            {/* Subheader - REAL .subheader-bar CLASS (position: relative for demo) */}
-            <div className="subheader-bar !static">
-              <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  {/* Left side: Icon, Title, Description */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5 text-amber-400" />
+            {/* Subheader - REAL .subheader-bar CLASS (contained in rounded wrapper) */}
+            <div className="rounded-xl overflow-hidden">
+              <div className="subheader-bar !static">
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* Left side: Icon, Title, Description */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                        <BarChart3 className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <h1 className="section-heading text-white">Cash Market</h1>
+                        <p className="text-sm text-navy-400">CEA Buy & Sell</p>
+                      </div>
                     </div>
-                    <div>
-                      <h1 className="section-heading text-white">Cash Market</h1>
-                      <p className="text-sm text-navy-400">CEA Buy & Sell</p>
+
+                    {/* Right side: Page-specific content */}
+                    <div className="flex items-center gap-6 text-sm">
+                      {/* Navigation Tabs */}
+                      <nav className="flex items-center gap-1 p-1 rounded-lg bg-navy-900/50">
+                        <button className="subheader-nav-btn subheader-nav-btn-active">Order Book</button>
+                        <button className="subheader-nav-btn subheader-nav-btn-inactive">My Orders</button>
+                      </nav>
+
+                      {/* Action Buttons */}
+                      <button className="p-2.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-navy-400 hover:text-white transition-colors">
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Right side: Page-specific content */}
-                  <div className="flex items-center gap-6 text-sm">
-                    {/* Navigation Tabs */}
-                    <nav className="flex items-center gap-1 p-1 rounded-lg bg-navy-900/50">
-                      <button className="subheader-nav-btn subheader-nav-btn-active">Order Book</button>
-                      <button className="subheader-nav-btn subheader-nav-btn-inactive">My Orders</button>
-                    </nav>
-
-                    {/* Action Buttons */}
-                    <button className="p-2.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-navy-400 hover:text-white transition-colors">
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -400,31 +324,33 @@ export function ThemePage() {
             </p>
 
             {/* SubSubHeader - REAL .subsubheader-bar CLASS */}
-            <div className="subsubheader-bar justify-between">
-              {/* Left side: Filters/Toggles */}
-              <div className="flex items-center gap-2">
-                <button className="subsubheader-nav-btn subsubheader-nav-btn-active">
-                  All
-                  <span className="subsubheader-nav-badge">24</span>
-                </button>
-                <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">
-                  Pending
-                  <span className="subsubheader-nav-badge">3</span>
-                </button>
-                <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">Completed</button>
-              </div>
+            <div className="rounded-xl overflow-hidden">
+              <div className="subsubheader-bar justify-between">
+                {/* Left side: Filters/Toggles */}
+                <div className="flex items-center gap-2">
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-active">
+                    All
+                    <span className="subsubheader-nav-badge">24</span>
+                  </button>
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">
+                    Pending
+                    <span className="subsubheader-nav-badge">3</span>
+                  </button>
+                  <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">Completed</button>
+                </div>
 
-              {/* Right side: Actions */}
-              <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
-                  <Search className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
-                  <Download className="w-4 h-4" />
-                </button>
+                {/* Right side: Actions */}
+                <div className="flex items-center gap-2">
+                  <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                    <Search className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -599,7 +525,7 @@ export function ThemePage() {
               <div className="max-w-4xl mx-auto space-y-4">
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {['Total Value', 'Cash (EUR)', 'CEA', 'EUA'].map((label, i) => (
+                  {['Total Value', 'Cash (EUR)', 'CEA', 'EUA'].map((label) => (
                     <div key={label} className="content_wrapper p-3">
                       <p className="text-xs text-navy-400">{label}</p>
                       <p className="text-lg font-bold text-white font-mono">€{(Math.random() * 10000).toFixed(2)}</p>
@@ -690,10 +616,121 @@ export function ThemePage() {
           </div>
         </section>
 
+        {/* CONTAINERS SECTION */}
+        <section id="containers">
+          <SectionHeader title="CSS Container Classes" />
+          <p className={`text-sm ${textSecondary} mb-6`}>
+            Reusable CSS classes for page layouts, wrappers, and content containers.
+          </p>
+
+          {/* Layout Classes */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-4">Layout Classes</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div
+                  className="min-h-[80px] rounded-xl border-2 border-dashed border-navy-600 flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--page-bg-bg)' }}
+                >
+                  <span className="text-sm text-navy-400">.page-bg background</span>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.page-bg</code>
+                  <p className="text-xs text-navy-400 mt-1">min-h-screen background for most pages</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="page-container rounded-xl border-2 border-navy-700 py-4 bg-navy-800/30">
+                  <p className="text-sm text-navy-400 text-center">max-w-7xl centered</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.page-container</code>
+                  <p className="text-xs text-navy-400 mt-1">max-w-7xl mx-auto px-4 sm:px-6 lg:px-8</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card/Wrapper Classes */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-4">Card & Wrapper Classes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-3">
+                <div className="content_wrapper">
+                  <p className="text-sm text-navy-400">Label</p>
+                  <p className="text-2xl font-bold text-white font-mono mt-1">€1,234.56</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.content_wrapper</code>
+                  <p className="text-xs text-navy-400 mt-1">Dashboard stat cards</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="content_wrapper_last p-4">
+                  <p className="text-sm text-navy-400">Section content</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.content_wrapper_last</code>
+                  <p className="text-xs text-navy-400 mt-1">Generic section wrapper</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="content_wrapper_last-hover p-4 cursor-pointer">
+                  <p className="text-sm text-navy-400">Hover me</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.content_wrapper_last-hover</code>
+                  <p className="text-xs text-navy-400 mt-1">Interactive with hover effect</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Classes */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-4">Table Classes</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="table-container">
+                  <div className="table-header-cell border-b border-navy-700">HEADER</div>
+                  <div className="table-row-hover">
+                    <div className="table-cell">Row 1</div>
+                  </div>
+                  <div className="table-row-hover">
+                    <div className="table-cell">Row 2</div>
+                  </div>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.table-container</code>
+                  <p className="text-xs text-navy-400 mt-1">+ .table-header-cell, .table-row-hover, .table-cell</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="table-container-dark">
+                  <div className="px-5 py-3 text-xs uppercase text-navy-400 border-b border-navy-700">HEADER</div>
+                  <div className="table-row-dark">
+                    <div className="px-5 py-3 text-sm text-white">Row 1</div>
+                  </div>
+                  <div className="table-row-dark">
+                    <div className="px-5 py-3 text-sm text-white">Row 2</div>
+                  </div>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.table-container-dark</code>
+                  <p className="text-xs text-navy-400 mt-1">Darker variant with .table-row-dark</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* COLORS SECTION */}
         <section
           id="colors"
-          ref={(el) => { sectionRefs.current['colors'] = el; }}
         >
           <SectionHeader title="Color Palette" />
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -743,7 +780,6 @@ export function ThemePage() {
         {/* TYPOGRAPHY SECTION */}
         <section
           id="typography"
-          ref={(el) => { sectionRefs.current['typography'] = el; }}
         >
           <SectionHeader title="Typography" />
           <Card className="p-6 space-y-4">
@@ -777,7 +813,6 @@ export function ThemePage() {
         {/* BUTTONS SECTION */}
         <section
           id="buttons"
-          ref={(el) => { sectionRefs.current['buttons'] = el; }}
         >
           <SectionHeader title="Buttons" />
           <Card className="p-6 space-y-6">
@@ -824,7 +859,6 @@ export function ThemePage() {
         {/* INPUTS SECTION */}
         <section
           id="inputs"
-          ref={(el) => { sectionRefs.current['inputs'] = el; }}
         >
           <SectionHeader title="Inputs" />
           <Card className="p-6">
@@ -875,7 +909,6 @@ export function ThemePage() {
         {/* BADGES SECTION */}
         <section
           id="badges"
-          ref={(el) => { sectionRefs.current['badges'] = el; }}
         >
           <SectionHeader title="Badges" />
           <Card className="p-6 space-y-6">
@@ -931,7 +964,6 @@ export function ThemePage() {
         {/* TABS & TOGGLES SECTION */}
         <section
           id="tabs"
-          ref={(el) => { sectionRefs.current['tabs'] = el; }}
         >
           <SectionHeader title="Tabs & Toggles" />
           <Card className="p-6 space-y-8">
@@ -988,7 +1020,6 @@ export function ThemePage() {
         {/* CARDS SECTION */}
         <section
           id="cards"
-          ref={(el) => { sectionRefs.current['cards'] = el; }}
         >
           <SectionHeader title="Cards & Stats" />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1050,7 +1081,6 @@ export function ThemePage() {
         {/* TABLES SECTION */}
         <section
           id="tables"
-          ref={(el) => { sectionRefs.current['tables'] = el; }}
         >
           <SectionHeader title="Tables" />
           <div className={`overflow-hidden rounded-2xl border ${isDark ? 'border-navy-700 bg-navy-800' : 'border-navy-200 bg-white'}`}>
@@ -1116,7 +1146,6 @@ export function ThemePage() {
         {/* FEEDBACK SECTION */}
         <section
           id="feedback"
-          ref={(el) => { sectionRefs.current['feedback'] = el; }}
         >
           <SectionHeader title="Alerts & Modals" />
           <Card className="p-6 space-y-4">
@@ -1152,7 +1181,6 @@ export function ThemePage() {
         {/* LOADING SECTION */}
         <section
           id="loading"
-          ref={(el) => { sectionRefs.current['loading'] = el; }}
         >
           <SectionHeader title="Loading States" />
           <Card className="p-6 space-y-6">

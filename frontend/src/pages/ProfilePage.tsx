@@ -346,14 +346,14 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="min-h-screen bg-navy-900">
       <Subheader
         icon={<User className="w-5 h-5 text-emerald-500" />}
         title="My Profile"
         description="Manage your personal information and security settings"
         iconBg="bg-emerald-500/20"
       />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="page-container py-8">
         {/* Error Display */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">

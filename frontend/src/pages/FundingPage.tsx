@@ -19,7 +19,7 @@ import {
   FileText,
   Target,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, SubSubHeader } from '../components/common';
+import { Button, Card, Badge, Subheader, SubheaderNavButtonAction } from '../components/common';
 import { usersApi } from '../services/api';
 import { formatRelativeTime, formatCurrency } from '../utils';
 import { useAuthStore } from '../stores/useStore';
@@ -241,46 +241,29 @@ export function FundingPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      {/* Sticky header area following theme pattern */}
-      <div className="page-section-header-sticky">
-        <Subheader
-          icon={<Banknote className="w-5 h-5 text-emerald-400" />}
-          title="Fund Your Account"
-          description="Wire transfer funds to start trading on the Carbon Market"
-          iconBg="bg-emerald-500/20"
-        />
-
-        <SubSubHeader
-          left={
-            <nav className="flex items-center gap-2">
-              {sections.map((section) => {
-                const Icon = section.icon;
-                const isActive = activeSection === section.key;
-                return (
-                  <button
-                    key={section.key}
-                    onClick={() => setActiveSection(section.key)}
-                    className={`group subsubheader-nav-btn ${
-                      isActive ? 'subsubheader-nav-btn-active' : 'subsubheader-nav-btn-inactive'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span
-                      className={`whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ${
-                        isActive
-                          ? 'max-w-[14rem] opacity-100'
-                          : 'max-w-0 opacity-0 group-hover:max-w-[14rem] group-hover:opacity-100'
-                      }`}
-                    >
-                      {section.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          }
-        />
-      </div>
+      {/* Subheader with navigation */}
+      <Subheader
+        icon={<Banknote className="w-5 h-5 text-emerald-400" />}
+        title="Fund Your Account"
+        description="Wire transfer funds to start trading on the Carbon Market"
+        iconBg="bg-emerald-500/20"
+      >
+        <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide" aria-label="Funding navigation">
+          {sections.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.key;
+            return (
+              <SubheaderNavButtonAction
+                key={section.key}
+                label={section.label}
+                icon={<Icon className="w-4 h-4" />}
+                isActive={isActive}
+                onClick={() => setActiveSection(section.key)}
+              />
+            );
+          })}
+        </nav>
+      </Subheader>
 
       {/* Content area */}
       <div>

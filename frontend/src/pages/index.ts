@@ -15,7 +15,7 @@ export { LearnMorePage } from './LearnMorePage';
 export { ComponentShowcasePage } from './ComponentShowcasePage';
 export { DesignSystemPage } from './DesignSystemPage';
 export { ThemePage } from './ThemePage';
-export { ThemeContainersPage } from './ThemeContainersPage';
+export { ThemeSectionPage } from './ThemeSectionPage';
 export { MarketMakersPage } from './MarketMakersPage';
 export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';

@@ -64,18 +64,19 @@ export function OnboardingLink({ to, children, className, style }: OnboardingLin
 import {
   Upload,
   CheckCircle,
-  LogOut,
   Globe,
   Building2,
   Factory,
   TrendingUp,
   FileText,
   Home,
-  ChevronRight,
   Target,
+  BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useStore';
 import { onboardingApi } from '@/services/api';
+import { Header } from '@/components/layout';
+import { Subheader, SubheaderNavButton } from '@/components/common';
 import KycUploadModal from './KycUploadModal';
 
 /* Design-token references (see design-tokens.css --color-onboarding-*) */
@@ -113,7 +114,6 @@ interface OnboardingLayoutProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
-  showBreadcrumb?: boolean;
   /** When true, only renders the content without header/footer/nav - for embedding in other pages */
   embedded?: boolean;
 }
@@ -122,10 +122,9 @@ export default function OnboardingLayout({
   children,
   title,
   subtitle,
-  showBreadcrumb = true,
   embedded = false,
 }: OnboardingLayoutProps) {
-  const { logout, user } = useAuthStore();
+  const { user } = useAuthStore();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [kycProgress, setKycProgress] = useState(0);
@@ -156,13 +155,6 @@ export default function OnboardingLayout({
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
-
-  const currentNavItem = navItems.find(item => item.path === location.pathname);
-
   // When embedded, only render the content without header/footer/nav
   if (isEmbedded) {
     return (
@@ -187,125 +179,40 @@ export default function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>
-      {/* Header */}
-      <header
-        className="sticky top-0 z-40"
-        style={{
-          background: 'linear-gradient(180deg, rgba(13, 148, 136, 0.15) 0%, transparent 100%)',
-          borderBottom: `1px solid ${colors.border}`,
-          backdropFilter: 'blur(20px)',
-        }}
+    <div className="min-h-screen bg-navy-900">
+      {/* Main Header - consistent with rest of app */}
+      <Header />
+
+      {/* Subheader with navigation - consistent with theme */}
+      <Subheader
+        icon={<BookOpen className="w-5 h-5 text-teal-400" />}
+        title="Onboarding"
+        description="Learn about Nihao Group and the Carbon Market"
+        iconBg="bg-teal-500/20"
       >
-        <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link to="/onboarding" className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg"
-                style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
-              >
-                N
-              </div>
-              <div>
-                <h1
-                  className="text-xl font-bold"
-                  style={{
-                    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Nihao Group
-                </h1>
-                <span className="text-xs uppercase tracking-widest" style={{ color: colors.textSecondary }}>
-                  Onboarding
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Navigation */}
-            <nav className="hidden xl:flex gap-1 p-1 rounded-xl" style={{ backgroundColor: colors.bgCard }}>
-              {navItems.map(nav => {
-                const Icon = nav.icon;
-                const isActive = location.pathname === nav.path;
-                return (
-                  <Link
-                    key={nav.path}
-                    to={nav.path}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                    style={{
-                      backgroundColor: isActive ? colors.primary : 'transparent',
-                      color: isActive ? 'white' : colors.textSecondary,
-                    }}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {nav.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/20"
-              style={{ color: colors.danger }}
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="xl:hidden overflow-x-auto px-4 pb-4">
-          <nav className="flex gap-2 min-w-max">
-            {navItems.map(nav => {
-              const Icon = nav.icon;
-              const isActive = location.pathname === nav.path;
-              return (
-                <Link
-                  key={nav.path}
-                  to={nav.path}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap"
-                  style={{
-                    backgroundColor: isActive ? colors.primary : colors.bgCard,
-                    color: isActive ? 'white' : colors.textSecondary,
-                  }}
-                >
-                  <Icon className="w-4 h-4" />
-                  {nav.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </header>
-
-      {/* Breadcrumb */}
-      {showBreadcrumb && currentNavItem && location.pathname !== '/onboarding' && (
-        <div className="max-w-7xl mx-auto px-8 py-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              to="/onboarding"
-              className="hover:underline"
-              style={{ color: colors.textSecondary }}
-            >
-              Onboarding
-            </Link>
-            <ChevronRight className="w-4 h-4" style={{ color: colors.textMuted }} />
-            <span style={{ color: colors.primaryLight }}>{currentNavItem.label}</span>
-          </div>
-        </div>
-      )}
+        <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide" aria-label="Onboarding navigation">
+          {navItems.map((nav) => {
+            const Icon = nav.icon;
+            const isActive = location.pathname === nav.path;
+            return (
+              <SubheaderNavButton
+                key={nav.path}
+                to={nav.path}
+                label={nav.label}
+                icon={<Icon className="w-4 h-4" />}
+                isActive={isActive}
+              />
+            );
+          })}
+        </nav>
+      </Subheader>
 
       {/* Page Title */}
       {title && (
-        <div className="max-w-7xl mx-auto px-8 pt-8 pb-4">
-          <h2 className="text-4xl font-extrabold mb-2">{title}</h2>
+        <div className="page-container pt-8 pb-4">
+          <h2 className="text-4xl font-extrabold text-white mb-2">{title}</h2>
           {subtitle && (
-            <p className="text-lg" style={{ color: colors.textSecondary }}>
+            <p className="text-lg text-navy-400">
               {subtitle}
             </p>
           )}
@@ -313,19 +220,16 @@ export default function OnboardingLayout({
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-8 py-8">
+      <main className="page-container py-8">
         {children}
       </main>
 
       {/* Footer */}
-      <footer
-        className="text-center py-12"
-        style={{ borderTop: `1px solid ${colors.border}` }}
-      >
-        <p className="font-semibold" style={{ color: colors.textSecondary }}>
+      <footer className="text-center py-12 border-t border-navy-700">
+        <p className="font-semibold text-navy-400">
           Nihao Group Hong Kong | Carbon Market Intermediation | January 2026
         </p>
-        <p className="text-sm mt-2" style={{ color: colors.textMuted }}>
+        <p className="text-sm mt-2 text-navy-500">
           Bridging the EU ETS and China ETS through innovative bilateral trading solutions
         </p>
       </footer>

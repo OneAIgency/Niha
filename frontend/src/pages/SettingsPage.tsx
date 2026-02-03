@@ -387,14 +387,14 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="min-h-screen bg-navy-900">
       <Subheader
         icon={<Database className="w-5 h-5 text-blue-500" />}
         title="Platform Settings"
         description="Configure scraping sources, view market data, and monitor user activity"
         iconBg="bg-blue-500/20"
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="page-container py-8">
 
         {error && (
           <div

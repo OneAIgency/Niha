@@ -222,7 +222,7 @@ const valueProps = [
 
 export default function OnboardingIndexPage() {
   return (
-    <OnboardingLayout showBreadcrumb={false}>
+    <OnboardingLayout>
       {/* Hero Section */}
       <section className="text-center py-16 relative">
         <div

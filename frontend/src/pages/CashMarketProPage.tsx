@@ -1,18 +1,16 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  TrendingUp,
-  TrendingDown,
   RefreshCw,
-  BarChart3,
   Activity,
   Clock,
   AlertCircle,
   X,
-  ArrowLeft,
   ShoppingCart,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Header } from '../components/layout';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi } from '../services/api';
 import { UserOrderEntryModal } from '../components/cash-market/UserOrderEntryModal';
@@ -402,157 +400,10 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
 }
 
 // =============================================================================
-// MARKET STATS BAR (COMPACT)
-// =============================================================================
-
-interface MarketStatsBarProps {
-  lastPrice: number | null;
-  change24h: number;
-  high24h: number | null;
-  low24h: number | null;
-  volume24h: number;
-  loading: boolean;
-  onRefresh: () => void;
-  onBack: () => void;
-  onPlaceOrder: () => void;
-}
-
-function MarketStatsBar({
-  lastPrice,
-  change24h,
-  high24h,
-  low24h,
-  volume24h,
-  loading,
-  onRefresh,
-  onBack,
-  onPlaceOrder,
-}: MarketStatsBarProps) {
-  const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
-    if (num === null || num === undefined) return '-';
-    return num.toLocaleString(undefined, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
-  };
-
-  const formatVolume = (vol: number | null | undefined) => {
-    if (vol === null || vol === undefined) return '-';
-    if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
-    if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
-    return vol.toFixed(0);
-  };
-
-  // Safe change24h with fallback
-  const safeChange24h = change24h ?? 0;
-
-  return (
-    <div className="bg-navy-900 border-b border-navy-800 px-3 py-1.5 flex items-center gap-3">
-      {/* Back Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onBack}
-        className="w-8 h-8 rounded-lg bg-navy-800 hover:bg-navy-700 flex items-center justify-center text-navy-300 hover:text-white transition-colors"
-        title="Back to Dashboard"
-      >
-        <ArrowLeft className="w-4 h-4" />
-      </motion.button>
-
-      {/* Title */}
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded bg-amber-500/20 flex items-center justify-center">
-          <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
-        </div>
-        <div>
-          <h1 className="text-[12px] font-bold text-white">CEA Cash</h1>
-          <p className="text-[9px] text-navy-500">Professional Trading</p>
-        </div>
-      </div>
-
-      {/* Separator */}
-      <div className="w-px h-6 bg-navy-700" />
-
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-[10px]">
-        {/* Last Price */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-navy-500">Last</span>
-          <span className="font-bold font-mono text-white text-[13px]">
-            €{formatNumber(lastPrice, 3)}
-          </span>
-        </div>
-
-        {/* 24h Change */}
-        <div className="flex items-center gap-1">
-          <span className="text-navy-500">24h</span>
-          <span className={`flex items-center font-semibold ${
-            safeChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-          }`}>
-            {safeChange24h >= 0 ? (
-              <TrendingUp className="w-3 h-3 mr-0.5" />
-            ) : (
-              <TrendingDown className="w-3 h-3 mr-0.5" />
-            )}
-            {safeChange24h >= 0 ? '+' : ''}{safeChange24h.toFixed(2)}%
-          </span>
-        </div>
-
-        {/* High */}
-        <div>
-          <span className="text-navy-500 mr-1">H</span>
-          <span className="font-mono text-emerald-400">€{formatNumber(high24h, 2)}</span>
-        </div>
-
-        {/* Low */}
-        <div>
-          <span className="text-navy-500 mr-1">L</span>
-          <span className="font-mono text-red-400">€{formatNumber(low24h, 2)}</span>
-        </div>
-
-        {/* Volume */}
-        <div>
-          <span className="text-navy-500 mr-1">Vol</span>
-          <span className="font-semibold text-white font-mono">
-            {formatVolume(volume24h)}
-          </span>
-        </div>
-      </div>
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Place Order Button */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onPlaceOrder}
-        className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/20"
-      >
-        <ShoppingCart className="w-3.5 h-3.5" />
-        <span>Place Order</span>
-      </motion.button>
-
-      {/* Refresh Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={onRefresh}
-        className="p-1.5 rounded hover:bg-navy-800 text-navy-400"
-      >
-        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-      </motion.button>
-    </div>
-  );
-}
-
-// =============================================================================
 // MAIN PAGE COMPONENT
 // =============================================================================
 
 export function CashMarketProPage() {
-  const navigate = useNavigate();
-
   // Use real data from API with 5s polling
   const {
     orderBook,
@@ -565,14 +416,10 @@ export function CashMarketProPage() {
   } = useCashMarket('CEA', 5000);
 
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isOuterExpanded, setIsOuterExpanded] = useState(false);
 
   // Real user balances from API (with safe defaults)
   const availableEur = balances?.eur ?? 0;
-
-  // Navigate back to dashboard
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
 
   // Handle order cancellation via API
   const handleCancelOrder = async (orderId: string) => {
@@ -627,10 +474,13 @@ export function CashMarketProPage() {
   // Loading state
   if (loading && !orderBook) {
     return (
-      <div className="h-screen bg-navy-950 flex items-center justify-center trading-terminal">
-        <div className="text-center">
-          <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto mb-3" />
-          <p className="text-[11px] text-navy-400">Loading market data...</p>
+      <div className="min-h-screen bg-navy-950 flex flex-col trading-terminal">
+        <Header />
+        <div className="flex-1 flex items-center justify-center pt-20">
+          <div className="text-center">
+            <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto mb-3" />
+            <p className="text-[11px] text-navy-400">Loading market data...</p>
+          </div>
         </div>
       </div>
     );
@@ -639,9 +489,11 @@ export function CashMarketProPage() {
   // Error state
   if (error && !orderBook) {
     return (
-      <div className="h-screen bg-navy-950 flex items-center justify-center trading-terminal">
-        <div className="text-center">
-          <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-3" />
+      <div className="min-h-screen bg-navy-950 flex flex-col trading-terminal">
+        <Header />
+        <div className="flex-1 flex items-center justify-center pt-20">
+          <div className="text-center">
+            <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-3" />
           <p className="text-[11px] text-red-400 mb-3">{error}</p>
           <button
             onClick={refresh}
@@ -649,6 +501,7 @@ export function CashMarketProPage() {
           >
             Retry
           </button>
+        </div>
         </div>
       </div>
     );
@@ -669,46 +522,104 @@ export function CashMarketProPage() {
   };
 
   return (
-    <div className="h-screen bg-navy-950 flex flex-col overflow-hidden trading-terminal">
-      {/* Market Stats Bar */}
-      <MarketStatsBar
-        lastPrice={safeOrderBook.lastPrice}
-        change24h={safeOrderBook.change24h}
-        high24h={safeOrderBook.high24h}
-        low24h={safeOrderBook.low24h}
-        volume24h={safeOrderBook.volume24h}
-        loading={loading}
-        onRefresh={refresh}
-        onBack={handleBack}
-        onPlaceOrder={() => setIsOrderModalOpen(true)}
-      />
+    <div className="min-h-screen bg-navy-950 flex flex-col overflow-hidden relative">
+      {/* Thin bar always visible — click anywhere to expand overlay */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOuterExpanded(true)}
+        onKeyDown={(e) => e.key === 'Enter' && setIsOuterExpanded(true)}
+        className="flex-shrink-0 flex flex-col border-b border-navy-700/50 bg-navy-900/80 z-40 cursor-pointer hover:bg-navy-800/80 transition-colors"
+        title="Expand header and navigation"
+        aria-label="Expand header"
+      >
+        <div className="flex items-center justify-center h-9 min-h-9 gap-1.5 text-navy-400">
+          <ChevronDown className="w-4 h-4" />
+          <span className="text-xs text-navy-300">CEA Cash</span>
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-2 overflow-hidden flex flex-col min-h-0">
-        <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
-          {/* Order Book - Takes 9 columns */}
-          <div className="col-span-12 lg:col-span-9 flex flex-col min-h-0">
-            <div className="flex-1 min-h-0">
-              <ProfessionalOrderBook
-                bids={safeOrderBook.bids}
-                asks={safeOrderBook.asks}
-                spread={safeOrderBook.spread}
-                bestBid={safeOrderBook.bestBid}
-                bestAsk={safeOrderBook.bestAsk}
+      {/* Trading theme: always full height; overlay opens on top */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden trading-terminal relative">
+        {/* Expanded outer wrapper as overlay — click outside to close */}
+        <AnimatePresence>
+          {isOuterExpanded && (
+            <>
+              <motion.div
+                role="button"
+                tabIndex={0}
+                aria-label="Close header"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px]"
+                onClick={() => setIsOuterExpanded(false)}
+                onKeyDown={(e) => e.key === 'Escape' && setIsOuterExpanded(false)}
               />
-            </div>
-          </div>
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-navy-700/50 bg-navy-900/95 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Header />
+                <div className="flex justify-center py-1 bg-navy-800/50 border-t border-navy-700/50">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsOuterExpanded(false)}
+                  className="p-1.5 rounded-md text-navy-400 hover:text-white hover:bg-navy-700 transition-colors"
+                  title="Collapse header"
+                  aria-label="Collapse header"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </motion.button>
+              </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
-          {/* Right Column: Recent Trades + My Orders */}
-          <div className="col-span-12 lg:col-span-3 flex flex-col min-h-0 gap-2">
-            <div className="flex-1 min-h-0">
-              <RecentTrades trades={recentTrades} />
+        <div className="flex-1 p-2 overflow-hidden flex flex-col min-h-0">
+          <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
+            {/* Order Book - Takes 9 columns */}
+            <div className="col-span-12 lg:col-span-9 flex flex-col min-h-0">
+              <div className="flex-1 min-h-0">
+                <ProfessionalOrderBook
+                  bids={safeOrderBook.bids}
+                  asks={safeOrderBook.asks}
+                  spread={safeOrderBook.spread}
+                  bestBid={safeOrderBook.bestBid}
+                  bestAsk={safeOrderBook.bestAsk}
+                />
+              </div>
             </div>
-            <div className="h-40 flex-shrink-0">
-              <MyOrdersPro
-                orders={myOrders}
-                onCancelOrder={handleCancelOrder}
-              />
+
+            {/* Right Column: Place Order + Recent Trades + My Orders */}
+            <div className="col-span-12 lg:col-span-3 flex flex-col min-h-0 gap-2">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsOrderModalOpen(true)}
+                className="flex-shrink-0 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-500/20"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Place Order
+              </motion.button>
+              <div className="flex-1 min-h-0">
+                <RecentTrades trades={recentTrades} />
+              </div>
+              <div className="h-40 flex-shrink-0">
+                <MyOrdersPro
+                  orders={myOrders}
+                  onCancelOrder={handleCancelOrder}
+                />
+              </div>
             </div>
           </div>
         </div>

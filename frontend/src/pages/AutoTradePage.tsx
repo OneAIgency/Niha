@@ -737,10 +737,10 @@ export function AutoTradePage() {
 
   return (
     <BackofficeLayout>
-      <div className="min-h-screen bg-navy-950">
+      <div className="min-h-screen bg-navy-900">
         {/* Header */}
         <div className="border-b border-navy-800/50 bg-navy-900/30">
-          <div className="max-w-7xl mx-auto px-6 py-5">
+          <div className="page-container py-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/20">
@@ -787,7 +787,7 @@ export function AutoTradePage() {
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="page-container py-8">
           {/* Error Alert */}
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">

@@ -135,7 +135,7 @@ export function CashMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950 text-[11px]">
+    <div className="min-h-screen bg-navy-900 text-[11px]">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
@@ -228,7 +228,7 @@ export function CashMarketPage() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="page-container py-4">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
             <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />

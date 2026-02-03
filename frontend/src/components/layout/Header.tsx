@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette, Activity } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
-import { useAuthStore, usePricesStore, useUIStore } from '../../stores/useStore';
+import { useAuthStore, useUIStore } from '../../stores/useStore';
+import { usePrices } from '../../hooks/usePrices';
 import { cn } from '../../utils';
 import type { User as UserType } from '../../types';
 
@@ -22,7 +23,7 @@ export function Header() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { prices } = usePricesStore();
+  const { prices } = usePrices();
   const { theme } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -216,18 +217,6 @@ export function Header() {
 
                         {isAdmin && (
                           <>
-                            <button
-                              onClick={() => handleMenuItemClick('/auto-trade')}
-                              className={cn(
-                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
-                                isDark
-                                  ? 'text-navy-200 hover:bg-navy-700'
-                                  : 'text-navy-700 hover:bg-navy-50'
-                              )}
-                            >
-                              <Activity className="w-4 h-4" />
-                              Auto Trade
-                            </button>
                             <button
                               onClick={() => handleMenuItemClick('/settings')}
                               className={cn(

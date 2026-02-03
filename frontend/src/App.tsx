@@ -62,8 +62,7 @@ const EuEntitiesPage = lazy(() => import('./pages').then(m => ({ default: m.EuEn
 const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default: m.StrategicAdvantagePage })));
 const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
 const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
-const ThemePage = lazy(() => import('./pages').then(m => ({ default: m.ThemePage })));
-const ThemeContainersPage = lazy(() => import('./pages').then(m => ({ default: m.ThemeContainersPage })));
+const ThemeSectionPage = lazy(() => import('./pages').then(m => ({ default: m.ThemeSectionPage })));
 const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
 const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
@@ -410,7 +409,7 @@ function App() {
               }
             />
             <Route
-              path="/auto-trade"
+              path="/backoffice/auto-trade"
               element={
                 <AdminRoute>
                   <AutoTradePage />
@@ -463,9 +462,8 @@ function App() {
                 </AdminRoute>
               }
             >
-              <Route index element={<Navigate to="sample" replace />} />
-              <Route path="sample" element={<ThemePage />} />
-              <Route path="containers" element={<ThemeContainersPage />} />
+              <Route index element={<Navigate to="layout" replace />} />
+              <Route path=":section" element={<ThemeSectionPage />} />
             </Route>
 
             {/* Backoffice routes - same Layout (Header + Footer) as rest of site */}
