@@ -6,7 +6,7 @@ This is the ONLY place in the codebase that handles currency conversion.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Dict, Optional
 
@@ -138,7 +138,9 @@ class CurrencyService:
                     stale_threshold = timedelta(
                         minutes=source.scrape_interval_minutes * 2
                     )
-                    if datetime.utcnow() - source.last_scraped_at > stale_threshold:
+                    # Use naive UTC for comparison with DB timestamp
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    if now - source.last_scraped_at > stale_threshold:
                         logger.warning(f"Scraped rate for {from_currency} is stale")
                         return None
 
@@ -202,7 +204,7 @@ class CurrencyService:
 
                     # Cache the rates
                     await self._cache_rates(converted_rates)
-                    self._last_fetch = datetime.utcnow()
+                    self._last_fetch = datetime.now(timezone.utc)
                     self._fetch_count += 1
 
                     logger.info(f"Fetched fresh currency rates: {converted_rates}")

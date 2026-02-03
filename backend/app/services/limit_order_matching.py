@@ -14,7 +14,7 @@ Key principles:
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_DOWN
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -153,18 +153,18 @@ class LimitOrderMatcher:
                 certificate_type=incoming_order.certificate_type,
                 price=trade_price,
                 quantity=match_qty,
-                executed_at=datetime.utcnow(),
+                executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
             db.add(trade)
             await db.flush()  # Get trade ID
 
             # Update incoming order
             incoming_order.filled_quantity = incoming_order.filled_quantity + match_qty
-            incoming_order.updated_at = datetime.utcnow()
+            incoming_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             # Update contra order
             contra_order.filled_quantity = contra_order.filled_quantity + match_qty
-            contra_order.updated_at = datetime.utcnow()
+            contra_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             # Update order statuses
             if contra_order.filled_quantity >= contra_order.quantity:
@@ -352,7 +352,7 @@ class LimitOrderMatcher:
                     certificate_type=certificate_type,
                     price=trade_price,
                     quantity=match_qty,
-                    executed_at=datetime.utcnow(),
+                    executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 db.add(trade)
 
@@ -362,7 +362,7 @@ class LimitOrderMatcher:
                     buy_order.status = OrderStatus.FILLED
                 else:
                     buy_order.status = OrderStatus.PARTIALLY_FILLED
-                buy_order.updated_at = datetime.utcnow()
+                buy_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 # Update sell order
                 sell_order.filled_quantity = sell_order.filled_quantity + match_qty
@@ -370,7 +370,7 @@ class LimitOrderMatcher:
                     sell_order.status = OrderStatus.FILLED
                 else:
                     sell_order.status = OrderStatus.PARTIALLY_FILLED
-                sell_order.updated_at = datetime.utcnow()
+                sell_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 trades_created += 1
                 buy_remaining -= match_qty

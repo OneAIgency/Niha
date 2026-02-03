@@ -182,6 +182,25 @@ class LiquidityService:
         # Fallback to default
         return LiquidityService.DEFAULT_PRICES[certificate_type]
 
+    # Price step for CEA cash market (0.1 EUR)
+    PRICE_STEP = Decimal("0.1")
+
+    @staticmethod
+    def round_to_price_step(price: Decimal, side: OrderSide) -> Decimal:
+        """
+        Round price to the nearest 0.1 EUR step.
+
+        For BUY orders: round DOWN to ensure we don't bid higher than intended
+        For SELL orders: round UP to ensure we don't ask lower than intended
+        """
+        step = LiquidityService.PRICE_STEP
+        if side == OrderSide.BUY:
+            # Round down for bids
+            return (price / step).quantize(Decimal("1"), rounding="ROUND_DOWN") * step
+        else:
+            # Round up for asks
+            return (price / step).quantize(Decimal("1"), rounding="ROUND_UP") * step
+
     @staticmethod
     def generate_price_levels(
         reference_price: Decimal, side: OrderSide
@@ -196,24 +215,32 @@ class LiquidityService:
 
         Raises:
             ValueError: If reference_price <= 0
+
+        Note: All prices are rounded to 0.1 EUR step to comply with market rules.
         """
         if reference_price <= 0:
             raise ValueError(f"reference_price must be positive, got {reference_price}")
 
         if side == OrderSide.BUY:
             # BID levels: 0.2%, 0.4%, 0.5% below mid
-            levels = [
+            raw_levels = [
                 (reference_price * Decimal("0.998"), Decimal("0.5")),  # 50% volume
                 (reference_price * Decimal("0.996"), Decimal("0.3")),  # 30% volume
                 (reference_price * Decimal("0.995"), Decimal("0.2")),  # 20% volume
             ]
         else:  # SELL
             # ASK levels: 0.2%, 0.4%, 0.5% above mid
-            levels = [
+            raw_levels = [
                 (reference_price * Decimal("1.002"), Decimal("0.5")),  # 50% volume
                 (reference_price * Decimal("1.004"), Decimal("0.3")),  # 30% volume
                 (reference_price * Decimal("1.005"), Decimal("0.2")),  # 20% volume
             ]
+
+        # Round all prices to 0.1 EUR step
+        levels = [
+            (LiquidityService.round_to_price_step(price, side), pct)
+            for price, pct in raw_levels
+        ]
 
         return levels
 

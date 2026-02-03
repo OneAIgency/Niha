@@ -5,7 +5,7 @@ Runs periodically to advance settlement statuses based on timeline.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from sqlalchemy import and_, select
@@ -86,7 +86,7 @@ class SettlementProcessor:
     @staticmethod
     def _should_advance_status(settlement: SettlementBatch) -> bool:
         """Check if settlement should advance based on expected timeline."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Terminal statuses should never advance
         if settlement.status in [SettlementStatus.SETTLED, SettlementStatus.FAILED]:
@@ -183,7 +183,7 @@ class SettlementProcessor:
     async def _check_overdue_with_session(db: AsyncSession):
         """Internal method for checking overdue settlements"""
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             result = await db.execute(
                 select(SettlementBatch).where(

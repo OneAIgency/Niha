@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 import uuid
 from typing import List, Optional
@@ -16,9 +16,9 @@ from ..models.models import (
 class SwapService:
     @staticmethod
     def _generate_anonymous_code(length: int = 6) -> str:
-        """Generate a random anonymous code (e.g., SWAP-XYZ)"""
+        """Generate a cryptographically secure anonymous code (e.g., SWAP-XYZ)"""
         chars = string.ascii_uppercase + string.digits
-        suffix = ''.join(random.choices(chars, k=length))
+        suffix = ''.join(secrets.choice(chars) for _ in range(length))
         return f"SWAP-{suffix}"
 
     @staticmethod
@@ -74,22 +74,14 @@ class SwapService:
         
         query = select(SwapRequest).where(SwapRequest.status == SwapStatus.OPEN)
         
-        # Filter by direction (derived from types)
-        if direction:
-            if direction == "eua_to_cea":
-                query = query.where(
-                    and_(
-                        SwapRequest.from_type == CertificateType.EUA,
-                        SwapRequest.to_type == CertificateType.CEA
-                    )
+        # Filter by direction (only CEA → EUA swaps are supported)
+        if direction and direction == "cea_to_eua":
+            query = query.where(
+                and_(
+                    SwapRequest.from_type == CertificateType.CEA,
+                    SwapRequest.to_type == CertificateType.EUA
                 )
-            elif direction == "cea_to_eua":
-                query = query.where(
-                    and_(
-                        SwapRequest.from_type == CertificateType.CEA,
-                        SwapRequest.to_type == CertificateType.EUA
-                    )
-                )
+            )
 
         if min_quantity:
             query = query.where(SwapRequest.quantity >= min_quantity)

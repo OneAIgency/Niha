@@ -10,7 +10,7 @@ Handles all withdrawal operations including:
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 def generate_withdrawal_reference() -> str:
     """Generate unique internal reference for withdrawal"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     unique_id = str(uuid.uuid4())[:8].upper()
     return f"WD-{timestamp}-{unique_id}"
 
@@ -113,7 +113,7 @@ async def request_withdrawal(
         destination_account_id=destination_account_id,
         internal_reference=internal_reference,
         client_notes=client_notes,
-        requested_at=datetime.utcnow(),
+        requested_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(withdrawal)
 
@@ -253,10 +253,10 @@ async def approve_withdrawal(
 
     # Update status
     withdrawal.status = WithdrawalStatus.PROCESSING
-    withdrawal.processed_at = datetime.utcnow()
+    withdrawal.processed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     withdrawal.processed_by = admin_id
     withdrawal.admin_notes = admin_notes
-    withdrawal.updated_at = datetime.utcnow()
+    withdrawal.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.flush()
 
@@ -297,7 +297,7 @@ async def complete_withdrawal(
 
     # Update status
     withdrawal.status = WithdrawalStatus.COMPLETED
-    withdrawal.completed_at = datetime.utcnow()
+    withdrawal.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     withdrawal.completed_by = admin_id
     withdrawal.wire_reference = wire_reference
     if admin_notes:
@@ -306,7 +306,7 @@ async def complete_withdrawal(
             if withdrawal.admin_notes
             else admin_notes
         )
-    withdrawal.updated_at = datetime.utcnow()
+    withdrawal.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.flush()
 
@@ -361,7 +361,7 @@ async def reject_withdrawal(
 
     # Update status
     withdrawal.status = WithdrawalStatus.REJECTED
-    withdrawal.rejected_at = datetime.utcnow()
+    withdrawal.rejected_at = datetime.now(timezone.utc).replace(tzinfo=None)
     withdrawal.rejected_by = admin_id
     withdrawal.rejection_reason = rejection_reason
     if admin_notes:
@@ -370,7 +370,7 @@ async def reject_withdrawal(
             if withdrawal.admin_notes
             else admin_notes
         )
-    withdrawal.updated_at = datetime.utcnow()
+    withdrawal.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.flush()
 

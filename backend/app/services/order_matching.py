@@ -5,8 +5,11 @@ FIFO price-time priority matching engine for the CEA Cash market.
 Handles order preview, market orders, and limit orders with proper fee calculations.
 """
 
+import logging
 from dataclasses import dataclass
-from datetime import datetime
+
+logger = logging.getLogger(__name__)
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -131,6 +134,7 @@ class OrderPreviewResult:
     can_execute: bool
     execution_message: str
     partial_fill: bool
+    will_be_placed_in_book: bool = False  # True for LIMIT orders waiting in book
 
 
 async def normalize_order_price_to_eur(order: Order) -> Decimal:
@@ -205,7 +209,7 @@ async def update_entity_balance(
 
     if holding:
         holding.quantity = balance_after
-        holding.updated_at = datetime.utcnow()
+        holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         # Create new holding
         holding = EntityHolding(
@@ -270,6 +274,7 @@ async def preview_buy_order(
     amount_eur: Optional[Decimal] = None,
     quantity: Optional[Decimal] = None,
     limit_price: Optional[Decimal] = None,
+    order_type: str = "MARKET",
     all_or_none: bool = False,
 ) -> OrderPreviewResult:
     """
@@ -283,7 +288,8 @@ async def preview_buy_order(
         entity_id: Buyer's entity ID
         amount_eur: EUR amount to spend (mutually exclusive with quantity)
         quantity: CEA quantity to buy (mutually exclusive with amount_eur)
-        limit_price: Maximum price in CNY (for limit orders)
+        limit_price: Maximum price in EUR (for limit orders)
+        order_type: "MARKET" or "LIMIT" - affects behavior when no liquidity
         all_or_none: If True, only return fills if entire order can be matched
 
     Returns:
@@ -318,6 +324,31 @@ async def preview_buy_order(
     sell_orders = await get_cea_sell_orders(db, limit_price)
 
     if not sell_orders:
+        # For LIMIT orders without immediate liquidity, allow placement in order book
+        if order_type == "LIMIT" and limit_price is not None:
+            # Calculate estimated quantity based on limit price and amount
+            estimated_quantity = Decimal("0")
+            if amount_eur is not None:
+                # Estimate: quantity = amount / (price * (1 + fee))
+                estimated_quantity = amount_eur / (limit_price * (Decimal("1") + fee_rate))
+
+            return OrderPreviewResult(
+                fills=[],
+                total_quantity=estimated_quantity,
+                total_cost_gross=amount_eur if amount_eur else Decimal("0"),
+                weighted_avg_price=limit_price,
+                best_price=None,
+                worst_price=None,
+                platform_fee_amount=(amount_eur * fee_rate) if amount_eur else Decimal("0"),
+                total_cost_net=amount_eur * (Decimal("1") + fee_rate) if amount_eur else Decimal("0"),
+                net_price_per_unit=limit_price * (Decimal("1") + fee_rate),
+                can_execute=True,  # Can place in book
+                execution_message=f"Order will be placed in order book at €{limit_price:.2f}",
+                partial_fill=False,
+                will_be_placed_in_book=True,
+            )
+
+        # MARKET orders without liquidity cannot execute
         return OrderPreviewResult(
             fills=[],
             total_quantity=Decimal("0"),
@@ -588,9 +619,14 @@ async def execute_market_buy_order(
             certificate_type=CertificateType.CEA,
             price=fill.price,
             quantity=fill.quantity,
-            executed_at=datetime.utcnow(),
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(trade)
+
+        logger.info(
+            f"Trade executed: buyer_order={buy_order.id}, seller_order={sell_order.id}, "
+            f"qty={fill.quantity}, price={fill.price} EUR, cost={fill.cost_eur} EUR"
+        )
 
         # Update sell order
         sell_order.filled_quantity = (
@@ -600,7 +636,7 @@ async def execute_market_buy_order(
             sell_order.status = OrderStatus.FILLED
         else:
             sell_order.status = OrderStatus.PARTIALLY_FILLED
-        sell_order.updated_at = datetime.utcnow()
+        sell_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Update seller stats (only for legacy sellers, not Market Makers)
         if sell_order.seller_id:

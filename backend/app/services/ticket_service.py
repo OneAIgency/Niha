@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
@@ -23,7 +23,7 @@ class TicketService:
         Generate unique ticket ID: TKT-YYYY-NNNNNN
         Uses Redis counter for atomic increment
         """
-        year = datetime.utcnow().year
+        year = datetime.now(timezone.utc).year
         redis = await RedisManager.get_redis()
 
         # Atomic increment counter for this year
@@ -59,9 +59,10 @@ class TicketService:
         """Create audit ticket"""
         ticket_id = await TicketService.generate_ticket_id()
 
+        # Naive UTC for Column(DateTime) / TIMESTAMP WITHOUT TIME ZONE (asyncpg)
         ticket = TicketLog(
             ticket_id=ticket_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc).replace(tzinfo=None),
             user_id=user_id,
             market_maker_id=market_maker_id,
             action_type=action_type,

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
@@ -36,7 +36,7 @@ class PriceScraper:
     def __init__(self):
         self.last_eua_price = self.BASE_EUA_EUR
         self.last_cea_price = self.BASE_CEA_EUR
-        self.last_update = datetime.utcnow()
+        self.last_update = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def _apply_variance(self, base_price: float, max_variance: float = 0.02) -> float:
         """Apply realistic price variance (±2% by default)"""
@@ -365,7 +365,8 @@ class PriceScraper:
 
         try:
             price = await self.scrape_source(source)
-            now = datetime.utcnow()
+            # Naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             if price:
                 price_decimal = Decimal(str(price))
@@ -442,7 +443,7 @@ class PriceScraper:
                 raise Exception("No price found")
 
         except asyncio.TimeoutError as e:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             await db.execute(
                 update(ScrapingSource)
                 .where(ScrapingSource.id == source.id)
@@ -454,7 +455,7 @@ class PriceScraper:
             await db.commit()
             raise Exception("Scrape timeout") from e
         except Exception:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             try:
                 await db.execute(
                     update(ScrapingSource)
@@ -535,7 +536,7 @@ class PriceScraper:
                         "change_24h": float(cached.get("cea_change", 0)),
                     },
                     "updated_at": cached.get(
-                        "updated_at", datetime.utcnow().isoformat()
+                        "updated_at", datetime.now(timezone.utc).isoformat()
                     ),
                 }
 
@@ -554,7 +555,7 @@ class PriceScraper:
         eua_change = round(random.uniform(-3, 3), 2)
         cea_change = round(random.uniform(-2, 2), 2)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         prices = {
             "eua": {
@@ -594,7 +595,7 @@ class PriceScraper:
         from sqlalchemy import select
 
         days = hours // 24
-        start_date = datetime.utcnow() - timedelta(days=max(days, 1))
+        start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=max(days, 1))
 
         eua_data = []
         cea_data = []
@@ -671,7 +672,7 @@ class PriceScraper:
             else self.BASE_CEA_EUR
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         for i in range(days, -1, -1):
             timestamp = now - timedelta(days=i)
             eua_data.append({"price": base_eua_eur, "timestamp": timestamp.isoformat()})
@@ -783,7 +784,8 @@ class PriceScraper:
 
         try:
             rate = await self.scrape_exchange_rate(source)
-            now = datetime.utcnow()
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             if rate:
                 rate_decimal = Decimal(str(rate))
@@ -811,7 +813,7 @@ class PriceScraper:
                 await db.commit()
                 raise Exception("No rate found")
         except asyncio.TimeoutError as e:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             await db.execute(
                 update(ExchangeRateSource)
                 .where(ExchangeRateSource.id == source.id)
@@ -823,7 +825,7 @@ class PriceScraper:
             await db.commit()
             raise Exception("Exchange rate scrape timeout") from e
         except Exception:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             try:
                 await db.execute(
                     update(ExchangeRateSource)

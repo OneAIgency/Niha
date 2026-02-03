@@ -5,7 +5,7 @@ Shared utilities for entity balance management.
 Moved from order_matching to avoid circular imports.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -69,7 +69,7 @@ async def update_entity_balance(
 
     if holding:
         holding.quantity = balance_after
-        holding.updated_at = datetime.utcnow()
+        holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         # Create new holding
         holding = EntityHolding(
