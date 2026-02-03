@@ -120,7 +120,7 @@ async def lifespan(app: FastAPI):
     # Price scraping scheduler
     async def price_scraping_scheduler_loop():
         """Run price scraping based on each source's configured interval"""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         from sqlalchemy import select
 
@@ -141,7 +141,7 @@ async def lifespan(app: FastAPI):
                     )
                     sources = result.scalars().all()
 
-                    now = datetime.utcnow()
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
                     for source in sources:
                         # Check if it's time to scrape based on configured interval
                         if source.last_scrape_at is None:
@@ -173,7 +173,7 @@ async def lifespan(app: FastAPI):
     # Exchange rate scraping scheduler
     async def exchange_rate_scraping_scheduler_loop():
         """Run exchange rate scraping based on each source's configured interval"""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         from sqlalchemy import select
 
@@ -194,7 +194,8 @@ async def lifespan(app: FastAPI):
                     )
                     sources = result.scalars().all()
 
-                    now = datetime.utcnow()
+                    # Use naive UTC for comparison with DB timestamps
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
                     for source in sources:
                         # Check if it's time to scrape based on configured interval
                         if source.last_scraped_at is None:
@@ -236,8 +237,8 @@ async def lifespan(app: FastAPI):
 
         from .models.models import User, UserRole
 
-        # Wait 60 seconds on startup before first check
-        await asyncio.sleep(60)
+        # Wait 10 seconds on startup before first check
+        await asyncio.sleep(10)
 
         while True:
             try:
@@ -260,8 +261,8 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"Auto-trade executor error: {e}", exc_info=True)
 
-            # Check every 30 seconds for rules ready to execute
-            await asyncio.sleep(30)
+            # Check every 5 seconds for rules ready to execute (supports 10-20 sec intervals)
+            await asyncio.sleep(5)
 
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())

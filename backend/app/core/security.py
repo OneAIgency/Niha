@@ -83,12 +83,11 @@ def generate_magic_link_token() -> str:
 
 
 def generate_anonymous_code() -> str:
-    """Generate anonymous seller code like 'ZH-847291'"""
-    import random
+    """Generate cryptographically secure anonymous seller code like 'ZH-847291'"""
     import string
 
-    letters = "".join(random.choices(string.ascii_uppercase, k=2))
-    numbers = "".join(random.choices(string.digits, k=6))
+    letters = "".join(secrets.choice(string.ascii_uppercase) for _ in range(2))
+    numbers = "".join(secrets.choice(string.digits) for _ in range(6))
     return f"{letters}-{numbers}"
 
 
@@ -109,30 +108,121 @@ class RedisManager:
 
     @classmethod
     async def store_magic_link(cls, token: str, email: str):
-        r = await cls.get_redis()
-        await r.setex(
-            f"magic_link:{token}", settings.MAGIC_LINK_EXPIRE_MINUTES * 60, email
-        )
+        try:
+            r = await cls.get_redis()
+            await r.setex(
+                f"magic_link:{token}", settings.MAGIC_LINK_EXPIRE_MINUTES * 60, email
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to store magic link (Redis unavailable): {e}")
+            raise  # Magic links require Redis, so we must raise here
 
     @classmethod
     async def verify_magic_link(cls, token: str) -> Optional[str]:
-        r = await cls.get_redis()
-        email = await r.get(f"magic_link:{token}")
-        if email:
-            await r.delete(f"magic_link:{token}")  # One-time use
-        return email
+        try:
+            r = await cls.get_redis()
+            email = await r.get(f"magic_link:{token}")
+            if email:
+                await r.delete(f"magic_link:{token}")  # One-time use
+            return email
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to verify magic link (Redis unavailable): {e}")
+            return None
 
     @classmethod
     async def cache_prices(cls, prices: dict):
-        r = await cls.get_redis()
-        await r.hset("carbon_prices", mapping=prices)
-        await r.expire("carbon_prices", 600)  # 10 min cache
+        try:
+            r = await cls.get_redis()
+            await r.hset("carbon_prices", mapping=prices)
+            await r.expire("carbon_prices", 600)  # 10 min cache
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to cache prices (Redis unavailable): {e}")
 
     @classmethod
     async def get_cached_prices(cls) -> Optional[dict]:
-        r = await cls.get_redis()
-        prices = await r.hgetall("carbon_prices")
-        return prices if prices else None
+        try:
+            r = await cls.get_redis()
+            prices = await r.hgetall("carbon_prices")
+            return prices if prices else None
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to get cached prices (Redis unavailable): {e}")
+            return None
+
+    @classmethod
+    async def blacklist_token(cls, token: str, expires_in_seconds: int):
+        """
+        Add a JWT token to the blacklist.
+        Token will be automatically removed after expiration.
+        """
+        try:
+            r = await cls.get_redis()
+            await r.setex(f"token_blacklist:{token}", expires_in_seconds, "1")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to blacklist token (Redis unavailable): {e}")
+
+    @classmethod
+    async def is_token_blacklisted(cls, token: str) -> bool:
+        """Check if a token has been blacklisted (logged out).
+        Returns False if Redis is unavailable (fail open for availability).
+        """
+        try:
+            r = await cls.get_redis()
+            return await r.exists(f"token_blacklist:{token}") > 0
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to check token blacklist (Redis unavailable): {e}")
+            return False  # Fail open - allow login if Redis is down
+
+    @classmethod
+    async def check_rate_limit(
+        cls,
+        key: str,
+        max_requests: int,
+        window_seconds: int
+    ) -> tuple[bool, int]:
+        """
+        Check if a rate limit has been exceeded using sliding window.
+
+        Args:
+            key: Unique identifier (e.g., IP address, user ID)
+            max_requests: Maximum number of requests allowed in window
+            window_seconds: Time window in seconds
+
+        Returns:
+            Tuple of (allowed: bool, remaining: int)
+            Returns (True, max_requests) if Redis is unavailable (fail open).
+        """
+        try:
+            r = await cls.get_redis()
+            redis_key = f"rate_limit:{key}"
+
+            # Get current count
+            current = await r.get(redis_key)
+
+            if current is None:
+                # First request in window
+                await r.setex(redis_key, window_seconds, 1)
+                return True, max_requests - 1
+
+            current_count = int(current)
+
+            if current_count >= max_requests:
+                # Rate limit exceeded
+                return False, 0
+
+            # Increment counter
+            await r.incr(redis_key)
+            return True, max_requests - current_count - 1
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Rate limit check failed (Redis unavailable): {e}")
+            # Fail open - allow request if Redis is down
+            return True, max_requests
 
 
 # Dependency to get current user from JWT token
@@ -142,6 +232,7 @@ async def get_current_user(
     """
     Extract and validate JWT token to get current user.
     Returns user data from token payload.
+    Checks token blacklist for logged-out tokens.
     """
     from ..models.models import User
     from .database import AsyncSessionLocal
@@ -157,6 +248,15 @@ async def get_current_user(
         raise credentials_exception
 
     token = credentials.credentials
+
+    # Check if token is blacklisted (logged out)
+    if await RedisManager.is_token_blacklisted(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been invalidated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = verify_token(token)
 
     if payload is None:
