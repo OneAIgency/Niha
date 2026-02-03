@@ -25,6 +25,7 @@ import {
   Table2,
   Layers,
   Loader2,
+  Menu,
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
 import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
@@ -145,10 +146,135 @@ export function ThemePage() {
             Every page follows this structure. Fixed header and subheader, optional sticky subsubheader, then page content.
           </p>
 
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* HEADER ANATOMY */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-emerald-500 flex items-center justify-center text-xs font-bold">1</span>
+              Header
+            </h3>
+            <p className={`text-sm ${textSecondary} mb-4`}>
+              Fixed at top, z-50, height h-16 (mobile) / h-20 (desktop). Contains logo, price ticker, navigation, and user menu.
+            </p>
+
+            {/* Header Visual */}
+            <div className="rounded-xl border-2 border-emerald-500/50 overflow-hidden bg-navy-900/80 backdrop-blur-lg">
+              {/* Actual Header Mockup */}
+              <div className="px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16 md:h-20">
+                  {/* Logo */}
+                  <div className="flex-shrink-0 flex items-center gap-1 group">
+                    <span className="text-xl font-bold text-white">NIHAO</span>
+                    <span className="text-xl font-bold text-emerald-400">GROUP</span>
+                    <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Logo</span>
+                  </div>
+
+                  {/* Price Ticker (Desktop) */}
+                  <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-lg bg-navy-800/50 border border-navy-700">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-blue-400">E</span>
+                      </div>
+                      <span className="text-sm font-medium text-white">€72.45</span>
+                      <span className="text-xs text-emerald-400">+1.2%</span>
+                    </div>
+                    <div className="w-px h-4 bg-navy-600" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-amber-400">C</span>
+                      </div>
+                      <span className="text-sm font-medium text-white">€48.30</span>
+                      <span className="text-xs text-red-400">-0.5%</span>
+                    </div>
+                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">PriceTicker</span>
+                  </div>
+
+                  {/* Desktop Navigation */}
+                  <nav className="hidden md:flex items-center gap-6">
+                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Dashboard</span>
+                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Funding</span>
+                    <span className="text-sm font-medium text-white cursor-pointer">CEA Cash</span>
+                    <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Swap</span>
+                    <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium">Nav Links</span>
+
+                    {/* User Dropdown */}
+                    <div className="relative flex items-center gap-2 p-1 rounded-full">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                        AU
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-white" />
+                      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">User Dropdown</span>
+                    </div>
+                  </nav>
+
+                  {/* Mobile menu button */}
+                  <div className="md:hidden">
+                    <div className="p-2 rounded-lg border border-navy-700">
+                      <Menu className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium mt-1 block text-center">Mobile</span>
+                  </div>
+                </div>
+              </div>
+              {/* Border indicator */}
+              <div className="h-px bg-navy-700" />
+            </div>
+
+            {/* Header Specs */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Position</p>
+                <code className="text-sm text-emerald-400">fixed top-0 left-0 right-0</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Z-Index</p>
+                <code className="text-sm text-emerald-400">z-50</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Height</p>
+                <code className="text-sm text-emerald-400">h-16 md:h-20</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Background</p>
+                <code className="text-sm text-emerald-400">bg-navy-900/80 backdrop-blur-lg</code>
+              </div>
+            </div>
+
+            {/* Header Components */}
+            <div className="mt-4 p-4 rounded-lg bg-navy-800/30 border border-navy-700">
+              <p className="text-xs text-navy-400 mb-3 uppercase tracking-wider">Header Components</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-400">
+                  <code>&lt;Logo /&gt;</code>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/30 text-sm text-blue-400">
+                  <code>&lt;PriceTicker /&gt;</code>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                  <code>navLinks[]</code>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                  <code>UserDropdown</code>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* FULL PAGE LAYOUT VISUAL */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-navy-600 flex items-center justify-center text-xs font-bold">∑</span>
+              Full Page Structure
+            </h3>
+          </div>
+
           {/* Visual Layout Mockup */}
           <div className="rounded-2xl border-2 border-navy-600 overflow-hidden bg-navy-900/50">
-            {/* HEADER */}
-            <div className="bg-navy-900 border-b-2 border-navy-700 px-4 py-3">
+            {/* HEADER (simplified) */}
+            <div className="bg-navy-900 border-b-2 border-emerald-500/50 px-4 py-3 relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-1">
@@ -165,7 +291,7 @@ export function ThemePage() {
                 <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">U</div>
               </div>
               <div className="absolute -right-2 top-1/2 -translate-y-1/2 bg-emerald-500 text-white text-xs px-2 py-1 rounded-l font-medium hidden lg:block">
-                HEADER (fixed)
+                HEADER (fixed, z-50)
               </div>
             </div>
 
