@@ -63,16 +63,16 @@ export interface SwapCalculation {
   input: {
     type: CertificateType;
     quantity: number;
-    value_usd: number;
+    value_eur: number;
   };
   output: {
     type: CertificateType;
     quantity: number;
-    value_usd: number;
+    value_eur: number;
   };
   rate: number;
   fee_pct: number;
-  fee_usd: number;
+  fee_eur: number;
 }
 
 // User Types
@@ -155,6 +155,8 @@ export interface ScrapingSource {
   scrape_interval_minutes: number;
   last_scrape_at?: string;
   last_scrape_status?: 'success' | 'failed' | 'timeout';
+  /** Set by API response (camelCase); use with last_scrape_status for display. */
+  lastScrapeStatus?: 'success' | 'failed' | 'timeout';
   last_price?: number;
   lastPriceEur?: number;  // EUR-converted price (for CEA)
   lastExchangeRate?: number;  // EUR/CNY rate used for conversion
@@ -483,48 +485,76 @@ export type RejectionReason =
 export interface Deposit {
   id: string;
   entity_id: string;
+  entityId?: string;  // camelCase variant
   entity_name?: string;
+  entityName?: string;  // camelCase variant
   user_id?: string;
+  userId?: string;  // camelCase variant
   user_email?: string;
+  userEmail?: string;  // camelCase variant
 
-  // Reported by client
+  // Reported by client (snake_case from backend, camelCase from interceptor)
   reported_amount?: number;
+  reportedAmount?: number;  // camelCase variant
   reported_currency?: Currency;
+  reportedCurrency?: Currency;  // camelCase variant
   source_bank?: string;
+  sourceBank?: string;  // camelCase variant
   source_iban?: string;
+  sourceIban?: string;  // camelCase variant
   source_swift?: string;
+  sourceSwift?: string;  // camelCase variant
   client_notes?: string;
+  clientNotes?: string;  // camelCase variant
 
   // Confirmed by admin
   amount?: number;
   currency?: Currency;
   wire_reference?: string;
+  wireReference?: string;  // camelCase variant
   bank_reference?: string;
+  bankReference?: string;  // camelCase variant
 
   // Status
   status: DepositStatus;
   /** Reporting user's role (client status); FUNDING when announced. API returns snake_case; interceptor may camelCase. */
   user_role?: string;
-  userRole?: string;
+  userRole?: string;  // camelCase variant
   aml_status?: AMLStatus;
+  amlStatus?: AMLStatus;  // camelCase variant
   hold_type?: HoldType;
+  holdType?: HoldType;  // camelCase variant
   hold_days_required?: number;
+  holdDaysRequired?: number;  // camelCase variant
   hold_expires_at?: string;
+  holdExpiresAt?: string;  // camelCase variant
 
-  // Timestamps
+  // Timestamps (snake_case from backend, camelCase from interceptor)
   reported_at?: string;
+  reportedAt?: string;  // camelCase variant
   confirmed_at?: string;
+  confirmedAt?: string;  // camelCase variant
   cleared_at?: string;
+  clearedAt?: string;  // camelCase variant
   rejected_at?: string;
+  rejectedAt?: string;  // camelCase variant
 
   // Audit trail
   confirmed_by?: string;
+  confirmedBy?: string;  // camelCase variant
   cleared_by?: string;
+  clearedBy?: string;  // camelCase variant
   rejected_by?: string;
+  rejectedBy?: string;  // camelCase variant
   rejection_reason?: string;
+  rejectionReason?: string;  // camelCase variant
   admin_notes?: string;
+  adminNotes?: string;  // camelCase variant
   notes?: string;
+  ticket_id?: string;
+  ticketId?: string;  // camelCase variant
   created_at: string;
+  createdAt?: string;  // camelCase variant
 }
 
 export interface DepositCreate {
@@ -602,6 +632,15 @@ export interface EntityBalance {
   balance_currency?: Currency;
   total_deposited: number;
   deposit_count: number;
+}
+
+/**
+ * Entity balances for all asset types (admin testing tools)
+ */
+export interface EntityBalances {
+  eur: number;
+  cea: number;
+  eua: number;
 }
 
 // =============================================================================
@@ -762,29 +801,29 @@ export type SettlementType = 'CEA_PURCHASE' | 'SWAP_CEA_TO_EUA';
 
 export interface SettlementBatch {
   id: string;
-  batch_reference: string;
-  settlement_type: SettlementType;
+  batchReference: string;
+  settlementType: SettlementType;
   status: SettlementStatus;
-  asset_type: 'CEA' | 'EUA';
+  assetType: 'CEA' | 'EUA';
   quantity: number;
   price: number;
-  total_value_eur: number;
-  expected_settlement_date: string;
-  actual_settlement_date: string | null;
-  progress_percent?: number;
-  registry_reference?: string;
+  totalValueEur: number;
+  expectedSettlementDate: string;
+  actualSettlementDate: string | null;
+  progressPercent?: number;
+  registryReference?: string;
   notes?: string;
   timeline?: SettlementStatusHistory[];
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SettlementStatusHistory {
   id: string;
-  settlement_batch_id: string;
+  settlementBatchId: string;
   status: SettlementStatus;
   notes?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 // =============================================================================
@@ -965,4 +1004,75 @@ export interface MarketMakerOrder {
 export interface MarketMakerOrderUpdate {
   price?: number;
   quantity?: number;
+}
+
+// Auto Trade Settings Types
+export interface AutoTradeSettings {
+  id: string;
+  certificateType: string;
+  maxAskLiquidity: number | null;
+  maxBidLiquidity: number | null;
+  liquidityLimitEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutoTradeSettingsUpdate {
+  targetAskLiquidity?: number | null;
+  targetBidLiquidity?: number | null;
+  liquidityLimitEnabled?: boolean;
+}
+
+export interface LiquidityStatus {
+  certificateType: string;
+  askLiquidity: number;
+  bidLiquidity: number;
+  targetAskLiquidity: number | null;
+  targetBidLiquidity: number | null;
+  askPercentage: number | null;
+  bidPercentage: number | null;
+  liquidityLimitEnabled: boolean;
+}
+
+// Per-market-side auto trade settings
+export interface MarketMakerSummary {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface AutoTradeMarketSettings {
+  id: string;
+  marketKey: string;  // 'CEA_BID', 'CEA_ASK', 'EUA_SWAP'
+  enabled: boolean;
+  targetLiquidity: number | null;
+  priceDeviationPct: number;  // Percentage deviation from best price
+  avgOrderCount: number;  // Average number of orders to maintain
+  minOrderVolumeEur: number;  // Minimum order volume in EUR
+  volumeVariety: number;  // 1-10 scale for volume diversity
+  intervalSeconds: number;  // Order placement interval in seconds
+  maxLiquidityThreshold: number | null;  // Trigger internal trades above this EUR value
+  internalTradeInterval: number | null;  // Interval for internal trades when at target (seconds)
+  internalTradeVolumeMin: number | null;  // Min volume per internal trade (EUR)
+  internalTradeVolumeMax: number | null;  // Max volume per internal trade (EUR)
+  createdAt: string;
+  updatedAt: string;
+  marketMakers: MarketMakerSummary[];
+  currentLiquidity: number | null;
+  liquidityPercentage: number | null;
+  isOnline: boolean;  // Whether the auto-trader is actively running
+}
+
+export interface AutoTradeMarketSettingsUpdate {
+  enabled?: boolean;
+  target_liquidity?: number | null;  // snake_case for backend
+  price_deviation_pct?: number;
+  avg_order_count?: number;
+  min_order_volume_eur?: number;
+  volume_variety?: number;
+  interval_seconds?: number;
+  max_liquidity_threshold?: number | null;
+  internal_trade_interval?: number | null;
+  internal_trade_volume_min?: number | null;
+  internal_trade_volume_max?: number | null;
 }

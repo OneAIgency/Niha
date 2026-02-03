@@ -1,6 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -339,6 +340,9 @@ class MarketMakerClient(Base):
     eur_balance = Column(
         Numeric(18, 2), default=0, nullable=False
     )  # For Liquidity Providers
+    eua_balance = Column(
+        Numeric(18, 2), default=0, nullable=False
+    )  # EUA balance for EUA_OFFER market makers
 
     @property
     def market(self) -> MarketType:
@@ -404,7 +408,7 @@ class Certificate(Base):
     unit_price = Column(Numeric(18, 4), nullable=False)
     vintage_year = Column(Integer)
     status = Column(SQLEnum(CertificateStatus), default=CertificateStatus.AVAILABLE)
-    anonymous_code = Column(String(10), unique=True, nullable=False)
+    anonymous_code = Column(String(20), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -448,7 +452,7 @@ class SwapRequest(Base):
     matched_with = Column(
         UUID(as_uuid=True), ForeignKey("swap_requests.id"), nullable=True
     )
-    anonymous_code = Column(String(10), unique=True, nullable=False)
+    anonymous_code = Column(String(20), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -773,6 +777,9 @@ class Deposit(Base):
     notes = Column(Text, nullable=True)  # Legacy admin notes
     admin_notes = Column(Text, nullable=True)  # Detailed admin notes
     client_notes = Column(Text, nullable=True)  # Notes from client
+
+    # Ticket tracking
+    ticket_id = Column(String(50), nullable=True)  # Ticket ID for the deposit announcement
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1218,11 +1225,15 @@ class AutoTradeRule(Base):
     min_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
     max_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
 
-    # Timing
+    # Timing (supports both minutes and seconds - seconds take precedence if set)
     interval_mode = Column(String(20), nullable=False, default="fixed")  # 'fixed' or 'random'
-    interval_minutes = Column(Integer, nullable=False, default=5)  # Used when interval_mode='fixed'
-    interval_min_minutes = Column(Integer, nullable=True)  # Min interval when mode='random'
-    interval_max_minutes = Column(Integer, nullable=True)  # Max interval when mode='random'
+    interval_minutes = Column(Integer, nullable=False, default=5)  # Used when interval_mode='fixed' (legacy)
+    interval_min_minutes = Column(Integer, nullable=True)  # Min interval when mode='random' (legacy)
+    interval_max_minutes = Column(Integer, nullable=True)  # Max interval when mode='random' (legacy)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds = Column(Integer, nullable=True, default=60)  # Used when interval_mode='fixed'
+    interval_min_seconds = Column(Integer, nullable=True)  # Min interval when mode='random'
+    interval_max_seconds = Column(Integer, nullable=True)  # Max interval when mode='random'
 
     # Conditions
     min_balance = Column(Numeric(18, 2), nullable=True)  # Min balance required to place order
@@ -1239,6 +1250,96 @@ class AutoTradeRule(Base):
 
     # Relationships
     market_maker = relationship("MarketMakerClient", back_populates="auto_trade_rules")
+
+
+class AutoTradeSettings(Base):
+    """
+    Global auto-trade settings per certificate type (legacy).
+    Controls target liquidity levels - auto-trade maintains liquidity at target.
+    Below target: places new orders to refill.
+    Above target: executes internal trades to consume excess.
+    """
+
+    __tablename__ = "auto_trade_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    certificate_type = Column(String(10), nullable=False, unique=True)  # 'CEA' or 'EUA'
+
+    # Target liquidity in EUR (total value = price * quantity for all open orders)
+    target_ask_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on SELL side
+    target_bid_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on BUY side
+
+    # Enable/disable liquidity management
+    liquidity_limit_enabled = Column(Boolean, default=True, nullable=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+
+
+class AutoTradeMarketSettings(Base):
+    """
+    Per-market-side auto-trade settings.
+    Markets: CEA_BID (buyers), CEA_ASK (sellers), EUA_SWAP (swappers)
+
+    Controls:
+    - Target liquidity level
+    - Price deviation from best price
+    - Average number of orders
+    - Min order volume
+    - Volume variety (1-10 scale)
+    """
+
+    __tablename__ = "auto_trade_market_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market_key = Column(String(20), nullable=False, unique=True)  # 'CEA_BID', 'CEA_ASK', 'EUA_SWAP'
+
+    # Enable/disable this market's auto-trade
+    enabled = Column(Boolean, default=True, nullable=False)
+
+    # Target liquidity in EUR
+    target_liquidity = Column(Numeric(18, 2), nullable=True)
+
+    # Price deviation from best price (percentage, e.g., 0.5 = 0.5%)
+    price_deviation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("0.5"))
+
+    # Average number of orders to maintain in the book
+    avg_order_count = Column(Integer, nullable=False, default=10)
+
+    # Minimum volume per order in EUR
+    min_order_volume_eur = Column(Numeric(18, 2), nullable=False, default=Decimal("1000"))
+
+    # Volume variety indicator (1-10)
+    # 1 = orders close to min volume (uniform)
+    # 10 = very diverse order sizes
+    volume_variety = Column(Integer, nullable=False, default=5)
+
+    # Order placement interval in seconds
+    interval_seconds = Column(Integer, nullable=False, default=60)
+
+    # Max liquidity threshold in EUR - if exceeded, execute internal trades to reduce
+    max_liquidity_threshold = Column(Numeric(18, 2), nullable=True)
+
+    # Internal trade settings (when liquidity is at target)
+    # Interval in seconds for internal trades
+    internal_trade_interval = Column(Integer, nullable=True)
+    # Min volume per internal trade in EUR
+    internal_trade_volume_min = Column(Numeric(18, 2), nullable=True)
+    # Max volume per internal trade in EUR
+    internal_trade_volume_max = Column(Numeric(18, 2), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 class MailProvider(str, enum.Enum):

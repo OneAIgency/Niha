@@ -190,6 +190,18 @@ class PasswordLoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class SetupPasswordRequest(BaseModel):
+    """Request body for password setup from invitation link."""
+    token: str
+    password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request body for admin reset operations requiring password confirmation."""
+    password: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -673,6 +685,7 @@ class OrderPreviewResponse(BaseModel):
     can_execute: bool
     execution_message: str
     partial_fill: bool = False  # True if order would only partially fill
+    will_be_placed_in_book: bool = False  # True for LIMIT orders that will wait in order book
 
 
 class MarketOrderRequest(BaseModel):
@@ -1303,9 +1316,13 @@ class AutoTradeRuleCreate(BaseModel):
 
     # Timing
     interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$")
-    interval_minutes: int = Field(default=5, ge=1, le=1440)  # Used when interval_mode='fixed'
-    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Min interval when mode='random'
-    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Max interval when mode='random'
+    interval_minutes: int = Field(default=5, ge=1, le=1440)  # Used when interval_mode='fixed' (legacy)
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Min interval when mode='random' (legacy)
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Max interval when mode='random' (legacy)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)  # 5 sec to 24 hours
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
 
     # Conditions
     min_balance: Optional[Decimal] = Field(None, ge=0)
@@ -1339,6 +1356,10 @@ class AutoTradeRuleUpdate(BaseModel):
     interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
     interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)
     interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
 
     # Conditions
     min_balance: Optional[Decimal] = Field(None, ge=0)
@@ -1374,6 +1395,10 @@ class AutoTradeRuleResponse(BaseModel):
     interval_minutes: int
     interval_min_minutes: Optional[int]
     interval_max_minutes: Optional[int]
+    # Seconds-based intervals
+    interval_seconds: Optional[int]
+    interval_min_seconds: Optional[int]
+    interval_max_seconds: Optional[int]
 
     # Conditions
     min_balance: Optional[Decimal]
@@ -1401,6 +1426,98 @@ class AutoTradeConfigResponse(BaseModel):
 class AutoTradeConfigUpdate(BaseModel):
     """Update the global enabled state for auto trade"""
     enabled: bool
+
+
+# Auto Trade Settings Schemas (Global Liquidity Targets)
+class AutoTradeSettingsResponse(BaseModel):
+    """Response for auto trade global settings"""
+    id: UUID
+    certificate_type: str
+    target_ask_liquidity: Optional[Decimal] = None
+    target_bid_liquidity: Optional[Decimal] = None
+    liquidity_limit_enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeSettingsUpdate(BaseModel):
+    """Update auto trade global settings"""
+    target_ask_liquidity: Optional[Decimal] = Field(None, ge=0)
+    target_bid_liquidity: Optional[Decimal] = Field(None, ge=0)
+    liquidity_limit_enabled: Optional[bool] = None
+
+
+class LiquidityStatusResponse(BaseModel):
+    """Current liquidity status for a certificate type"""
+    certificate_type: str
+    ask_liquidity: Decimal  # Current EUR value of SELL orders
+    bid_liquidity: Decimal  # Current EUR value of BUY orders
+    target_ask_liquidity: Optional[Decimal]  # Target level
+    target_bid_liquidity: Optional[Decimal]  # Target level
+    ask_percentage: Optional[Decimal]  # Current % of target (null if no target)
+    bid_percentage: Optional[Decimal]  # Current % of target (null if no target)
+    liquidity_limit_enabled: bool
+
+
+# Auto Trade Market Settings Schemas (Per-market-side settings)
+class MarketMakerSummary(BaseModel):
+    """Summary of a market maker for display"""
+    id: UUID
+    name: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeMarketSettingsResponse(BaseModel):
+    """Response for per-market-side auto trade settings"""
+    id: UUID
+    market_key: str  # 'CEA_BID', 'CEA_ASK', 'EUA_SWAP'
+    enabled: bool
+    target_liquidity: Optional[Decimal]
+    price_deviation_pct: Decimal  # Percentage deviation from best price
+    avg_order_count: int  # Average number of orders to maintain
+    min_order_volume_eur: Decimal  # Minimum order volume in EUR
+    volume_variety: int  # 1-10 scale for volume diversity
+    interval_seconds: int = 60  # Order placement interval in seconds
+    max_liquidity_threshold: Optional[Decimal] = None  # Trigger internal trades above this
+    internal_trade_interval: Optional[int] = None  # Interval for internal trades when at target
+    internal_trade_volume_min: Optional[Decimal] = None  # Min volume per internal trade (EUR)
+    internal_trade_volume_max: Optional[Decimal] = None  # Max volume per internal trade (EUR)
+    created_at: datetime
+    updated_at: datetime
+
+    # Associated market makers
+    market_makers: List[MarketMakerSummary] = []
+
+    # Current liquidity status
+    current_liquidity: Optional[Decimal] = None
+    liquidity_percentage: Optional[Decimal] = None
+
+    # Derived status
+    is_online: bool = False  # Whether the auto-trader is actively running
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeMarketSettingsUpdate(BaseModel):
+    """Update per-market-side auto trade settings"""
+    enabled: Optional[bool] = None
+    target_liquidity: Optional[Decimal] = Field(None, ge=0)
+    price_deviation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    avg_order_count: Optional[int] = Field(None, ge=1, le=1000)
+    min_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
+    volume_variety: Optional[int] = Field(None, ge=1, le=10)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=3600)  # 5 sec to 1 hour
+    max_liquidity_threshold: Optional[Decimal] = Field(None, ge=0)
+    internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600)  # 10 sec to 1 hour
+    internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0)
+    internal_trade_volume_max: Optional[Decimal] = Field(None, ge=0)
 
 
 # Market Order (Admin) Schemas

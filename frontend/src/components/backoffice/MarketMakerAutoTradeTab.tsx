@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
   Pause,
@@ -15,9 +15,14 @@ import {
   Loader2,
   Activity,
   Target,
+  ChevronDown,
+  ChevronUp,
+  Gauge,
+  DollarSign,
+  BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../common';
-import { NumberInput } from '../common/NumberInput';
 import {
   getAutoTradeRules,
   createAutoTradeRule,
@@ -33,17 +38,63 @@ interface MarketMakerAutoTradeTabProps {
   marketMaker: MarketMaker;
 }
 
-const DEFAULT_RULE: Omit<AutoTradeRuleCreate, 'side'> = {
-  name: 'New Rule',
-  enabled: false,
-  order_type: 'LIMIT',
-  price_mode: 'spread_from_best',
-  spread_from_best: 0.5,
-  quantity_mode: 'fixed',
-  fixed_quantity: 100,
-  interval_mode: 'fixed',
-  interval_minutes: 5,
-  max_active_orders: 10,
+// Presets for quick configuration
+const PRESETS = {
+  aggressive: {
+    name: 'Aggressive',
+    icon: Zap,
+    color: 'text-red-500',
+    bgColor: 'bg-red-500/10 border-red-500/30 hover:border-red-500',
+    description: 'High frequency, tight spread',
+    config: {
+      price_mode: 'spread_from_best' as const,
+      spread_from_best: 0.1,
+      quantity_mode: 'random_range' as const,
+      min_quantity: 10000,
+      max_quantity: 50000,
+      interval_mode: 'random' as const,
+      interval_seconds: 15,
+      interval_min_seconds: 10,
+      interval_max_seconds: 20,
+    }
+  },
+  balanced: {
+    name: 'Balanced',
+    icon: Gauge,
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10 border-blue-500/30 hover:border-blue-500',
+    description: 'Medium frequency, moderate spread',
+    config: {
+      price_mode: 'random_spread' as const,
+      spread_min: 0.2,
+      spread_max: 0.4,
+      quantity_mode: 'random_range' as const,
+      min_quantity: 5000,
+      max_quantity: 20000,
+      interval_mode: 'random' as const,
+      interval_seconds: 30,
+      interval_min_seconds: 20,
+      interval_max_seconds: 45,
+    }
+  },
+  conservative: {
+    name: 'Conservative',
+    icon: Target,
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500',
+    description: 'Low frequency, wide spread',
+    config: {
+      price_mode: 'random_spread' as const,
+      spread_min: 0.3,
+      spread_max: 0.6,
+      quantity_mode: 'random_range' as const,
+      min_quantity: 1000,
+      max_quantity: 10000,
+      interval_mode: 'fixed' as const,
+      interval_seconds: 60,
+      interval_minutes: 1,
+    }
+  }
 };
 
 export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTabProps) {
@@ -53,9 +104,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const isSeller = marketMaker.mm_type === 'CEA_SELLER' || marketMaker.mm_type === 'EUA_OFFER';
-  const isBuyer = marketMaker.mm_type === 'CEA_BUYER';
 
   // Load rules from API
   const loadRules = useCallback(async () => {
@@ -77,6 +128,14 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
     loadRules();
   }, [loadRules]);
 
+  // Auto-refresh every 5 seconds for live stats
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isSaving) loadRules();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [loadRules, isSaving]);
+
   const selectedRule = rules.find(r => r.id === selectedRuleId);
 
   const handleAddRule = async () => {
@@ -84,9 +143,11 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
     setError(null);
     try {
       const newRuleData: AutoTradeRuleCreate = {
-        ...DEFAULT_RULE,
-        name: `Rule ${rules.length + 1}`,
+        name: `${isSeller ? 'ASK' : 'BID'} Rule ${rules.length + 1}`,
+        enabled: false,
         side: isSeller ? 'SELL' : 'BUY',
+        order_type: 'LIMIT', // Always LIMIT for auto-trade
+        ...PRESETS.balanced.config,
       };
       const result = await createAutoTradeRule(marketMaker.id, newRuleData);
       await loadRules();
@@ -99,36 +160,38 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
     }
   };
 
-  const handleDeleteRule = async (ruleId: string) => {
+  const handleUpdateRule = async (ruleId: string, updates: AutoTradeRuleUpdate) => {
     setIsSaving(true);
     setError(null);
     try {
-      await deleteAutoTradeRule(marketMaker.id, ruleId);
-      await loadRules();
-      if (selectedRuleId === ruleId) {
-        setSelectedRuleId(null);
-      }
-    } catch (err) {
-      console.error('Failed to delete rule:', err);
-      setError('Failed to delete rule');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleUpdateRule = async (ruleId: string, updates: AutoTradeRuleUpdate) => {
-    setError(null);
-    try {
       await updateAutoTradeRule(marketMaker.id, ruleId, updates);
-      // Update local state optimistically
-      setRules(rules.map(r => r.id === ruleId ? { ...r, ...updates } as AutoTradeRule : r));
+      // Convert null values to undefined to match AutoTradeRule type
+      const sanitizedUpdates = Object.fromEntries(
+        Object.entries(updates).map(([key, value]) => [key, value === null ? undefined : value])
+      ) as Partial<AutoTradeRule>;
+      setRules(prev => prev.map(r => r.id === ruleId ? { ...r, ...sanitizedUpdates } : r));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
     } catch (err) {
       console.error('Failed to update rule:', err);
       setError('Failed to update rule');
-      // Reload to get correct state
-      await loadRules();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: string) => {
+    if (!confirm('Delete this rule?')) return;
+    setIsSaving(true);
+    try {
+      await deleteAutoTradeRule(marketMaker.id, ruleId);
+      setRules(prev => prev.filter(r => r.id !== ruleId));
+      if (selectedRuleId === ruleId) setSelectedRuleId(null);
+    } catch (err) {
+      console.error('Failed to delete rule:', err);
+      setError('Failed to delete rule');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -139,454 +202,607 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
     }
   };
 
+  const handleApplyPreset = async (presetKey: keyof typeof PRESETS) => {
+    if (!selectedRule) return;
+    const preset = PRESETS[presetKey];
+    await handleUpdateRule(selectedRule.id, {
+      ...preset.config,
+      name: `${isSeller ? 'ASK' : 'BID'} ${preset.name}`,
+    });
+  };
+
   const activeRulesCount = rules.filter(r => r.enabled).length;
+
+  // Helper to format interval display
+  const formatInterval = (rule: AutoTradeRule) => {
+    if (rule.intervalMode === 'random') {
+      if (rule.intervalMinSeconds && rule.intervalMaxSeconds) {
+        return `${rule.intervalMinSeconds}-${rule.intervalMaxSeconds}s`;
+      }
+      return `${rule.intervalMinMinutes || 1}-${rule.intervalMaxMinutes || 5}m`;
+    }
+    if (rule.intervalSeconds) return `${rule.intervalSeconds}s`;
+    return `${rule.intervalMinutes || 1}m`;
+  };
+
+  // Helper to generate preview text
+  const getPreviewText = (rule: AutoTradeRule) => {
+    const side = rule.side === 'BUY' ? 'BUY' : 'SELL';
+    const priceRef = rule.side === 'BUY' ? 'best ask' : 'best bid';
+
+    // Helper to safely convert to number and format
+    const toNum = (val: number | string | null | undefined) => Number(val) || 0;
+
+    let priceText = '';
+    if (rule.priceMode === 'spread_from_best') {
+      priceText = `€${toNum(rule.spreadFromBest).toFixed(2)} from ${priceRef}`;
+    } else if (rule.priceMode === 'random_spread') {
+      priceText = `€${toNum(rule.spreadMin).toFixed(2)}-${toNum(rule.spreadMax).toFixed(2)} spread`;
+    } else if (rule.priceMode === 'fixed') {
+      priceText = `fixed €${toNum(rule.fixedPrice).toFixed(2)}`;
+    } else {
+      priceText = `${toNum(rule.percentageFromMarket)}% from market`;
+    }
+
+    let qtyText = '';
+    if (rule.quantityMode === 'fixed') {
+      qtyText = `${toNum(rule.fixedQuantity).toLocaleString()} units`;
+    } else if (rule.quantityMode === 'random_range') {
+      qtyText = `${toNum(rule.minQuantity).toLocaleString()}-${toNum(rule.maxQuantity).toLocaleString()} units`;
+    } else {
+      qtyText = `${toNum(rule.percentageOfBalance)}% of balance`;
+    }
+
+    return `${side} orders at ${priceText}, ${qtyText}, every ${formatInterval(rule)}`;
+  };
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-navy-500" />
-        <span className="ml-2 text-navy-500">Loading auto trade rules...</span>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (error && rules.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <p className="text-red-400 mb-4">{error}</p>
+        <Button onClick={loadRules}>Retry</Button>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4">
+      {/* Header with stats */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-            <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <div className="p-2 rounded-lg bg-emerald-500/10">
+            <Zap className="w-5 h-5 text-emerald-500" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-navy-900 dark:text-white">
-              Auto Trade Rules
-            </h3>
+            <h3 className="font-semibold text-navy-900 dark:text-white">Auto Trade Rules</h3>
             <p className="text-sm text-navy-500 dark:text-navy-400">
-              Configure automatic order placement for this market maker
+              {activeRulesCount} active rule{activeRulesCount !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
-
-        {/* Active Rules Count */}
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-navy-600 dark:text-navy-400">
-            {activeRulesCount} active rule{activeRulesCount !== 1 ? 's' : ''}
-          </div>
-        </div>
+        <Button
+          onClick={handleAddRule}
+          disabled={isSaving}
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Rule
+        </Button>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">{error}</span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-4">
         {/* Rules List */}
-        <div className="col-span-1 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-navy-700 dark:text-navy-300">Rules</h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddRule}
-              loading={isSaving}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Add Rule
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            {rules.length === 0 ? (
-              <div className="p-4 text-center text-sm text-navy-500 dark:text-navy-400 bg-navy-50 dark:bg-navy-900/50 rounded-lg">
-                No rules configured yet.
-                <br />
-                Click "Add Rule" to create one.
-              </div>
-            ) : (
-              rules.map(rule => (
-                <button
-                  key={rule.id}
-                  onClick={() => setSelectedRuleId(rule.id)}
-                  className={`w-full p-3 rounded-lg border-2 text-left transition-colors ${
-                    selectedRuleId === rule.id
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-navy-200 dark:border-navy-700 hover:border-navy-300 dark:hover:border-navy-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-navy-900 dark:text-white text-sm">
+        <div className="space-y-2">
+          {rules.length === 0 ? (
+            <div className="p-6 rounded-xl border-2 border-dashed border-navy-300 dark:border-navy-600 text-center">
+              <p className="text-navy-500 dark:text-navy-400 text-sm">
+                No rules configured.<br />Click "Add Rule" to create one.
+              </p>
+            </div>
+          ) : (
+            rules.map(rule => (
+              <motion.button
+                key={rule.id}
+                onClick={() => setSelectedRuleId(rule.id)}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
+                  selectedRuleId === rule.id
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg shadow-emerald-500/10'
+                    : rule.enabled
+                      ? 'border-emerald-400/40 bg-emerald-50/50 dark:bg-emerald-900/10 hover:border-emerald-400'
+                      : 'border-navy-200 dark:border-navy-700 hover:border-navy-300 dark:hover:border-navy-600 opacity-70'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-navy-900 dark:text-white text-sm truncate max-w-[120px]">
                       {rule.name}
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleRule(rule.id);
-                      }}
-                      className={`p-1 rounded ${
-                        rule.enabled
-                          ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30'
-                          : 'text-navy-400 bg-navy-100 dark:bg-navy-800'
-                      }`}
-                    >
-                      {rule.enabled ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
-                    {rule.side === 'BUY' ? (
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                    )}
-                    <span>{rule.side}</span>
-                    <span>·</span>
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {rule.interval_mode === 'random'
-                        ? `${rule.interval_min_minutes || 1}-${rule.interval_max_minutes || 60}m`
-                        : `Every ${rule.interval_minutes}m`
-                      }
-                    </span>
-                    {(rule.execution_count || 0) > 0 && (
-                      <>
-                        <span>·</span>
-                        <Target className="w-3 h-3" />
-                        <span>{rule.execution_count} orders</span>
-                      </>
+                    {rule.enabled && (
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        LIVE
+                      </span>
                     )}
                   </div>
-                </button>
-              ))
-            )}
-          </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleRule(rule.id);
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      rule.enabled
+                        ? 'text-white bg-emerald-500 hover:bg-emerald-600'
+                        : 'text-navy-400 bg-navy-100 dark:bg-navy-800 hover:bg-navy-200'
+                    }`}
+                  >
+                    {rule.enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                  {rule.side === 'BUY' ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-red-500" />
+                  )}
+                  <span className="font-medium">{rule.side}</span>
+                  <span>•</span>
+                  <Clock className="w-3 h-3" />
+                  <span>{formatInterval(rule)}</span>
+                </div>
+                {rule.executionCount > 0 && (
+                  <div className="mt-2 pt-2 border-t border-navy-200 dark:border-navy-700">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-navy-500 dark:text-navy-400">
+                        {rule.executionCount} orders
+                      </span>
+                      {rule.enabled && rule.nextExecutionAt && (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          Next: {Math.max(0, Math.round((new Date(rule.nextExecutionAt).getTime() - Date.now()) / 1000))}s
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.button>
+            ))
+          )}
         </div>
 
         {/* Rule Editor */}
         <div className="col-span-2">
           {selectedRule ? (
-            <div className="space-y-6 p-4 bg-navy-50 dark:bg-navy-900/50 rounded-xl">
+            <div className="p-4 rounded-xl bg-white dark:bg-navy-800/50 border border-navy-200 dark:border-navy-700 space-y-5">
               {/* Rule Header */}
               <div className="flex items-center justify-between">
                 <input
                   type="text"
                   value={selectedRule.name}
                   onChange={(e) => handleUpdateRule(selectedRule.id, { name: e.target.value })}
-                  className="text-lg font-semibold bg-transparent border-none focus:outline-none text-navy-900 dark:text-white"
+                  className="text-lg font-bold text-navy-900 dark:text-white bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                 />
-                <button
-                  onClick={() => handleDeleteRule(selectedRule.id)}
-                  className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Order Type */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                    Side
-                  </label>
-                  <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600">
-                    {(isBuyer ? ['BUY'] : isSeller ? ['SELL'] : ['BUY', 'SELL']).map(side => (
-                      <button
-                        key={side}
-                        onClick={() => handleUpdateRule(selectedRule.id, { side: side as 'BUY' | 'SELL' })}
-                        className={`flex-1 py-2 text-sm font-semibold transition-colors ${
-                          selectedRule.side === side
-                            ? side === 'BUY'
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-red-500 text-white'
-                            : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400'
-                        }`}
-                      >
-                        {side}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                    Order Type
-                  </label>
-                  <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600">
-                    {['LIMIT', 'MARKET'].map(type => (
-                      <button
-                        key={type}
-                        onClick={() => handleUpdateRule(selectedRule.id, { order_type: type as 'LIMIT' | 'MARKET' })}
-                        className={`flex-1 py-2 text-sm font-semibold transition-colors ${
-                          selectedRule.order_type === type
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Price Settings (only for LIMIT orders) */}
-              {selectedRule.order_type === 'LIMIT' && (
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                    Price Strategy
-                  </label>
-                  <select
-                    value={selectedRule.price_mode}
-                    onChange={(e) => handleUpdateRule(selectedRule.id, { price_mode: e.target.value as AutoTradeRule['price_mode'] })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleDeleteRule(selectedRule.id)}
+                    className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
-                    <option value="fixed">Fixed Price</option>
-                    <option value="spread_from_best">Spread from Best Price</option>
-                    <option value="random_spread">Random Spread (fills gaps)</option>
-                    <option value="percentage_from_market">Percentage from Market</option>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Status Banner */}
+              {selectedRule.enabled && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/30"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        LIVE - Auto Trading Active
+                      </span>
+                    </div>
+                    <div className="text-xs text-navy-600 dark:text-navy-300">
+                      {selectedRule.executionCount} orders placed
+                      {selectedRule.nextExecutionAt && (
+                        <> • Next in ~{Math.max(0, Math.round((new Date(selectedRule.nextExecutionAt).getTime() - Date.now()) / 1000))}s</>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Quick Presets */}
+              <div>
+                <label className="block text-xs font-semibold text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-2">
+                  Quick Presets
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.entries(PRESETS) as [keyof typeof PRESETS, typeof PRESETS[keyof typeof PRESETS]][]).map(([key, preset]) => {
+                    const Icon = preset.icon;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleApplyPreset(key)}
+                        className={`p-3 rounded-lg border-2 transition-all ${preset.bgColor}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className={`w-4 h-4 ${preset.color}`} />
+                          <span className={`font-semibold text-sm ${preset.color}`}>{preset.name}</span>
+                        </div>
+                        <p className="text-xs text-navy-500 dark:text-navy-400">{preset.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-900/50 border border-navy-200 dark:border-navy-700">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-navy-600 dark:text-navy-300 uppercase tracking-wider mb-1">Preview</p>
+                    <p className="text-sm text-navy-700 dark:text-navy-200">
+                      {getPreviewText(selectedRule)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Settings - 3 Cards */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Price Card */}
+                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-4 h-4 text-emerald-500" />
+                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Price</span>
+                  </div>
+                  <select
+                    value={selectedRule.priceMode}
+                    onChange={(e) => handleUpdateRule(selectedRule.id, { price_mode: e.target.value as AutoTradeRule['priceMode'] })}
+                    className="w-full px-2 py-1.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm text-navy-900 dark:text-white mb-2"
+                  >
+                    <option value="spread_from_best">Spread from best</option>
+                    <option value="random_spread">Random spread</option>
+                    <option value="fixed">Fixed price</option>
+                    <option value="percentage_from_market">% from market</option>
                   </select>
 
-                  <div className="mt-3">
-                    {selectedRule.price_mode === 'fixed' && (
-                      <NumberInput
-                        label="Fixed Price (EUR)"
-                        value={selectedRule.fixed_price?.toString() || ''}
-                        onChange={(val) => handleUpdateRule(selectedRule.id, { fixed_price: parseFloat(val) || null })}
-                        suffix="EUR"
-                        decimals={2}
+                  {selectedRule.priceMode === 'spread_from_best' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={selectedRule.spreadFromBest || 0.1}
+                        onChange={(e) => handleUpdateRule(selectedRule.id, { spread_from_best: parseFloat(e.target.value) || 0.1 })}
+                        step="0.1"
+                        min="0.1"
+                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
                       />
-                    )}
-                    {selectedRule.price_mode === 'spread_from_best' && (
-                      <NumberInput
-                        label={`Spread from Best ${selectedRule.side === 'BUY' ? 'Ask' : 'Bid'} (EUR)`}
-                        value={selectedRule.spread_from_best?.toString() || ''}
-                        onChange={(val) => handleUpdateRule(selectedRule.id, { spread_from_best: parseFloat(val) || null })}
-                        suffix="EUR"
-                        decimals={2}
-                      />
-                    )}
-                    {selectedRule.price_mode === 'random_spread' && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <NumberInput
-                          label="Min Spread (EUR)"
-                          value={selectedRule.spread_min?.toString() || '0.1'}
-                          onChange={(val) => handleUpdateRule(selectedRule.id, { spread_min: parseFloat(val) || 0.1 })}
-                          suffix="EUR"
-                          decimals={1}
+                      <span className="text-xs text-navy-500">EUR</span>
+                    </div>
+                  )}
+
+                  {selectedRule.priceMode === 'random_spread' && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={selectedRule.spreadMin || 0.1}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { spread_min: parseFloat(e.target.value) || 0.1 })}
+                          step="0.1"
+                          min="0.1"
+                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="Min"
                         />
-                        <NumberInput
-                          label="Max Spread (EUR)"
-                          value={selectedRule.spread_max?.toString() || '1.0'}
-                          onChange={(val) => handleUpdateRule(selectedRule.id, { spread_max: parseFloat(val) || 1.0 })}
-                          suffix="EUR"
-                          decimals={1}
+                        <span className="text-xs text-navy-400">-</span>
+                        <input
+                          type="number"
+                          value={selectedRule.spreadMax || 0.5}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { spread_max: parseFloat(e.target.value) || 0.5 })}
+                          step="0.1"
+                          min="0.1"
+                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="Max"
                         />
                       </div>
-                    )}
-                    {selectedRule.price_mode === 'percentage_from_market' && (
-                      <NumberInput
-                        label="Percentage from Market Price"
-                        value={selectedRule.percentage_from_market?.toString() || ''}
-                        onChange={(val) => handleUpdateRule(selectedRule.id, { percentage_from_market: parseFloat(val) || null })}
-                        suffix="%"
-                        decimals={2}
+                      <p className="text-[10px] text-navy-400">EUR spread range</p>
+                    </div>
+                  )}
+
+                  {selectedRule.priceMode === 'fixed' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={selectedRule.fixedPrice || ''}
+                        onChange={(e) => handleUpdateRule(selectedRule.id, { fixed_price: parseFloat(e.target.value) || null })}
+                        step="0.01"
+                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        placeholder="9.50"
                       />
-                    )}
+                      <span className="text-xs text-navy-500">EUR</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quantity Card */}
+                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="w-4 h-4 text-blue-500" />
+                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Quantity</span>
+                  </div>
+                  <select
+                    value={selectedRule.quantityMode}
+                    onChange={(e) => handleUpdateRule(selectedRule.id, { quantity_mode: e.target.value as AutoTradeRule['quantityMode'] })}
+                    className="w-full px-2 py-1.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm text-navy-900 dark:text-white mb-2"
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="random_range">Random range</option>
+                    <option value="percentage_of_balance">% of balance</option>
+                  </select>
+
+                  {selectedRule.quantityMode === 'fixed' && (
+                    <input
+                      type="number"
+                      value={selectedRule.fixedQuantity || ''}
+                      onChange={(e) => handleUpdateRule(selectedRule.id, { fixed_quantity: parseInt(e.target.value) || null })}
+                      className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                      placeholder="10000"
+                    />
+                  )}
+
+                  {selectedRule.quantityMode === 'random_range' && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={selectedRule.minQuantity || ''}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { min_quantity: parseInt(e.target.value) || null })}
+                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="Min"
+                        />
+                        <span className="text-xs text-navy-400">-</span>
+                        <input
+                          type="number"
+                          value={selectedRule.maxQuantity || ''}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_quantity: parseInt(e.target.value) || null })}
+                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="Max"
+                        />
+                      </div>
+                      <p className="text-[10px] text-navy-400">certificates per order</p>
+                    </div>
+                  )}
+
+                  {selectedRule.quantityMode === 'percentage_of_balance' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={selectedRule.percentageOfBalance || ''}
+                        onChange={(e) => handleUpdateRule(selectedRule.id, { percentage_of_balance: parseFloat(e.target.value) || null })}
+                        step="1"
+                        min="1"
+                        max="100"
+                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        placeholder="5"
+                      />
+                      <span className="text-xs text-navy-500">%</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Speed Card */}
+                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Speed</span>
                   </div>
 
-                  {/* Max Price Deviation */}
-                  <div className="mt-3">
-                    <NumberInput
-                      label="Max Price Deviation from Scraped Price"
-                      value={selectedRule.max_price_deviation?.toString() || ''}
-                      onChange={(val) => handleUpdateRule(selectedRule.id, { max_price_deviation: parseFloat(val) || null })}
-                      suffix="%"
-                      decimals={1}
-                      placeholder="No limit"
-                    />
-                    <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      Orders will not be placed if price deviates more than this % from the scraped market price
-                    </p>
+                  {/* Quick speed buttons */}
+                  <div className="grid grid-cols-4 gap-1 mb-2">
+                    {[10, 15, 30, 60].map(sec => (
+                      <button
+                        key={sec}
+                        onClick={() => handleUpdateRule(selectedRule.id, {
+                          interval_mode: 'fixed',
+                          interval_seconds: sec,
+                          interval_minutes: 1
+                        })}
+                        className={`py-1 px-2 rounded text-xs font-medium transition-colors ${
+                          selectedRule.intervalMode === 'fixed' && selectedRule.intervalSeconds === sec
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 text-navy-600 dark:text-navy-300 hover:border-amber-300'
+                        }`}
+                      >
+                        {sec}s
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Random interval toggle */}
+                  <button
+                    onClick={() => handleUpdateRule(selectedRule.id, {
+                      interval_mode: selectedRule.intervalMode === 'random' ? 'fixed' : 'random',
+                      interval_min_seconds: 10,
+                      interval_max_seconds: 30,
+                    })}
+                    className={`w-full py-1.5 px-2 rounded text-xs font-medium transition-colors ${
+                      selectedRule.intervalMode === 'random'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 text-navy-600 dark:text-navy-300'
+                    }`}
+                  >
+                    {selectedRule.intervalMode === 'random' ? '✓ Random interval' : 'Use random interval'}
+                  </button>
+
+                  {selectedRule.intervalMode === 'random' && (
+                    <div className="mt-2 flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={selectedRule.intervalMinSeconds || 10}
+                        onChange={(e) => handleUpdateRule(selectedRule.id, { interval_min_seconds: parseInt(e.target.value) || 10 })}
+                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        min="5"
+                      />
+                      <span className="text-xs text-navy-400">-</span>
+                      <input
+                        type="number"
+                        value={selectedRule.intervalMaxSeconds || 30}
+                        onChange={(e) => handleUpdateRule(selectedRule.id, { interval_max_seconds: parseInt(e.target.value) || 30 })}
+                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        min="5"
+                      />
+                      <span className="text-xs text-navy-500">s</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Advanced Settings Toggle */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-400 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
+              >
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                Advanced Settings
+              </button>
+
+              {/* Advanced Settings */}
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                      <div>
+                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                          Min Balance Required
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedRule.minBalance || ''}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { min_balance: parseFloat(e.target.value) || null })}
+                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="No minimum"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                          Max Active Orders
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedRule.maxActiveOrders || ''}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_active_orders: parseInt(e.target.value) || null })}
+                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="Unlimited"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                          Max Price Deviation (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedRule.maxPriceDeviation || ''}
+                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_price_deviation: parseFloat(e.target.value) || null })}
+                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                          placeholder="No limit"
+                          step="0.1"
+                        />
+                        <p className="text-[10px] text-navy-400 mt-1">Skip if price deviates too much from market</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Stats Section */}
+              {selectedRule.executionCount > 0 && (
+                <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="w-4 h-4 text-navy-500" />
+                    <span className="text-sm font-semibold text-navy-700 dark:text-navy-300">Statistics</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {selectedRule.executionCount}
+                      </div>
+                      <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Orders Placed</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-800 text-center">
+                      <div className="text-sm font-semibold text-navy-700 dark:text-navy-200">
+                        {selectedRule.lastExecutedAt
+                          ? new Date(selectedRule.lastExecutedAt).toLocaleTimeString()
+                          : '-'}
+                      </div>
+                      <div className="text-xs text-navy-500 dark:text-navy-400">Last Order</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-800 text-center">
+                      <div className="text-sm font-semibold text-navy-700 dark:text-navy-200">
+                        {selectedRule.nextExecutionAt && selectedRule.enabled
+                          ? new Date(selectedRule.nextExecutionAt).toLocaleTimeString()
+                          : '-'}
+                      </div>
+                      <div className="text-xs text-navy-500 dark:text-navy-400">Next Order</div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Quantity Settings */}
-              <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  Quantity Strategy
-                </label>
-                <select
-                  value={selectedRule.quantity_mode}
-                  onChange={(e) => handleUpdateRule(selectedRule.id, { quantity_mode: e.target.value as AutoTradeRule['quantity_mode'] })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+              {/* Main Toggle */}
+              <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+                <button
+                  onClick={() => handleToggleRule(selectedRule.id)}
+                  disabled={isSaving}
+                  className={`w-full py-3 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-2 ${
+                    selectedRule.enabled
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-emerald-500 hover:bg-emerald-600'
+                  }`}
                 >
-                  <option value="fixed">Fixed Quantity</option>
-                  <option value="percentage_of_balance">Percentage of Available Balance</option>
-                  <option value="random_range">Random Range</option>
-                </select>
-
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {selectedRule.quantity_mode === 'fixed' && (
-                    <NumberInput
-                      label="Fixed Quantity"
-                      value={selectedRule.fixed_quantity?.toString() || ''}
-                      onChange={(val) => handleUpdateRule(selectedRule.id, { fixed_quantity: parseFloat(val) || null })}
-                      decimals={0}
-                    />
-                  )}
-                  {selectedRule.quantity_mode === 'percentage_of_balance' && (
-                    <NumberInput
-                      label="Percentage of Balance"
-                      value={selectedRule.percentage_of_balance?.toString() || ''}
-                      onChange={(val) => handleUpdateRule(selectedRule.id, { percentage_of_balance: parseFloat(val) || null })}
-                      suffix="%"
-                      decimals={1}
-                    />
-                  )}
-                  {selectedRule.quantity_mode === 'random_range' && (
+                  {selectedRule.enabled ? (
                     <>
-                      <NumberInput
-                        label="Min Quantity"
-                        value={selectedRule.min_quantity?.toString() || ''}
-                        onChange={(val) => handleUpdateRule(selectedRule.id, { min_quantity: parseFloat(val) || null })}
-                        decimals={0}
-                      />
-                      <NumberInput
-                        label="Max Quantity"
-                        value={selectedRule.max_quantity?.toString() || ''}
-                        onChange={(val) => handleUpdateRule(selectedRule.id, { max_quantity: parseFloat(val) || null })}
-                        decimals={0}
-                      />
+                      <Pause className="w-5 h-5" />
+                      Stop Auto Trading
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" />
+                      Start Auto Trading
                     </>
                   )}
-                </div>
-              </div>
-
-              {/* Timing */}
-              <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  Interval Mode
-                </label>
-                <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600 mb-3">
-                  {(['fixed', 'random'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => handleUpdateRule(selectedRule.id, {
-                        interval_mode: mode,
-                        // Set sensible defaults when switching modes
-                        ...(mode === 'random' ? { interval_min_minutes: 1, interval_max_minutes: 15 } : {})
-                      })}
-                      className={`flex-1 py-2 text-sm font-semibold transition-colors ${
-                        (selectedRule.interval_mode || 'fixed') === mode
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400'
-                      }`}
-                    >
-                      {mode === 'fixed' ? 'Fixed Interval' : 'Random Interval'}
-                    </button>
-                  ))}
-                </div>
-
-                {(selectedRule.interval_mode || 'fixed') === 'fixed' ? (
-                  <div className="grid grid-cols-5 gap-2">
-                    {[1, 5, 15, 30, 60].map(minutes => (
-                      <button
-                        key={minutes}
-                        onClick={() => handleUpdateRule(selectedRule.id, { interval_minutes: minutes })}
-                        className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                          selectedRule.interval_minutes === minutes
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-700 text-navy-600 dark:text-navy-400 hover:border-emerald-300'
-                        }`}
-                      >
-                        {minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <NumberInput
-                      label="Min Interval (minutes)"
-                      value={selectedRule.interval_min_minutes?.toString() || '1'}
-                      onChange={(val) => handleUpdateRule(selectedRule.id, { interval_min_minutes: parseInt(val) || 1 })}
-                      decimals={0}
-                    />
-                    <NumberInput
-                      label="Max Interval (minutes)"
-                      value={selectedRule.interval_max_minutes?.toString() || '60'}
-                      onChange={(val) => handleUpdateRule(selectedRule.id, { interval_max_minutes: parseInt(val) || 60 })}
-                      decimals={0}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Conditions */}
-              <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                  Conditions
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <NumberInput
-                    label="Min Balance Required"
-                    value={selectedRule.min_balance?.toString() || ''}
-                    onChange={(val) => handleUpdateRule(selectedRule.id, { min_balance: parseFloat(val) || null })}
-                    placeholder="No minimum"
-                    decimals={0}
-                  />
-                  <NumberInput
-                    label="Max Active Orders"
-                    value={selectedRule.max_active_orders?.toString() || ''}
-                    onChange={(val) => handleUpdateRule(selectedRule.id, { max_active_orders: parseInt(val) || null })}
-                    placeholder="Unlimited"
-                    decimals={0}
-                  />
-                </div>
-              </div>
-
-              {/* Execution Stats */}
-              <div className="border-t border-navy-200 dark:border-navy-700 pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Activity className="w-4 h-4 text-navy-500" />
-                  <label className="text-sm font-medium text-navy-700 dark:text-navy-300">
-                    Execution Stats
-                  </label>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white dark:bg-navy-800 rounded-lg p-3 border border-navy-200 dark:border-navy-700">
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Orders Placed</div>
-                    <div className="text-lg font-semibold text-navy-900 dark:text-white">
-                      {selectedRule.execution_count || 0}
-                    </div>
-                  </div>
-                  <div className="bg-white dark:bg-navy-800 rounded-lg p-3 border border-navy-200 dark:border-navy-700">
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Last Executed</div>
-                    <div className="text-sm font-medium text-navy-900 dark:text-white">
-                      {selectedRule.last_executed_at
-                        ? new Date(selectedRule.last_executed_at).toLocaleString()
-                        : 'Never'}
-                    </div>
-                  </div>
-                  <div className="bg-white dark:bg-navy-800 rounded-lg p-3 border border-navy-200 dark:border-navy-700">
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Next Execution</div>
-                    <div className="text-sm font-medium text-navy-900 dark:text-white">
-                      {selectedRule.next_execution_at
-                        ? new Date(selectedRule.next_execution_at).toLocaleString()
-                        : selectedRule.enabled ? 'Soon' : 'Disabled'}
-                    </div>
-                  </div>
-                </div>
+                </button>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+            <div className="flex flex-col items-center justify-center h-full py-12 text-center rounded-xl bg-navy-50 dark:bg-navy-800/30 border-2 border-dashed border-navy-300 dark:border-navy-600">
               <Settings className="w-12 h-12 text-navy-300 dark:text-navy-600 mb-4" />
-              <p className="text-navy-500 dark:text-navy-400">
-                Select a rule to edit or create a new one
+              <p className="text-navy-500 dark:text-navy-400 mb-2">
+                Select a rule to configure
+              </p>
+              <p className="text-sm text-navy-400 dark:text-navy-500">
+                or create a new one with the button above
               </p>
             </div>
           )}
@@ -594,16 +810,19 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
       </div>
 
       {/* Save Success Indicator */}
-      {saveSuccess && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg shadow-lg"
-        >
-          <Check className="w-4 h-4" />
-          <span className="text-sm font-medium">Saved!</span>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {saveSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg shadow-lg"
+          >
+            <Check className="w-4 h-4" />
+            <span className="text-sm font-medium">Saved!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

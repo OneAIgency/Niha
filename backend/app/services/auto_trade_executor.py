@@ -469,6 +469,7 @@ class AutoTradeExecutor:
         Returns: (status, current_liquidity, target_liquidity, market_settings)
 
         Status can be:
+        - "exceeds_max_threshold": URGENT - exceeds max_liquidity_threshold, trigger aggressive internal trades
         - "below_target": need to place new orders
         - "at_target": within 5% tolerance, do nothing
         - "above_target": need to consume orders via internal trades
@@ -484,6 +485,11 @@ class AutoTradeExecutor:
         )
 
         target = market_settings.target_liquidity
+
+        # Check max threshold first (takes priority)
+        max_threshold = market_settings.max_liquidity_threshold
+        if max_threshold and max_threshold > 0 and current and current > max_threshold:
+            return "exceeds_max_threshold", current, target, market_settings
 
         if target is None or target <= 0:
             return "no_target", current, None, market_settings
@@ -1201,6 +1207,52 @@ class AutoTradeExecutor:
                 }
 
             # Handle based on liquidity status
+            if status == "exceeds_max_threshold":
+                # URGENT: Liquidity exceeds max threshold - aggressively reduce via internal trades
+                max_threshold = market_settings.max_liquidity_threshold if market_settings else None
+                logger.warning(
+                    f"Rule {rule.name}: Liquidity EXCEEDS MAX THRESHOLD ({current_liq}/{max_threshold} EUR) - "
+                    f"executing internal trades to reduce"
+                )
+
+                # Execute multiple internal trades to bring liquidity below threshold
+                trades_executed = 0
+                max_trades = 5  # Limit to avoid infinite loops
+
+                while trades_executed < max_trades:
+                    internal_result = await AutoTradeExecutor.execute_internal_trade(
+                        db, certificate_type, admin_user_id
+                    )
+
+                    if not internal_result["success"]:
+                        break
+
+                    trades_executed += 1
+                    logger.info(
+                        f"Rule {rule.name} threshold reduction trade #{trades_executed}: "
+                        f"{internal_result['quantity']} @ {internal_result['price']}"
+                    )
+
+                    # Re-check liquidity
+                    new_current = await AutoTradeExecutor.calculate_current_liquidity(
+                        db, certificate_type, rule.side, market_type
+                    )
+                    if new_current and max_threshold and new_current <= max_threshold:
+                        logger.info(f"Rule {rule.name}: Liquidity now {new_current} EUR, below threshold")
+                        break
+
+                # Update rule execution tracking
+                rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.execution_count = (rule.execution_count or 0) + 1
+                await db.commit()
+
+                result["success"] = trades_executed > 0
+                result["action"] = "threshold_reduction"
+                result["trades_executed"] = trades_executed
+                result["reason"] = f"executed {trades_executed} internal trades to reduce excess liquidity"
+                return result
+
             if status == "at_target":
                 # Liquidity is at target level - skip this execution
                 logger.debug(
