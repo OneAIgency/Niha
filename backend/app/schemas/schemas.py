@@ -751,6 +751,8 @@ class OrderBookResponse(BaseModel):
     last_price: Optional[float]
     volume_24h: float
     change_24h: float
+    high_24h: Optional[float] = None
+    low_24h: Optional[float] = None
 
 
 class MarketDepthPoint(BaseModel):

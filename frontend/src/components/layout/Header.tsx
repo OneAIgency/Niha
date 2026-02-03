@@ -193,7 +193,9 @@ export function Header() {
                           'text-xs truncate',
                           isDark ? 'text-navy-400' : 'text-navy-500'
                         )}>
-                          {user?.email}
+                          {user?.first_name && user?.last_name
+                            ? user?.email
+                            : user?.role || 'User'}
                         </p>
                       </div>
 

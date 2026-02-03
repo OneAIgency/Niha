@@ -105,6 +105,8 @@ async def get_orderbook(
         last_price=orderbook["last_price"],
         volume_24h=orderbook["volume_24h"],
         change_24h=orderbook["change_24h"],
+        high_24h=orderbook.get("high_24h"),
+        low_24h=orderbook.get("low_24h"),
     )
 
 
@@ -812,6 +814,8 @@ async def get_real_orderbook_endpoint(
         last_price=orderbook["last_price"],
         volume_24h=orderbook["volume_24h"],
         change_24h=orderbook["change_24h"],
+        high_24h=orderbook.get("high_24h"),
+        low_24h=orderbook.get("low_24h"),
     )
 
 

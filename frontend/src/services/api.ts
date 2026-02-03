@@ -758,7 +758,22 @@ export const usersApi = {
 
   getFundingInstructions: async (): Promise<FundingInstructions> => {
     const { data } = await api.get('/users/me/funding-instructions');
-    return data;
+    // Normalize response (Axios transforms to camelCase, but types expect snake_case)
+    return {
+      bank_name: data.bankName ?? data.bank_name ?? '',
+      account_name: data.accountName ?? data.account_name ?? '',
+      account_number: data.accountNumber ?? data.account_number,
+      iban: data.iban,
+      swift_code: data.swiftCode ?? data.swift_code,
+      swift_bic: data.swiftBic ?? data.swift_bic,
+      routing_number: data.routingNumber ?? data.routing_number,
+      currency: data.currency,
+      reference_format: data.referenceFormat ?? data.reference_format,
+      reference_instructions: data.referenceInstructions ?? data.reference_instructions,
+      supported_currencies: data.supportedCurrencies ?? data.supported_currencies,
+      processing_time: data.processingTime ?? data.processing_time,
+      notes: data.notes,
+    };
   },
 };
 
@@ -2366,7 +2381,28 @@ export const withdrawalApi = {
 export const feesApi = {
   getAllFees: async (): Promise<AllFeesResponse> => {
     const { data } = await api.get('/admin/fees');
-    return data;
+    // Normalize camelCase (from Axios) to snake_case (expected by types)
+    const d = data as Record<string, unknown>;
+    const marketFees = ((d.marketFees ?? d.market_fees ?? []) as Record<string, unknown>[]).map((f) => ({
+      id: (f.id as string) ?? '',
+      market: (f.market as 'CEA_CASH' | 'SWAP') ?? 'CEA_CASH',
+      bid_fee_rate: (f.bidFeeRate ?? f.bid_fee_rate ?? 0) as number,
+      ask_fee_rate: (f.askFeeRate ?? f.ask_fee_rate ?? 0) as number,
+      is_active: (f.isActive ?? f.is_active ?? true) as boolean,
+      created_at: (f.createdAt ?? f.created_at ?? '') as string,
+      updated_at: (f.updatedAt ?? f.updated_at ?? '') as string,
+    }));
+    const entityOverrides = ((d.entityOverrides ?? d.entity_overrides ?? []) as Record<string, unknown>[]).map((o) => ({
+      id: (o.id as string) ?? '',
+      entity_id: (o.entityId ?? o.entity_id ?? '') as string,
+      entity_name: (o.entityName ?? o.entity_name ?? '') as string,
+      market: (o.market as 'CEA_CASH' | 'SWAP') ?? 'CEA_CASH',
+      bid_fee_rate: (o.bidFeeRate ?? o.bid_fee_rate ?? null) as number | null,
+      ask_fee_rate: (o.askFeeRate ?? o.ask_fee_rate ?? null) as number | null,
+      is_active: (o.isActive ?? o.is_active ?? true) as boolean,
+      created_at: (o.createdAt ?? o.created_at ?? '') as string,
+    }));
+    return { market_fees: marketFees, entity_overrides: entityOverrides };
   },
 
   updateMarketFees: async (

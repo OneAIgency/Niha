@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -802,8 +802,37 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
     spread = round(best_ask - best_bid, 4) if best_ask and best_bid else None
     last_price = best_ask or best_bid or (63.0 if certificate_type == "CEA" else 81.0)
 
-    total_ask_volume = sum(a["quantity"] for a in asks)
-    total_bid_volume = sum(b["quantity"] for b in bids)
+    # Get 24h trade stats
+    time_24h_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
+    trades_result = await db.execute(
+        select(CashMarketTrade)
+        .where(
+            and_(
+                CashMarketTrade.certificate_type == cert_enum,
+                CashMarketTrade.executed_at >= time_24h_ago,
+            )
+        )
+        .order_by(CashMarketTrade.executed_at.desc())
+    )
+    trades_24h = trades_result.scalars().all()
+
+    # Calculate 24h stats from actual trades
+    if trades_24h:
+        trade_prices = [float(t.price) for t in trades_24h]
+        trade_volumes = [float(t.quantity) for t in trades_24h]
+        high_24h = max(trade_prices)
+        low_24h = min(trade_prices)
+        volume_24h = sum(trade_volumes)
+        # Change: compare most recent to oldest in 24h period
+        change_24h = round(((trade_prices[0] - trade_prices[-1]) / trade_prices[-1]) * 100, 2) if len(trade_prices) > 1 else 0.0
+        # Use most recent trade price as last_price if available
+        last_price = trade_prices[0]
+    else:
+        # No trades in 24h - use current best prices as fallback
+        high_24h = last_price
+        low_24h = last_price
+        volume_24h = 0.0
+        change_24h = 0.0
 
     return {
         "certificate_type": certificate_type,
@@ -813,6 +842,8 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
         "best_bid": best_bid,
         "best_ask": best_ask,
         "last_price": last_price,
-        "volume_24h": total_ask_volume + total_bid_volume,
-        "change_24h": 0.0,  # Would need historical data
+        "volume_24h": volume_24h,
+        "change_24h": change_24h,
+        "high_24h": high_24h,
+        "low_24h": low_24h,
     }
