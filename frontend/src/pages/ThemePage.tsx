@@ -158,16 +158,14 @@ export function ThemePage() {
               Fixed at top, z-50, height h-16 (mobile) / h-20 (desktop). Contains logo, price ticker, navigation, and user menu.
             </p>
 
-            {/* Header Visual */}
-            <div className="rounded-xl border-2 border-emerald-500/50 overflow-hidden bg-navy-900/80 backdrop-blur-lg">
-              {/* Actual Header Mockup */}
-              <div className="px-4 sm:px-6 lg:px-8">
+            {/* Header - REAL STYLING */}
+            <header className="bg-navy-900/80 backdrop-blur-lg border-b border-navy-700">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16 md:h-20">
                   {/* Logo */}
-                  <div className="flex-shrink-0 flex items-center gap-1 group">
+                  <div className="flex-shrink-0 flex items-center gap-1">
                     <span className="text-xl font-bold text-white">NIHAO</span>
                     <span className="text-xl font-bold text-emerald-400">GROUP</span>
-                    <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Logo</span>
                   </div>
 
                   {/* Price Ticker (Desktop) */}
@@ -176,7 +174,7 @@ export function ThemePage() {
                       <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <span className="text-[10px] font-bold text-blue-400">E</span>
                       </div>
-                      <span className="text-sm font-medium text-white">€72.45</span>
+                      <span className="text-sm font-medium text-white font-mono">€72.45</span>
                       <span className="text-xs text-emerald-400">+1.2%</span>
                     </div>
                     <div className="w-px h-4 bg-navy-600" />
@@ -184,10 +182,9 @@ export function ThemePage() {
                       <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
                         <span className="text-[10px] font-bold text-amber-400">C</span>
                       </div>
-                      <span className="text-sm font-medium text-white">€48.30</span>
+                      <span className="text-sm font-medium text-white font-mono">€48.30</span>
                       <span className="text-xs text-red-400">-0.5%</span>
                     </div>
-                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">PriceTicker</span>
                   </div>
 
                   {/* Desktop Navigation */}
@@ -196,30 +193,23 @@ export function ThemePage() {
                     <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Funding</span>
                     <span className="text-sm font-medium text-white cursor-pointer">CEA Cash</span>
                     <span className="text-sm font-medium text-white/80 hover:text-white cursor-pointer transition-colors">Swap</span>
-                    <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium">Nav Links</span>
 
-                    {/* User Dropdown */}
-                    <div className="relative flex items-center gap-2 p-1 rounded-full">
+                    {/* User Avatar */}
+                    <div className="flex items-center gap-2 p-1 rounded-full">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
                         AU
                       </div>
                       <ChevronDown className="w-4 h-4 text-white" />
-                      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">User Dropdown</span>
                     </div>
                   </nav>
 
                   {/* Mobile menu button */}
-                  <div className="md:hidden">
-                    <div className="p-2 rounded-lg border border-navy-700">
-                      <Menu className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium mt-1 block text-center">Mobile</span>
+                  <div className="md:hidden p-2 rounded-lg border border-navy-700">
+                    <Menu className="w-6 h-6 text-white" />
                   </div>
                 </div>
               </div>
-              {/* Border indicator */}
-              <div className="h-px bg-navy-700" />
-            </div>
+            </header>
 
             {/* Header Specs */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -273,50 +263,36 @@ export function ThemePage() {
               Fixed below header, z-40. Contains page icon, title, description, and optional right-side content (tabs, buttons, stats).
             </p>
 
-            {/* Subheader Visual */}
-            <div className="rounded-xl border-2 border-blue-500/50 overflow-hidden bg-navy-800">
-              {/* Actual Subheader Mockup */}
-              <div className="px-4 sm:px-6 lg:px-8 py-4">
-                <div className="max-w-7xl mx-auto">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Left side: Icon, Title, Description */}
-                    <div className="flex items-center gap-3 group">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <BarChart3 className="w-5 h-5 text-amber-400" />
-                      </div>
-                      <div>
-                        <h1 className="text-lg font-semibold text-white">Page Title</h1>
-                        <p className="text-sm text-navy-400">Page description or breadcrumb</p>
-                      </div>
-                      <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Icon + Title</span>
+            {/* Subheader - REAL .subheader-bar CLASS (position: relative for demo) */}
+            <div className="subheader-bar !static">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Left side: Icon, Title, Description */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <BarChart3 className="w-5 h-5 text-amber-400" />
                     </div>
-
-                    {/* Right side: Page-specific content */}
-                    <div className="flex items-center gap-4">
-                      {/* Tabs Example */}
-                      <div className="flex items-center gap-1 p-1 rounded-lg bg-navy-900/50">
-                        <button className="px-3 py-1.5 text-sm font-medium rounded-md bg-navy-700 text-white">Tab 1</button>
-                        <button className="px-3 py-1.5 text-sm font-medium rounded-md text-navy-400 hover:bg-navy-700/50">Tab 2</button>
-                        <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium ml-1">Tabs</span>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2">
-                        <button className="p-2.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-navy-400">
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
-                        <button className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium flex items-center gap-2">
-                          <Download className="w-4 h-4" />
-                          Export
-                        </button>
-                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium">Actions</span>
-                      </div>
+                    <div>
+                      <h1 className="section-heading text-white">Cash Market</h1>
+                      <p className="text-sm text-navy-400">CEA Buy & Sell</p>
                     </div>
+                  </div>
+
+                  {/* Right side: Page-specific content */}
+                  <div className="flex items-center gap-6 text-sm">
+                    {/* Navigation Tabs */}
+                    <nav className="flex items-center gap-1 p-1 rounded-lg bg-navy-900/50">
+                      <button className="subheader-nav-btn subheader-nav-btn-active">Order Book</button>
+                      <button className="subheader-nav-btn subheader-nav-btn-inactive">My Orders</button>
+                    </nav>
+
+                    {/* Action Buttons */}
+                    <button className="p-2.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-navy-400 hover:text-white transition-colors">
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
-              {/* Border indicator */}
-              <div className="h-px bg-navy-700" />
             </div>
 
             {/* Subheader Specs */}
@@ -423,39 +399,32 @@ export function ThemePage() {
               Optional bar below Subheader for page-specific filters, toggles, and actions. NOT fixed - flows with content or can be sticky.
             </p>
 
-            {/* SubSubHeader Visual */}
-            <div className="rounded-xl border-2 border-amber-500/50 overflow-hidden bg-navy-900/80">
-              {/* Actual SubSubHeader Mockup */}
-              <div className="px-4 sm:px-6 lg:px-8 py-3 border-b border-navy-700">
-                <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-                  {/* Left side: Filters/Toggles */}
-                  <div className="flex items-center gap-2 group">
-                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg bg-navy-700 text-white flex items-center gap-1.5">
-                      All
-                      <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">24</span>
-                    </button>
-                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg text-navy-400 hover:bg-navy-700/50">
-                      Pending
-                      <span className="ml-1.5 bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">3</span>
-                    </button>
-                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg text-navy-400 hover:bg-navy-700/50">Completed</button>
-                    <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Filter Tabs</span>
-                  </div>
+            {/* SubSubHeader - REAL .subsubheader-bar CLASS */}
+            <div className="subsubheader-bar justify-between">
+              {/* Left side: Filters/Toggles */}
+              <div className="flex items-center gap-2">
+                <button className="subsubheader-nav-btn subsubheader-nav-btn-active">
+                  All
+                  <span className="subsubheader-nav-badge">24</span>
+                </button>
+                <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">
+                  Pending
+                  <span className="subsubheader-nav-badge">3</span>
+                </button>
+                <button className="subsubheader-nav-btn subsubheader-nav-btn-inactive">Completed</button>
+              </div>
 
-                  {/* Right side: Actions */}
-                  <div className="flex items-center gap-2 group">
-                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
-                      <Search className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Actions</span>
-                  </div>
-                </div>
+              {/* Right side: Actions */}
+              <div className="flex items-center gap-2">
+                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                  <Search className="w-4 h-4" />
+                </button>
+                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white transition-colors">
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
