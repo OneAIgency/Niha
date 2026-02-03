@@ -1,28 +1,28 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, AlertTriangle, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
-import { Button } from '../common';
+import { Button, AlertBanner } from '../common';
 import { getFailedActions } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 interface TicketLog {
   [key: string]: unknown;
   id: string;
-  ticket_id: string;
+  ticketId: string;
   timestamp: string;
-  user_id?: string;
-  market_maker_id?: string;
-  action_type: string;
-  entity_type: string;
-  entity_id?: string;
+  userId?: string;
+  marketMakerId?: string;
+  actionType: string;
+  entityType: string;
+  entityId?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: Record<string, unknown>;
-  response_data?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
-  before_state?: Record<string, unknown>;
-  after_state?: Record<string, unknown>;
-  related_ticket_ids: string[];
+  requestPayload?: Record<string, unknown>;
+  responseData?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  relatedTicketIds: string[];
   tags: string[];
 }
 
@@ -72,7 +72,7 @@ export function FailedActionsTab() {
 
   const columns: Column<TicketLog>[] = [
     {
-      key: 'ticket_id',
+      key: 'ticketId',
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
@@ -92,7 +92,7 @@ export function FailedActionsTab() {
       ),
     },
     {
-      key: 'action_type',
+      key: 'actionType',
       header: 'Action Type',
       width: '200px',
       render: (value) => (
@@ -105,7 +105,7 @@ export function FailedActionsTab() {
       ),
     },
     {
-      key: 'entity_type',
+      key: 'entityType',
       header: 'Entity',
       width: '120px',
       render: (value) => (
@@ -126,7 +126,7 @@ export function FailedActionsTab() {
       ),
     },
     {
-      key: 'user_id',
+      key: 'userId',
       header: 'User',
       width: '100px',
       render: (value) =>
@@ -139,7 +139,7 @@ export function FailedActionsTab() {
         ),
     },
     {
-      key: 'market_maker_id',
+      key: 'marketMakerId',
       header: 'MM',
       width: '100px',
       render: (value) =>
@@ -156,7 +156,7 @@ export function FailedActionsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+      <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/20 dark:to-amber-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
@@ -188,10 +188,7 @@ export function FailedActionsTab() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
-        </div>
+        <AlertBanner variant="error" message={error} />
       )}
 
       {/* Success Message */}
@@ -199,7 +196,7 @@ export function FailedActionsTab() {
         <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-8 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-              <AlertCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">

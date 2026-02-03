@@ -1,10 +1,19 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from html import escape
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def sanitize_string(value: Optional[str]) -> Optional[str]:
+    """Strip and escape HTML from user input to prevent XSS"""
+    if value is None:
+        return None
+    # Strip whitespace and escape HTML entities
+    return escape(value.strip())
 
 
 # Enums
@@ -16,11 +25,20 @@ class Jurisdiction(str, Enum):
 
 
 class UserRole(str, Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class CertificateType(str, Enum):
@@ -94,19 +112,25 @@ class ContactRequestCreate(BaseModel):
     contact_email: EmailStr
     contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
-    request_type: str = Field(default="join")  # 'join' or 'nda'
+
+    @field_validator("entity_name", "contact_name", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class ContactRequestResponse(BaseModel):
+    """Contact request; client/request state is ONLY user_role (NDA, KYC, REJECTED). Do not use request_type."""
+
     id: UUID
     entity_name: str
     contact_email: str
     contact_name: Optional[str]
     position: Optional[str]
-    request_type: str
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None
-    status: str
+    user_role: str  # Sole source for request state; values NDA, KYC, REJECTED
     notes: Optional[str] = None
     created_at: datetime
 
@@ -146,9 +170,15 @@ class UserCreate(BaseModel):
     password: Optional[str] = Field(
         None, min_length=8
     )  # Optional - if not provided, send invitation
-    role: UserRole = UserRole.PENDING
+    role: UserRole = UserRole.NDA
     entity_id: Optional[UUID] = None
     position: Optional[str] = None
+
+    @field_validator("first_name", "last_name", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class UserProfileUpdate(BaseModel):
@@ -156,6 +186,12 @@ class UserProfileUpdate(BaseModel):
     last_name: Optional[str] = Field(None, max_length=100)
     phone: Optional[str] = Field(None, max_length=50)
     position: Optional[str] = Field(None, max_length=100)
+
+    @field_validator("first_name", "last_name", "phone", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class PasswordChange(BaseModel):
@@ -179,6 +215,18 @@ class MagicLinkVerify(BaseModel):
 class PasswordLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1)
+
+
+class SetupPasswordRequest(BaseModel):
+    """Request body for password setup from invitation link."""
+    token: str
+    password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request body for admin reset operations requiring password confirmation."""
+    password: str
 
 
 class TokenResponse(BaseModel):
@@ -323,15 +371,35 @@ class DashboardStats(BaseModel):
 
 
 # Admin Schemas
+VALID_CONTACT_STATUS = frozenset({"NDA", "REJECTED", "KYC"})
+
+
 class ContactRequestUpdate(BaseModel):
-    status: Optional[str] = None
+    user_role: Optional[str] = None
     notes: Optional[str] = None
     agent_id: Optional[UUID] = None
+
+    @field_validator("user_role")
+    @classmethod
+    def validate_user_role(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if v not in VALID_CONTACT_STATUS:
+            raise ValueError(
+                f"user_role must be one of {sorted(VALID_CONTACT_STATUS)}"
+            )
+        return v
 
 
 class EntityKYCUpdate(BaseModel):
     kyc_status: str
     notes: Optional[str] = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 # Generic Response
@@ -417,6 +485,28 @@ class ScrapingSourceCreate(BaseModel):
     certificate_type: CertificateType
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
     scrape_interval_minutes: int = Field(5, ge=1, le=60)
+    config: Optional[Dict[str, Any]] = None
+
+
+# Exchange Rate Source Schemas
+class ExchangeRateSourceCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    from_currency: str = Field(..., min_length=3, max_length=3)
+    to_currency: str = Field(..., min_length=3, max_length=3)
+    url: str = Field(..., min_length=1, max_length=500)
+    scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
+    scrape_interval_minutes: int = Field(60, ge=1, le=1440)
+    is_primary: bool = False
+    config: Optional[Dict[str, Any]] = None
+
+
+class ExchangeRateSourceUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    url: Optional[str] = Field(None, min_length=1, max_length=500)
+    scrape_library: Optional[ScrapeLibrary] = None
+    is_active: Optional[bool] = None
+    is_primary: Optional[bool] = None
+    scrape_interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
     config: Optional[Dict[str, Any]] = None
 
 
@@ -527,7 +617,7 @@ class PaginatedResponse(BaseModel):
     pagination: Dict[str, int]
 
 
-# Cash Market Order Schemas
+# CEA Cash Market Order Schemas
 class OrderCreate(BaseModel):
     certificate_type: CertificateType
     side: OrderSide
@@ -628,6 +718,7 @@ class OrderPreviewResponse(BaseModel):
     can_execute: bool
     execution_message: str
     partial_fill: bool = False  # True if order would only partially fill
+    will_be_placed_in_book: bool = False  # True for LIMIT orders that will wait in order book
 
 
 class MarketOrderRequest(BaseModel):
@@ -693,6 +784,8 @@ class OrderBookResponse(BaseModel):
     last_price: Optional[float]
     volume_24h: float
     change_24h: float
+    high_24h: Optional[float] = None
+    low_24h: Optional[float] = None
 
 
 class MarketDepthPoint(BaseModel):
@@ -908,6 +1001,12 @@ class DepositAnnouncementRequest(BaseModel):
     )
     notes: Optional[str] = Field(None, description="Additional notes from client")
 
+    @field_validator("source_bank", "source_iban", "source_swift", "wire_reference", "notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class WireInstructions(BaseModel):
     """Bank wire instructions for deposit"""
@@ -940,11 +1039,23 @@ class DepositConfirmRequest(BaseModel):
     )
     admin_notes: Optional[str] = Field(None, description="Admin notes")
 
+    @field_validator("admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class DepositApproveRequest(BaseModel):
     """Admin approves deposit after AML hold"""
 
     admin_notes: Optional[str] = Field(None, description="Approval notes")
+
+    @field_validator("admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class RejectionReason(str, Enum):
@@ -965,6 +1076,12 @@ class DepositRejectRequest(BaseModel):
     reason: RejectionReason = Field(..., description="Rejection reason category")
     reason_details: str = Field(..., min_length=10, description="Detailed explanation")
     admin_notes: Optional[str] = Field(None, description="Internal admin notes")
+
+    @field_validator("reason_details", "admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class DepositDetailResponse(BaseModel):
@@ -1078,9 +1195,9 @@ class AssetTypeEnum(str, Enum):
 class MarketMakerTypeEnum(str, Enum):
     """Types of market makers"""
 
-    CEA_CASH_SELLER = "CEA_CASH_SELLER"
-    CASH_BUYER = "CASH_BUYER"
-    SWAP_MAKER = "SWAP_MAKER"
+    CEA_BUYER = "CEA_BUYER"
+    CEA_SELLER = "CEA_SELLER"
+    EUA_OFFER = "EUA_OFFER"
 
 
 class TransactionTypeEnum(str, Enum):
@@ -1155,15 +1272,27 @@ class MarketMakerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     description: Optional[str] = None
-    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_CASH_SELLER
+    mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_SELLER
     initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
     initial_eur_balance: Optional[Decimal] = None
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class MarketMakerUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class MarketMakerBalance(BaseModel):
@@ -1181,6 +1310,8 @@ class MarketMakerResponse(BaseModel):
     is_active: bool
     current_balances: Dict[str, MarketMakerBalance]  # {CEA: {...}, EUA: {...}}
     eur_balance: Optional[Decimal] = None
+    cea_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
+    eua_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
     total_orders: int = 0
     total_trades: int = 0
     created_at: datetime
@@ -1212,6 +1343,252 @@ class MarketMakerTransactionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# =============================================================================
+# Auto Trade Rule Schemas
+# =============================================================================
+
+
+class AutoTradePriceMode(str, Enum):
+    FIXED = "fixed"
+    SPREAD_FROM_BEST = "spread_from_best"
+    RANDOM_SPREAD = "random_spread"
+    PERCENTAGE_FROM_MARKET = "percentage_from_market"
+
+
+class AutoTradeQuantityMode(str, Enum):
+    FIXED = "fixed"
+    PERCENTAGE_OF_BALANCE = "percentage_of_balance"
+    RANDOM_RANGE = "random_range"
+
+
+class AutoTradeRuleCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    enabled: bool = False
+    side: OrderSide
+    order_type: str = Field(default="LIMIT", pattern="^(LIMIT|MARKET)$")
+
+    # Price settings
+    price_mode: AutoTradePriceMode = AutoTradePriceMode.SPREAD_FROM_BEST
+    fixed_price: Optional[Decimal] = Field(None, gt=0)
+    spread_from_best: Optional[Decimal] = Field(None, ge=0)
+    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
+    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)  # Max % deviation from scraped price
+
+    # Quantity settings
+    quantity_mode: AutoTradeQuantityMode = AutoTradeQuantityMode.FIXED
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
+    min_quantity: Optional[Decimal] = Field(None, gt=0)
+    max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    # Timing
+    interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$")
+    interval_minutes: int = Field(default=5, ge=1, le=1440)  # Used when interval_mode='fixed' (legacy)
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Min interval when mode='random' (legacy)
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Max interval when mode='random' (legacy)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)  # 5 sec to 24 hours
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
+
+    # Conditions
+    min_balance: Optional[Decimal] = Field(None, ge=0)
+    max_active_orders: Optional[int] = Field(None, ge=1)
+
+
+class AutoTradeRuleUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    enabled: Optional[bool] = None
+    side: Optional[OrderSide] = None
+    order_type: Optional[str] = Field(None, pattern="^(LIMIT|MARKET)$")
+
+    # Price settings
+    price_mode: Optional[AutoTradePriceMode] = None
+    fixed_price: Optional[Decimal] = Field(None, gt=0)
+    spread_from_best: Optional[Decimal] = Field(None, ge=0)
+    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
+    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)
+
+    # Quantity settings
+    quantity_mode: Optional[AutoTradeQuantityMode] = None
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
+    min_quantity: Optional[Decimal] = Field(None, gt=0)
+    max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    # Timing
+    interval_mode: Optional[str] = Field(None, pattern="^(fixed|random)$")
+    interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
+
+    # Conditions
+    min_balance: Optional[Decimal] = Field(None, ge=0)
+    max_active_orders: Optional[int] = Field(None, ge=1)
+
+
+class AutoTradeRuleResponse(BaseModel):
+    id: UUID
+    market_maker_id: UUID
+    name: str
+    enabled: bool
+    side: str
+    order_type: str
+
+    # Price settings
+    price_mode: str
+    fixed_price: Optional[Decimal]
+    spread_from_best: Optional[Decimal]
+    spread_min: Optional[Decimal]
+    spread_max: Optional[Decimal]
+    percentage_from_market: Optional[Decimal]
+    max_price_deviation: Optional[Decimal]
+
+    # Quantity settings
+    quantity_mode: str
+    fixed_quantity: Optional[Decimal]
+    percentage_of_balance: Optional[Decimal]
+    min_quantity: Optional[Decimal]
+    max_quantity: Optional[Decimal]
+
+    # Timing
+    interval_mode: str
+    interval_minutes: int
+    interval_min_minutes: Optional[int]
+    interval_max_minutes: Optional[int]
+    # Seconds-based intervals
+    interval_seconds: Optional[int]
+    interval_min_seconds: Optional[int]
+    interval_max_seconds: Optional[int]
+
+    # Conditions
+    min_balance: Optional[Decimal]
+    max_active_orders: Optional[int]
+
+    # Execution tracking
+    last_executed_at: Optional[datetime]
+    next_execution_at: Optional[datetime]
+    execution_count: int
+
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeConfigResponse(BaseModel):
+    """Response for market maker auto trade configuration"""
+    enabled: bool
+    rules: List[AutoTradeRuleResponse]
+
+
+class AutoTradeConfigUpdate(BaseModel):
+    """Update the global enabled state for auto trade"""
+    enabled: bool
+
+
+# Auto Trade Settings Schemas (Global Liquidity Targets)
+class AutoTradeSettingsResponse(BaseModel):
+    """Response for auto trade global settings"""
+    id: UUID
+    certificate_type: str
+    target_ask_liquidity: Optional[Decimal] = None
+    target_bid_liquidity: Optional[Decimal] = None
+    liquidity_limit_enabled: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeSettingsUpdate(BaseModel):
+    """Update auto trade global settings"""
+    target_ask_liquidity: Optional[Decimal] = Field(None, ge=0)
+    target_bid_liquidity: Optional[Decimal] = Field(None, ge=0)
+    liquidity_limit_enabled: Optional[bool] = None
+
+
+class LiquidityStatusResponse(BaseModel):
+    """Current liquidity status for a certificate type"""
+    certificate_type: str
+    ask_liquidity: Decimal  # Current EUR value of SELL orders
+    bid_liquidity: Decimal  # Current EUR value of BUY orders
+    target_ask_liquidity: Optional[Decimal]  # Target level
+    target_bid_liquidity: Optional[Decimal]  # Target level
+    ask_percentage: Optional[Decimal]  # Current % of target (null if no target)
+    bid_percentage: Optional[Decimal]  # Current % of target (null if no target)
+    liquidity_limit_enabled: bool
+
+
+# Auto Trade Market Settings Schemas (Per-market-side settings)
+class MarketMakerSummary(BaseModel):
+    """Summary of a market maker for display"""
+    id: UUID
+    name: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeMarketSettingsResponse(BaseModel):
+    """Response for per-market-side auto trade settings"""
+    id: UUID
+    market_key: str  # 'CEA_BID', 'CEA_ASK', 'EUA_SWAP'
+    enabled: bool
+    target_liquidity: Optional[Decimal]
+    price_deviation_pct: Decimal  # Percentage deviation from best price
+    avg_order_count: int  # Average number of orders to maintain
+    min_order_volume_eur: Decimal  # Minimum order volume in EUR
+    volume_variety: int  # 1-10 scale for volume diversity
+    interval_seconds: int = 60  # Order placement interval in seconds
+    max_liquidity_threshold: Optional[Decimal] = None  # Trigger internal trades above this
+    internal_trade_interval: Optional[int] = None  # Interval for internal trades when at target
+    internal_trade_volume_min: Optional[Decimal] = None  # Min volume per internal trade (EUR)
+    internal_trade_volume_max: Optional[Decimal] = None  # Max volume per internal trade (EUR)
+    created_at: datetime
+    updated_at: datetime
+
+    # Associated market makers
+    market_makers: List[MarketMakerSummary] = []
+
+    # Current liquidity status
+    current_liquidity: Optional[Decimal] = None
+    liquidity_percentage: Optional[Decimal] = None
+
+    # Derived status
+    is_online: bool = False  # Whether the auto-trader is actively running
+
+    class Config:
+        from_attributes = True
+
+
+class AutoTradeMarketSettingsUpdate(BaseModel):
+    """Update per-market-side auto trade settings"""
+    enabled: Optional[bool] = None
+    target_liquidity: Optional[Decimal] = Field(None, ge=0)
+    price_deviation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    avg_order_count: Optional[int] = Field(None, ge=1, le=1000)
+    min_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
+    volume_variety: Optional[int] = Field(None, ge=1, le=10)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=3600)  # 5 sec to 1 hour
+    max_liquidity_threshold: Optional[Decimal] = Field(None, ge=0)
+    internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600)  # 10 sec to 1 hour
+    internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0)
+    internal_trade_volume_max: Optional[Decimal] = Field(None, ge=0)
 
 
 # Market Order (Admin) Schemas
@@ -1329,3 +1706,79 @@ class ProvisionRequest(BaseModel):
     amount: Decimal = Field(..., gt=0)
     mm_ids: Optional[List[UUID]] = None
     count: Optional[int] = None
+
+
+# =============================================================================
+# Trading Fee Schemas
+# =============================================================================
+
+
+class MarketTypeEnum(str, Enum):
+    """Trading markets"""
+
+    CEA_CASH = "CEA_CASH"
+    SWAP = "SWAP"
+
+
+class TradingFeeConfigResponse(BaseModel):
+    """Response for a single market's fee configuration"""
+
+    id: UUID
+    market: MarketTypeEnum
+    bid_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for buyers (0-1)")
+    ask_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for sellers (0-1)")
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TradingFeeConfigUpdate(BaseModel):
+    """Request to update a market's fee configuration"""
+
+    bid_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for buyers (0-1)")
+    ask_fee_rate: Decimal = Field(..., ge=0, le=1, description="Fee rate for sellers (0-1)")
+
+
+class EntityFeeOverrideResponse(BaseModel):
+    """Response for an entity's custom fee override"""
+
+    id: UUID
+    entity_id: UUID
+    entity_name: Optional[str] = None  # Populated from join
+    market: MarketTypeEnum
+    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EntityFeeOverrideCreate(BaseModel):
+    """Request to create/update an entity's fee override"""
+
+    entity_id: UUID
+    market: MarketTypeEnum
+    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom buyer fee (null = use default)")
+    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom seller fee (null = use default)")
+
+
+class AllFeesResponse(BaseModel):
+    """Response containing all fee configurations"""
+
+    market_fees: List[TradingFeeConfigResponse]
+    entity_overrides: List[EntityFeeOverrideResponse]
+
+
+class EffectiveFeeResponse(BaseModel):
+    """Response containing the effective fee rate for a specific context"""
+
+    market: MarketTypeEnum
+    side: str  # "BID" or "ASK"
+    fee_rate: Decimal
+    is_override: bool  # True if using entity override, False if using default
+    entity_id: Optional[UUID] = None

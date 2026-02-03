@@ -178,10 +178,14 @@ export { logger } from './logger';
 // Export sanitization utilities
 export {
   sanitizeString,
+  sanitizeHtml,
   sanitizeEmail,
   sanitizeNumber,
   sanitizeObject,
   sanitizeFormData,
+  isValidCssVariableName,
+  isValidCssValue,
+  sanitizeCssVariables,
 } from './sanitize';
 
 // Export data transformation utilities
@@ -195,3 +199,12 @@ export { getPostLoginRedirect } from './redirect';
 
 // Export user utilities
 export { formatUserName, getUserInitials } from './userUtils';
+
+// Export role badge helpers (client status / user_role)
+export { clientStatusVariant, type ClientStatusVariant } from './roleBadge';
+
+// Export contact request helpers (pending list filter)
+export {
+  isPendingContactRequest,
+  PENDING_CONTACT_REQUEST_ROLES,
+} from './contactRequest';

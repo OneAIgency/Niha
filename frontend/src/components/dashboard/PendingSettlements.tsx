@@ -55,9 +55,9 @@ export function PendingSettlements() {
       case 'TRANSFER_INITIATED':
         return <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
       case 'IN_TRANSIT':
-        return <Truck className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+        return <Truck className="w-4 h-4 text-navy-600 dark:text-navy-400" />;
       case 'AT_CUSTODY':
-        return <Package className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />;
+        return <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
       default:
         return <Clock className="w-4 h-4 text-navy-600 dark:text-navy-400" />;
     }
@@ -74,9 +74,9 @@ export function PendingSettlements() {
       case 'TRANSFER_INITIATED':
         return 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30';
       case 'IN_TRANSIT':
-        return 'text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30';
+        return 'text-navy-700 dark:text-navy-400 bg-navy-100 dark:bg-navy-500/20 border-navy-300 dark:border-navy-500/30';
       case 'AT_CUSTODY':
-        return 'text-cyan-700 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-500/20 border-cyan-300 dark:border-cyan-500/30';
+        return 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30';
       default:
         return 'text-navy-700 dark:text-navy-400 bg-navy-100 dark:bg-navy-500/20 border-navy-300 dark:border-navy-500/30';
     }
@@ -176,8 +176,8 @@ export function PendingSettlements() {
 
         <div className="space-y-3">
           {settlements.map((settlement) => {
-            const daysRemaining = calculateDaysRemaining(settlement.expected_settlement_date);
-            const progress = settlement.progress_percent || 0;
+            const daysRemaining = calculateDaysRemaining(settlement.expectedSettlementDate);
+            const progress = settlement.progressPercent || 0;
 
             return (
               <motion.div
@@ -195,7 +195,7 @@ export function PendingSettlements() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-navy-900 dark:text-white">
-                          {settlement.settlement_type === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
+                          {settlement.settlementType === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
                         </span>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-medium ${getStatusColor(settlement.status)}`}>
                           {getStatusIcon(settlement.status)}
@@ -203,7 +203,7 @@ export function PendingSettlements() {
                         </span>
                       </div>
                       <p className="text-xs text-navy-500 dark:text-navy-400 font-mono">
-                        {settlement.batch_reference}
+                        {settlement.batchReference}
                       </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-navy-400 dark:text-navy-500 group-hover:text-navy-600 dark:group-hover:text-navy-300 transition-colors" />
@@ -220,7 +220,7 @@ export function PendingSettlements() {
                     <div>
                       <div className="text-xs text-navy-500 dark:text-navy-400 mb-0.5">Value</div>
                       <div className="text-sm font-mono font-medium text-navy-900 dark:text-white">
-                        {formatCurrency(settlement.total_value_eur, 'EUR')}
+                        {formatCurrency(settlement.totalValueEur, 'EUR')}
                       </div>
                     </div>
                     <div>

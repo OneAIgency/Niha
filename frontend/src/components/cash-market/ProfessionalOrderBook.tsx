@@ -1,39 +1,33 @@
 import { useMemo } from 'react';
 import { OrderBookRow } from './OrderBookRow';
-import { OrderBookSpreadIndicator } from './OrderBookSpreadIndicator';
 import type { OrderBookLevel } from '../../types';
 
 interface OrderBookData {
   bids: OrderBookLevel[];
   asks: OrderBookLevel[];
   spread: number | null;
-  best_bid: number | null;
-  best_ask: number | null;
+  bestBid: number | null;
+  bestAsk: number | null;
 }
 
 interface ProfessionalOrderBookProps {
   orderBook: OrderBookData;
   onPriceClick?: (price: number, side: 'BUY' | 'SELL') => void;
+  /** Show all orders with scrolling instead of limiting to 7 rows */
+  showFullBook?: boolean;
 }
 
-export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalOrderBookProps) {
+export function ProfessionalOrderBook({ orderBook, onPriceClick, showFullBook = false }: ProfessionalOrderBookProps) {
   const maxQuantity = useMemo(() => {
-    const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulative_quantity)) : 0;
-    const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulative_quantity)) : 0;
+    const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulativeQuantity)) : 0;
+    const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulativeQuantity)) : 0;
     return Math.max(bidMax, askMax);
   }, [orderBook]);
 
   return (
-    <div className="card_back overflow-hidden p-0 text-[11px]">
-      {/* Header */}
-      <div className="px-4 py-2 border-b border-navy-200 dark:border-navy-700">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-navy-900 dark:text-white">Order Book</h2>
-        </div>
-      </div>
-
+    <div className="content_wrapper_last p-0 text-[11px] flex flex-col h-full">
       {/* Column Headers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-navy-200 dark:border-navy-700">
+      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-navy-200 dark:border-navy-700 flex-shrink-0">
         {/* Bids Header */}
         <div className="px-4 py-1.5 border-r border-navy-200 dark:border-navy-700">
           <div className="grid grid-cols-3 md:grid-cols-4 gap-2 text-[10px] font-medium text-navy-600 dark:text-navy-400">
@@ -56,10 +50,13 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
       </div>
 
       {/* Order Book Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0 overflow-hidden">
         {/* Bids (Buy Orders) */}
-        <div className="border-r border-navy-200 dark:border-navy-700">
-          {orderBook.bids.slice(0, 7).map((level, idx) => (
+        <div
+          className="border-r border-navy-200 dark:border-navy-700 overflow-y-auto"
+          style={showFullBook ? { height: '100%' } : undefined}
+        >
+          {(showFullBook ? orderBook.bids : orderBook.bids.slice(0, 7)).map((level, idx) => (
             <OrderBookRow
               key={`bid-${level.price}-${idx}`}
               level={level}
@@ -71,8 +68,11 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
         </div>
 
         {/* Asks (Sell Orders) */}
-        <div className="hidden md:block">
-          {orderBook.asks.slice(0, 7).map((level, idx) => (
+        <div
+          className="hidden md:block overflow-y-auto"
+          style={showFullBook ? { height: '100%' } : undefined}
+        >
+          {(showFullBook ? orderBook.asks : orderBook.asks.slice(0, 7)).map((level, idx) => (
             <OrderBookRow
               key={`ask-${level.price}-${idx}`}
               level={level}
@@ -84,13 +84,18 @@ export function ProfessionalOrderBook({ orderBook, onPriceClick }: ProfessionalO
         </div>
       </div>
 
-      {/* Center Spread Line - Professional Trading Platform Style */}
-      {orderBook.best_bid !== null && orderBook.best_ask !== null && orderBook.spread !== null && (
-        <OrderBookSpreadIndicator
-          bestBid={orderBook.best_bid}
-          bestAsk={orderBook.best_ask}
-          spread={orderBook.spread}
-        />
+      {/* Order Count Footer - shown when full book is enabled */}
+      {showFullBook && (
+        <div className="px-4 py-2 border-t border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-900/30 flex-shrink-0">
+          <div className="flex items-center justify-between text-[10px] text-navy-500 dark:text-navy-400">
+            <span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{orderBook.bids.length}</span> bid levels
+            </span>
+            <span>
+              <span className="font-semibold text-red-600 dark:text-red-400">{orderBook.asks.length}</span> ask levels
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

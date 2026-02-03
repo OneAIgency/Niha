@@ -17,6 +17,7 @@ import type {
   KYCDocument,
   ScrapingSource,
   ScrapeLibrary,
+  ExchangeRateSource,
   MailSettings,
   MailSettingsUpdate,
   UserSession,
@@ -43,10 +44,12 @@ import type {
   HoldCalculation,
   Entity,
   EntityBalance,
+  EntityBalances,
   MarketMaker,
   MarketMakerType,
   MarketMakerQueryParams,
   MarketMakerTransaction,
+  MarketMakerOrder,
   SettlementBatch,
   Trade,
   TransactionType,
@@ -56,6 +59,16 @@ import type {
   CompleteWithdrawalRequest,
   RejectWithdrawalRequest,
   WithdrawalStats,
+  AllFeesResponse,
+  TradingFeeConfig,
+  TradingFeeConfigUpdate,
+  EntityFeeOverride,
+  EntityFeeOverrideCreate,
+  EffectiveFeeResponse,
+  AutoTradeSettings,
+  LiquidityStatus,
+  AutoTradeMarketSettings,
+  AutoTradeMarketSettingsUpdate,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -66,21 +79,21 @@ import type {
   LiquidityCreationResponse,
 } from '../types/liquidity';
 import { logger } from '../utils/logger';
-import { transformKeysToCamelCase } from '../utils/dataTransform';
+import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
 import { TOKEN_KEY } from '../constants/auth';
 import { useAuthStore } from '../stores/useStore';
 
 // Flag to prevent multiple redirects during auth failures
 let isRedirectingToLogin = false;
 
-// Secure token storage utility
-// Note: For production, tokens should be stored in httpOnly cookies (requires backend changes)
+// Token storage utilities
+// Note: Primary auth is via httpOnly cookies (set by backend on login)
+// sessionStorage is kept as fallback during transition period
 
 function getToken(): string | null {
   try {
-    // Use sessionStorage instead of localStorage for better security
-    // Still vulnerable to XSS, but better than localStorage
-    // TODO: Migrate to httpOnly cookies for production
+    // Check sessionStorage for backwards compatibility during transition
+    // New auth flow uses httpOnly cookies (sent automatically via withCredentials)
     return sessionStorage.getItem(TOKEN_KEY);
   } catch {
     return null;
@@ -89,6 +102,7 @@ function getToken(): string | null {
 
 function removeToken(): void {
   try {
+    // Clear sessionStorage token (httpOnly cookie cleared by logout endpoint)
     sessionStorage.removeItem(TOKEN_KEY);
   } catch (error) {
     logger.error('Failed to remove token', error);
@@ -134,18 +148,23 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Enable credentials to send/receive httpOnly cookies
+  withCredentials: true,
 });
 
-// Add auth token to requests and handle FormData
+// Add auth token to requests, handle FormData, and transform request data
 api.interceptors.request.use((config) => {
   const token = getToken();
-  
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   // Remove Content-Type for FormData to let browser set it with correct boundary
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
+  } else if (config.data && typeof config.data === 'object') {
+    // Transform request data from camelCase to snake_case (backend expects snake_case)
+    config.data = transformKeysToSnakeCase(config.data);
   }
   return config;
 });
@@ -160,9 +179,28 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Standardize error response format
+    // Standardize error response format (message always string; data.detail unchanged for modal)
+    const d = error.response?.data?.detail;
+    let message: string;
+    if (typeof d === 'string') {
+      message = d;
+    } else if (
+      d &&
+      typeof d === 'object' &&
+      !Array.isArray(d) &&
+      typeof (d as { error?: string }).error === 'string'
+    ) {
+      message = (d as { error: string }).error;
+    } else if (
+      error.response?.data?.message &&
+      typeof error.response.data.message === 'string'
+    ) {
+      message = error.response.data.message;
+    } else {
+      message = error.message || 'An error occurred';
+    }
     const standardizedError = {
-      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'An error occurred',
+      message,
       status: error.response?.status,
       data: error.response?.data,
       originalError: error,
@@ -262,8 +300,8 @@ export const authApi = {
   validateInvitation: async (token: string): Promise<{
     valid: boolean;
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
   }> => {
     const { data } = await api.get(`/auth/validate-invitation/${token}`);
     return data;
@@ -275,8 +313,10 @@ export const authApi = {
     password: string,
     confirmPassword: string
   ): Promise<{ access_token: string; user: User }> => {
-    const { data } = await api.post('/auth/setup-password', null, {
-      params: { token, password, confirm_password: confirmPassword }
+    const { data } = await api.post('/auth/setup-password', {
+      token,
+      password,
+      confirm_password: confirmPassword
     });
     return data;
   },
@@ -493,8 +533,8 @@ export const swapsApi = {
   getRate: async (): Promise<{
     eua_to_cea: number;
     cea_to_eua: number;
-    eua_price_usd: number;
-    cea_price_usd: number;
+    eua_price_eur: number;
+    cea_price_eur: number;
     explanation: string;
     platform_fee_pct: number;
     effective_rate: number;
@@ -572,6 +612,69 @@ export const swapsApi = {
     count: number;
   }> => {
     const { data } = await api.get('/swaps/offers');
+    return data;
+  },
+
+  getOrderbook: async (): Promise<{
+    asks: Array<{
+      ratio: number;
+      euaQuantity: number;
+      ordersCount: number;
+      cumulativeEua: number;
+      depthPct: number;
+    }>;
+    totalEuaAvailable: number;
+    levelsCount: number;
+  }> => {
+    const { data } = await api.get('/swaps/orderbook');
+    // Data is already transformed by axios interceptor, just return it
+    return data;
+  },
+
+  createSwapOffer: async (offer: {
+    market_maker_id: string;
+    ratio: number;
+    eua_quantity: number;
+  }): Promise<{
+    success: boolean;
+    orderId: string;  // Transformed by axios interceptor from order_id
+    marketMakerId: string;
+    marketMakerName: string;
+    ratio: number;
+    euaQuantity: number;
+    status: string;
+    createdAt: string;
+  }> => {
+    const { data } = await api.post('/swaps/offers', offer);
+    return data;
+  },
+
+  createSwapOffersBatch: async (offers: Array<{
+    market_maker_id: string;
+    ratio: number;
+    eua_quantity: number;
+  }>): Promise<{
+    success: boolean;
+    created_count: number;
+    offers: Array<{
+      market_maker_id: string;
+      market_maker_name: string;
+      ratio: number;
+      eua_quantity: number;
+    }>;
+  }> => {
+    const { data } = await api.post('/swaps/offers/batch', { offers });
+    return data;
+  },
+
+  resetSwapLiquidity: async (confirmationCode: string): Promise<{
+    success: boolean;
+    message: string;
+    deleted_count: number;
+  }> => {
+    const { data } = await api.delete('/swaps/offers/reset', {
+      data: { confirmation_code: confirmationCode },
+    });
     return data;
   },
 };
@@ -668,7 +771,7 @@ export const usersApi = {
 export const adminApi = {
   // Contact Requests
   getContactRequests: async (params?: {
-    status?: string;
+    user_role?: string;
     page?: number;
     per_page?: number;
   }): Promise<PaginatedResponse<ContactRequestResponse>> => {
@@ -687,7 +790,7 @@ export const adminApi = {
     return data;
   },
 
-  // Create user from contact request (approve & invite)
+  // Create user from contact request (approve & create user)
   createUserFromRequest: async (
     requestId: string,
     userData: {
@@ -711,16 +814,21 @@ export const adminApi = {
       creation_method: string;
     };
   }> => {
+    const params: Record<string, string> = {
+      request_id: requestId,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      mode: userData.mode,
+    };
+    if (userData.password != null && userData.password !== '') {
+      params.password = userData.password;
+    }
+    if (userData.position != null && userData.position !== '') {
+      params.position = userData.position;
+    }
     const { data } = await api.post('/admin/users/create-from-request', null, {
-      params: {
-        request_id: requestId,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        mode: userData.mode,
-        password: userData.password,
-        position: userData.position,
-      }
+      params,
     });
     return data;
   },
@@ -772,7 +880,7 @@ export const adminApi = {
 
   // User Management
   getUsers: async (params?: {
-    role?: UserRole;
+    role?: UserRole | 'DISABLED';
     search?: string;
     page?: number;
     per_page?: number;
@@ -783,11 +891,12 @@ export const adminApi = {
 
   createUser: async (userData: {
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     role: UserRole;
     password?: string;
-    entity_id?: string;
+    position?: string;
+    entityId?: string;
   }): Promise<User> => {
     const { data } = await api.post('/admin/users', userData);
     return data;
@@ -800,11 +909,6 @@ export const adminApi = {
 
   updateUser: async (id: string, update: Partial<User>): Promise<User> => {
     const { data } = await api.put(`/admin/users/${id}`, update);
-    return data;
-  },
-
-  changeUserRole: async (id: string, role: UserRole): Promise<User> => {
-    const { data } = await api.put(`/admin/users/${id}/role`, { role });
     return data;
   },
 
@@ -828,6 +932,13 @@ export const adminApi = {
   // Reset user password
   resetUserPassword: async (id: string, reset: AdminPasswordReset): Promise<MessageResponse> => {
     const { data } = await api.post(`/admin/users/${id}/reset-password`, reset);
+    return data;
+  },
+
+  // Create entity for user (for users created without entity who need to report deposits)
+  createEntityForUser: async (id: string, entityName?: string): Promise<MessageResponse> => {
+    const params = entityName ? { entity_name: entityName } : {};
+    const { data } = await api.post(`/admin/users/${id}/create-entity`, null, { params });
     return data;
   },
 
@@ -899,6 +1010,59 @@ export const adminApi = {
     return data;
   },
 
+  // Exchange Rate Sources
+  getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
+    const { data } = await api.get('/admin/exchange-rate-sources');
+    return data;
+  },
+
+  createExchangeRateSource: async (source: {
+    name: string;
+    from_currency: string;
+    to_currency: string;
+    url: string;
+    scrape_library?: ScrapeLibrary;
+    scrape_interval_minutes: number;
+    is_primary?: boolean;
+    config?: Record<string, unknown>;
+  }): Promise<ExchangeRateSource> => {
+    const { data } = await api.post('/admin/exchange-rate-sources', source);
+    return data;
+  },
+
+  updateExchangeRateSource: async (
+    id: string,
+    update: {
+      name?: string;
+      url?: string;
+      scrape_library?: ScrapeLibrary;
+      is_active?: boolean;
+      is_primary?: boolean;
+      scrape_interval_minutes?: number;
+      config?: Record<string, unknown>;
+    }
+  ): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/exchange-rate-sources/${id}`, update);
+    return data;
+  },
+
+  testExchangeRateSource: async (
+    id: string
+  ): Promise<{ success: boolean; message: string; rate?: number }> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/test`);
+    return data;
+  },
+
+  refreshExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/exchange-rate-sources/${id}/refresh`);
+    return data;
+  },
+
+  deleteExchangeRateSource: async (id: string): Promise<MessageResponse> => {
+    const { data } = await api.delete(`/admin/exchange-rate-sources/${id}`);
+    return data;
+  },
+
   // Mail & Auth Settings
   getMailSettings: async (): Promise<MailSettings> => {
     const { data } = await api.get('/admin/settings/mail');
@@ -907,6 +1071,88 @@ export const adminApi = {
 
   updateMailSettings: async (payload: MailSettingsUpdate): Promise<{ message: string; success: boolean }> => {
     const { data } = await api.put('/admin/settings/mail', payload);
+    return data;
+  },
+
+  // Get all entities for admin purposes (for fee override dropdown)
+  getEntities: async (): Promise<Entity[]> => {
+    const { data } = await api.get('/admin/entities');
+    return data.data;  // API returns { data: [...] }
+  },
+
+  // Auto Trade Settings (Liquidity Limits)
+  getAutoTradeSettings: async (): Promise<AutoTradeSettings[]> => {
+    const { data } = await api.get('/admin/auto-trade-settings');
+    return data;
+  },
+
+  getAutoTradeSettingsByType: async (certificateType: string): Promise<AutoTradeSettings> => {
+    const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}`);
+    return data;
+  },
+
+  updateAutoTradeSettings: async (
+    certificateType: string,
+    payload: {
+      target_ask_liquidity?: number | null;
+      target_bid_liquidity?: number | null;
+      liquidity_limit_enabled?: boolean;
+    }
+  ): Promise<AutoTradeSettings> => {
+    const { data } = await api.put(`/admin/auto-trade-settings/${certificateType}`, payload);
+    return data;
+  },
+
+  getLiquidityStatus: async (certificateType: string): Promise<LiquidityStatus> => {
+    const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}/liquidity`);
+    return data;
+  },
+
+  // Per-market-side auto trade settings
+  getMarketSettings: async (): Promise<AutoTradeMarketSettings[]> => {
+    const { data } = await api.get('/admin/auto-trade-market-settings');
+    return data;
+  },
+
+  getMarketSettingsByKey: async (marketKey: string): Promise<AutoTradeMarketSettings> => {
+    const { data } = await api.get(`/admin/auto-trade-market-settings/${marketKey}`);
+    return data;
+  },
+
+  updateMarketSettings: async (
+    marketKey: string,
+    payload: AutoTradeMarketSettingsUpdate
+  ): Promise<AutoTradeMarketSettings> => {
+    const { data } = await api.put(`/admin/auto-trade-market-settings/${marketKey}`, payload);
+    return data;
+  },
+
+  // ==================== Admin Testing Tools ====================
+
+  /**
+   * Update admin's own role for testing purposes
+   */
+  updateMyRole: async (role: string): Promise<User> => {
+    const { data } = await api.put('/admin/me/role', { role });
+    return data;
+  },
+
+  /**
+   * Credit assets to admin's own entity for testing
+   */
+  creditMyEntity: async (assetType: string, amount: number): Promise<EntityBalances> => {
+    const { data } = await api.post('/admin/me/credit', {
+      asset_type: assetType,
+      amount,
+    });
+    return data;
+  },
+
+  /**
+   * Get admin's entity balances
+   */
+  getMyBalances: async (): Promise<EntityBalances> => {
+    const { data } = await api.get('/admin/me/balances');
     return data;
   },
 };
@@ -997,6 +1243,12 @@ export const backofficeApi = {
     return data;
   },
 
+  // Sync entity.balance_amount to EntityHolding (fix for legacy deposits)
+  syncEntityBalance: async (entityId: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/backoffice/entities/${entityId}/sync-balance`);
+    return data;
+  },
+
   // Confirm pending deposit with actual received amount
   confirmDeposit: async (
     depositId: string,
@@ -1021,7 +1273,7 @@ export const backofficeApi = {
   // Get all pending deposits (legacy - use new AML endpoints)
   getPendingDeposits: async (): Promise<Deposit[]> => {
     const { data } = await api.get('/backoffice/deposits', {
-      params: { status: 'pending' },
+      params: { status: 'PENDING' },
     });
     return data;
   },
@@ -1126,23 +1378,23 @@ export const backofficeApi = {
   },
 
   getEntityAssets: async (entityId: string): Promise<{
-    entity_id: string;
-    entity_name: string;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
-    recent_transactions: Array<{
+    entityId: string;
+    entityName: string;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
+    recentTransactions: Array<{
       id: string;
-      entity_id: string;
-      asset_type: string;
-      transaction_type: string;
+      entityId: string;
+      assetType: string;
+      transactionType: string;
       amount: number;
-      balance_before: number;
-      balance_after: number;
+      balanceBefore: number;
+      balanceAfter: number;
       reference?: string;
       notes?: string;
-      created_by: string;
-      created_at: string;
+      createdBy: string;
+      createdAt: string;
     }>;
   }> => {
     const { data } = await api.get(`/backoffice/entities/${entityId}/assets`);
@@ -1288,7 +1540,7 @@ export const cashMarketApi = {
     certificate_type?: CertificateType;
   }): Promise<Order[]> => {
     const { data } = await api.get('/cash-market/orders/my', { params });
-    return data;
+    return data || [];
   },
 
   cancelOrder: async (orderId: string): Promise<MessageResponse> => {
@@ -1299,13 +1551,18 @@ export const cashMarketApi = {
   // NEW REAL TRADING ENDPOINTS
 
   getUserBalances: async (): Promise<{
-    entity_id: string | null;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
+    entityId: string | null;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
   }> => {
     const { data } = await api.get('/cash-market/user/balances');
-    return data;
+    return {
+      entityId: data.entityId ?? null,
+      eurBalance: data.eurBalance ?? 0,
+      ceaBalance: data.ceaBalance ?? 0,
+      euaBalance: data.euaBalance ?? 0,
+    };
   },
 
   getRealOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
@@ -1322,33 +1579,33 @@ export const cashMarketApi = {
     limit_price?: number;
     all_or_none?: boolean;
   }): Promise<{
-    certificate_type: string;
+    certificateType: string;
     side: string;
-    order_type: string;
-    amount_eur: number | null;
-    quantity_requested: number | null;
-    limit_price: number | null;
-    all_or_none: boolean;
+    orderType: string;
+    amountEur: number | null;
+    quantityRequested: number | null;
+    limitPrice: number | null;
+    allOrNone: boolean;
     fills: Array<{
-      seller_code: string;
+      sellerCode: string;
       price: number;
       quantity: number;
       cost: number;
     }>;
-    total_quantity: number;
-    total_cost_gross: number;
-    weighted_avg_price: number;
-    best_price: number | null;
-    worst_price: number | null;
-    platform_fee_rate: number;
-    platform_fee_amount: number;
-    total_cost_net: number;
-    net_price_per_unit: number;
-    available_balance: number;
-    remaining_balance: number;
-    can_execute: boolean;
-    execution_message: string;
-    partial_fill: boolean;
+    totalQuantity: number;
+    totalCostGross: number;
+    weightedAvgPrice: number;
+    bestPrice: number | null;
+    worstPrice: number | null;
+    platformFeeRate: number;
+    platformFeeAmount: number;
+    totalCostNet: number;
+    netPricePerUnit: number;
+    availableBalance: number;
+    remainingBalance: number;
+    canExecute: boolean;
+    executionMessage: string;
+    partialFill: boolean;
   }> => {
     const { data } = await api.post('/cash-market/order/preview', request);
     return data;
@@ -1389,32 +1646,14 @@ export const cashMarketApi = {
 // Market Makers API
 export const getMarketMakers = async (params?: MarketMakerQueryParams): Promise<MarketMaker[]> => {
   const { data } = await api.get('/admin/market-makers', { params });
-
-  // Transform backend response to match frontend expectations
-  return data.map((mm: {
-    id: string;
-    name: string;
-    description?: string;
-    mm_type: MarketMakerType;
-    is_active: boolean;
-    eur_balance?: number;
-    current_balances?: { CEA?: { total: number }; EUA?: { total: number } };
-    total_orders?: number;
-    created_at: string;
-    ticket_id?: string;
-  }): MarketMaker => ({
-    id: mm.id,
-    name: mm.name,
-    description: mm.description,
-    mm_type: mm.mm_type || 'CEA_CASH_SELLER',
-    market: MARKET_MAKER_TYPES[mm.mm_type as MarketMakerType]?.market || 'CEA_CASH',
-    is_active: mm.is_active,
-    eur_balance: mm.eur_balance ?? 0,
-    cea_balance: mm.current_balances?.CEA?.total ?? 0,
-    eua_balance: mm.current_balances?.EUA?.total ?? 0,
-    total_orders: mm.total_orders || 0,
-    created_at: mm.created_at,
-    ticket_id: mm.ticket_id,
+  // Data is already transformed by axios interceptor to camelCase
+  // Handle legacy nested balances format if present
+  return data.map((mm: MarketMaker & { currentBalances?: { CEA?: { total: string | number }; EUA?: { total: string | number } } }) => ({
+    ...mm,
+    eurBalance: Number(mm.eurBalance) || 0,
+    ceaBalance: Number(mm.ceaBalance) || Number(mm.currentBalances?.CEA?.total) || 0,
+    euaBalance: Number(mm.euaBalance) || Number(mm.currentBalances?.EUA?.total) || 0,
+    market: MARKET_MAKER_TYPES[mm.mmType as MarketMakerType]?.market || 'CEA_CASH',
   }));
 };
 
@@ -1443,15 +1682,15 @@ export const createMarketMaker = async (data: CreateMarketMakerRequest): Promise
     name: data.name,
     email: data.email,
     description: data.description,
-    mm_type: data.mm_type || 'CEA_CASH_SELLER',
+    mm_type: data.mm_type || 'CEA_SELLER',
   };
 
-  // Add EUR balance for CASH_BUYER
+  // Add EUR balance for CEA_BUYER
   if (data.initial_eur_balance !== undefined) {
     payload.initial_eur_balance = data.initial_eur_balance;
   }
 
-  // Build initial_balances dict if any balance provided for CEA_CASH_SELLER or SWAP_MAKER
+  // Build initial_balances dict if any balance provided for CEA_SELLER or EUA_OFFER
   // Use !== undefined to properly handle zero values
   if (data.cea_balance !== undefined || data.eua_balance !== undefined) {
     payload.initial_balances = {};
@@ -1477,6 +1716,52 @@ export const deleteMarketMaker = async (id: string): Promise<MessageResponse> =>
   return data;
 };
 
+export const resetAllMarketMakers = async (password: string): Promise<{
+  message: string;
+  reset_count: number;
+  orders_deleted: number;
+  ticket_id: string;
+}> => {
+  const { data } = await api.post('/admin/market-makers/reset-all', { password });
+  return data;
+};
+
+export interface CreateTransactionRequest {
+  certificate_type: 'CEA' | 'EUA';
+  transaction_type: 'DEPOSIT' | 'WITHDRAWAL';
+  amount: number;
+  notes?: string;
+}
+
+export const createMarketMakerTransaction = async (
+  marketMakerId: string,
+  data: CreateTransactionRequest
+): Promise<{
+  transaction_id: string;
+  ticket_id: string;
+  balance_after: number;
+  message: string;
+}> => {
+  const { data: response } = await api.post(`/admin/market-makers/${marketMakerId}/transactions`, data);
+  return response;
+};
+
+export const depositEurToMarketMaker = async (
+  marketMakerId: string,
+  amount: number,
+  notes?: string
+): Promise<{
+  balance_before: number;
+  balance_after: number;
+  ticket_id: string;
+  message: string;
+}> => {
+  const params = new URLSearchParams({ amount: String(amount) });
+  if (notes) params.append('notes', notes);
+  const { data: response } = await api.post(`/admin/market-makers/${marketMakerId}/eur-deposit?${params.toString()}`);
+  return response;
+};
+
 export interface MarketMakerTransactionQueryParams {
   page?: number;
   per_page?: number;
@@ -1489,27 +1774,12 @@ export const getMarketMakerTransactions = async (
   params?: MarketMakerTransactionQueryParams
 ): Promise<MarketMakerTransaction[]> => {
   const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
-
-  // Transform backend response to match frontend expectations
-  // Backend returns: transaction_type as "DEPOSIT", "WITHDRAWAL", "TRADE_DEBIT", etc. (uppercase)
-  // Frontend expects: lowercase with underscores (deposit, withdrawal, trade_debit, trade_credit, etc.)
-  return data.map((transaction: {
-    id: string;
-    entity_id: string;
-    asset_type: 'EUR' | 'CEA' | 'EUA';
-    transaction_type: string;
-    amount: number;
-    balance_before: number;
-    balance_after: number;
-    reference?: string;
-    notes?: string;
-    created_by: string;
-    created_at: string;
-  }): MarketMakerTransaction => ({
+  // Data transformed by axios interceptor; add marketMakerId and normalize transaction_type
+  return data.map((transaction: MarketMakerTransaction) => ({
     ...transaction,
-    market_maker_id: id,
-    transaction_type: (transaction.transaction_type?.toLowerCase() || 'deposit') as TransactionType,
-    amount: Math.abs(transaction.amount), // Store absolute value for display
+    marketMakerId: id,
+    transactionType: (transaction.transactionType?.toLowerCase() || 'deposit') as TransactionType,
+    amount: Math.abs(transaction.amount),
   }));
 };
 
@@ -1530,31 +1800,197 @@ export const createTransaction = async (id: string, data: {
 };
 
 export const getMarketMakerBalances = async (id: string): Promise<{
-  cea_balance: number;
-  eua_balance: number;
-  cea_available: number;
-  eua_available: number;
-  cea_locked: number;
-  eua_locked: number;
+  ceaBalance: number;
+  euaBalance: number;
+  eurBalance: number;
+  ceaAvailable: number;
+  euaAvailable: number;
+  eurAvailable: number;
+  ceaLocked: number;
+  euaLocked: number;
+  eurLocked: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
-
-  // Transform nested backend structure to flat frontend structure
-  // Backend returns: {CEA: {available, locked, total}, EUA: {available, locked, total}}
-  // Frontend expects: flat structure with total, available, and locked for each
+  // Backend returns nested structure: {CEA: {available, locked, total}, ...}
   return {
-    cea_balance: data.CEA?.total ?? 0,
-    eua_balance: data.EUA?.total ?? 0,
-    cea_available: data.CEA?.available ?? 0,
-    eua_available: data.EUA?.available ?? 0,
-    cea_locked: data.CEA?.locked ?? 0,
-    eua_locked: data.EUA?.locked ?? 0,
+    ceaBalance: data.CEA?.total ?? 0,
+    euaBalance: data.EUA?.total ?? 0,
+    eurBalance: data.EUR?.total ?? 0,
+    ceaAvailable: data.CEA?.available ?? 0,
+    euaAvailable: data.EUA?.available ?? 0,
+    eurAvailable: data.EUR?.available ?? 0,
+    ceaLocked: data.CEA?.locked ?? 0,
+    euaLocked: data.EUA?.locked ?? 0,
+    eurLocked: data.EUR?.locked ?? 0,
   };
 };
 
+// Auto Trade Rules API
+export interface AutoTradeRule {
+  id: string;
+  marketMakerId: string;
+  name: string;
+  enabled: boolean;
+  side: 'BUY' | 'SELL';
+  orderType: 'LIMIT' | 'MARKET';
+  priceMode: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixedPrice?: number;
+  spreadFromBest?: number;
+  spreadMin?: number;
+  spreadMax?: number;
+  percentageFromMarket?: number;
+  maxPriceDeviation?: number;
+  quantityMode: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixedQuantity?: number;
+  percentageOfBalance?: number;
+  minQuantity?: number;
+  maxQuantity?: number;
+  intervalMode: 'fixed' | 'random';
+  intervalMinutes: number;
+  intervalMinMinutes?: number;
+  intervalMaxMinutes?: number;
+  intervalSeconds?: number | null;
+  intervalMinSeconds?: number | null;
+  intervalMaxSeconds?: number | null;
+  minBalance?: number;
+  maxActiveOrders?: number;
+  lastExecutedAt?: string;
+  nextExecutionAt?: string;
+  executionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutoTradeRuleCreate {
+  name: string;
+  enabled?: boolean;
+  side: 'BUY' | 'SELL';
+  order_type?: 'LIMIT' | 'MARKET';
+  price_mode?: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixed_price?: number;
+  spread_from_best?: number;
+  spread_min?: number;
+  spread_max?: number;
+  percentage_from_market?: number;
+  max_price_deviation?: number;
+  quantity_mode?: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixed_quantity?: number;
+  percentage_of_balance?: number;
+  min_quantity?: number;
+  max_quantity?: number;
+  interval_mode?: 'fixed' | 'random';
+  interval_minutes?: number;
+  interval_min_minutes?: number;
+  interval_max_minutes?: number;
+  interval_seconds?: number | null;
+  interval_min_seconds?: number | null;
+  interval_max_seconds?: number | null;
+  min_balance?: number;
+  max_active_orders?: number;
+}
+
+export interface AutoTradeRuleUpdate {
+  name?: string;
+  enabled?: boolean;
+  side?: 'BUY' | 'SELL';
+  order_type?: 'LIMIT' | 'MARKET';
+  price_mode?: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixed_price?: number | null;
+  spread_from_best?: number | null;
+  spread_min?: number | null;
+  spread_max?: number | null;
+  percentage_from_market?: number | null;
+  max_price_deviation?: number | null;
+  quantity_mode?: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixed_quantity?: number | null;
+  percentage_of_balance?: number | null;
+  min_quantity?: number | null;
+  max_quantity?: number | null;
+  interval_mode?: 'fixed' | 'random';
+  interval_minutes?: number;
+  interval_min_minutes?: number | null;
+  interval_max_minutes?: number | null;
+  interval_seconds?: number | null;
+  interval_min_seconds?: number | null;
+  interval_max_seconds?: number | null;
+  min_balance?: number | null;
+  max_active_orders?: number | null;
+}
+
+export const getAutoTradeRules = async (marketMakerId: string): Promise<AutoTradeRule[]> => {
+  const { data } = await api.get(`/admin/market-makers/${marketMakerId}/auto-trade-rules`);
+  return data;
+};
+
+export const createAutoTradeRule = async (
+  marketMakerId: string,
+  ruleData: AutoTradeRuleCreate
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.post(`/admin/market-makers/${marketMakerId}/auto-trade-rules`, ruleData);
+  return data;
+};
+
+export const updateAutoTradeRule = async (
+  marketMakerId: string,
+  ruleId: string,
+  ruleData: AutoTradeRuleUpdate
+): Promise<{ id: string; message: string }> => {
+  const { data } = await api.put(
+    `/admin/market-makers/${marketMakerId}/auto-trade-rules/${ruleId}`,
+    ruleData
+  );
+  return data;
+};
+
+export const deleteAutoTradeRule = async (
+  marketMakerId: string,
+  ruleId: string
+): Promise<{ message: string }> => {
+  const { data } = await api.delete(
+    `/admin/market-makers/${marketMakerId}/auto-trade-rules/${ruleId}`
+  );
+  return data;
+};
+
+// Auto Trade Monitor
+export interface AutoTradeRuleStatus {
+  id: string;
+  name: string;
+  market_maker_id: string;
+  market_maker_name: string;
+  enabled: boolean;
+  side: string | null;
+  health: 'healthy' | 'disabled' | 'inactive' | 'overdue' | 'delayed';
+  health_reason: string | null;
+  last_executed_at: string | null;
+  next_execution_at: string | null;
+  time_until_next_seconds: number | null;
+  execution_count: number;
+  interval_seconds: number;
+}
+
+export interface AutoTradeMonitorResponse {
+  summary: {
+    total_rules: number;
+    enabled: number;
+    disabled: number;
+    healthy: number;
+    overdue: number;
+  };
+  rules: AutoTradeRuleStatus[];
+  timestamp: string;
+}
+
+export const getAutoTradeMonitor = async (): Promise<AutoTradeMonitorResponse> => {
+  const { data } = await api.get('/admin/market-makers/auto-trade-rules/monitor');
+  return data;
+};
+
 // Market Orders API (Admin)
-export const getAdminOrderBook = (certificateType: string) =>
-  api.get(`/admin/market-orders/orderbook/${certificateType}`);
+export const getAdminOrderBook = async (certificateType: string): Promise<{ data: OrderBook }> => {
+  const { data } = await api.get(`/admin/market-orders/orderbook/${certificateType}`);
+  return { data };
+};
 
 export const placeMarketMakerOrder = (data: {
   market_maker_id: string;
@@ -1567,14 +2003,28 @@ export const placeMarketMakerOrder = (data: {
 // Alias for consistency
 export const placeAdminMarketOrder = placeMarketMakerOrder;
 
-export const getMarketMakerOrders = (params?: {
+export const getMarketMakerOrders = async (params?: {
   market_maker_id?: string;
   status?: string;
   certificate_type?: string;
-}) => api.get('/admin/market-orders', { params });
+}): Promise<{ data: MarketMakerOrder[] }> => {
+  const { data } = await api.get('/admin/market-orders', { params });
+  return { data: data || [] };
+};
 
 export const cancelMarketMakerOrder = (orderId: string) =>
   api.delete(`/admin/market-orders/${orderId}`);
+
+// Get ALL orders (both entity and market maker) - for unified order book view
+export const getAllOrders = async (params?: {
+  certificate_type?: string;
+  status?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<{ data: Order[] }> => {
+  const { data } = await api.get('/admin/market-orders/all', { params });
+  return { data: data || [] };
+};
 
 // Logging/Audit API
 export const getTickets = (params?: {
@@ -1698,6 +2148,61 @@ export const withdrawalApi = {
     request: RejectWithdrawalRequest
   ): Promise<{ success: boolean; error?: string }> => {
     const { data } = await api.post(`/withdrawals/${withdrawalId}/reject`, request);
+    return data;
+  },
+};
+
+// =============================================================================
+// Trading Fee Configuration API
+// =============================================================================
+
+export const feesApi = {
+  getAllFees: async (): Promise<AllFeesResponse> => {
+    const { data } = await api.get('/admin/fees');
+    return data;
+  },
+
+  updateMarketFees: async (
+    market: 'CEA_CASH' | 'SWAP',
+    feeData: TradingFeeConfigUpdate
+  ): Promise<TradingFeeConfig> => {
+    const { data } = await api.put(`/admin/fees/${market}`, feeData);
+    return data;
+  },
+
+  getEntityOverrides: async (): Promise<EntityFeeOverride[]> => {
+    const { data } = await api.get('/admin/fees/entities');
+    return data;
+  },
+
+  getEntityOverride: async (entityId: string): Promise<EntityFeeOverride[]> => {
+    const { data } = await api.get(`/admin/fees/entities/${entityId}`);
+    return data;
+  },
+
+  upsertEntityOverride: async (
+    entityId: string,
+    overrideData: EntityFeeOverrideCreate
+  ): Promise<EntityFeeOverride> => {
+    const { data } = await api.put(`/admin/fees/entities/${entityId}`, overrideData);
+    return data;
+  },
+
+  deleteEntityOverride: async (
+    entityId: string,
+    market: 'CEA_CASH' | 'SWAP'
+  ): Promise<{ status: string; entity_id: string; market: string }> => {
+    const { data } = await api.delete(`/admin/fees/entities/${entityId}/${market}`);
+    return data;
+  },
+
+  getEffectiveFee: async (
+    market: 'CEA_CASH' | 'SWAP',
+    side: 'BID' | 'ASK',
+    entityId?: string
+  ): Promise<EffectiveFeeResponse> => {
+    const params = entityId ? `?entity_id=${entityId}` : '';
+    const { data } = await api.get(`/admin/fees/effective/${market}/${side}${params}`);
     return data;
   },
 };

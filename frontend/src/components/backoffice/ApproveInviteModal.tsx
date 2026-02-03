@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, UserPlus, Copy, AlertTriangle, Check, Loader2 } from 'lucide-react';
+import { AlertBanner } from '../common';
 import { adminApi } from '../../services/api';
 import type { ContactRequestResponse } from '../../types';
 
@@ -13,27 +14,47 @@ interface ApproveInviteModalProps {
 
 type CreateMode = 'invitation' | 'manual';
 
+function initialFromRequest(r: ContactRequestResponse) {
+  const name = (r.contactName ?? '').trim();
+  const parts = name ? name.split(/\s+/) : [];
+  return {
+    email: r.contactEmail ?? '',
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' ') ?? '',
+    position: r.position ?? '',
+  };
+}
+
 export function ApproveInviteModal({
   contactRequest,
   isOpen,
   onClose,
   onSuccess
 }: ApproveInviteModalProps) {
+  const init = initialFromRequest(contactRequest);
   const [mode, setMode] = useState<CreateMode>('invitation');
-  const [email, setEmail] = useState(contactRequest.contact_email);
-  const [firstName, setFirstName] = useState(
-    contactRequest.contact_name?.split(' ')[0] || ''
-  );
-  const [lastName, setLastName] = useState(
-    contactRequest.contact_name?.split(' ').slice(1).join(' ') || ''
-  );
-  const [position, setPosition] = useState(contactRequest.position || '');
+  const [email, setEmail] = useState(init.email);
+  const [firstName, setFirstName] = useState(init.firstName);
+  const [lastName, setLastName] = useState(init.lastName);
+  const [position, setPosition] = useState(init.position);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const next = initialFromRequest(contactRequest);
+    setEmail(next.email);
+    setFirstName(next.firstName);
+    setLastName(next.lastName);
+    setPosition(next.position);
+    setPassword('');
+    setGeneratedPassword(null);
+    setError('');
+    setSuccess(false);
+  }, [contactRequest]);
 
   // Generate a strong random password
   const generatePassword = () => {
@@ -90,8 +111,37 @@ export function ApproveInviteModal({
         onClose();
       }, 1500);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to create user');
+      const e = err as {
+        message?: unknown;
+        data?: {
+          detail?:
+            | string
+            | Array<{ msg?: string }>
+            | { error?: string; details?: { hint?: string } };
+        };
+      };
+      let msg = 'Failed to create user';
+      let hint: string | undefined;
+      if (typeof e.message === 'string') msg = e.message;
+      else if (typeof e.data?.detail === 'string') msg = e.data.detail;
+      else if (Array.isArray(e.data?.detail) && e.data.detail.length) {
+        const first = e.data.detail[0];
+        msg = (first?.msg ?? String(first)) ?? msg;
+      } else if (
+        e.data?.detail &&
+        typeof e.data.detail === 'object' &&
+        !Array.isArray(e.data.detail) &&
+        'error' in e.data.detail
+      ) {
+        const d = e.data.detail as { error?: string; details?: { hint?: string } };
+        msg = d.error ?? msg;
+        hint = d.details?.hint;
+      }
+      if (hint && !msg.includes(hint)) {
+        const h = hint.length > 150 ? `${hint.slice(0, 150)}…` : hint;
+        msg = `${msg} — ${h}`;
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -101,12 +151,19 @@ export function ApproveInviteModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        role="presentation"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
@@ -114,7 +171,9 @@ export function ApproveInviteModal({
               Approve & Create User
             </h2>
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close"
               className="p-1 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-navy-500" />
@@ -127,13 +186,14 @@ export function ApproveInviteModal({
             <div className="p-3 bg-navy-50 dark:bg-navy-900/50 rounded-lg">
               <p className="text-sm text-navy-500 dark:text-navy-400">Creating user for:</p>
               <p className="font-semibold text-navy-900 dark:text-white">
-                {contactRequest.entity_name}
+                {contactRequest.entityName ?? '—'}
               </p>
             </div>
 
             {/* Mode Selection */}
             <div className="grid grid-cols-2 gap-3">
               <button
+                type="button"
                 onClick={() => setMode('invitation')}
                 className={`p-4 rounded-lg border-2 transition-all text-left ${
                   mode === 'invitation'
@@ -155,6 +215,7 @@ export function ApproveInviteModal({
               </button>
 
               <button
+                type="button"
                 onClick={() => setMode('manual')}
                 className={`p-4 rounded-lg border-2 transition-all text-left ${
                   mode === 'manual'
@@ -186,7 +247,7 @@ export function ApproveInviteModal({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -199,7 +260,7 @@ export function ApproveInviteModal({
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -210,7 +271,7 @@ export function ApproveInviteModal({
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -223,7 +284,7 @@ export function ApproveInviteModal({
                   type="text"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -242,7 +303,7 @@ export function ApproveInviteModal({
                         setGeneratedPassword(null);
                       }}
                       placeholder="Enter or generate password"
-                      className="flex-1 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                     <button
                       type="button"
@@ -287,9 +348,7 @@ export function ApproveInviteModal({
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             {/* Success Message */}
@@ -309,6 +368,7 @@ export function ApproveInviteModal({
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-4 border-t border-navy-200 dark:border-navy-700">
             <button
+              type="button"
               onClick={onClose}
               disabled={loading}
               className="px-4 py-2 text-navy-700 dark:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
@@ -316,8 +376,15 @@ export function ApproveInviteModal({
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
-              disabled={loading || !email || !firstName || (mode === 'manual' && !password)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!loading && email && firstName && lastName && (mode !== 'manual' || password)) {
+                  handleSubmit();
+                }
+              }}
+              disabled={loading || !email || !firstName || !lastName || (mode === 'manual' && !password)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               {loading ? (

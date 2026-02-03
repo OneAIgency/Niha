@@ -14,7 +14,7 @@ settlement health and identify issues requiring manual intervention.
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -97,8 +97,8 @@ class SettlementMonitoring:
         )
 
         # Settled today
-        today_start = datetime.utcnow().replace(
-            hour=0, minute=0, second=0, microsecond=0
+        today_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None
         )
         settled_today_count = await db.scalar(
             select(func.count(SettlementBatch.id)).where(
@@ -117,7 +117,7 @@ class SettlementMonitoring:
         )
 
         # Overdue settlements (past expected date but not SETTLED)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         overdue_count = await db.scalar(
             select(func.count(SettlementBatch.id)).where(
                 and_(
@@ -215,7 +215,7 @@ class SettlementMonitoring:
         Returns list of alerts ordered by severity.
         """
         alerts: List[SettlementAlert] = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # === CRITICAL: Failed Settlements ===
         failed_result = await db.execute(
@@ -357,8 +357,8 @@ class SettlementMonitoring:
         alerts = await SettlementMonitoring.detect_alerts(db)
 
         # Get settlements completed today
-        today_start = datetime.utcnow().replace(
-            hour=0, minute=0, second=0, microsecond=0
+        today_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None
         )
         completed_result = await db.execute(
             select(SettlementBatch, Entity)
@@ -383,7 +383,7 @@ class SettlementMonitoring:
             )
 
         return {
-            "report_date": datetime.utcnow().isoformat(),
+            "report_date": datetime.now(timezone.utc).isoformat(),
             "metrics": {
                 "total_pending": metrics.total_pending,
                 "total_in_progress": metrics.total_in_progress,
@@ -506,7 +506,7 @@ class SettlementMonitoring:
 
             return {
                 "success": True,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "metrics": metrics,
                 "alert_count": len(alerts),
                 "critical_alerts": len([a for a in alerts if a.severity == "CRITICAL"]),
@@ -519,5 +519,5 @@ class SettlementMonitoring:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }

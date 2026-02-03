@@ -1,6 +1,7 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
@@ -35,11 +37,20 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
     ADMIN = "ADMIN"
-    PENDING = "PENDING"
+    MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
     APPROVED = "APPROVED"
-    FUNDED = "FUNDED"
-    MARKET_MAKER = "MARKET_MAKER"
+    FUNDING = "FUNDING"
+    AML = "AML"
+    CEA = "CEA"
+    CEA_SETTLE = "CEA_SETTLE"
+    SWAP = "SWAP"
+    EUA_SETTLE = "EUA_SETTLE"
+    EUA = "EUA"
 
 
 class DocumentType(str, enum.Enum):
@@ -75,10 +86,10 @@ class ScrapeLibrary(str, enum.Enum):
 
 
 class ContactStatus(str, enum.Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    ENROLLED = "enrolled"
-    REJECTED = "rejected"
+    """Same values as UserRole where applicable; NDA, REJECTED, KYC for contact requests."""
+    NDA = "NDA"
+    REJECTED = "REJECTED"
+    KYC = "KYC"
 
 
 class CertificateType(str, enum.Enum):
@@ -130,11 +141,11 @@ class OrderStatus(str, enum.Enum):
 
 
 class DepositStatus(str, enum.Enum):
-    PENDING = "pending"  # User announced wire transfer
-    CONFIRMED = "confirmed"  # Backoffice confirmed receipt, now ON_HOLD
-    ON_HOLD = "on_hold"  # AML hold period active
-    CLEARED = "cleared"  # AML hold passed, funds available
-    REJECTED = "rejected"  # Wire not received or AML rejected
+    PENDING = "PENDING"  # User announced wire transfer
+    CONFIRMED = "CONFIRMED"  # Backoffice confirmed receipt, now ON_HOLD
+    ON_HOLD = "ON_HOLD"  # AML hold period active
+    CLEARED = "CLEARED"  # AML hold passed, funds available
+    REJECTED = "REJECTED"  # Wire not received or AML rejected
 
 
 class HoldType(str, enum.Enum):
@@ -162,20 +173,60 @@ class Currency(str, enum.Enum):
 
 
 class MarketMakerType(str, enum.Enum):
-    """Types of market maker clients - organized by market"""
+    """Types of market maker clients"""
 
-    CEA_CASH_SELLER = (
-        "CEA_CASH_SELLER"  # CEA-CASH market: Holds CEA, places SELL orders
-    )
-    CASH_BUYER = "CASH_BUYER"  # CEA-CASH market: Holds EUR, places BUY orders
-    SWAP_MAKER = "SWAP_MAKER"  # SWAP market: Facilitates CEA↔EUA swaps
+    CEA_BUYER = "CEA_BUYER"  # Buys CEA with EUR (places BID orders)
+    CEA_SELLER = "CEA_SELLER"  # Sells CEA for EUR (places ASK orders)
+    EUA_OFFER = "EUA_OFFER"  # Offers EUA for swap operations
 
 
 class MarketType(str, enum.Enum):
     """Trading markets"""
 
-    CEA_CASH = "CEA_CASH"  # Cash market: Buy/sell CEA with EUR
-    SWAP = "SWAP"  # Swap market: Exchange CEA↔EUA
+    CEA_CASH = "CEA_CASH"  # CEA Cash: Trade CEA with EUR
+    SWAP = "SWAP"  # Swap: Exchange CEA↔EUA
+
+
+class TradingFeeConfig(Base):
+    """Platform-wide trading fee configuration per market.
+
+    Defines default fees for each market, separate for buyers (BID) and sellers (ASK).
+    Fees are stored as decimal rates (e.g., 0.005 = 0.5%).
+    """
+    __tablename__ = "trading_fee_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market = Column(SQLEnum(MarketType), nullable=False, unique=True)
+    bid_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for buyers (BID)
+    ask_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for sellers (ASK)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+
+class EntityFeeOverride(Base):
+    """Per-entity fee override for custom client rates.
+
+    When an entity has an override for a market, their fee rate takes precedence
+    over the default market rate. NULL values mean "use default".
+    """
+    __tablename__ = "entity_fee_overrides"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True)
+    market = Column(SQLEnum(MarketType), nullable=False)
+    bid_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
+    ask_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    entity = relationship("Entity", backref="fee_overrides")
+
+    # Unique constraint: one override per entity per market
+    __table_args__ = (UniqueConstraint('entity_id', 'market', name='uq_entity_market_fee'),)
 
 
 class Entity(Base):
@@ -195,8 +246,8 @@ class Entity(Base):
     balance_amount = Column(Numeric(18, 2), default=0)
     balance_currency = Column(SQLEnum(Currency), nullable=True)
     total_deposited = Column(Numeric(18, 2), default=0)  # Lifetime total deposits
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     users = relationship("User", back_populates="entity", foreign_keys="User.entity_id")
     certificates = relationship("Certificate", back_populates="entity")
@@ -223,7 +274,7 @@ class User(Base):
     last_name = Column(String(100))
     position = Column(String(100))
     phone = Column(String(50), nullable=True)
-    role = Column(SQLEnum(UserRole), default=UserRole.PENDING)
+    role = Column(SQLEnum(UserRole), default=UserRole.NDA)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     invitation_token = Column(String(100), nullable=True)
@@ -232,8 +283,8 @@ class User(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     creation_method = Column(String(20), nullable=True)  # 'manual' or 'invitation'
     last_login = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="users", foreign_keys=[entity_id])
     activity_logs = relationship("ActivityLog", back_populates="user")
@@ -274,21 +325,24 @@ class MarketMakerClient(Base):
     )  # e.g., "MM-001", "MM-002"
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
     )
     created_by = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
     )
     mm_type = Column(
         SQLEnum(MarketMakerType),
-        default=MarketMakerType.CEA_CASH_SELLER,
+        default=MarketMakerType.CEA_SELLER,
         nullable=False,
     )
     eur_balance = Column(
         Numeric(18, 2), default=0, nullable=False
     )  # For Liquidity Providers
+    eua_balance = Column(
+        Numeric(18, 2), default=0, nullable=False
+    )  # EUA balance for EUA_OFFER market makers
 
     @property
     def market(self) -> MarketType:
@@ -296,15 +350,15 @@ class MarketMakerClient(Base):
         Determine which market this Market Maker operates in.
 
         Returns:
-            MarketType.CEA_CASH for CEA_CASH_SELLER and CASH_BUYER
-            MarketType.SWAP for SWAP_MAKER
+            MarketType.CEA_CASH for CEA_BUYER and CEA_SELLER
+            MarketType.SWAP for EUA_OFFER
         """
         if self.mm_type in (
-            MarketMakerType.CEA_CASH_SELLER,
-            MarketMakerType.CASH_BUYER,
+            MarketMakerType.CEA_BUYER,
+            MarketMakerType.CEA_SELLER,
         ):
             return MarketType.CEA_CASH
-        elif self.mm_type == MarketMakerType.SWAP_MAKER:
+        elif self.mm_type == MarketMakerType.EUA_OFFER:
             return MarketType.SWAP
         else:
             # Should never happen with proper enum validation
@@ -319,6 +373,7 @@ class MarketMakerClient(Base):
     )
     transactions = relationship("AssetTransaction", back_populates="market_maker")
     orders = relationship("Order", back_populates="market_maker")
+    auto_trade_rules = relationship("AutoTradeRule", back_populates="market_maker", cascade="all, delete-orphan")
 
 
 class ContactRequest(Base):
@@ -329,7 +384,6 @@ class ContactRequest(Base):
     contact_email = Column(String(255), nullable=False)
     contact_name = Column(String(255), nullable=True)  # Person's name
     position = Column(String(100))
-    request_type = Column(String(50), default="join")  # 'join' or 'nda'
     nda_file_path = Column(
         String(500), nullable=True
     )  # Deprecated - kept for migration
@@ -337,11 +391,11 @@ class ContactRequest(Base):
     nda_file_data = Column(LargeBinary, nullable=True)  # Store PDF binary in database
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
-    status = Column(SQLEnum(ContactStatus), default=ContactStatus.NEW)
+    user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class Certificate(Base):
@@ -354,9 +408,9 @@ class Certificate(Base):
     unit_price = Column(Numeric(18, 4), nullable=False)
     vintage_year = Column(Integer)
     status = Column(SQLEnum(CertificateStatus), default=CertificateStatus.AVAILABLE)
-    anonymous_code = Column(String(10), unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    anonymous_code = Column(String(20), unique=True, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="certificates")
 
@@ -374,7 +428,7 @@ class Trade(Base):
     price_per_unit = Column(Numeric(18, 4), nullable=False)
     total_value = Column(Numeric(18, 4), nullable=False)
     status = Column(SQLEnum(TradeStatus), default=TradeStatus.PENDING)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     completed_at = Column(DateTime)
 
     buyer = relationship(
@@ -398,9 +452,9 @@ class SwapRequest(Base):
     matched_with = Column(
         UUID(as_uuid=True), ForeignKey("swap_requests.id"), nullable=True
     )
-    anonymous_code = Column(String(10), unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    anonymous_code = Column(String(20), unique=True, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="swap_requests")
 
@@ -413,7 +467,7 @@ class PriceHistory(Base):
     price = Column(Numeric(18, 4), nullable=False)
     currency = Column(String(3), nullable=False)
     source = Column(String(100))
-    recorded_at = Column(DateTime, default=datetime.utcnow, index=True)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
 
 class ActivityLog(Base):
@@ -432,7 +486,7 @@ class ActivityLog(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
     session_id = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     user = relationship("User", back_populates="activity_logs")
 
@@ -458,8 +512,8 @@ class KYCDocument(Base):
     reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User", back_populates="kyc_documents", foreign_keys=[user_id])
     entity = relationship("Entity", back_populates="kyc_documents")
@@ -479,12 +533,38 @@ class ScrapingSource(Base):
     scrape_interval_minutes = Column(Integer, default=5)
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
-    last_price = Column(Numeric(18, 4), nullable=True)
+    last_price = Column(Numeric(18, 4), nullable=True)  # Raw price in source currency
+    last_price_eur = Column(Numeric(18, 4), nullable=True)  # Converted EUR price (for CEA)
+    last_exchange_rate = Column(Numeric(18, 8), nullable=True)  # Rate used for conversion
     config = Column(
         JSON, nullable=True
     )  # Additional scraper configuration (CSS selectors, etc.)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class ExchangeRateSource(Base):
+    """Configuration for exchange rate scraping sources"""
+
+    __tablename__ = "exchange_rate_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    from_currency = Column(String(3), nullable=False)  # e.g., "EUR"
+    to_currency = Column(String(3), nullable=False)  # e.g., "CNY"
+    url = Column(String(500), nullable=False)
+    scrape_library = Column(SQLEnum(ScrapeLibrary), default=ScrapeLibrary.HTTPX)
+    is_active = Column(Boolean, default=True)
+    is_primary = Column(Boolean, default=False)  # Primary source for this pair
+    scrape_interval_minutes = Column(Integer, default=60)
+    last_rate = Column(Numeric(18, 8), nullable=True)
+    last_scraped_at = Column(DateTime, nullable=True)
+    last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
+    config = Column(
+        JSON, nullable=True
+    )  # Additional scraper configuration (CSS selectors, XPath, etc.)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class UserSession(Base):
@@ -499,7 +579,7 @@ class UserSession(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
     device_info = Column(JSON, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     ended_at = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True)
@@ -508,7 +588,7 @@ class UserSession(Base):
 
 
 class Order(Base):
-    """Cash market orders for trading"""
+    """CEA Cash market orders for trading"""
 
     __tablename__ = "orders"
 
@@ -535,8 +615,8 @@ class Order(Base):
     quantity = Column(Numeric(18, 2), nullable=False)
     filled_quantity = Column(Numeric(18, 2), default=0)
     status = Column(SQLEnum(OrderStatus), default=OrderStatus.OPEN)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity")
     seller = relationship("Seller", back_populates="orders")
@@ -554,7 +634,7 @@ class Order(Base):
 
 
 class CashMarketTrade(Base):
-    """Executed trades from the cash market matching engine"""
+    """Executed trades from the CEA Cash market matching engine"""
 
     __tablename__ = "cash_market_trades"
 
@@ -575,7 +655,7 @@ class CashMarketTrade(Base):
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
-    executed_at = Column(DateTime, default=datetime.utcnow, index=True)
+    executed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     buy_order = relationship(
         "Order", foreign_keys=[buy_order_id], back_populates="buy_trades"
@@ -605,13 +685,13 @@ class AuthenticationAttempt(Base):
     failure_reason = Column(
         String(255), nullable=True
     )  # 'invalid_password', 'user_not_found', 'account_disabled', etc.
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     user = relationship("User", back_populates="auth_attempts")
 
 
 class Seller(Base):
-    """CEA sellers with unique client codes for the Cash Market"""
+    """CEA sellers with unique client codes for the CEA Cash market"""
 
     __tablename__ = "sellers"
 
@@ -627,8 +707,8 @@ class Seller(Base):
     total_transactions = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationship to orders
     orders = relationship("Order", back_populates="seller")
@@ -677,7 +757,7 @@ class Deposit(Base):
 
     # Timestamps
     reported_at = Column(
-        DateTime, default=datetime.utcnow
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )  # When user announced the wire
     confirmed_at = Column(DateTime, nullable=True)  # When backoffice confirmed receipt
 
@@ -698,8 +778,11 @@ class Deposit(Base):
     admin_notes = Column(Text, nullable=True)  # Detailed admin notes
     client_notes = Column(Text, nullable=True)  # Notes from client
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Ticket tracking
+    ticket_id = Column(String(50), nullable=True)  # Ticket ID for the deposit announcement
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     entity = relationship("Entity", back_populates="deposits")
@@ -745,8 +828,8 @@ class EntityHolding(Base):
     )
     asset_type = Column(SQLEnum(AssetType), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="holdings")
 
@@ -791,7 +874,7 @@ class AssetTransaction(Base):
     balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
     notes = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     # Relationships
     entity = relationship("Entity", foreign_keys=[entity_id])
@@ -808,7 +891,7 @@ class TicketLog(Base):
     ticket_id = Column(
         String(30), unique=True, nullable=False, index=True
     )  # TKT-2026-001234
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
     )
@@ -851,7 +934,7 @@ class LiquidityOperation(Base):
     [
         {
             "mm_id": "uuid-string",
-            "mm_type": "CEA_CASH_SELLER" | "CASH_BUYER" | "SWAP_MAKER",
+            "mm_type": "CEA_BUYER" | "CEA_SELLER" | "EUA_OFFER",
             "amount": "decimal-as-string"
         },
         ...
@@ -881,7 +964,7 @@ class LiquidityOperation(Base):
 
     # Metadata
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     notes = Column(Text, nullable=True)
 
     # Relationships
@@ -981,9 +1064,9 @@ class SettlementBatch(Base):
     notes = Column(Text, nullable=True)
 
     # Audit timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
     )
 
     # Relationships
@@ -1019,7 +1102,7 @@ class SettlementStatusHistory(Base):
     updated_by = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )  # Admin who made the change
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     # Relationships
     settlement_batch = relationship("SettlementBatch", back_populates="status_history")
@@ -1070,7 +1153,7 @@ class Withdrawal(Base):
     admin_notes = Column(Text, nullable=True)
 
     # Timestamps
-    requested_at = Column(DateTime, default=datetime.utcnow)
+    requested_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     processed_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     rejected_at = Column(DateTime, nullable=True)
@@ -1081,8 +1164,8 @@ class Withdrawal(Base):
     rejected_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Standard audit columns
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     entity = relationship("Entity", foreign_keys=[entity_id])
@@ -1090,6 +1173,173 @@ class Withdrawal(Base):
     processed_by_user = relationship("User", foreign_keys=[processed_by])
     completed_by_user = relationship("User", foreign_keys=[completed_by])
     rejected_by_user = relationship("User", foreign_keys=[rejected_by])
+
+
+class AutoTradePriceMode(str, enum.Enum):
+    """Price strategy for auto trade rules"""
+    FIXED = "fixed"
+    SPREAD_FROM_BEST = "spread_from_best"
+    PERCENTAGE_FROM_MARKET = "percentage_from_market"
+    RANDOM_SPREAD = "random_spread"  # Random spread between min and max, respecting 0.1 step
+
+
+class AutoTradeQuantityMode(str, enum.Enum):
+    """Quantity strategy for auto trade rules"""
+    FIXED = "fixed"
+    PERCENTAGE_OF_BALANCE = "percentage_of_balance"
+    RANDOM_RANGE = "random_range"
+
+
+class AutoTradeRule(Base):
+    """Auto trade rules for market makers to automatically place orders"""
+
+    __tablename__ = "auto_trade_rules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market_maker_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("market_maker_clients.id"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String(100), nullable=False)
+    enabled = Column(Boolean, default=False, nullable=False)
+
+    # Order settings
+    side = Column(SQLEnum(OrderSide), nullable=False)
+    order_type = Column(String(20), nullable=False, default="LIMIT")  # LIMIT or MARKET
+
+    # Price settings
+    price_mode = Column(SQLEnum(AutoTradePriceMode), nullable=False, default=AutoTradePriceMode.SPREAD_FROM_BEST)
+    fixed_price = Column(Numeric(18, 4), nullable=True)
+    spread_from_best = Column(Numeric(18, 4), nullable=True)  # EUR spread from best bid/ask
+    spread_min = Column(Numeric(18, 4), nullable=True)  # Min spread for RANDOM_SPREAD mode (in EUR)
+    spread_max = Column(Numeric(18, 4), nullable=True)  # Max spread for RANDOM_SPREAD mode (in EUR)
+    percentage_from_market = Column(Numeric(8, 4), nullable=True)  # Percentage offset
+    max_price_deviation = Column(Numeric(8, 4), nullable=True)  # Max % deviation from scraped price allowed
+
+    # Quantity settings
+    quantity_mode = Column(SQLEnum(AutoTradeQuantityMode), nullable=False, default=AutoTradeQuantityMode.FIXED)
+    fixed_quantity = Column(Numeric(18, 2), nullable=True)
+    percentage_of_balance = Column(Numeric(8, 4), nullable=True)
+    min_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
+    max_quantity = Column(Numeric(18, 2), nullable=True)  # For random range
+
+    # Timing (supports both minutes and seconds - seconds take precedence if set)
+    interval_mode = Column(String(20), nullable=False, default="fixed")  # 'fixed' or 'random'
+    interval_minutes = Column(Integer, nullable=False, default=5)  # Used when interval_mode='fixed' (legacy)
+    interval_min_minutes = Column(Integer, nullable=True)  # Min interval when mode='random' (legacy)
+    interval_max_minutes = Column(Integer, nullable=True)  # Max interval when mode='random' (legacy)
+    # Seconds-based intervals (preferred for high-frequency trading)
+    interval_seconds = Column(Integer, nullable=True, default=60)  # Used when interval_mode='fixed'
+    interval_min_seconds = Column(Integer, nullable=True)  # Min interval when mode='random'
+    interval_max_seconds = Column(Integer, nullable=True)  # Max interval when mode='random'
+
+    # Conditions
+    min_balance = Column(Numeric(18, 2), nullable=True)  # Min balance required to place order
+    max_active_orders = Column(Integer, nullable=True)  # Max concurrent orders for this rule
+
+    # Execution tracking
+    last_executed_at = Column(DateTime, nullable=True)  # When this rule last placed an order
+    next_execution_at = Column(DateTime, nullable=True)  # When this rule should next execute
+    execution_count = Column(Integer, default=0, nullable=False)  # Total orders placed by this rule
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+
+    # Relationships
+    market_maker = relationship("MarketMakerClient", back_populates="auto_trade_rules")
+
+
+class AutoTradeSettings(Base):
+    """
+    Global auto-trade settings per certificate type (legacy).
+    Controls target liquidity levels - auto-trade maintains liquidity at target.
+    Below target: places new orders to refill.
+    Above target: executes internal trades to consume excess.
+    """
+
+    __tablename__ = "auto_trade_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    certificate_type = Column(String(10), nullable=False, unique=True)  # 'CEA' or 'EUA'
+
+    # Target liquidity in EUR (total value = price * quantity for all open orders)
+    target_ask_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on SELL side
+    target_bid_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on BUY side
+
+    # Enable/disable liquidity management
+    liquidity_limit_enabled = Column(Boolean, default=True, nullable=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+
+
+class AutoTradeMarketSettings(Base):
+    """
+    Per-market-side auto-trade settings.
+    Markets: CEA_BID (buyers), CEA_ASK (sellers), EUA_SWAP (swappers)
+
+    Controls:
+    - Target liquidity level
+    - Price deviation from best price
+    - Average number of orders
+    - Min order volume
+    - Volume variety (1-10 scale)
+    """
+
+    __tablename__ = "auto_trade_market_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    market_key = Column(String(20), nullable=False, unique=True)  # 'CEA_BID', 'CEA_ASK', 'EUA_SWAP'
+
+    # Enable/disable this market's auto-trade
+    enabled = Column(Boolean, default=True, nullable=False)
+
+    # Target liquidity in EUR
+    target_liquidity = Column(Numeric(18, 2), nullable=True)
+
+    # Price deviation from best price (percentage, e.g., 0.5 = 0.5%)
+    price_deviation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("0.5"))
+
+    # Average number of orders to maintain in the book
+    avg_order_count = Column(Integer, nullable=False, default=10)
+
+    # Minimum volume per order in EUR
+    min_order_volume_eur = Column(Numeric(18, 2), nullable=False, default=Decimal("1000"))
+
+    # Volume variety indicator (1-10)
+    # 1 = orders close to min volume (uniform)
+    # 10 = very diverse order sizes
+    volume_variety = Column(Integer, nullable=False, default=5)
+
+    # Order placement interval in seconds
+    interval_seconds = Column(Integer, nullable=False, default=60)
+
+    # Max liquidity threshold in EUR - if exceeded, execute internal trades to reduce
+    max_liquidity_threshold = Column(Numeric(18, 2), nullable=True)
+
+    # Internal trade settings (when liquidity is at target)
+    # Interval in seconds for internal trades
+    internal_trade_interval = Column(Integer, nullable=True)
+    # Min volume per internal trade in EUR
+    internal_trade_volume_min = Column(Numeric(18, 2), nullable=True)
+    # Max volume per internal trade in EUR
+    internal_trade_volume_max = Column(Numeric(18, 2), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 class MailProvider(str, enum.Enum):
@@ -1127,5 +1377,5 @@ class MailConfig(Base):
     verification_method = Column(String(50), nullable=True)
     # Placeholder for auth options
     auth_method = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

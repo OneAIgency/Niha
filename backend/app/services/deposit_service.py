@@ -1,12 +1,16 @@
 """
 Deposit Service - AML Hold Management
 
-Handles deposit lifecycle:
-1. Client announces wire transfer
-2. Backoffice confirms receipt
-3. AML hold period calculated and applied
-4. Hold expires or admin clears early
-5. Funds credited to entity balance
+Handles deposit lifecycle (announce → confirm → clear):
+1. Client announces wire transfer (POST /deposits/announce); APPROVED→FUNDING.
+2. Backoffice confirms receipt (POST /deposits/{id}/confirm); FUNDING→AML, ON_HOLD.
+3. AML hold period calculated and applied.
+4. Hold expires or admin clears early (POST /deposits/{id}/clear); AML→CEA, credit.
+5. Funds credited to entity balance.
+
+Alternative: PUT /backoffice/deposits/{id}/confirm for immediate confirm (no hold),
+also FUNDING→AML. Direct create: POST /backoffice/deposits (no announce, no
+role transitions). See backoffice docstrings.
 
 Hold Period Rules:
 - First deposit: 3 business days
@@ -15,7 +19,9 @@ Hold Period Rules:
 """
 
 import logging
-from datetime import datetime, timedelta
+import secrets
+import string
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -32,9 +38,13 @@ from ..models.models import (
     DepositStatus,
     Entity,
     HoldType,
+    TicketStatus,
     TransactionType,
+    User,
+    UserRole,
 )
 from ..services.balance_utils import update_entity_balance
+from ..services.ticket_service import TicketService
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +177,10 @@ async def announce_deposit(
     Returns:
         Created Deposit record
     """
+    # Generate bank reference
+    chars = string.ascii_uppercase + string.digits
+    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
+
     deposit = Deposit(
         entity_id=entity_id,
         user_id=user_id,
@@ -176,17 +190,54 @@ async def announce_deposit(
         source_iban=source_iban,
         source_swift=source_swift,
         client_notes=client_notes,
+        bank_reference=bank_ref,
         status=DepositStatus.PENDING,
         aml_status=AMLStatus.PENDING.value,
-        reported_at=datetime.utcnow(),
+        reported_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
     db.add(deposit)
     await db.flush()
 
+    # Create audit ticket for deposit announcement
+    # Note: TicketStatus.SUCCESS means the announcement action succeeded, not that the deposit is cleared
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="DEPOSIT_ANNOUNCED",
+        entity_type="Deposit",
+        entity_id=deposit.id,
+        status=TicketStatus.SUCCESS,
+        user_id=user_id,
+        request_payload={
+            "reported_amount": str(reported_amount),
+            "reported_currency": reported_currency.value,
+            "source_bank": source_bank,
+            "source_iban": source_iban,
+            "client_notes": client_notes,
+        },
+        response_data={
+            "deposit_id": str(deposit.id),
+            "bank_reference": bank_ref,
+        },
+        tags=["deposit", "announced", "pending"],
+    )
+    deposit.ticket_id = ticket.ticket_id
+    await db.flush()
+
+    # Transition: first successful announce for this entity → APPROVED users become FUNDING
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == entity_id,
+            User.role == UserRole.APPROVED,
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.FUNDING
+    await db.flush()
+
     logger.info(
         f"Deposit announced: {deposit.id} - Entity {entity_id} - "
-        f"{reported_amount} {reported_currency.value}"
+        f"{reported_amount} {reported_currency.value} - Ticket {ticket.ticket_id}"
     )
 
     return deposit
@@ -241,7 +292,7 @@ async def confirm_deposit(
         db, deposit.entity_id, actual_amount
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     hold_expires_at = calculate_business_days(now, hold_days)
 
     # Update deposit
@@ -259,6 +310,15 @@ async def confirm_deposit(
     if admin_notes:
         deposit.admin_notes = admin_notes
 
+    # Transition: FUNDING → AML when backoffice confirms wire
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role == UserRole.FUNDING,
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.AML
     await db.flush()
 
     logger.info(
@@ -275,7 +335,7 @@ async def clear_deposit(
     admin_id: UUID,
     admin_notes: Optional[str] = None,
     force_clear: bool = False,
-) -> Deposit:
+) -> Tuple[Deposit, int]:
     """
     Clear deposit and credit funds to entity balance.
 
@@ -308,7 +368,7 @@ async def clear_deposit(
             f"Cannot clear deposit in {deposit.status.value} status"
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Check if hold has expired (unless force clearing)
     if not force_clear and deposit.hold_expires_at and deposit.hold_expires_at > now:
@@ -324,6 +384,19 @@ async def clear_deposit(
     deposit.cleared_by_admin_id = admin_id
     if admin_notes:
         deposit.admin_notes = (deposit.admin_notes or "") + f"\n[Cleared] {admin_notes}"
+
+    # Transition: AML → CEA when deposit is cleared
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role == UserRole.AML,
+        )
+    )
+    users_to_upgrade = users_result.scalars().all()
+    upgraded_count = len(users_to_upgrade)
+    for u in users_to_upgrade:
+        u.role = UserRole.CEA
+    await db.flush()
 
     # Credit funds to entity balance
     if deposit.amount and deposit.currency == Currency.EUR:
@@ -356,14 +429,15 @@ async def clear_deposit(
 
     currency_val = deposit.currency.value if deposit.currency else "N/A"
     logger.info(
-        "Deposit cleared: %s - %s %s - Entity %s",
+        "Deposit cleared: %s - %s %s - Entity %s - %s user(s) AML→CEA",
         deposit.id,
         deposit.amount,
         currency_val,
         deposit.entity_id,
+        upgraded_count,
     )
 
-    return deposit
+    return deposit, upgraded_count
 
 
 async def reject_deposit(
@@ -401,7 +475,7 @@ async def reject_deposit(
             f"Cannot reject deposit in {deposit.status.value} status"
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     deposit.status = DepositStatus.REJECTED
     deposit.aml_status = AMLStatus.REJECTED.value
@@ -413,6 +487,15 @@ async def reject_deposit(
             deposit.admin_notes or ""
         ) + f"\n[Rejected] {admin_notes}"
 
+    # Transition: entity users in FUNDING or AML → REJECTED
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == deposit.entity_id,
+            User.role.in_([UserRole.FUNDING, UserRole.AML]),
+        )
+    )
+    for u in users_result.scalars().all():
+        u.role = UserRole.REJECTED
     await db.flush()
 
     logger.info(
@@ -481,7 +564,13 @@ async def get_on_hold_deposits(
     """Get deposits currently on hold."""
     query = (
         select(Deposit)
-        .options(selectinload(Deposit.entity), selectinload(Deposit.user))
+        .options(
+            selectinload(Deposit.entity),
+            selectinload(Deposit.user),
+            selectinload(Deposit.confirmed_by_user),
+            selectinload(Deposit.cleared_by_admin),
+            selectinload(Deposit.rejected_by_admin),
+        )
         .where(Deposit.status == DepositStatus.ON_HOLD)
     )
 
@@ -490,7 +579,7 @@ async def get_on_hold_deposits(
         query = query.where(
             or_(
                 Deposit.hold_expires_at.is_(None),
-                Deposit.hold_expires_at > datetime.utcnow(),
+                Deposit.hold_expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
             )
         )
 
@@ -502,7 +591,8 @@ async def get_on_hold_deposits(
 
 async def get_expired_holds(db: AsyncSession) -> List[Deposit]:
     """Get deposits where hold period has expired but not yet cleared."""
-    now = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     query = (
         select(Deposit)
@@ -546,7 +636,7 @@ async def process_expired_holds(db: AsyncSession, system_admin_id: UUID) -> int:
                 admin_notes="Auto-cleared after hold period expiration",
                 force_clear=False,
             )
-            cleared_count += 1
+            cleared_count += 1  # (deposit, upgraded_count) returned; we count cleared deposits
         except Exception as e:
             logger.error(f"Failed to auto-clear deposit {deposit.id}: {e}")
 

@@ -15,15 +15,15 @@ interface CeaScrappedProps {
  * Shows the current price and 24h change percentage with appropriate color coding.
  * 
  * @param props - Component props
- * @param props.priceData - CEA price data containing price and change_24h
+ * @param props.priceData - CEA price data containing price and change24h
  * @param props.className - Optional additional CSS classes
  */
 export function CeaScrapped({ priceData, className = '' }: CeaScrappedProps) {
-  if (!priceData) {
+  if (!priceData || priceData.price === undefined || priceData.change24h === undefined) {
     return null;
   }
 
-  const isPositive = priceData.change_24h >= 0;
+  const isPositive = priceData.change24h >= 0;
 
   return (
     <div className={`flex items-center gap-3 px-4 py-2 bg-navy-700/50 rounded-lg ${className}`}>
@@ -44,7 +44,7 @@ export function CeaScrapped({ priceData, className = '' }: CeaScrappedProps) {
             ) : (
               <TrendingDown className="w-3 h-3" />
             )}
-            {isPositive ? '+' : ''}{priceData.change_24h.toFixed(2)}%
+            {isPositive ? '+' : ''}{priceData.change24h.toFixed(2)}%
           </span>
         </div>
       </div>

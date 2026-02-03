@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, AlertCircle, Bot } from 'lucide-react';
+import { RefreshCw, Bot } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
-import { Button } from '../common';
+import { Button, AlertBanner } from '../common';
 import { getMarketMakerActions } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 interface TicketLog {
   id: string;
-  ticket_id: string;
+  ticketId: string;
   timestamp: string;
-  user_id?: string;
-  market_maker_id?: string;
-  action_type: string;
-  entity_type: string;
-  entity_id?: string;
+  userId?: string;
+  marketMakerId?: string;
+  actionType: string;
+  entityType: string;
+  entityId?: string;
   status: 'SUCCESS' | 'FAILED';
-  request_payload?: Record<string, unknown>;
-  response_data?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
-  before_state?: Record<string, unknown>;
-  after_state?: Record<string, unknown>;
-  related_ticket_ids: string[];
+  requestPayload?: Record<string, unknown>;
+  responseData?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  relatedTicketIds: string[];
   tags: string[];
   [key: string]: unknown;
 }
@@ -72,7 +72,7 @@ export function MarketMakerActionsTab() {
 
   const columns: Column<TicketLog>[] = [
     {
-      key: 'ticket_id',
+      key: 'ticketId',
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
@@ -92,17 +92,17 @@ export function MarketMakerActionsTab() {
       ),
     },
     {
-      key: 'action_type',
+      key: 'actionType',
       header: 'Action Type',
       width: '200px',
       render: (value) => (
-        <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
           {String(value)}
         </span>
       ),
     },
     {
-      key: 'entity_type',
+      key: 'entityType',
       header: 'Entity',
       width: '120px',
       render: (value) => (
@@ -129,20 +129,20 @@ export function MarketMakerActionsTab() {
       ),
     },
     {
-      key: 'market_maker_id',
+      key: 'marketMakerId',
       header: 'Market Maker ID',
       width: '150px',
       render: (value) => (
         <div className="flex items-center gap-2">
-          <Bot className="w-3 h-3 text-purple-500" />
-          <code className="text-xs font-mono text-purple-600 dark:text-purple-400">
+          <Bot className="w-3 h-3 text-emerald-500" />
+          <code className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
             {value ? String(value).substring(0, 8) + '...' : '—'}
           </code>
         </div>
       ),
     },
     {
-      key: 'user_id',
+      key: 'userId',
       header: 'Admin',
       width: '100px',
       render: (value) =>
@@ -159,11 +159,11 @@ export function MarketMakerActionsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+      <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+              <Bot className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-navy-900 dark:text-white">
@@ -191,10 +191,7 @@ export function MarketMakerActionsTab() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
-        </div>
+        <AlertBanner variant="error" message={error} />
       )}
 
       {/* Table */}

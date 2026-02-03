@@ -25,13 +25,14 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 import { usePrices } from '../hooks/usePrices';
-import { usersApi, cashMarketApi, swapsApi } from '../services/api';
+import { usersApi, cashMarketApi, swapsApi, settlementApi } from '../services/api';
 import {
   DataTable,
   Tabs,
   ProgressBar,
   Skeleton,
   Subheader,
+  AlertBanner,
   type Column,
   type Tab,
 } from '../components/common';
@@ -40,33 +41,57 @@ import { SettlementTransactions } from '../components/dashboard/SettlementTransa
 import { SettlementDetails } from '../components/dashboard/SettlementDetails';
 import type { Order, SettlementBatch, SwapRequest } from '../types';
 
+/**
+ * Helper to safely get Order fields (handles both camelCase from Axios and snake_case from TypeScript types).
+ * Axios interceptor transforms snake_case → camelCase, but TypeScript types still use snake_case.
+ */
+const getOrderField = (order: Order, field: 'createdAt' | 'certificateType' | 'filledQuantity' | 'remainingQuantity'): string | number => {
+  const o = order as unknown as Record<string, unknown>;
+  const snakeMap: Record<string, string> = {
+    createdAt: 'created_at',
+    certificateType: 'certificate_type',
+    filledQuantity: 'filled_quantity',
+    remainingQuantity: 'remaining_quantity',
+  };
+  return (o[field] ?? o[snakeMap[field]] ?? '') as string | number;
+};
+
+/**
+ * Safely parse a date string, returning null if invalid
+ */
+const safeParseDate = (dateStr: unknown): Date | null => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
 interface EntityBalance {
-  entity_id: string;
-  entity_name: string;
-  balance_amount: number;
-  balance_currency?: string | null;
-  total_deposited: number;
-  deposit_count: number;
+  entityId: string;
+  entityName: string;
+  balanceAmount: number;
+  balanceCurrency?: string | null;
+  totalDeposited: number;
+  depositCount: number;
 }
 
 interface EntityAssets {
-  entity_id: string;
-  entity_name: string;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  entityId: string;
+  entityName: string;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface Portfolio {
-  cash_available: number;
-  cash_locked: number;
-  cash_total: number;
-  cea_available: number;
-  cea_locked: number;
-  cea_total: number;
-  eua_available: number;
-  eua_pending: number;
-  eua_total: number;
+  cashAvailable: number;
+  cashLocked: number;
+  cashTotal: number;
+  ceaAvailable: number;
+  ceaLocked: number;
+  ceaTotal: number;
+  euaAvailable: number;
+  euaPending: number;
+  euaTotal: number;
 }
 
 // Transaction type for display
@@ -97,11 +122,11 @@ const transactionColumns: Column<Transaction>[] = [
     width: '100px',
     render: (value) => {
       const colors: Record<string, string> = {
-        SWAP: 'text-violet-400 bg-violet-500/20',
+        SWAP: 'text-navy-400 bg-navy-500/20',
         BUY: 'text-emerald-400 bg-emerald-500/20',
         SELL: 'text-red-400 bg-red-500/20',
         DEPOSIT: 'text-blue-400 bg-blue-500/20',
-        WITHDRAW: 'text-orange-400 bg-orange-500/20',
+        WITHDRAW: 'text-amber-400 bg-amber-500/20',
         SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
       };
       const typeKey = typeof value === 'string' ? value : '';
@@ -189,6 +214,8 @@ export function DashboardPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedSettlement, setSelectedSettlement] = useState<SettlementBatch | null>(null);
+  const [pendingCeaSettlements, setPendingCeaSettlements] = useState<SettlementBatch[]>([]);
+  const [pendingEuaSettlements, setPendingEuaSettlements] = useState<SettlementBatch[]>([]);
   const lastLocationRef = useRef<string>('');
   const isRefreshingBalanceRef = useRef<boolean>(false);
 
@@ -196,28 +223,28 @@ export function DashboardPage() {
   // Currently we just refresh on any balance update event
 
   // Derive portfolio from real data (prefer entityAssets over entityBalance for cash)
-  const eurBalance = entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0;
+  const eurBalance = entityAssets?.eurBalance ?? entityBalance?.balanceAmount ?? 0;
   const portfolio: Portfolio = {
-    cash_available: eurBalance,
-    cash_locked: 0, // Would come from orders
-    cash_total: eurBalance,
-    cea_available: entityAssets?.cea_balance ?? 0,
-    cea_locked: 0,
-    cea_total: entityAssets?.cea_balance ?? 0,
-    eua_available: entityAssets?.eua_balance ?? 0,
-    eua_pending: 0,
-    eua_total: entityAssets?.eua_balance ?? 0,
+    cashAvailable: eurBalance,
+    cashLocked: 0, // Would come from orders
+    cashTotal: eurBalance,
+    ceaAvailable: entityAssets?.ceaBalance ?? 0,
+    ceaLocked: 0,
+    ceaTotal: entityAssets?.ceaBalance ?? 0,
+    euaAvailable: entityAssets?.euaBalance ?? 0,
+    euaPending: 0,
+    euaTotal: entityAssets?.euaBalance ?? 0,
   };
 
   // Calculate portfolio value
   const calculatePortfolioValue = useCallback(() => {
-    const cashValue = portfolio.cash_total;
+    const cashValue = portfolio.cashTotal;
     const ceaPrice = prices?.cea.price || 0;
     const euaPrice = prices?.eua.price || 0;
 
-    const ceaValueEur = portfolio.cea_total * ceaPrice;
-    const euaValueEur = portfolio.eua_total * euaPrice;
-    const pendingEuaValueEur = portfolio.eua_pending * euaPrice;
+    const ceaValueEur = portfolio.ceaTotal * ceaPrice;
+    const euaValueEur = portfolio.euaTotal * euaPrice;
+    const pendingEuaValueEur = portfolio.euaPending * euaPrice;
 
     return {
       total: cashValue + ceaValueEur + euaValueEur,
@@ -227,7 +254,7 @@ export function DashboardPage() {
       eua: euaValueEur,
       pending: pendingEuaValueEur,
     };
-  }, [portfolio.cash_total, portfolio.cea_total, portfolio.eua_total, portfolio.eua_pending, prices]);
+  }, [portfolio.cashTotal, portfolio.ceaTotal, portfolio.euaTotal, portfolio.euaPending, prices]);
 
   const portfolioValue = calculatePortfolioValue();
 
@@ -247,7 +274,10 @@ export function DashboardPage() {
    * @returns Promise<boolean> - true if fetch succeeded, false otherwise
    */
   const fetchBalance = useCallback(async (): Promise<boolean> => {
-    if (user?.role === 'FUNDED' || user?.role === 'ADMIN') {
+    // Allow balance fetch for all funded roles (CEA, EUA, SWAP, MM, ADMIN, etc.)
+    // These roles have access to the /cash-market/user/balances endpoint
+    const fundedRoles = ['ADMIN', 'MM', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'];
+    if (user?.role && fundedRoles.includes(user.role)) {
       // Prevent overlapping calls using ref to avoid dependency issues
       if (isRefreshingBalanceRef.current) {
         return false;
@@ -261,11 +291,11 @@ export function DashboardPage() {
         
         // Map to entityAssets format for compatibility
         setEntityAssets({
-          entity_id: balances.entity_id || '',
-          entity_name: '',
-          eur_balance: balances.eur_balance,
-          cea_balance: balances.cea_balance,
-          eua_balance: balances.eua_balance,
+          entityId: balances.entityId || '',
+          entityName: '',
+          eurBalance: balances.eurBalance,
+          ceaBalance: balances.ceaBalance,
+          euaBalance: balances.euaBalance,
         });
         
         // Also fetch entity balance for deposit count if needed
@@ -325,19 +355,42 @@ export function DashboardPage() {
     }
   }, []);
 
+  /**
+   * Fetches pending settlements for display in the Holdings cards.
+   * Shows CEA amounts (T+3 settlement cycle) and EUA amounts (T+14 swap settlement).
+   */
+  const fetchSettlements = useCallback(async () => {
+    try {
+      const result = await settlementApi.getPendingSettlements();
+      // Filter for CEA settlements that are not yet settled
+      const ceaSettlements = result.data.filter(
+        (s: SettlementBatch) => s.assetType === 'CEA' && s.status !== 'SETTLED' && s.status !== 'FAILED'
+      );
+      // Filter for EUA settlements from swaps that are not yet settled
+      const euaSettlements = result.data.filter(
+        (s: SettlementBatch) => s.assetType === 'EUA' && s.status !== 'SETTLED' && s.status !== 'FAILED'
+      );
+      setPendingCeaSettlements(ceaSettlements);
+      setPendingEuaSettlements(euaSettlements);
+    } catch (err) {
+      console.error('Failed to fetch settlements:', err);
+      // Non-critical, don't block the UI
+    }
+  }, []);
+
   // Initial fetch on mount
   useEffect(() => {
     const init = async () => {
       setLoadingBalance(true);
       setLoadingOrders(true);
-      await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
+      await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps(), fetchSettlements()]);
       setLoadingBalance(false);
       setLoadingOrders(false);
     };
     init();
     lastLocationRef.current = location.pathname;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchBalance, fetchOrders, fetchSwaps]);
+  }, [fetchBalance, fetchOrders, fetchSwaps, fetchSettlements]);
 
   /**
    * Listens for balance update events triggered after trade execution.
@@ -411,9 +464,9 @@ export function DashboardPage() {
   // Refresh handler
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps()]);
+    await Promise.all([fetchBalance(), fetchOrders(), fetchSwaps(), fetchSettlements()]);
     setIsRefreshing(false);
-  }, [fetchBalance, fetchOrders, fetchSwaps]);
+  }, [fetchBalance, fetchOrders, fetchSwaps, fetchSettlements]);
 
   // Format helpers
   const formatNumber = (num: number, decimals = 0) => {
@@ -435,17 +488,20 @@ export function DashboardPage() {
   const orderTransactions: Transaction[] = orders.map(order => {
     // Check if this is a swap order (SWAP market orders use price field for ratio)
     const isSwap = order.market === 'SWAP';
-    
+    // Get fields safely (handles Axios camelCase transformation)
+    const certType = getOrderField(order, 'certificateType') as string || 'CEA';
+    const createdDate = safeParseDate(getOrderField(order, 'createdAt'));
+
     return {
       id: order.id,
-      date: new Date(order.created_at).toLocaleString(),
+      date: createdDate?.toLocaleString() || 'Unknown',
       type: isSwap ? 'SWAP' : order.side,
-      description: isSwap 
-        ? `SWAP ${order.certificate_type}` 
-        : `${order.side} ${order.certificate_type}`,
+      description: isSwap
+        ? `SWAP ${certType}`
+        : `${order.side} ${certType}`,
       details: isSwap
-        ? `${formatNumber(order.quantity)} ${order.certificate_type} @ ratio ${order.price.toFixed(4)}`
-        : `${formatNumber(order.quantity)} ${order.certificate_type} @ €${order.price.toFixed(2)}`,
+        ? `${formatNumber(order.quantity)} ${certType} @ ratio ${order.price.toFixed(4)}`
+        : `${formatNumber(order.quantity)} ${certType} @ €${order.price.toFixed(2)}`,
       amount: isSwap ? null : (order.side === 'BUY' ? -(order.quantity * order.price) : (order.quantity * order.price)),
       status: order.status === 'FILLED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
       ref: order.id.substring(0, 16),
@@ -458,18 +514,22 @@ export function DashboardPage() {
    */
   const swapTransactions: Transaction[] = swaps.map(swap => {
     const fromQty = swap.quantity;
-    const toQty = swap.equivalent_quantity || (swap.quantity * (swap.desired_rate || 0));
-    const rate = swap.desired_rate || (toQty / fromQty);
-    
+    const toQty = swap.equivalentQuantity || (swap.quantity * (swap.desiredRate || 0));
+    const rate = swap.desiredRate || (toQty / fromQty);
+    const s = swap as unknown as Record<string, unknown>; // Axios transforms to camelCase
+    const createdDate = safeParseDate(s.createdAt ?? swap.createdAt);
+    const fromType = (s.fromType as string) ?? swap.fromType ?? 'CEA';
+    const toType = (s.toType as string) ?? swap.toType ?? 'EUA';
+
     return {
       id: swap.id,
-      date: new Date(swap.created_at).toLocaleString(),
+      date: createdDate?.toLocaleString() || 'Unknown',
       type: 'SWAP',
-      description: `SWAP ${swap.from_type} → ${swap.to_type}`,
-      details: `${formatNumber(fromQty)} ${swap.from_type} → ${formatNumber(toQty)} ${swap.to_type} @ ${rate.toFixed(4)}`,
+      description: `SWAP ${fromType} → ${toType}`,
+      details: `${formatNumber(fromQty)} ${fromType} → ${formatNumber(toQty)} ${toType} @ ${rate.toFixed(4)}`,
       amount: null, // Swaps don't have EUR amount
       status: swap.status === 'completed' || swap.status === 'matched' ? 'completed' : 'pending',
-      ref: swap.anonymous_code || swap.id.substring(0, 16),
+      ref: swap.anonymousCode || swap.id.substring(0, 16),
     };
   });
 
@@ -499,11 +559,11 @@ export function DashboardPage() {
       icon: Wallet,
       iconColor: 'text-emerald-400',
       iconBg: 'bg-emerald-500/20',
-      available: portfolio.cash_available,
-      locked: portfolio.cash_locked,
+      available: portfolio.cashAvailable,
+      locked: portfolio.cashLocked,
       pending: 0,
-      total: portfolio.cash_total,
-      value: portfolio.cash_total,
+      total: portfolio.cashTotal,
+      value: portfolio.cashTotal,
       price: null as number | null,
       change: null as number | null,
     },
@@ -514,13 +574,13 @@ export function DashboardPage() {
       icon: Leaf,
       iconColor: 'text-amber-400',
       iconBg: 'bg-amber-500/20',
-      available: portfolio.cea_available,
-      locked: portfolio.cea_locked,
+      available: portfolio.ceaAvailable,
+      locked: portfolio.ceaLocked,
       pending: 0,
-      total: portfolio.cea_total,
-      value: portfolio.cea_total * (prices?.cea.price || 0),
+      total: portfolio.ceaTotal,
+      value: portfolio.ceaTotal * (prices?.cea.price || 0),
       price: prices?.cea.price || 0,
-      change: prices?.cea.change_24h || 0,
+      change: prices?.cea.change24h || 0,
     },
     {
       id: 'eua',
@@ -529,13 +589,13 @@ export function DashboardPage() {
       icon: Wind,
       iconColor: 'text-blue-400',
       iconBg: 'bg-blue-500/20',
-      available: portfolio.eua_available,
+      available: portfolio.euaAvailable,
       locked: 0,
-      pending: portfolio.eua_pending,
-      total: portfolio.eua_total,
-      value: portfolio.eua_total * (prices?.eua.price || 0),
+      pending: portfolio.euaPending,
+      total: portfolio.euaTotal,
+      value: portfolio.euaTotal * (prices?.eua.price || 0),
       price: prices?.eua.price || 0,
-      change: prices?.eua.change_24h || 0,
+      change: prices?.eua.change24h || 0,
     },
   ];
 
@@ -572,16 +632,15 @@ export function DashboardPage() {
       </motion.div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="page-container py-6">
         {/* Error Banner */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-3"
+            className="mb-6"
           >
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            <span className="text-red-300">{error}</span>
+            <AlertBanner variant="error" message={error} />
           </motion.div>
         )}
 
@@ -591,7 +650,7 @@ export function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5 contained"
+            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-emerald-300/70">Total Portfolio Value</span>
@@ -624,10 +683,10 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
+            className="content_wrapper"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">Cash ({entityBalance?.balance_currency || 'EUR'})</span>
+              <span className="text-sm text-navy-400">Cash ({entityBalance?.balanceCurrency || 'EUR'})</span>
               <div className="w-8 h-8 rounded-lg bg-navy-600 flex items-center justify-center">
                 <Wallet className="w-4 h-4 text-navy-300" />
               </div>
@@ -637,18 +696,18 @@ export function DashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-white font-mono mb-2">
-                  {formatCurrency(portfolio.cash_available, 2)}
+                  {formatCurrency(portfolio.cashAvailable, 2)}
                 </div>
-                {portfolio.cash_locked > 0 && (
+                {portfolio.cashLocked > 0 && (
                   <div className="flex items-center gap-2 text-xs">
                     <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
-                      {formatCurrency(portfolio.cash_locked)} locked
+                      {formatCurrency(portfolio.cashLocked)} locked
                     </span>
                   </div>
                 )}
-                {entityBalance?.total_deposited && entityBalance.total_deposited > 0 && (
+                {entityBalance?.totalDeposited && entityBalance.totalDeposited > 0 && (
                   <div className="text-xs text-navy-500 mt-2">
-                    Total deposited: {formatCurrency(entityBalance.total_deposited, 2)}
+                    Total deposited: {formatCurrency(entityBalance.totalDeposited, 2)}
                   </div>
                 )}
               </>
@@ -656,70 +715,202 @@ export function DashboardPage() {
           </motion.div>
 
           {/* CEA Holdings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">CEA Holdings</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <Leaf className="w-4 h-4 text-amber-400" />
-              </div>
-            </div>
-            {isLoading ? (
-              <Skeleton variant="textLg" width="40%" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
-                  {formatNumber(portfolio.cea_total)}
-                  <span className="text-sm text-navy-500 ml-1">tCO₂</span>
-                </div>
-                {portfolio.cea_locked > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded flex items-center gap-1">
-                      <ArrowRightLeft className="w-3 h-3" />
-                      {formatNumber(portfolio.cea_locked)} in swap
+          {pendingCeaSettlements.length > 0 ? (
+            // Settling state - clickable card with reduced opacity
+            pendingCeaSettlements.map((settlement) => {
+              const expectedDate = new Date(settlement.expectedSettlementDate);
+              const createdDate = new Date(settlement.createdAt);
+              const now = new Date();
+              const totalDuration = expectedDate.getTime() - createdDate.getTime();
+              const elapsed = now.getTime() - createdDate.getTime();
+              const progressPercent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+
+              return (
+                <motion.div
+                  key={settlement.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    borderColor: ['rgba(245, 158, 11, 0.3)', 'rgba(245, 158, 11, 0.8)', 'rgba(245, 158, 11, 0.3)'],
+                  }}
+                  transition={{
+                    delay: 0.1,
+                    borderColor: {
+                      duration: 3.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  }}
+                  className="content_wrapper relative cursor-pointer border-2 border-amber-500/30 hover:border-amber-500 overflow-hidden"
+                  onClick={() => setSelectedSettlement(settlement)}
+                >
+                  {/* Progress bar as card background */}
+                  <div
+                    className="absolute inset-0 bg-amber-500/15"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+
+                  {/* Card content with reduced opacity */}
+                  <div className="relative opacity-30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-navy-400">CEA Holdings</span>
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <Leaf className="w-4 h-4 text-amber-400" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                      {formatNumber(settlement.quantity, 2)}
+                      <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                    </div>
+                  </div>
+
+                  {/* SETTLING badge and click hint */}
+                  <div className="relative flex items-center justify-between mt-2">
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-semibold flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      SETTLING
+                    </span>
+                    <span className="text-xs text-navy-400 hover:text-amber-400 transition-colors">
+                      Click for details →
                     </span>
                   </div>
-                )}
-              </>
-            )}
-          </motion.div>
+                </motion.div>
+              );
+            })
+          ) : (
+            // Normal state - no pending settlements
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="content_wrapper"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-navy-400">CEA Holdings</span>
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <Leaf className="w-4 h-4 text-amber-400" />
+                </div>
+              </div>
+              {isLoading ? (
+                <Skeleton variant="textLg" width="40%" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                    {formatNumber(portfolio.ceaTotal)}
+                    <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                  </div>
+                  {portfolio.ceaLocked > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 rounded flex items-center gap-1">
+                        <ArrowRightLeft className="w-3 h-3" />
+                        {formatNumber(portfolio.ceaLocked)} in swap
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
 
           {/* EUA Holdings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 p-5 contained"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">EUA Holdings</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Wind className="w-4 h-4 text-blue-400" />
-              </div>
-            </div>
-            {isLoading ? (
-              <Skeleton variant="textLg" width="40%" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
-                  {formatNumber(portfolio.eua_total)}
-                  <span className="text-sm text-navy-500 ml-1">tCO₂</span>
-                </div>
-                {portfolio.eua_pending > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
+          {pendingEuaSettlements.length > 0 ? (
+            // Settling state - clickable card with reduced opacity (same as CEA)
+            pendingEuaSettlements.map((settlement) => {
+              const expectedDate = new Date(settlement.expectedSettlementDate);
+              const createdDate = new Date(settlement.createdAt);
+              const now = new Date();
+              const totalDuration = expectedDate.getTime() - createdDate.getTime();
+              const elapsed = now.getTime() - createdDate.getTime();
+              const progressPercent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+
+              return (
+                <motion.div
+                  key={settlement.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    borderColor: ['rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.8)', 'rgba(59, 130, 246, 0.3)'],
+                  }}
+                  transition={{
+                    delay: 0.15,
+                    borderColor: {
+                      duration: 3.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  }}
+                  className="content_wrapper relative cursor-pointer border-2 border-blue-500/30 hover:border-blue-500 overflow-hidden"
+                  onClick={() => setSelectedSettlement(settlement)}
+                >
+                  {/* Progress bar as card background */}
+                  <div
+                    className="absolute inset-0 bg-blue-500/15"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+
+                  {/* Card content with reduced opacity */}
+                  <div className="relative opacity-30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-navy-400">EUA Holdings</span>
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <Wind className="w-4 h-4 text-blue-400" />
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                      {formatNumber(settlement.quantity, 2)}
+                      <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                    </div>
+                  </div>
+
+                  {/* SETTLING badge and click hint */}
+                  <div className="relative flex items-center justify-between mt-2">
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold flex items-center gap-1.5">
                       <Clock className="w-3 h-3" />
-                      +{formatNumber(portfolio.eua_pending)} pending
+                      SETTLING
+                    </span>
+                    <span className="text-xs text-navy-400 hover:text-blue-400 transition-colors">
+                      Click for details →
                     </span>
                   </div>
-                )}
-              </>
-            )}
-          </motion.div>
+                </motion.div>
+              );
+            })
+          ) : (
+            // Normal state - no pending EUA settlements
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="content_wrapper"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-navy-400">EUA Holdings</span>
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Wind className="w-4 h-4 text-blue-400" />
+                </div>
+              </div>
+              {isLoading ? (
+                <Skeleton variant="textLg" width="40%" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                    {formatNumber(portfolio.euaTotal)}
+                    <span className="text-sm text-navy-500 ml-1">tCO₂</span>
+                  </div>
+                  {portfolio.euaPending > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        +{formatNumber(portfolio.euaPending)} pending
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
         </div>
 
         {/* Holdings Breakdown & Active Orders */}
@@ -729,7 +920,7 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-navy-800 rounded-xl border border-navy-700 contained"
+            className="content_wrapper p-0 lg:col-span-2"
           >
             <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -817,14 +1008,14 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="bg-navy-800 rounded-xl border border-navy-700 contained"
+            className="content_wrapper p-0"
           >
             <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-navy-400" />
                 <h2 className="font-semibold text-white">Active Orders</h2>
                 {activeOrders.length > 0 && (
-                  <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs rounded-full">
+                  <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 text-xs rounded-full">
                     {activeOrders.length}
                   </span>
                 )}
@@ -866,7 +1057,7 @@ export function DashboardPage() {
                           </div>
                           <div className="text-left">
                             <div className="font-medium text-white text-sm">
-                              {order.side} {order.certificate_type}
+                              {order.side} {getOrderField(order, 'certificateType') || 'CEA'}
                             </div>
                             <div className="text-xs text-navy-500">
                               {formatNumber(order.quantity)} @ €{order.price.toFixed(2)}
@@ -899,21 +1090,24 @@ export function DashboardPage() {
                           >
                             <div className="px-4 pb-4 space-y-3">
                               {/* Progress */}
-                              {order.filled_quantity > 0 && (
-                                <div>
-                                  <div className="flex items-center justify-between text-xs mb-2">
-                                    <span className="text-navy-400">Filled</span>
-                                    <span className="text-white font-mono">
-                                      {formatNumber(order.filled_quantity)} / {formatNumber(order.quantity)}
-                                    </span>
+                              {(() => {
+                                const filled = Number(getOrderField(order, 'filledQuantity')) || 0;
+                                return filled > 0 && (
+                                  <div>
+                                    <div className="flex items-center justify-between text-xs mb-2">
+                                      <span className="text-navy-400">Filled</span>
+                                      <span className="text-white font-mono">
+                                        {formatNumber(filled)} / {formatNumber(order.quantity)}
+                                      </span>
+                                    </div>
+                                    <ProgressBar
+                                      value={(filled / order.quantity) * 100}
+                                      variant="success"
+                                      size="sm"
+                                    />
                                   </div>
-                                  <ProgressBar
-                                    value={(order.filled_quantity / order.quantity) * 100}
-                                    variant="success"
-                                    size="sm"
-                                  />
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Details */}
                               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -926,7 +1120,7 @@ export function DashboardPage() {
                                 <div className="bg-navy-800/50 rounded-lg p-3">
                                   <div className="text-navy-500 mb-1">Created</div>
                                   <div className="font-mono text-white">
-                                    {new Date(order.created_at).toLocaleDateString()}
+                                    {safeParseDate(getOrderField(order, 'createdAt'))?.toLocaleDateString() || 'Unknown'}
                                   </div>
                                 </div>
                               </div>
@@ -947,7 +1141,7 @@ export function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-navy-800 rounded-xl border border-navy-700 contained"
+          className="content_wrapper p-0"
         >
           <div className="px-5 py-4 border-b border-navy-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -988,13 +1182,13 @@ export function DashboardPage() {
               data={filteredTransactions}
               variant="dark"
               rowKey="id"
-              emptyMessage="No orders found. Place your first order in the Cash Market."
+              emptyMessage="No orders found. Place your first order in CEA Cash."
               className="border-none rounded-none"
               getRowClassName={(row: Transaction) => {
-                // Style swap transactions with violet accent to distinguish from regular BUY/SELL orders
+                // Style swap transactions with navy accent to distinguish from regular BUY/SELL orders
                 // Matches the SWAP badge color scheme used elsewhere in the application
                 if (row.type === 'SWAP') {
-                  return 'bg-violet-500/5 border-l-4 border-l-violet-500/50 hover:bg-violet-500/10';
+                  return 'bg-navy-500/5 border-l-4 border-l-navy-500/50 hover:bg-navy-500/10';
                 }
                 return '';
               }}

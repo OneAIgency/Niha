@@ -3,13 +3,18 @@
  */
 
 export interface FundingInstructions {
-  bank_name: string;
-  account_name: string;
-  account_number: string;
+  bankName: string;
+  bankAddress?: string;
+  accountName: string;
+  accountNumber: string;
   iban?: string;
-  swift_code?: string;
-  routing_number?: string;
-  currency: string;
-  reference_format: string;
+  swiftCode?: string;
+  swiftBic?: string;
+  routingNumber?: string;
+  currency?: string;
+  referenceFormat?: string;
+  referenceInstructions?: string;
+  supportedCurrencies?: string[];
+  processingTime?: string;
   notes?: string;
 }

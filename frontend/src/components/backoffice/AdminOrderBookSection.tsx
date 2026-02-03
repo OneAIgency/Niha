@@ -4,13 +4,24 @@ import { ProfessionalOrderBook } from '../cash-market/ProfessionalOrderBook';
 import { getAdminOrderBook } from '../../services/api';
 import type { OrderBook as OrderBookType, CertificateType } from '../../types';
 
+export interface OrderBookData {
+  bestBid: number | null;
+  bestAsk: number | null;
+  bidQuantityAtBest: number;  // Volume at best bid price
+  askQuantityAtBest: number;  // Volume at best ask price
+}
+
 interface AdminOrderBookSectionProps {
   certificateType: CertificateType;
   /** Called when user clicks a price in the order book (e.g. to open placement modal) */
   onPriceClick?: (price: number, side: 'BUY' | 'SELL') => void;
+  /** Called when orderbook data is updated - provides best prices and volumes for auto-fill */
+  onOrderBookData?: (data: OrderBookData) => void;
+  /** Show all orders with scrolling instead of limiting to 7 rows */
+  showFullBook?: boolean;
 }
 
-export function AdminOrderBookSection({ certificateType, onPriceClick }: AdminOrderBookSectionProps) {
+export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBookData, showFullBook = false }: AdminOrderBookSectionProps) {
   const [orderBook, setOrderBook] = useState<OrderBookType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -18,14 +29,27 @@ export function AdminOrderBookSection({ certificateType, onPriceClick }: AdminOr
   const fetchOrderBook = useCallback(async () => {
     try {
       const response = await getAdminOrderBook(certificateType);
-      setOrderBook(response.data);
+      const data = response.data;
+      setOrderBook(data);
+
+      // Notify parent with best prices and quantities for auto-fill
+      if (onOrderBookData) {
+        const bidQuantityAtBest = data.bids.length > 0 ? data.bids[0].quantity : 0;
+        const askQuantityAtBest = data.asks.length > 0 ? data.asks[0].quantity : 0;
+        onOrderBookData({
+          bestBid: data.bestBid,
+          bestAsk: data.bestAsk,
+          bidQuantityAtBest: bidQuantityAtBest,
+          askQuantityAtBest: askQuantityAtBest,
+        });
+      }
     } catch (error) {
       console.error('Error fetching order book:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [certificateType]);
+  }, [certificateType, onOrderBookData]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -60,10 +84,11 @@ export function AdminOrderBookSection({ certificateType, onPriceClick }: AdminOr
             bids: orderBook.bids,
             asks: orderBook.asks,
             spread: orderBook.spread,
-            best_bid: orderBook.best_bid,
-            best_ask: orderBook.best_ask,
+            bestBid: orderBook.bestBid,
+            bestAsk: orderBook.bestAsk,
           }}
           onPriceClick={onPriceClick != null ? handlePriceClick : undefined}
+          showFullBook={showFullBook}
         />
       )}
       <div className="flex items-center justify-center text-xs text-navy-500 dark:text-navy-400">

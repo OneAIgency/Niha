@@ -81,7 +81,7 @@ export const documentCategories = [
     id: 'representative' as const,
     name: 'Representative Documents',
     icon: User,
-    color: 'var(--color-violet)',
+    color: 'var(--color-navy)',
   },
   {
     id: 'optional' as const,

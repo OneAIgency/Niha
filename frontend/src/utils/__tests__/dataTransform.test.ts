@@ -107,10 +107,9 @@ describe('transformKeysToSnakeCase', () => {
       contactEmail: 'contact@acme.com',
       contactName: 'Jane Doe',
       position: 'Sustainability Director',
-      requestType: 'join',
       ndaFileName: null,
       submitterIp: '192.168.1.1',
-      status: 'new',
+      userRole: 'new',
       notes: null,
       createdAt: '2026-01-29T12:00:00Z',
     };
@@ -121,10 +120,9 @@ describe('transformKeysToSnakeCase', () => {
       contact_email: 'contact@acme.com',
       contact_name: 'Jane Doe',
       position: 'Sustainability Director',
-      request_type: 'join',
       nda_file_name: null,
       submitter_ip: '192.168.1.1',
-      status: 'new',
+      user_role: 'new',
       notes: null,
       created_at: '2026-01-29T12:00:00Z',
     });

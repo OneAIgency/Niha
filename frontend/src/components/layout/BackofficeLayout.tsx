@@ -7,13 +7,13 @@ import {
   Bot,
   ShoppingCart,
   Zap,
-  Wallet,
   UserPlus,
+  Percent,
 } from 'lucide-react';
 import { Subheader, SubSubHeader, SubheaderNavButton } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/deposits' | '/backoffice/logging' | '/users';
+type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/fee-settings' | '/backoffice/auto-trade' | '/backoffice/logging' | '/users';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -81,17 +81,23 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-amber-500',
     description: 'Create liquidity',
   },
+  '/backoffice/fee-settings': {
+    icon: Percent,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Configure trading fees per market and per client',
+  },
+  '/backoffice/auto-trade': {
+    icon: Zap,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'Automated market making control',
+  },
   '/backoffice/logging': {
     icon: Activity,
     iconBg: 'bg-amber-500/20',
     iconColor: 'text-amber-500',
     description: 'View comprehensive audit trail',
-  },
-  '/backoffice/deposits': {
-    icon: Wallet,
-    iconBg: 'bg-emerald-500/20',
-    iconColor: 'text-emerald-500',
-    description: 'Manage deposits and AML checks',
   },
   '/users': {
     icon: Users,
@@ -106,8 +112,9 @@ const BACKOFFICE_NAV = [
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
   { to: '/backoffice/market-orders', label: 'Market Orders', icon: ShoppingCart },
   { to: '/backoffice/liquidity', label: 'Liquidity', icon: Zap },
-  { to: '/backoffice/deposits', label: 'Deposits', icon: Wallet },
-  { to: '/backoffice/logging', label: 'Audit Logging', icon: Activity },
+  { to: '/backoffice/fee-settings', label: 'Fees', icon: Percent },
+  { to: '/backoffice/auto-trade', label: 'Auto Trade', icon: Activity },
+  { to: '/backoffice/logging', label: 'Audit Logging', icon: FileText },
   { to: '/users', label: 'Users', icon: Users },
 ] as const;
 
@@ -152,33 +159,35 @@ export function BackofficeLayout({ children, subSubHeaderLeft, subSubHeader }: B
   const showSubSub = Boolean(subSubHeaderLeft) || Boolean(subSubHeader);
 
   return (
-    <div className="min-h-screen bg-navy-950">
-      <Subheader
-        icon={<IconComponent className={cn('w-5 h-5', config.iconColor)} />}
-        title="Backoffice"
-        description={config.description}
-        iconBg={config.iconBg}
-      >
-        <nav className="flex items-center gap-2" aria-label="Backoffice navigation">
-          {BACKOFFICE_NAV.map((item) => {
-            const isActive = isRouteActive(pathname, item.to);
-            const Icon = item.icon;
-            return (
-              <SubheaderNavButton
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                icon={<Icon className="w-4 h-4" aria-hidden="true" />}
-                isActive={isActive}
-              />
-            );
-          })}
-        </nav>
-      </Subheader>
-      {showSubSub && (
-        <SubSubHeader left={subSubHeaderLeft}>{subSubHeader}</SubSubHeader>
-      )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-navy-900">
+      <div className="page-section-header-sticky">
+        <Subheader
+          icon={<IconComponent className={cn('w-5 h-5', config.iconColor)} />}
+          title="Backoffice"
+          description={config.description}
+          iconBg={config.iconBg}
+        >
+          <nav className="flex items-center gap-2" aria-label="Backoffice navigation">
+            {BACKOFFICE_NAV.map((item) => {
+              const isActive = isRouteActive(pathname, item.to);
+              const Icon = item.icon;
+              return (
+                <SubheaderNavButton
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  icon={<Icon className="w-4 h-4" aria-hidden="true" />}
+                  isActive={isActive}
+                />
+              );
+            })}
+          </nav>
+        </Subheader>
+        {showSubSub && (
+          <SubSubHeader left={subSubHeaderLeft}>{subSubHeader}</SubSubHeader>
+        )}
+      </div>
+      <div className="page-container py-6">
         {children}
       </div>
     </div>

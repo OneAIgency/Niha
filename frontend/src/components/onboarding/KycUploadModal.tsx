@@ -96,9 +96,9 @@ const categories = [
     id: 'representative',
     name: 'Representative Documents',
     icon: User,
-    bgClass: 'bg-violet-500/10',
-    borderClass: 'border-violet-500',
-    iconClass: 'text-violet-500',
+    bgClass: 'bg-navy-500/10',
+    borderClass: 'border-navy-500',
+    iconClass: 'text-navy-500',
   },
   {
     id: 'optional',
@@ -140,7 +140,9 @@ export default function KycUploadModal({
     setError(null);
     try {
       const status = await onboardingApi.getStatus();
-      setUploadedDocs(status.documents || []);
+      const docs = status.documents || [];
+      // API response uses camelCase (documentType, fileName)
+      setUploadedDocs(docs);
     } catch (err) {
       console.error('Failed to load documents:', err);
       setError('Failed to load documents');
@@ -149,9 +151,11 @@ export default function KycUploadModal({
     }
   };
 
+  const getDocType = (d: KYCDocument) => d.documentType;
+
   // Calculate progress
   const requiredDocs = documentDefinitions.filter(d => d.required);
-  const uploadedTypes = new Set(uploadedDocs.map(d => d.document_type));
+  const uploadedTypes = new Set(uploadedDocs.map(d => getDocType(d)));
   const uploadedRequiredCount = requiredDocs.filter(d => uploadedTypes.has(d.type)).length;
   const progress = Math.round((uploadedRequiredCount / requiredDocs.length) * 100);
 
@@ -164,13 +168,19 @@ export default function KycUploadModal({
     setError(null);
     try {
       const doc = await onboardingApi.uploadDocument(type, file);
-      setUploadedDocs(prev => [...prev.filter(d => d.document_type !== type), doc]);
+      setUploadedDocs(prev => [...prev.filter(d => getDocType(d) !== type), doc]);
     } catch (err: unknown) {
       console.error('Upload failed:', err);
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
         : null;
-      setError(typeof msg === 'string' ? msg : 'Upload failed');
+      const detail = typeof msg === 'string' ? msg : '';
+      if (detail.includes('already uploaded')) {
+        setError('This document type is already uploaded. Delete it using the trash icon, then upload a new file.');
+        await loadDocuments();
+      } else {
+        setError(detail || 'Upload failed');
+      }
     } finally {
       setUploading(null);
     }
@@ -214,7 +224,8 @@ export default function KycUploadModal({
   const activeDocuments = documentDefinitions.filter(d => d.category === activeCategory);
   const activeCategoryData = categories.find(c => c.id === activeCategory);
 
-  const getUploadedDoc = (type: KYCDocumentType) => uploadedDocs.find(d => d.document_type === type);
+  const getUploadedDoc = (type: KYCDocumentType) =>
+    uploadedDocs.find(d => getDocType(d) === type);
 
   return (
     <AnimatePresence>
@@ -255,11 +266,11 @@ export default function KycUploadModal({
                   <span className="text-navy-400">
                     {uploadedRequiredCount} of {requiredDocs.length} required documents
                   </span>
-                  <span className="text-teal-300">{progress}%</span>
+                  <span className="text-emerald-300">{progress}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-navy-600">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-300"
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.5 }}
@@ -327,7 +338,7 @@ export default function KycUploadModal({
               <div className="flex-1 p-6 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
                   </div>
                 ) : activeCategoryData && (
                   <>
@@ -378,7 +389,7 @@ export default function KycUploadModal({
                 disabled={!canSubmit || submitting}
                 className={`px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2 ${
                   canSubmit && !submitting
-                    ? 'bg-gradient-to-br from-teal-500 to-blue-600 cursor-pointer opacity-100'
+                    ? 'bg-gradient-to-br from-emerald-500 to-blue-600 cursor-pointer opacity-100'
                     : 'bg-navy-600 cursor-not-allowed opacity-50'
                 }`}
               >
@@ -473,7 +484,7 @@ function DocumentUploadCard({
             </div>
             <div className="text-sm mt-1 text-navy-400">{docDef.description}</div>
             {uploadedDoc && (
-              <div className="text-xs mt-2 text-navy-300">{uploadedDoc.file_name} - {uploadedDoc.status}</div>
+              <div className="text-xs mt-2 text-navy-300">{uploadedDoc.fileName} - {uploadedDoc.status}</div>
             )}
           </div>
         </div>

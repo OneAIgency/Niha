@@ -13,7 +13,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   Loader2,
   RefreshCw,
   DollarSign,
@@ -21,6 +20,7 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
+import { AlertBanner, LoadingState } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type {
   Withdrawal,
@@ -93,7 +93,7 @@ export const WithdrawalsTab: React.FC = () => {
     setActionLoading(true);
     try {
       const result = await withdrawalApi.approveWithdrawal(selectedWithdrawal.id, {
-        admin_notes: adminNotes || undefined,
+        adminNotes: adminNotes || undefined,
       });
       if (result.success) {
         await fetchData();
@@ -113,8 +113,8 @@ export const WithdrawalsTab: React.FC = () => {
     setActionLoading(true);
     try {
       const result = await withdrawalApi.completeWithdrawal(selectedWithdrawal.id, {
-        wire_reference: wireReference || undefined,
-        admin_notes: adminNotes || undefined,
+        wireReference: wireReference || undefined,
+        adminNotes: adminNotes || undefined,
       });
       if (result.success) {
         await fetchData();
@@ -134,8 +134,8 @@ export const WithdrawalsTab: React.FC = () => {
     setActionLoading(true);
     try {
       const result = await withdrawalApi.rejectWithdrawal(selectedWithdrawal.id, {
-        rejection_reason: rejectionReason,
-        admin_notes: adminNotes || undefined,
+        rejectionReason: rejectionReason,
+        adminNotes: adminNotes || undefined,
       });
       if (result.success) {
         await fetchData();
@@ -190,7 +190,7 @@ export const WithdrawalsTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-navy-600" />
+        <LoadingState variant="spinner" size="lg" />
       </div>
     );
   }
@@ -241,16 +241,7 @@ export const WithdrawalsTab: React.FC = () => {
 
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-red-500" />
-          <span className="text-red-700 dark:text-red-400">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-400"
-          >
-            ×
-          </button>
-        </div>
+        <AlertBanner variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
       {/* Tabs */}
@@ -298,11 +289,11 @@ export const WithdrawalsTab: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${ASSET_COLORS[withdrawal.asset_type]}`}>
-                        {withdrawal.asset_type}
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${ASSET_COLORS[withdrawal.assetType]}`}>
+                        {withdrawal.assetType}
                       </span>
                       <span className="text-lg font-semibold">
-                        {formatAmount(withdrawal.amount, withdrawal.asset_type)}
+                        {formatAmount(withdrawal.amount, withdrawal.assetType)}
                       </span>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[withdrawal.status]}`}>
                         {withdrawal.status}
@@ -312,59 +303,59 @@ export const WithdrawalsTab: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4 text-sm text-navy-400">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
-                        <span>{withdrawal.entity_name || 'Unknown Entity'}</span>
+                        <span>{withdrawal.entityName || 'Unknown Entity'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        <span>{withdrawal.user_email || '-'}</span>
+                        <span>{withdrawal.userEmail || '-'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Requested: {formatDate(withdrawal.requested_at)}</span>
+                        <span>Requested: {formatDate(withdrawal.requestedAt)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
-                        <span>Ref: {withdrawal.internal_reference || '-'}</span>
+                        <span>Ref: {withdrawal.internalReference || '-'}</span>
                       </div>
                     </div>
 
                     {/* Destination info */}
                     <div className="mt-3 p-3 bg-navy-700/50 rounded-xl text-sm">
-                      {withdrawal.asset_type === 'EUR' ? (
+                      {withdrawal.assetType === 'EUR' ? (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <span className="text-navy-400">Bank:</span>{' '}
-                            {withdrawal.destination_bank || '-'}
+                            {withdrawal.destinationBank || '-'}
                           </div>
                           <div>
                             <span className="text-navy-400">IBAN:</span>{' '}
-                            <span className="font-mono">{withdrawal.destination_iban || '-'}</span>
+                            <span className="font-mono">{withdrawal.destinationIban || '-'}</span>
                           </div>
                           <div>
                             <span className="text-navy-400">SWIFT:</span>{' '}
-                            {withdrawal.destination_swift || '-'}
+                            {withdrawal.destinationSwift || '-'}
                           </div>
                           <div>
                             <span className="text-navy-400">Holder:</span>{' '}
-                            {withdrawal.destination_account_holder || '-'}
+                            {withdrawal.destinationAccountHolder || '-'}
                           </div>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <span className="text-navy-400">Registry:</span>{' '}
-                            {withdrawal.destination_registry || '-'}
+                            {withdrawal.destinationRegistry || '-'}
                           </div>
                           <div>
                             <span className="text-navy-400">Account ID:</span>{' '}
-                            <span className="font-mono">{withdrawal.destination_account_id || '-'}</span>
+                            <span className="font-mono">{withdrawal.destinationAccountId || '-'}</span>
                           </div>
                         </div>
                       )}
-                      {withdrawal.client_notes && (
+                      {withdrawal.clientNotes && (
                         <div className="mt-2 pt-2 border-t border-navy-700">
                           <span className="text-navy-400">Client Notes:</span>{' '}
-                          {withdrawal.client_notes}
+                          {withdrawal.clientNotes}
                         </div>
                       )}
                     </div>
@@ -419,13 +410,13 @@ export const WithdrawalsTab: React.FC = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Approve Withdrawal</h3>
             <div className="mb-4 p-3 bg-blue-500/20 rounded-xl border border-blue-500/30">
               <p className="text-sm text-navy-200">
-                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.asset_type)}
+                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.assetType)}
               </p>
               <p className="text-sm text-navy-200">
-                <strong>Entity:</strong> {selectedWithdrawal.entity_name}
+                <strong>Entity:</strong> {selectedWithdrawal.entityName}
               </p>
               <p className="text-sm text-navy-200">
-                <strong>Reference:</strong> {selectedWithdrawal.internal_reference}
+                <strong>Reference:</strong> {selectedWithdrawal.internalReference}
               </p>
             </div>
             <div className="mb-4">
@@ -467,13 +458,13 @@ export const WithdrawalsTab: React.FC = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Complete Withdrawal</h3>
             <div className="mb-4 p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
               <p className="text-sm text-navy-200">
-                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.asset_type)}
+                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.assetType)}
               </p>
               <p className="text-sm text-navy-200">
-                <strong>Entity:</strong> {selectedWithdrawal.entity_name}
+                <strong>Entity:</strong> {selectedWithdrawal.entityName}
               </p>
               <p className="text-sm text-navy-200">
-                <strong>Reference:</strong> {selectedWithdrawal.internal_reference}
+                <strong>Reference:</strong> {selectedWithdrawal.internalReference}
               </p>
             </div>
             <div className="mb-4">
@@ -527,10 +518,10 @@ export const WithdrawalsTab: React.FC = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Reject Withdrawal</h3>
             <div className="mb-4 p-3 bg-red-500/20 rounded-xl border border-red-500/30">
               <p className="text-sm text-navy-200">
-                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.asset_type)}
+                <strong>Amount:</strong> {formatAmount(selectedWithdrawal.amount, selectedWithdrawal.assetType)}
               </p>
               <p className="text-sm text-navy-200">
-                <strong>Entity:</strong> {selectedWithdrawal.entity_name}
+                <strong>Entity:</strong> {selectedWithdrawal.entityName}
               </p>
               <p className="text-sm text-red-400 font-medium mt-2">
                 Funds will be refunded to the entity&apos;s balance.

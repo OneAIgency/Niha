@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api.v1 import (
     admin,
+    admin_fees,
     admin_logging,
     admin_market_orders,
     assets,
@@ -29,6 +30,7 @@ from .core.config import settings
 from .core.database import AsyncSessionLocal, init_db
 from .core.security import RedisManager
 from .services import deposit_service
+from .services.auto_trade_executor import AutoTradeExecutor
 from .services.settlement_monitoring import SettlementMonitoring
 from .services.settlement_processor import SettlementProcessor
 
@@ -115,14 +117,166 @@ async def lifespan(app: FastAPI):
             # Wait 1 hour
             await asyncio.sleep(3600)
 
+    # Price scraping scheduler
+    async def price_scraping_scheduler_loop():
+        """Run price scraping based on each source's configured interval"""
+        from datetime import datetime, timezone
+
+        from sqlalchemy import select
+
+        from .models.models import ScrapingSource
+        from .services.price_scraper import price_scraper
+
+        # Wait 30 seconds on startup before first check
+        await asyncio.sleep(30)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get all active scraping sources
+                    result = await db.execute(
+                        select(ScrapingSource).where(
+                            ScrapingSource.is_active.is_(True)
+                        )
+                    )
+                    sources = result.scalars().all()
+
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    for source in sources:
+                        # Check if it's time to scrape based on configured interval
+                        if source.last_scrape_at is None:
+                            should_scrape = True
+                        else:
+                            minutes_since_last = (
+                                now - source.last_scrape_at
+                            ).total_seconds() / 60
+                            should_scrape = (
+                                minutes_since_last >= source.scrape_interval_minutes
+                            )
+
+                        if should_scrape:
+                            try:
+                                await price_scraper.refresh_source(source, db)
+                                logger.info(
+                                    f"Auto-scraped {source.name}: {source.last_price}"
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Auto-scrape failed for {source.name}: {e}"
+                                )
+            except Exception as e:
+                logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
+
+            # Check every 60 seconds
+            await asyncio.sleep(60)
+
+    # Exchange rate scraping scheduler
+    async def exchange_rate_scraping_scheduler_loop():
+        """Run exchange rate scraping based on each source's configured interval"""
+        from datetime import datetime, timezone
+
+        from sqlalchemy import select
+
+        from .models.models import ExchangeRateSource
+        from .services.price_scraper import price_scraper
+
+        # Wait 45 seconds on startup before first check (stagger from price scraper)
+        await asyncio.sleep(45)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get all active exchange rate sources
+                    result = await db.execute(
+                        select(ExchangeRateSource).where(
+                            ExchangeRateSource.is_active.is_(True)
+                        )
+                    )
+                    sources = result.scalars().all()
+
+                    # Use naive UTC for comparison with DB timestamps
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    for source in sources:
+                        # Check if it's time to scrape based on configured interval
+                        if source.last_scraped_at is None:
+                            should_scrape = True
+                        else:
+                            minutes_since_last = (
+                                now - source.last_scraped_at
+                            ).total_seconds() / 60
+                            should_scrape = (
+                                minutes_since_last >= source.scrape_interval_minutes
+                            )
+
+                        if should_scrape:
+                            try:
+                                await price_scraper.refresh_exchange_rate_source(
+                                    source, db
+                                )
+                                logger.info(
+                                    f"Auto-scraped exchange rate {source.name}: "
+                                    f"{source.last_rate}"
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Auto-scrape failed for exchange rate "
+                                    f"{source.name}: {e}"
+                                )
+            except Exception as e:
+                logger.error(
+                    f"Exchange rate scraping scheduler error: {e}", exc_info=True
+                )
+
+            # Check every 60 seconds
+            await asyncio.sleep(60)
+
+    # Auto-trade executor scheduler
+    async def auto_trade_executor_loop():
+        """Execute auto-trade rules based on their configured intervals"""
+        from sqlalchemy import select
+
+        from .models.models import User, UserRole
+
+        # Wait 10 seconds on startup before first check
+        await asyncio.sleep(10)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get a system admin for audit trail
+                    result = await db.execute(
+                        select(User).where(User.role == UserRole.ADMIN).limit(1)
+                    )
+                    admin = result.scalar_one_or_none()
+
+                    if admin:
+                        results = await AutoTradeExecutor.execute_all_ready_rules(
+                            db=db, admin_user_id=admin.id
+                        )
+                        successes = sum(1 for r in results if r.get("success"))
+                        if results:
+                            logger.info(
+                                f"Auto-trade cycle: {successes}/{len(results)} orders placed"
+                            )
+            except Exception as e:
+                logger.error(f"Auto-trade executor error: {e}", exc_info=True)
+
+            # Check every 5 seconds for rules ready to execute (supports 10-20 sec intervals)
+            await asyncio.sleep(5)
+
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())
     monitoring_task = asyncio.create_task(settlement_monitoring_loop())
     deposit_task = asyncio.create_task(deposit_hold_processor_loop())
-    _background_tasks.extend([processor_task, monitoring_task, deposit_task])
+    scraping_task = asyncio.create_task(price_scraping_scheduler_loop())
+    exchange_rate_task = asyncio.create_task(exchange_rate_scraping_scheduler_loop())
+    auto_trade_task = asyncio.create_task(auto_trade_executor_loop())
+    _background_tasks.extend(
+        [processor_task, monitoring_task, deposit_task, scraping_task, exchange_rate_task, auto_trade_task]
+    )
     logger.info(
-        "Settlement processor, monitoring and deposit hold processor started "
-        "(running every 1 hour)"
+        "Settlement processor, monitoring, deposit hold processor, price scraping, "
+        "exchange rate scraping, and auto-trade schedulers started"
     )
 
     yield
@@ -195,6 +349,7 @@ app.include_router(market_maker.router, prefix="/api/v1/admin")
 app.include_router(admin_market_orders.router, prefix="/api/v1/admin")
 app.include_router(admin_logging.router, prefix="/api/v1/admin")
 app.include_router(liquidity.router, prefix="/api/v1/admin")
+app.include_router(admin_fees.router, prefix="/api/v1/admin")
 app.include_router(deposits.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")
 app.include_router(withdrawals.router, prefix="/api/v1")

@@ -1,12 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { RefreshCw, TrendingDown, TrendingUp, X, List } from 'lucide-react';
 import { Button } from '../components/common';
-import { AdminOrderBookSection } from '../components/backoffice/AdminOrderBookSection';
+import { AdminOrderBookSection, type OrderBookData } from '../components/backoffice/AdminOrderBookSection';
 import { PlaceOrder } from '../components/backoffice/PlaceOrder';
+import { EditOrderModal } from '../components/backoffice/EditOrderModal';
+import { IndividualOrdersTable } from '../components/backoffice/IndividualOrdersTable';
 import { BackofficeLayout } from '../components/layout';
-import { placeMarketMakerOrder } from '../services/api';
+import { placeMarketMakerOrder, cancelMarketMakerOrder, backofficeApi } from '../services/api';
 import type { CertificateType } from '../types';
+
+// Extended order type that includes both entity and market maker orders
+interface AllOrder {
+  id: string;
+  entityId?: string;
+  entityName?: string;
+  marketMakerId?: string;
+  marketMakerName?: string;
+  certificateType: CertificateType;
+  side: 'BUY' | 'SELL';
+  price: number;
+  quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
+  status: 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
+  createdAt: string;
+  updatedAt?: string;
+  ticketId?: string;
+  orderType: 'entity' | 'market_maker';
+}
 import { cn } from '../utils';
 
 const REFRESH_TIMEOUT_MS = 500;
@@ -34,7 +56,13 @@ export function MarketOrdersPage() {
   const [bidModalOpen, setBidModalOpen] = useState(false);
   const [bidPrefilledPrice, setBidPrefilledPrice] = useState<number | undefined>(undefined);
   const [askPrefilledPrice, setAskPrefilledPrice] = useState<number | undefined>(undefined);
+  const [bidPrefilledQuantity, setBidPrefilledQuantity] = useState<number | undefined>(undefined);
+  const [askPrefilledQuantity, setAskPrefilledQuantity] = useState<number | undefined>(undefined);
+  const [orderBookData, setOrderBookData] = useState<OrderBookData | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'aggregated' | 'individual'>('aggregated');
+  const [editingOrder, setEditingOrder] = useState<AllOrder | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const askDialogRef = useRef<HTMLDivElement>(null);
   const bidDialogRef = useRef<HTMLDivElement>(null);
 
@@ -51,36 +79,68 @@ export function MarketOrdersPage() {
   const closeAsk = useCallback(() => {
     setAskModalOpen(false);
     setAskPrefilledPrice(undefined);
+    setAskPrefilledQuantity(undefined);
   }, []);
 
   const closeBid = useCallback(() => {
     setBidModalOpen(false);
     setBidPrefilledPrice(undefined);
+    setBidPrefilledQuantity(undefined);
   }, []);
 
+  /**
+   * Open ASK modal with best ask price and quantity auto-filled
+   */
   const handlePlaceAsk = () => {
-    setAskPrefilledPrice(undefined);
+    // Auto-fill with best ask price and quantity from orderbook
+    if (orderBookData?.bestAsk) {
+      setAskPrefilledPrice(orderBookData.bestAsk);
+      setAskPrefilledQuantity(orderBookData.askQuantityAtBest);
+    } else {
+      setAskPrefilledPrice(undefined);
+      setAskPrefilledQuantity(undefined);
+    }
     setAskModalOpen(true);
   };
 
+  /**
+   * Open BID modal with best bid price and quantity auto-filled
+   */
   const handlePlaceBid = () => {
-    setBidPrefilledPrice(undefined);
+    // Auto-fill with best bid price and quantity from orderbook
+    if (orderBookData?.bestBid) {
+      setBidPrefilledPrice(orderBookData.bestBid);
+      setBidPrefilledQuantity(orderBookData.bidQuantityAtBest);
+    } else {
+      setBidPrefilledPrice(undefined);
+      setBidPrefilledQuantity(undefined);
+    }
     setBidModalOpen(true);
   };
 
   /**
    * Order book price click: bid row (BUY) → place ASK (sell into it); ask row (SELL) → place BID (buy from it).
    * Prefilled price is set so the modal opens with the clicked price.
+   * Quantity is NOT auto-filled when clicking a specific price (user clicked intentionally).
    */
   const handlePriceClick = (price: number, side: 'BUY' | 'SELL') => {
     if (side === 'BUY') {
       setAskPrefilledPrice(price);
+      setAskPrefilledQuantity(undefined); // Don't auto-fill quantity on price click
       setAskModalOpen(true);
     } else {
       setBidPrefilledPrice(price);
+      setBidPrefilledQuantity(undefined); // Don't auto-fill quantity on price click
       setBidModalOpen(true);
     }
   };
+
+  /**
+   * Callback to receive orderbook data for auto-fill
+   */
+  const handleOrderBookData = useCallback((data: OrderBookData) => {
+    setOrderBookData(data);
+  }, []);
 
   /** API-only submit. PlaceOrder handles errors; onSuccess handles refresh + close. */
   const handleOrderSubmit = async (order: MarketOrder) => {
@@ -104,6 +164,43 @@ export function MarketOrdersPage() {
   const handleSuccessAndCloseBid = () => {
     handleOrderPlaced();
     closeBid();
+  };
+
+  /**
+   * Handle clicking on an individual order to edit it
+   */
+  const handleEditOrder = (order: AllOrder) => {
+    setEditingOrder(order);
+    setEditModalOpen(true);
+  };
+
+  /**
+   * Close edit modal
+   */
+  const closeEditModal = useCallback(() => {
+    setEditModalOpen(false);
+    setEditingOrder(null);
+  }, []);
+
+  /**
+   * Update order via API
+   */
+  const handleUpdateOrder = async (orderId: string, update: { price?: number; quantity?: number }) => {
+    await backofficeApi.adminUpdateOrder(orderId, update);
+  };
+
+  /**
+   * Cancel order via API
+   */
+  const handleCancelOrder = async (orderId: string) => {
+    await cancelMarketMakerOrder(orderId);
+  };
+
+  /**
+   * Called after successful edit/cancel
+   */
+  const handleEditSuccess = () => {
+    handleOrderPlaced(); // Refresh both views
   };
 
   // Escape key: close whichever modal is open
@@ -178,7 +275,10 @@ export function MarketOrdersPage() {
     <BackofficeLayout
       subSubHeaderLeft={
         <div className="inline-flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800">
-          {(['CEA', 'EUA'] as CertificateType[]).map((type) => (
+          {([
+            { type: 'CEA' as CertificateType, label: 'CEA Cash' },
+            { type: 'EUA' as CertificateType, label: 'Swap' }
+          ]).map(({ type, label }) => (
             <button
               key={type}
               onClick={() => setCertificateType(type)}
@@ -189,13 +289,41 @@ export function MarketOrdersPage() {
                   : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
               )}
             >
-              {type}
+              {label}
             </button>
           ))}
         </div>
       }
       subSubHeader={
         <>
+          {/* View Toggle */}
+          <div className="inline-flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 mr-2">
+            <button
+              onClick={() => setViewMode('aggregated')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'aggregated'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
+              )}
+              title="Aggregated order book view"
+            >
+              Aggregated
+            </button>
+            <button
+              onClick={() => setViewMode('individual')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1',
+                viewMode === 'individual'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
+              )}
+              title="Individual orders view - click to edit"
+            >
+              <List className="w-3.5 h-3.5" />
+              Orders
+            </button>
+          </div>
           {certificateType === 'CEA' && (
             <Button
               variant="primary"
@@ -231,19 +359,31 @@ export function MarketOrdersPage() {
       <div className="max-w-[1600px] mx-auto">
         {/* Order book section */}
         <motion.div
-          key={certificateType}
+          key={`${certificateType}-${viewMode}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Order Book */}
-          <div className="h-[600px] lg:h-[700px] xl:h-[800px]">
-            <AdminOrderBookSection
-              key={`orderbook-${refreshKey}`}
+          {viewMode === 'aggregated' ? (
+            /* Aggregated Order Book - Full book with scroll for CEA Cash */
+            <div className="min-h-[400px]">
+              <AdminOrderBookSection
+                key={`orderbook-${refreshKey}`}
+                certificateType={certificateType}
+                onPriceClick={handlePriceClick}
+                onOrderBookData={handleOrderBookData}
+                showFullBook={certificateType === 'CEA'}
+              />
+            </div>
+          ) : (
+            /* Individual Orders Table */
+            <IndividualOrdersTable
+              key={`orders-${refreshKey}`}
               certificateType={certificateType}
-              onPriceClick={handlePriceClick}
+              onEditOrder={handleEditOrder}
+              refreshKey={refreshKey}
             />
-          </div>
+          )}
         </motion.div>
       </div>
 
@@ -297,6 +437,7 @@ export function MarketOrdersPage() {
                   onSubmit={handleOrderSubmit}
                   onSuccess={handleSuccessAndCloseAsk}
                   prefilledPrice={askPrefilledPrice}
+                  prefilledQuantity={askPrefilledQuantity}
                   compact
                 />
               </div>
@@ -355,6 +496,7 @@ export function MarketOrdersPage() {
                   onSubmit={handleOrderSubmit}
                   onSuccess={handleSuccessAndCloseBid}
                   prefilledPrice={bidPrefilledPrice}
+                  prefilledQuantity={bidPrefilledQuantity}
                   compact
                 />
               </div>
@@ -362,6 +504,16 @@ export function MarketOrdersPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Order Modal */}
+      <EditOrderModal
+        order={editingOrder}
+        isOpen={editModalOpen}
+        onClose={closeEditModal}
+        onUpdate={handleUpdateOrder}
+        onCancel={handleCancelOrder}
+        onSuccess={handleEditSuccess}
+      />
     </BackofficeLayout>
   );
 }

@@ -38,11 +38,11 @@ export function LearnMorePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-lg">N</span>
               </div>
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-emerald-400 bg-clip-text text-transparent">
                   Nihao Group
                 </h1>
                 <span className="text-xs text-navy-400 uppercase tracking-wider">Carbon Bridge</span>
@@ -71,7 +71,7 @@ export function LearnMorePage() {
             className="text-4xl md:text-5xl font-bold mb-6"
           >
             Carbon Trading
-            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent"> Made Simple</span>
+            <span className="bg-gradient-to-r from-emerald-400 to-emerald-400 bg-clip-text text-transparent"> Made Simple</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -217,7 +217,7 @@ export function LearnMorePage() {
               </div>
 
               {/* Key Insight */}
-              <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
+              <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
                     <BarChart3 className="w-6 h-6 text-emerald-400" />
@@ -245,7 +245,7 @@ export function LearnMorePage() {
             className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center text-xl">
                 2
               </div>
               <div className="text-left">
@@ -335,8 +335,8 @@ export function LearnMorePage() {
               </div>
 
               {/* Investment Funds */}
-              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-purple-500/50 transition-all">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+              <div className="bg-navy-700/50 border border-navy-600 rounded-2xl p-6 hover:border-emerald-500/50 transition-all">
+                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mb-4">
                   <Briefcase className="w-7 h-7 text-white" />
                 </div>
                 <h4 className="text-lg font-bold mb-2">Investment Funds</h4>
@@ -361,9 +361,9 @@ export function LearnMorePage() {
                     <span className="text-sm text-navy-300">Professional exit liquidity</span>
                   </div>
                 </div>
-                <div className="mt-4 p-3 bg-purple-500/10 rounded-lg">
+                <div className="mt-4 p-3 bg-emerald-500/10 rounded-lg">
                   <div className="text-xs text-navy-400 uppercase tracking-wider mb-1">CEA Upside</div>
-                  <div className="text-xl font-bold text-purple-400">+200%</div>
+                  <div className="text-xl font-bold text-emerald-400">+200%</div>
                   <div className="text-xs text-navy-400">projected by 2030</div>
                 </div>
               </div>
@@ -378,7 +378,7 @@ export function LearnMorePage() {
             className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center text-xl">
                 3
               </div>
               <div className="text-left">
@@ -516,7 +516,7 @@ export function LearnMorePage() {
               </div>
 
               {/* Economic Summary */}
-              <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
+              <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6">
                 <h4 className="font-bold text-emerald-400 mb-4">Economic Analysis: 100,000 EUA Swap</h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-navy-800/50 rounded-xl">
@@ -547,7 +547,7 @@ export function LearnMorePage() {
             className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-navy-500 to-navy-600 rounded-xl flex items-center justify-center text-xl">
                 4
               </div>
               <div className="text-left">
@@ -586,25 +586,25 @@ export function LearnMorePage() {
                     icon: Lock,
                     title: 'Complete Confidentiality',
                     description: 'OTC transactions with no market signal. Your trading activity remains private. No competitors, regulators, or government entities can infer your position.',
-                    color: 'from-purple-500 to-purple-600',
+                    color: 'from-navy-500 to-navy-600',
                   },
                   {
                     icon: Users,
                     title: 'Partner Network',
                     description: 'Access our curated network of verified counterparties. We aggregate volume from multiple partners to negotiate better rates and ensure liquidity.',
-                    color: 'from-amber-500 to-orange-600',
+                    color: 'from-amber-500 to-amber-600',
                   },
                   {
                     icon: DollarSign,
                     title: 'Tax Optimization',
                     description: 'Export VAT structure (0% vs 6%), proper inventory treatment for cost deduction, and environmental investment incentives can reduce tax burden significantly.',
-                    color: 'from-teal-500 to-cyan-600',
+                    color: 'from-blue-500 to-blue-600',
                   },
                   {
                     icon: Zap,
                     title: 'Speed of Execution',
                     description: 'Settlement in 3-5 days vs 3-5 weeks through traditional routes. Critical for banking deadline compliance and cash flow management.',
-                    color: 'from-pink-500 to-rose-600',
+                    color: 'from-red-500 to-red-600',
                   },
                 ].map((item, i) => (
                   <div
@@ -630,7 +630,7 @@ export function LearnMorePage() {
             className="w-full flex items-center justify-between p-6 bg-navy-700/50 border border-navy-600 rounded-2xl hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center text-xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-xl">
                 5
               </div>
               <div className="text-left">
@@ -684,7 +684,7 @@ export function LearnMorePage() {
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-purple-400 mb-4 flex items-center gap-2">
+                    <h4 className="font-bold text-navy-400 mb-4 flex items-center gap-2">
                       <Users className="w-5 h-5" />
                       Representative Documents
                     </h4>
@@ -736,7 +736,7 @@ export function LearnMorePage() {
           </p>
           <Link
             to="/onboarding"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Onboarding

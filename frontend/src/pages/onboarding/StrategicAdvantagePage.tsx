@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { Award, ChevronRight, ArrowRight } from 'lucide-react';
-import { OnboardingLayout } from '@/components/onboarding';
+import { OnboardingLayout, OnboardingLink } from '@/components/onboarding';
 import {
   executiveSummary,
   tabs,
@@ -102,20 +101,20 @@ export default function StrategicAdvantagePage() {
 
       {/* Navigation Footer */}
       <div className="flex justify-between items-center pt-8 border-t border-navy-200 dark:border-navy-600">
-        <Link
+        <OnboardingLink
           to="/onboarding/about-nihao"
           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all bg-navy-800 text-navy-900 dark:text-white"
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           About Nihao
-        </Link>
-        <Link
+        </OnboardingLink>
+        <OnboardingLink
           to="/onboarding/cea-holders"
           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all bg-emerald-500 text-white"
         >
           CEA Holders
           <ArrowRight className="w-4 h-4" />
-        </Link>
+        </OnboardingLink>
       </div>
     </OnboardingLayout>
   );

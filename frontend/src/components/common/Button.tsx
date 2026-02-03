@@ -3,12 +3,10 @@ import { cn } from '../../utils';
 import { Loader2 } from 'lucide-react';
 
 /**
- * Shared button component. Variants: primary | secondary | outline | ghost.
- * For destructive actions (e.g. Reject), use variant="secondary" with
- * className including text-red-500 (design system Error/Sell token).
+ * Shared button component. Variants: primary | secondary | outline | ghost | danger.
  */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -36,6 +34,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       outline:
         'border-2 border-navy-200 dark:border-navy-600 text-navy-700 dark:text-navy-200 hover:bg-navy-50 dark:hover:bg-navy-700 focus:ring-navy-500',
       ghost: 'text-navy-600 dark:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-700 focus:ring-navy-500',
+      danger:
+        'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 focus:ring-red-500 shadow-lg shadow-red-500/25',
     };
 
     const sizes = {

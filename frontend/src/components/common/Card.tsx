@@ -8,11 +8,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', children, ...props }, ref) => {
-    /* Section/card wrapper: .card_back (theme: --color-card-back-bg, --color-card-back-border, --radius-card-back). */
+    /* Section/card wrapper: .content_wrapper_last */
     const variants = {
-      default: 'card_back',
+      default: 'content_wrapper_last',
       glass: 'bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg rounded-2xl border border-white/20 dark:border-navy-700/50 shadow-lg',
-      hover: 'card_back transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5',
+      hover: 'content_wrapper_last transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5',
     };
 
     const paddings = {

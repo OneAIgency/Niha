@@ -1,17 +1,19 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Sun, Moon, Settings, Briefcase, ChevronDown } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
-import { useAuthStore, usePricesStore, useUIStore } from '../../stores/useStore';
+import { useAuthStore, useUIStore } from '../../stores/useStore';
+import { usePrices } from '../../hooks/usePrices';
 import { cn } from '../../utils';
 import type { User as UserType } from '../../types';
 
 // Helper to get user initials
 const getInitials = (user: UserType | null): string => {
   if (!user) return '??';
-  if (user.first_name && user.last_name) {
-    return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+  if (user.firstName && user.lastName) {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   }
   return user.email.substring(0, 2).toUpperCase();
 };
@@ -21,16 +23,15 @@ export function Header() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { prices } = usePricesStore();
-  const { theme, toggleTheme } = useUIStore();
+  const { prices } = usePrices();
+  const { theme } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
 
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
-  const isAdmin = user?.role === 'ADMIN';
-  const isFunded = user?.role === 'FUNDED';
-  const isApproved = user?.role === 'APPROVED';
+  const role = user?.role ?? null;
+  const isAdmin = role === 'ADMIN';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,41 +55,43 @@ export function Header() {
     navigate('/');
   };
 
-  // Build navigation links based on user role
+  // Build navigation links based on user role (0010 flow)
+  // ADMIN sees ALL navigation options (superuser access)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
-      return [
-        { href: '/contact', label: 'Contact' },
-      ];
+      return [{ href: '/contact', label: 'Contact', icon: null }];
     }
+    if (!role) return [];
 
-    // APPROVED users - only see Funding
-    if (isApproved) {
-      return [
-        { href: '/funding', label: 'Funding' },
-      ];
-    }
+    const links: { href: string; label: string; icon: LucideIcon | null }[] = [];
 
-    // FUNDED users - Dashboard and Cash Market (no Swap)
-    if (isFunded) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-      ];
-    }
-
-    // ADMIN users - full access including Swap
+    // ADMIN superuser: show ALL navigation options
     if (isAdmin) {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/cash-market', label: 'Cash Market' },
-        { href: '/swap', label: 'Swap Center' },
-      ];
+      links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+      links.push({ href: '/funding', label: 'Funding', icon: null });
+      links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
+      links.push({ href: '/swap', label: 'Swap', icon: null });
+      links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+      return links;
     }
 
-    // Default (PENDING or unknown) - minimal navigation
-    return [];
-  }, [isAuthenticated, isApproved, isFunded, isAdmin]);
+    // Regular users: show only their allowed sections
+    // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + MM
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'MM'].includes(role);
+    // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + MM
+    const canSwap = ['SWAP', 'MM'].includes(role);
+    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canOnboarding = ['NDA', 'KYC'].includes(role);
+
+    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
+    if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
+    if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
+    if (canOnboarding) links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+
+    return links;
+  }, [isAuthenticated, role, isAdmin]);
 
   return (
     <header
@@ -117,40 +120,26 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  isLandingPage || isDark
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-navy-600 hover:text-navy-900',
-                  location.pathname === link.href &&
-                    (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={cn(
-                'p-2 rounded-lg transition-all duration-200',
-                isLandingPage || isDark
-                  ? 'text-white/80 hover:text-white hover:bg-white/10'
-                  : 'text-navy-600 hover:text-navy-900 hover:bg-navy-100'
-              )}
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    'text-sm font-medium transition-colors flex items-center gap-1.5',
+                    isLandingPage || isDark
+                      ? 'text-white/80 hover:text-white'
+                      : 'text-navy-600 hover:text-navy-900',
+                    location.pathname === link.href &&
+                      (isLandingPage || isDark ? 'text-white' : 'text-emerald-600')
+                  )}
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  {link.label}
+                </Link>
+              );
+            })}
 
             {isAuthenticated ? (
               <div className="relative" ref={dropdownRef}>
@@ -197,15 +186,17 @@ export function Header() {
                           'text-sm font-semibold truncate',
                           isDark ? 'text-white' : 'text-navy-900'
                         )}>
-                          {user?.first_name && user?.last_name
-                            ? `${user.first_name} ${user.last_name}`
+                          {user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
                             : user?.email}
                         </p>
                         <p className={cn(
                           'text-xs truncate',
                           isDark ? 'text-navy-400' : 'text-navy-500'
                         )}>
-                          {user?.email}
+                          {user?.firstName && user?.lastName
+                            ? user?.email
+                            : user?.role || 'User'}
                         </p>
                       </div>
 
@@ -237,6 +228,18 @@ export function Header() {
                             >
                               <Settings className="w-4 h-4" />
                               Settings
+                            </button>
+                            <button
+                              onClick={() => handleMenuItemClick('/theme')}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                                isDark
+                                  ? 'text-navy-200 hover:bg-navy-700'
+                                  : 'text-navy-700 hover:bg-navy-50'
+                              )}
+                            >
+                              <Palette className="w-4 h-4" />
+                              Theme
                             </button>
                             <button
                               onClick={() => handleMenuItemClick('/backoffice')}
@@ -285,22 +288,6 @@ export function Header() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Mobile Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={cn(
-                'p-2 rounded-lg transition-all duration-200',
-                isLandingPage || isDark
-                  ? 'text-white/80 hover:text-white'
-                  : 'text-navy-600 hover:text-navy-900'
-              )}
-            >
-              {isDark ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
             <button
               className="p-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -321,19 +308,23 @@ export function Header() {
             isDark ? 'border-navy-700' : 'border-white/10'
           )}>
             <nav className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={cn(
-                    'text-lg font-medium',
-                    isLandingPage || isDark ? 'text-white' : 'text-navy-900'
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={cn(
+                      'text-lg font-medium flex items-center gap-2',
+                      isLandingPage || isDark ? 'text-white' : 'text-navy-900'
+                    )}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {Icon && <Icon className="w-5 h-5" />}
+                    {link.label}
+                  </Link>
+                );
+              })}
               {!isAuthenticated && (
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" className="w-full">

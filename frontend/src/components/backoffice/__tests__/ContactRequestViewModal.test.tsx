@@ -76,8 +76,7 @@ describe('ContactRequestViewModal', () => {
         contact_name: 'Jane Doe',
         contact_email: 'jane@acme.com',
         position: 'Director',
-        request_type: 'join',
-        status: 'new',
+        user_role: 'new',
         notes: 'Optional notes',
         created_at: '2026-01-15T10:00:00Z',
       })
@@ -101,9 +100,7 @@ describe('ContactRequestViewModal', () => {
     expect(screen.getByText('jane@acme.com')).toBeInTheDocument();
     expect(screen.getByText(/^Position/)).toBeInTheDocument();
     expect(screen.getByText('Director')).toBeInTheDocument();
-    expect(screen.getByText(/^Request type/)).toBeInTheDocument();
-    expect(screen.getByText('JOIN')).toBeInTheDocument();
-    expect(screen.getByText(/^Status/)).toBeInTheDocument();
+    expect(screen.getByText(/^User role/)).toBeInTheDocument();
     expect(screen.getByText('new')).toBeInTheDocument();
     expect(screen.getByText(/^Notes/)).toBeInTheDocument();
     expect(screen.getByText('Optional notes')).toBeInTheDocument();

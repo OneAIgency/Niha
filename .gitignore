@@ -53,3 +53,16 @@ lovable-export/
 nihao-prototype/
 grafana-lovable-sync/
 *.skill
+
+# Playwright screenshots
+.playwright-mcp/
+
+# Test files
+backend/test_*.py
+backend/niha.db
+
+# Agent workspace
+.gigel/
+
+# Plans and docs (local only)
+docs/plans/

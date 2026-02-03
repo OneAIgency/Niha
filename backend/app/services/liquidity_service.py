@@ -5,7 +5,7 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
@@ -47,8 +47,8 @@ class LiquidityService:
 
     Provides automated liquidity injection by coordinating orders across multiple
     market makers. Supports two market maker types:
-    - CASH_BUYER: Holds EUR, places BUY orders (BID liquidity)
-    - CEA_CASH_SELLER: Holds certificates, places SELL orders (ASK liquidity)
+    - CEA_BUYER: Holds EUR, places BUY orders (BID liquidity)
+    - CEA_SELLER: Holds certificates, places SELL orders (ASK liquidity)
 
     Orders are distributed across 3 price levels with tight spreads (0.2-0.5%)
     and volume allocation (50/30/20) for optimal market depth.
@@ -69,7 +69,7 @@ class LiquidityService:
         """
         Get all active EUR-holding market makers with balances.
 
-        Returns market makers of type CASH_BUYER that have positive EUR balance
+        Returns market makers of type CEA_BUYER that have positive EUR balance
         and are active. Used for placing BID orders.
 
         Args:
@@ -82,7 +82,7 @@ class LiquidityService:
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.CASH_BUYER,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER,
                     MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.eur_balance > 0,
                 )
@@ -98,8 +98,11 @@ class LiquidityService:
         """
         Get all active asset-holding market makers with certificate balances.
 
-        Returns market makers of type CEA_CASH_SELLER that have available
+        Returns market makers of type CEA_SELLER that have available
         certificate balance for the specified type. Used for placing ASK orders.
+
+        Uses bulk queries to calculate total and locked balances for all MMs
+        in just 3 queries (MMs + totals + locked) instead of 1 + N*5.
 
         Args:
             db: Database session
@@ -108,39 +111,67 @@ class LiquidityService:
         Returns:
             List of dictionaries with 'mm' (MarketMakerClient) and 'available'
             (Decimal balance) keys, sorted by available balance descending
-
-        Note:
-            This method has a known N+1 query issue. It fetches all asset holder
-            MMs in one query, then separately queries balances for each MM.
-            Future optimization: Refactor balance calculation to use joins.
         """
-        # NOTE: This method has a known N+1 query issue. It fetches all asset holder MMs
-        # in one query, then separately queries balances for each MM. This results in
-        # 1 + (N x 5) queries where N is the number of asset holders.
-        # Future: Refactor balance calculation to use joins for bulk retrieval.
-
-        result = await db.execute(
+        # Query 1: Get all active CEA_SELLER market makers
+        mm_result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
-                    MarketMakerClient.mm_type == MarketMakerType.CEA_CASH_SELLER,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
                     MarketMakerClient.is_active.is_(True),
                 )
             )
         )
-        mms = result.scalars().all()
+        mms = mm_result.scalars().all()
 
-        # Get balances for each MM
-        mm_data = []
-        for mm in mms:
-            balances = await MarketMakerService.get_balances(db, mm.id)
-            balance_data = balances.get(certificate_type.value)
-            if not balance_data:
-                logger.warning(
-                    f"No balance data for {certificate_type.value} on MM {mm.id}"
+        if not mms:
+            return []
+
+        mm_ids = [mm.id for mm in mms]
+        mm_map = {mm.id: mm for mm in mms}
+
+        # Query 2: Get total balances from transactions (bulk)
+        totals_result = await db.execute(
+            select(
+                AssetTransaction.market_maker_id,
+                func.coalesce(func.sum(AssetTransaction.amount), 0).label("total"),
+            )
+            .where(
+                and_(
+                    AssetTransaction.market_maker_id.in_(mm_ids),
+                    AssetTransaction.certificate_type == certificate_type,
                 )
-                continue
+            )
+            .group_by(AssetTransaction.market_maker_id)
+        )
+        totals = {row[0]: Decimal(str(row[1])) for row in totals_result.fetchall()}
 
-            available = balance_data.get("available", Decimal("0"))
+        # Query 3: Get locked amounts from active SELL orders (bulk)
+        locked_result = await db.execute(
+            select(
+                Order.market_maker_id,
+                func.coalesce(
+                    func.sum(Order.quantity - Order.filled_quantity), 0
+                ).label("locked"),
+            )
+            .where(
+                and_(
+                    Order.market_maker_id.in_(mm_ids),
+                    Order.certificate_type == certificate_type,
+                    Order.side == OrderSide.SELL,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+            .group_by(Order.market_maker_id)
+        )
+        locked = {row[0]: Decimal(str(row[1])) for row in locked_result.fetchall()}
+
+        # Calculate available balances
+        mm_data = []
+        for mm_id, mm in mm_map.items():
+            total = totals.get(mm_id, Decimal("0"))
+            mm_locked = locked.get(mm_id, Decimal("0"))
+            available = total - mm_locked
+
             if available > 0:
                 mm_data.append({"mm": mm, "available": available})
 
@@ -182,6 +213,25 @@ class LiquidityService:
         # Fallback to default
         return LiquidityService.DEFAULT_PRICES[certificate_type]
 
+    # Price step for CEA cash market (0.1 EUR)
+    PRICE_STEP = Decimal("0.1")
+
+    @staticmethod
+    def round_to_price_step(price: Decimal, side: OrderSide) -> Decimal:
+        """
+        Round price to the nearest 0.1 EUR step.
+
+        For BUY orders: round DOWN to ensure we don't bid higher than intended
+        For SELL orders: round UP to ensure we don't ask lower than intended
+        """
+        step = LiquidityService.PRICE_STEP
+        if side == OrderSide.BUY:
+            # Round down for bids
+            return (price / step).quantize(Decimal("1"), rounding="ROUND_DOWN") * step
+        else:
+            # Round up for asks
+            return (price / step).quantize(Decimal("1"), rounding="ROUND_UP") * step
+
     @staticmethod
     def generate_price_levels(
         reference_price: Decimal, side: OrderSide
@@ -196,24 +246,32 @@ class LiquidityService:
 
         Raises:
             ValueError: If reference_price <= 0
+
+        Note: All prices are rounded to 0.1 EUR step to comply with market rules.
         """
         if reference_price <= 0:
             raise ValueError(f"reference_price must be positive, got {reference_price}")
 
         if side == OrderSide.BUY:
             # BID levels: 0.2%, 0.4%, 0.5% below mid
-            levels = [
+            raw_levels = [
                 (reference_price * Decimal("0.998"), Decimal("0.5")),  # 50% volume
                 (reference_price * Decimal("0.996"), Decimal("0.3")),  # 30% volume
                 (reference_price * Decimal("0.995"), Decimal("0.2")),  # 20% volume
             ]
         else:  # SELL
             # ASK levels: 0.2%, 0.4%, 0.5% above mid
-            levels = [
+            raw_levels = [
                 (reference_price * Decimal("1.002"), Decimal("0.5")),  # 50% volume
                 (reference_price * Decimal("1.004"), Decimal("0.3")),  # 30% volume
                 (reference_price * Decimal("1.005"), Decimal("0.2")),  # 20% volume
             ]
+
+        # Round all prices to 0.1 EUR step
+        levels = [
+            (LiquidityService.round_to_price_step(price, side), pct)
+            for price, pct in raw_levels
+        ]
 
         return levels
 

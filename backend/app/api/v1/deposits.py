@@ -8,7 +8,7 @@ Endpoints for deposit lifecycle:
 All deposit management routes with AML hold support.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
@@ -20,10 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, get_approved_user
-from ...models.models import Currency, DepositStatus, User, UserRole
+from ...models.models import Currency, DepositStatus, TicketStatus, User
 from ...schemas.schemas import MessageResponse
 from ...services import deposit_service
 from ...services.deposit_service import DepositNotFoundError, InvalidDepositStateError
+from ...services.ticket_service import TicketService
 from .backoffice import backoffice_ws_manager
 
 router = APIRouter(prefix="/deposits", tags=["Deposits"])
@@ -145,6 +146,7 @@ class DepositDetailResponse(BaseModel):
 
     # Status
     status: str
+    user_role: Optional[str] = None  # Reporting user's role (client status); FUNDING when announced
     aml_status: Optional[str] = None
     hold_type: Optional[str] = None
     hold_days_required: Optional[int] = None
@@ -162,6 +164,7 @@ class DepositDetailResponse(BaseModel):
     rejected_by: Optional[str] = None
     rejection_reason: Optional[str] = None
     admin_notes: Optional[str] = None
+    ticket_id: Optional[str] = None  # Ticket ID for the deposit announcement
 
     class Config:
         from_attributes = True
@@ -199,28 +202,38 @@ class HoldCalculationResponse(BaseModel):
 # ============== Helper Functions ==============
 
 
-def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailResponse:
-    """Convert Deposit model to response schema"""
+def deposit_to_response(deposit, include_entity: bool = True, include_relations: bool = True) -> DepositDetailResponse:
+    """Convert Deposit model to DepositDetailResponse. Sets user_role from deposit.user.role when present (client status; FUNDING when announced).
+
+    Args:
+        deposit: Deposit model instance
+        include_entity: Include entity name in response
+        include_relations: If False, skip all relationship access (avoids async lazy loading issues)
+    """
     entity_name = None
     user_email = None
+    user_role = None
     confirmed_by_name = None
     cleared_by_name = None
     rejected_by_name = None
 
-    if include_entity and hasattr(deposit, "entity") and deposit.entity:
-        entity_name = deposit.entity.name
+    # Only access relationships if include_relations is True (they must be eager loaded)
+    if include_relations:
+        if include_entity and hasattr(deposit, "entity") and deposit.entity:
+            entity_name = deposit.entity.name
 
-    if hasattr(deposit, "user") and deposit.user:
-        user_email = deposit.user.email
+        if hasattr(deposit, "user") and deposit.user:
+            user_email = deposit.user.email
+            user_role = deposit.user.role.value
 
-    if hasattr(deposit, "confirmed_by_user") and deposit.confirmed_by_user:
-        confirmed_by_name = deposit.confirmed_by_user.email
+        if hasattr(deposit, "confirmed_by_user") and deposit.confirmed_by_user:
+            confirmed_by_name = deposit.confirmed_by_user.email
 
-    if hasattr(deposit, "cleared_by_admin") and deposit.cleared_by_admin:
-        cleared_by_name = deposit.cleared_by_admin.email
+        if hasattr(deposit, "cleared_by_admin") and deposit.cleared_by_admin:
+            cleared_by_name = deposit.cleared_by_admin.email
 
-    if hasattr(deposit, "rejected_by_admin") and deposit.rejected_by_admin:
-        rejected_by_name = deposit.rejected_by_admin.email
+        if hasattr(deposit, "rejected_by_admin") and deposit.rejected_by_admin:
+            rejected_by_name = deposit.rejected_by_admin.email
 
     return DepositDetailResponse(
         id=str(deposit.id),
@@ -243,6 +256,7 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
         wire_reference=deposit.wire_reference,
         bank_reference=deposit.bank_reference,
         status=deposit.status.value,
+        user_role=user_role,
         aml_status=deposit.aml_status,
         hold_type=deposit.hold_type,
         hold_days_required=deposit.hold_days_required,
@@ -264,6 +278,7 @@ def deposit_to_response(deposit, include_entity: bool = True) -> DepositDetailRe
         rejected_by=rejected_by_name,
         rejection_reason=deposit.rejection_reason,
         admin_notes=deposit.admin_notes,
+        ticket_id=deposit.ticket_id,
     )
 
 
@@ -322,7 +337,7 @@ async def announce_deposit(
         },
     )
 
-    return deposit_to_response(deposit, include_entity=False)
+    return deposit_to_response(deposit, include_entity=False, include_relations=False)
 
 
 @router.get("/my-deposits", response_model=DepositListResponse)
@@ -384,7 +399,8 @@ async def preview_hold_period(
         db=db, entity_id=current_user.entity_id, amount=amount
     )
 
-    release_date = deposit_service.calculate_business_days(datetime.utcnow(), hold_days)
+    # Use naive UTC for date calculation
+    release_date = deposit_service.calculate_business_days(datetime.now(timezone.utc).replace(tzinfo=None), hold_days)
 
     reasons = {
         "FIRST_DEPOSIT": "First deposit requires extended verification",
@@ -515,6 +531,29 @@ async def confirm_deposit(
             admin_notes=request.admin_notes,
         )
 
+        # Create audit ticket for deposit confirmation
+        ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="DEPOSIT_CONFIRMED",
+            entity_type="Deposit",
+            entity_id=deposit.id,
+            status=TicketStatus.SUCCESS,
+            user_id=admin_user.id,
+            request_payload={
+                "deposit_id": deposit_id,
+                "actual_amount": float(request.actual_amount),
+                "actual_currency": request.actual_currency.value,
+            },
+            response_data={
+                "status": deposit.status.value if deposit.status else "ON_HOLD",
+                "hold_type": deposit.hold_type,
+                "hold_expires_at": deposit.hold_expires_at.isoformat()
+                if deposit.hold_expires_at
+                else None,
+            },
+            tags=["deposit", "confirm", "admin"],
+        )
+
         await db.commit()
 
         # Broadcast WebSocket event
@@ -525,6 +564,7 @@ async def confirm_deposit(
                 "entity_id": str(deposit.entity_id),
                 "amount": float(deposit.amount),
                 "hold_type": deposit.hold_type,
+                "ticket_id": ticket.ticket_id,
                 "hold_expires_at": deposit.hold_expires_at.isoformat()
                 if deposit.hold_expires_at
                 else None,
@@ -557,7 +597,7 @@ async def clear_deposit(
     - Manually with force_clear=True before hold expires
     """
     try:
-        deposit = await deposit_service.clear_deposit(
+        deposit, upgraded_count = await deposit_service.clear_deposit(
             db=db,
             deposit_id=UUID(deposit_id),
             admin_id=admin_user.id,
@@ -565,45 +605,42 @@ async def clear_deposit(
             force_clear=request.force_clear,
         )
 
-        # Upgrade entity users to FUNDED if first cleared deposit
-        from sqlalchemy import select
-
-        from ...models.models import Entity
-
-        entity_result = await db.execute(
-            select(Entity).where(Entity.id == deposit.entity_id)
+        # Create audit ticket for deposit clearing
+        ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="DEPOSIT_CLEARED",
+            entity_type="Deposit",
+            entity_id=deposit.id,
+            status=TicketStatus.SUCCESS,
+            user_id=admin_user.id,
+            request_payload={
+                "deposit_id": deposit_id,
+                "force_clear": request.force_clear,
+            },
+            response_data={
+                "amount": float(deposit.amount) if deposit.amount else 0,
+                "currency": deposit.currency.value if deposit.currency else None,
+                "upgraded_users": upgraded_count,
+            },
+            tags=["deposit", "clear", "admin"],
         )
-        entity = entity_result.scalar_one_or_none()
-
-        upgraded_count = 0
-        if entity:
-            users_result = await db.execute(
-                select(User).where(User.entity_id == entity.id)
-            )
-            users = users_result.scalars().all()
-
-            for user in users:
-                if user.role == UserRole.APPROVED:
-                    user.role = UserRole.FUNDED
-                    upgraded_count += 1
 
         await db.commit()
 
-        # Broadcast WebSocket event
+        # Reload with relationships for entity name
+        deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         await backoffice_ws_manager.broadcast(
             "deposit_cleared",
             {
                 "deposit_id": str(deposit.id),
                 "entity_id": str(deposit.entity_id),
-                "entity_name": entity.name if entity else None,
+                "entity_name": deposit.entity.name if deposit.entity else None,
                 "amount": float(deposit.amount) if deposit.amount else 0,
                 "currency": deposit.currency.value if deposit.currency else None,
                 "upgraded_users": upgraded_count,
+                "ticket_id": ticket.ticket_id,
             },
         )
-
-        # Reload with relationships
-        deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
 
     except DepositNotFoundError as e:

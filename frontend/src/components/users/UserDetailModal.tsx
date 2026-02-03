@@ -25,11 +25,11 @@ import type { UserRole, AdminUserFull, Deposit, EntityBalance } from '../../type
 
 // Simple interface for entity assets display
 interface EntityAssetsDisplay {
-  entity_id: string;
-  entity_name: string;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  entityId: string;
+  entityName: string;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface UserDetailModalProps {
@@ -65,12 +65,22 @@ function getRoleBadgeVariant(role: UserRole) {
   switch (role) {
     case 'ADMIN':
       return 'default';
-    case 'FUNDED':
-      return 'success';
-    case 'APPROVED':
+    case 'MM':
       return 'info';
-    case 'PENDING':
+    case 'EUA':
+      return 'success';
+    case 'NDA':
+    case 'KYC':
+    case 'APPROVED':
+    case 'FUNDING':
+    case 'AML':
+    case 'CEA':
+    case 'CEA_SETTLE':
+    case 'SWAP':
+    case 'EUA_SETTLE':
       return 'warning';
+    case 'REJECTED':
+      return 'danger';
     default:
       return 'default';
   }
@@ -124,19 +134,17 @@ export function UserDetailModal({
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl',
-                  user.role === 'ADMIN'
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                    : user.role === 'FUNDED'
-                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                    : user.role === 'APPROVED'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                    : 'bg-gradient-to-br from-amber-500 to-amber-600'
+              user.role === 'ADMIN'
+                ? 'bg-gradient-to-br from-navy-500 to-navy-600'
+                : user.role === 'MM'
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                  : 'bg-gradient-to-br from-amber-500 to-amber-600'
                 )}>
-                  {getInitials(user.first_name, user.last_name, user.email)}
+                  {getInitials(user.firstName, user.lastName, user.email)}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-navy-900 dark:text-white">
-                    {user.first_name} {user.last_name}
+                    {user.firstName} {user.lastName}
                   </h2>
                   <p className="text-navy-500 dark:text-navy-400">{user.email}</p>
                 </div>
@@ -156,8 +164,8 @@ export function UserDetailModal({
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id);
-                    if (tab.id === 'deposits' && user?.entity_id) {
-                      onLoadDeposits(user.entity_id);
+                    if (tab.id === 'deposits' && user?.entityId) {
+                      onLoadDeposits(user.entityId);
                     }
                   }}
                   className={cn(
@@ -183,7 +191,7 @@ export function UserDetailModal({
               )}
 
               {activeTab === 'auth' && (
-                <AuthHistoryTab authHistory={user.auth_history} />
+                <AuthHistoryTab authHistory={user.authHistory} />
               )}
 
               {activeTab === 'sessions' && (
@@ -198,7 +206,7 @@ export function UserDetailModal({
                   entityBalance={entityBalance}
                   entityAssets={entityAssets}
                   deposits={deposits}
-                  onRetry={() => user.entity_id && onLoadDeposits(user.entity_id)}
+                  onRetry={() => user.entityId && onLoadDeposits(user.entityId)}
                   onEditAsset={onEditAsset}
                 />
               )}
@@ -234,19 +242,19 @@ function UserInfoTab({
         </div>
         <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
           <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Status</p>
-          <Badge variant={user.is_active ? 'success' : 'danger'}>
-            {user.is_active ? 'Active' : 'Inactive'}
+          <Badge variant={user.isActive ? 'success' : 'danger'}>
+            {user.isActive ? 'Active' : 'DISABLED'}
           </Badge>
         </div>
         <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
           <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Password</p>
-          <Badge variant={user.password_set ? 'success' : 'warning'}>
-            {user.password_set ? 'Set' : 'Not Set'}
+          <Badge variant={user.passwordSet ? 'success' : 'warning'}>
+            {user.passwordSet ? 'Set' : 'Not Set'}
           </Badge>
         </div>
         <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
           <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Total Logins</p>
-          <p className="text-lg font-bold text-navy-900 dark:text-white">{user.login_count}</p>
+          <p className="text-lg font-bold text-navy-900 dark:text-white">{user.loginCount}</p>
         </div>
       </div>
 
@@ -257,7 +265,7 @@ function UserInfoTab({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Entity</span>
-              <span className="text-navy-900 dark:text-white">{user.entity_name || 'None'}</span>
+              <span className="text-navy-900 dark:text-white">{user.entityName || 'None'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Position</span>
@@ -270,7 +278,7 @@ function UserInfoTab({
             <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Created</span>
               <span className="text-navy-900 dark:text-white">
-                {user.created_at ? formatRelativeTime(user.created_at) : 'Unknown'}
+                {user.createdAt ? formatRelativeTime(user.createdAt) : 'Unknown'}
               </span>
             </div>
           </div>
@@ -281,25 +289,25 @@ function UserInfoTab({
             <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Last Login</span>
               <span className="text-navy-900 dark:text-white">
-                {user.last_login ? formatRelativeTime(user.last_login) : 'Never'}
+                {user.lastLogin ? formatRelativeTime(user.lastLogin) : 'Never'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Last IP</span>
               <span className="text-navy-900 dark:text-white font-mono text-sm">
-                {user.last_login_ip || 'Unknown'}
+                {user.lastLoginIp || 'Unknown'}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-navy-500 dark:text-navy-400">Failed (24h)</span>
-              <Badge variant={user.failed_login_count_24h > 5 ? 'danger' : user.failed_login_count_24h > 0 ? 'warning' : 'success'}>
-                {user.failed_login_count_24h}
+              <Badge variant={user.failedLoginCount24h > 5 ? 'danger' : user.failedLoginCount24h > 0 ? 'warning' : 'success'}>
+                {user.failedLoginCount24h}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-navy-500 dark:text-navy-400">Force Password Change</span>
-              <Badge variant={user.must_change_password ? 'warning' : 'success'}>
-                {user.must_change_password ? 'Yes' : 'No'}
+              <Badge variant={user.mustChangePassword ? 'warning' : 'success'}>
+                {user.mustChangePassword ? 'Yes' : 'No'}
               </Badge>
             </div>
           </div>
@@ -325,7 +333,7 @@ function UserInfoTab({
   );
 }
 
-function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['auth_history'] }) {
+function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHistory'] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -357,23 +365,23 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['auth_hist
                 <div>
                   <p className="text-sm font-medium text-navy-900 dark:text-white">
                     {attempt.success ? 'Successful Login' : 'Failed Attempt'}
-                    {attempt.failure_reason && (
-                      <span className="text-red-500 ml-2">({attempt.failure_reason})</span>
+                    {attempt.failureReason && (
+                      <span className="text-red-500 ml-2">({attempt.failureReason})</span>
                     )}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
                     <Badge variant="default" className="text-xs">{attempt.method}</Badge>
-                    {attempt.ip_address && (
+                    {attempt.ipAddress && (
                       <span className="flex items-center gap-1">
                         <Globe className="w-3 h-3" />
-                        {attempt.ip_address}
+                        {attempt.ipAddress}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
               <span className="text-xs text-navy-500 dark:text-navy-400">
-                {formatRelativeTime(attempt.created_at)}
+                {formatRelativeTime(attempt.createdAt)}
               </span>
             </div>
           ))}
@@ -402,19 +410,19 @@ function SessionsTab({ sessions }: { sessions: AdminUserFull['sessions'] }) {
                 <Monitor className="w-5 h-5 text-navy-400" />
                 <div>
                   <p className="text-sm font-medium text-navy-900 dark:text-white font-mono">
-                    {session.ip_address || 'Unknown IP'}
+                    {session.ipAddress || 'Unknown IP'}
                   </p>
                   <p className="text-xs text-navy-500 dark:text-navy-400 truncate max-w-md">
-                    {session.user_agent || 'Unknown device'}
+                    {session.userAgent || 'Unknown device'}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <Badge variant={session.is_active ? 'success' : 'default'}>
-                  {session.is_active ? 'Active' : 'Ended'}
+                <Badge variant={session.isActive ? 'success' : 'default'}>
+                  {session.isActive ? 'Active' : 'Ended'}
                 </Badge>
                 <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                  {formatRelativeTime(session.started_at)}
+                  {formatRelativeTime(session.startedAt)}
                 </p>
               </div>
             </div>
@@ -449,7 +457,7 @@ function DepositsTab({
     currentBalance: number;
   }) => void;
 }) {
-  if (!user.entity_id) {
+  if (!user.entityId) {
     return (
       <div className="text-center py-8">
         <Building2 className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
@@ -499,7 +507,7 @@ function DepositsTab({
         <div>
           <p className="text-sm text-navy-500 dark:text-navy-400">Entity Holdings</p>
           <p className="font-bold text-navy-900 dark:text-white">
-            {entityAssets?.entity_name || entityBalance?.entity_name || user.entity_name || 'Unknown Entity'}
+            {entityAssets?.entityName || entityBalance?.entityName || user.entityName || 'Unknown Entity'}
           </p>
         </div>
       </div>
@@ -510,10 +518,10 @@ function DepositsTab({
         <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
-              entityId: user.entity_id!,
-              entityName: entityAssets?.entity_name || user.entity_name || 'Unknown',
+              entityId: user.entityId!,
+              entityName: entityAssets?.entityName || user.entityName || 'Unknown',
               assetType: 'EUR',
-              currentBalance: entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0,
+              currentBalance: entityAssets?.eurBalance ?? entityBalance?.balanceAmount ?? 0,
             })}
             className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
             title="Edit EUR Balance"
@@ -525,7 +533,7 @@ function DepositsTab({
             <span className="text-sm font-medium text-emerald-100">EUR Cash</span>
           </div>
           <p className="text-2xl font-bold font-mono">
-            {'\u20AC'}{(entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {'\u20AC'}{(entityAssets?.eurBalance ?? entityBalance?.balanceAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
 
@@ -533,10 +541,10 @@ function DepositsTab({
         <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
-              entityId: user.entity_id!,
-              entityName: entityAssets?.entity_name || user.entity_name || 'Unknown',
+              entityId: user.entityId!,
+              entityName: entityAssets?.entityName || user.entityName || 'Unknown',
               assetType: 'CEA',
-              currentBalance: entityAssets?.cea_balance ?? 0,
+              currentBalance: entityAssets?.ceaBalance ?? 0,
             })}
             className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
             title="Edit CEA Balance"
@@ -548,7 +556,7 @@ function DepositsTab({
             <span className="text-sm font-medium text-amber-100">CEA</span>
           </div>
           <p className="text-2xl font-bold font-mono">
-            {(entityAssets?.cea_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {(entityAssets?.ceaBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             <span className="text-sm font-normal ml-1">tCO{'\u2082'}</span>
           </p>
         </div>
@@ -557,10 +565,10 @@ function DepositsTab({
         <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
-              entityId: user.entity_id!,
-              entityName: entityAssets?.entity_name || user.entity_name || 'Unknown',
+              entityId: user.entityId!,
+              entityName: entityAssets?.entityName || user.entityName || 'Unknown',
               assetType: 'EUA',
-              currentBalance: entityAssets?.eua_balance ?? 0,
+              currentBalance: entityAssets?.euaBalance ?? 0,
             })}
             className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/20 opacity-0 group-hover:opacity-100 hover:bg-white/30 transition-all"
             title="Edit EUA Balance"
@@ -572,7 +580,7 @@ function DepositsTab({
             <span className="text-sm font-medium text-blue-100">EUA</span>
           </div>
           <p className="text-2xl font-bold font-mono">
-            {(entityAssets?.eua_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {(entityAssets?.euaBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             <span className="text-sm font-normal ml-1">tCO{'\u2082'}</span>
           </p>
         </div>
@@ -586,20 +594,22 @@ function DepositsTab({
             <span className="text-sm text-navy-600 dark:text-navy-300">Total Deposited</span>
           </div>
           <span className="font-mono font-semibold text-navy-900 dark:text-white">
-            {entityBalance ? formatCurrency(entityBalance.total_deposited, entityBalance.balance_currency || 'EUR') : '\u20AC 0.00'}
+            {entityBalance ? formatCurrency(entityBalance.totalDeposited, entityBalance.balanceCurrency || 'EUR') : '\u20AC 0.00'}
           </span>
         </div>
       </div>
 
       {/* Role Info */}
-      {user.role === 'APPROVED' && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+      {(user.role === 'NDA' || user.role === 'KYC') && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-navy-900 dark:text-white">User is APPROVED but not yet FUNDED</p>
+              <p className="font-medium text-navy-900 dark:text-white">
+                User has {user.role} status (under review)
+              </p>
               <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
-                Confirm a deposit to upgrade this user to FUNDED status, allowing them to trade.
+                {user.role === 'NDA' ? 'Approve to create user (KYC).' : 'Approve KYC to grant funding access.'}
               </p>
             </div>
           </div>
@@ -647,10 +657,10 @@ function DepositsTab({
                         : '—'}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
-                      {deposit.wire_reference && (
-                        <span>Ref: {deposit.wire_reference}</span>
+                      {deposit.wireReference && (
+                        <span>Ref: {deposit.wireReference}</span>
                       )}
-                      <span>{formatRelativeTime(deposit.created_at)}</span>
+                      <span>{formatRelativeTime(deposit.createdAt)}</span>
                     </div>
                     {deposit.notes && (
                       <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
@@ -675,7 +685,7 @@ function DepositsTab({
 }
 
 function OrdersTab({ user }: { user: AdminUserFull }) {
-  if (!user.entity_id) {
+  if (!user.entityId) {
     return (
       <div className="text-center py-8">
         <BarChart3 className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
@@ -691,8 +701,8 @@ function OrdersTab({ user }: { user: AdminUserFull }) {
 
   return (
     <UserOrdersSection
-      entityId={user.entity_id}
-      entityName={user.entity_name || 'Unknown Entity'}
+      entityId={user.entityId}
+      entityName={user.entityName || 'Unknown Entity'}
     />
   );
 }

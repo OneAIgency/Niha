@@ -4,6 +4,17 @@
 > **Last Updated:** 2026-01-22
 > **Live Reference:** [/design-system](http://localhost:5173/design-system)
 
+### Tema grafică – un singur punct de intrare
+
+**Toate caracteristicile temei grafice sunt centralizate.** Pentru „unde modific X?” și pentru fluxul temei:
+
+- **Hub central:** `frontend/src/theme/README.md` – tabel cu fișierele temei, cum le modifici și cum stau în relație.
+- **Tokeni editabili (nume variabile, config Theme Containers):** `frontend/src/theme/tokens.ts` și `frontend/src/theme/index.ts`.
+
+Variabilele CSS sunt în `frontend/src/styles/design-tokens.css`; paleta Tailwind în `frontend/tailwind.config.js`. Păstrează-le aliniate; detaliile sunt în theme README.
+
+---
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -385,6 +396,63 @@ Special shadows for interactive elements and brand colors.
 
 ## Component Library
 
+### Page Section Headers (Subheader & SubSubHeader)
+
+**Single source of truth:** bar styling and fixed positioning are defined in `frontend/src/styles/design-tokens.css`; components live in `frontend/src/components/common/` (`Subheader.tsx`, `SubSubHeader.tsx`, `SubheaderNavButton.tsx`). Use these everywhere for a unified page-section header theme. The subheader bar is **fixed** below the main header app-wide.
+
+#### Purpose
+
+- **Subheader** – Bar under the main app header: icon, title, description, and optional right-side content (e.g. nav buttons, actions). Used on Dashboard, Backoffice, Theme, Cash Market, Swap Center, Funding, Profile, Settings, etc.
+- **SubSubHeader** – Optional bar directly under Subheader for page-specific content: filters, toggles (e.g. CEA|EUA), actions (Live, Refresh). Used in Backoffice (Onboarding: Contact Requests, KYC, Deposits), Market Orders, etc.
+
+#### Theme tokens (design-tokens.css)
+
+**Bar containers (unified look):**
+
+| Token / class | Usage |
+|---------------|--------|
+| `--color-subheader-bg`, `--color-subheader-border`, `--subheader-padding-x`, `--subheader-padding-y` | Subheader bar background, border, padding |
+| `--color-subsubheader-bg`, `--color-subsubheader-border`, `--subsubheader-padding-x`, `--subsubheader-padding-y`, `--subsubheader-min-height` | SubSubHeader bar |
+| `.subheader-bar` | Applied by `Subheader` component – fixed below main header; do not override in pages |
+| `.subheader-bar-spacer` | Spacer div rendered by `Subheader` so content starts below the fixed bar |
+| `.subsubheader-bar` | Applied by `SubSubHeader` component |
+| `.page-section-header-sticky` | Optional sticky wrapper for Subheader + SubSubHeader (e.g. BackofficeLayout) |
+
+**Nav buttons (inside Subheader / SubSubHeader):** see [Subheader nav buttons](#subheader-nav-buttons-subpage-navigation) and [SubSubHeader nav buttons](#subsubheader-nav-buttons-child-level-under-subheader) below.
+
+#### Fixed subheader bar
+
+- The subheader bar (`.subheader-bar`) is **fixed** below the main header on all pages: `position: fixed; top: 4rem` (mobile) / `top: 5rem` (desktop); `Subheader` renders a spacer (`.subheader-bar-spacer`) so content is not hidden under the bar.
+- **Subheader + SubSubHeader:** BackofficeLayout wraps both in `page-section-header-sticky` so the sub-subheader can stay with the subheader when needed.
+
+#### Usage across the app
+
+| Location | Subheader | SubSubHeader |
+|----------|-----------|--------------|
+| BackofficeLayout | Yes (Backoffice title + nav) | Yes (when `subSubHeaderLeft` / `subSubHeader` passed) |
+| ThemeLayout | Yes (Theme + Sample/Containers) | No |
+| DashboardPage, CashMarketPage, CeaSwapMarketPage, FundingPage, ProfilePage, SettingsPage | Yes | No |
+| BackofficeOnboardingPage, MarketOrdersPage, etc. | Via BackofficeLayout | Via BackofficeLayout props |
+
+#### Example
+
+```tsx
+// Layout with Subheader + optional SubSubHeader (BackofficeLayout)
+<div className="page-section-header-sticky">
+  <Subheader icon={...} title="Backoffice" description={...}>
+    <nav>...</nav>
+  </Subheader>
+  {showSubSub && <SubSubHeader left={...}>{actions}</SubSubHeader>}
+</div>
+
+// Single Subheader (fixed bar is applied automatically)
+<Subheader icon={...} title="Theme" description="Design system showcase" />
+```
+
+To change the look app-wide, edit the CSS variables and classes in `design-tokens.css`; do not hard-code bar colors or padding in pages.
+
+---
+
 ### Buttons
 
 #### Variants
@@ -550,6 +618,18 @@ Highlighting the button for the current page uses the same logic as Subheader (a
     3
   </span>
 </div>
+```
+
+#### Client status badge
+
+Use **`ClientStatusBadge`** (`components/common`) for deposit/client role display (Onboarding Deposits tab, AML tab, Backoffice Deposits page, Users list). Single source of truth: `user_role` from API (FUNDING when user announced transfer). Uses `clientStatusVariant` (`utils/roleBadge`) for role→Badge variant mapping; design tokens only. Supported roles include onboarding flow (NDA, KYC, … EUA), **MM** (Market Maker; maps to `info` variant), and **ADMIN**.
+
+```tsx
+import { ClientStatusBadge } from '@/components/common';
+
+// In deposit cards or table "Client" column
+<ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
+// Renders role (e.g. FUNDING, APPROVED) or "—" when missing
 ```
 
 ---

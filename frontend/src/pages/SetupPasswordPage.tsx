@@ -20,8 +20,8 @@ export function SetupPasswordPage() {
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [userInfo, setUserInfo] = useState<{
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
   } | null>(null);
   const [error, setError] = useState('');
 
@@ -149,7 +149,7 @@ export function SetupPasswordPage() {
             <Lock className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-navy-900 dark:text-white">
-            Welcome, {userInfo?.first_name}!
+            Welcome, {userInfo?.firstName}!
           </h1>
           <p className="text-navy-500 dark:text-navy-400 mt-2">
             Set up your password to activate your account

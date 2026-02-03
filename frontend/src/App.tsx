@@ -1,6 +1,7 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Layout } from './components/layout';
+import { Layout, ThemeLayout } from './components/layout';
+import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
 import { getPostLoginRedirect } from './utils/redirect';
@@ -39,44 +40,46 @@ class BackofficeErrorBoundary extends Component<
   }
 }
 
-// Code splitting: Lazy load pages for better performance
-const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
-const LoginPage = lazy(() => import('./pages').then(m => ({ default: m.LoginPage })));
-const CashMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketPage })));
-const CashMarketProPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketProPage })));
-const SwapPage = lazy(() => import('./pages').then(m => ({ default: m.SwapPage })));
-const CeaSwapMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CeaSwapMarketPage })));
-const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.DashboardPage })));
-const ProfilePage = lazy(() => import('./pages').then(m => ({ default: m.ProfilePage })));
-const SettingsPage = lazy(() => import('./pages').then(m => ({ default: m.SettingsPage })));
-const UsersPage = lazy(() => import('./pages').then(m => ({ default: m.UsersPage })));
-const FundingPage = lazy(() => import('./pages').then(m => ({ default: m.FundingPage })));
-const SetupPasswordPage = lazy(() => import('./pages').then(m => ({ default: m.SetupPasswordPage })));
-const Onboarding1Page = lazy(() => import('./pages').then(m => ({ default: m.Onboarding1Page })));
-const LearnMorePage = lazy(() => import('./pages').then(m => ({ default: m.LearnMorePage })));
-const OnboardingIndexPage = lazy(() => import('./pages').then(m => ({ default: m.OnboardingIndexPage })));
-const MarketOverviewPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOverviewPage })));
-const AboutNihaoPage = lazy(() => import('./pages').then(m => ({ default: m.AboutNihaoPage })));
-const CeaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.CeaHoldersPage })));
-const EuaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.EuaHoldersPage })));
-const EuEntitiesPage = lazy(() => import('./pages').then(m => ({ default: m.EuEntitiesPage })));
-const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default: m.StrategicAdvantagePage })));
-const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
-const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
-const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
-const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
-const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
-const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
-const BackofficeDepositsPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeDepositsPage })));
-const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
+// Code splitting: Lazy load pages with DIRECT imports (not barrel) for true code splitting
+const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
+const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const FundingPage = lazy(() => import('./pages/FundingPage').then(m => ({ default: m.FundingPage })));
+const SetupPasswordPage = lazy(() => import('./pages/SetupPasswordPage').then(m => ({ default: m.SetupPasswordPage })));
+const Onboarding1Page = lazy(() => import('./pages/Onboarding1Page'));
+const LearnMorePage = lazy(() => import('./pages/LearnMorePage').then(m => ({ default: m.LearnMorePage })));
+const OnboardingIndexPage = lazy(() => import('./pages/onboarding/OnboardingIndexPage'));
+const MarketOverviewPage = lazy(() => import('./pages/onboarding/MarketOverviewPage'));
+const AboutNihaoPage = lazy(() => import('./pages/onboarding/AboutNihaoPage'));
+const CeaHoldersPage = lazy(() => import('./pages/onboarding/CeaHoldersPage'));
+const EuaHoldersPage = lazy(() => import('./pages/onboarding/EuaHoldersPage'));
+const EuEntitiesPage = lazy(() => import('./pages/onboarding/EuEntitiesPage'));
+const StrategicAdvantagePage = lazy(() => import('./pages/onboarding/StrategicAdvantagePage'));
+const ComponentShowcasePage = lazy(() => import('./pages/ComponentShowcasePage').then(m => ({ default: m.ComponentShowcasePage })));
+const DesignSystemPage = lazy(() => import('./pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
+const ThemeSectionPage = lazy(() => import('./pages/ThemeSectionPage').then(m => ({ default: m.ThemeSectionPage })));
+const MarketMakersPage = lazy(() => import('./pages/MarketMakersPage').then(m => ({ default: m.MarketMakersPage })));
+const MarketOrdersPage = lazy(() => import('./pages/MarketOrdersPage').then(m => ({ default: m.MarketOrdersPage })));
+const LoggingPage = lazy(() => import('./pages/LoggingPage'));
+const CreateLiquidityPage = lazy(() => import('./pages/CreateLiquidityPage').then(m => ({ default: m.CreateLiquidityPage })));
+const BackofficeOnboardingPage = lazy(() => import('./pages/BackofficeOnboardingPage').then(m => ({ default: m.BackofficeOnboardingPage })));
+const FeeSettingsPage = lazy(() => import('./pages/FeeSettingsPage').then(m => ({ default: m.FeeSettingsPage })));
+const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
 
-// Loading fallback component
+// Loading fallback component with proper semantic structure for accessibility
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-navy-50 dark:bg-navy-950">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-      <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
-    </div>
+  <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+    <main className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+        <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
+      </div>
+    </main>
   </div>
 );
 
@@ -86,6 +89,8 @@ const PageLoader = () => (
  * CRITICAL: This component handles ALL auth-based redirects to prevent loops.
  * Do NOT add redirect logic elsewhere (LoginPage, individual routes, etc.)
  * Order: authentication → allowedRoles → blockRoles.
+ *
+ * ADMIN SUPERUSER: ADMIN role bypasses all role checks and has access to everything.
  */
 function AuthGuard({
   children,
@@ -116,6 +121,15 @@ function AuthGuard({
     if (!isAuthenticated || !user) {
       // Not authenticated - redirect to login
       return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+    // Rejected users have no access
+    if (user.role === 'REJECTED') {
+      return <Navigate to="/login" replace />;
+    }
+
+    // ADMIN SUPERUSER: bypass all role checks - ADMIN has access to everything
+    if (user.role === 'ADMIN') {
+      return <>{children}</>;
     }
 
     // Check role-based access (allowed roles)
@@ -149,10 +163,10 @@ function AuthGuard({
 
 // Convenience wrappers using AuthGuard
 
-/** Protects routes for authenticated non-PENDING users; PENDING redirects to /onboarding. */
+/** Protects routes for authenticated non-NDA users; NDA redirects to /onboarding. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
+    <AuthGuard requireAuth={true} blockRoles={['NDA']} redirectWhenBlocked="/onboarding">
       {children}
     </AuthGuard>
   );
@@ -194,51 +208,42 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Onboarding area: requires auth only; PENDING and other roles can access. */
+/** Onboarding documentation: NDA, KYC, and all post-KYC users (for re-reading mechanism docs). */
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true}>
+    <RoleProtectedRoute allowedRoles={['NDA', 'KYC', 'APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA']}>
       {children}
-    </AuthGuard>
+    </RoleProtectedRoute>
   );
 }
 
-/** Funding area: APPROVED only; non-APPROVED (e.g. PENDING) redirect to role home in one hop. */
+/** Funding page: APPROVED and beyond, ADMIN, MM. Users can add funds at any stage. */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED']}>
+    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
 }
 
+/** Cash market (CEA purchase): CEA and CEA_SETTLE only, or ADMIN, or MM. SWAP and beyond use /swap. */
 function FundedRoute({ children }: { children: React.ReactNode }) {
-  const { user, _hasHydrated } = useAuthStore();
-
-  if (!_hasHydrated) {
-    return <PageLoader />;
-  }
-
-  // Special redirects based on role
-  if (user?.role === 'PENDING') {
-    return <Navigate to="/onboarding" replace />;
-  }
-  if (user?.role === 'APPROVED') {
-    return <Navigate to="/funding" replace />;
-  }
-
   return (
-    <RoleProtectedRoute allowedRoles={['FUNDED', 'ADMIN']} redirectTo="/dashboard">
+    <RoleProtectedRoute
+      allowedRoles={['CEA', 'CEA_SETTLE', 'ADMIN', 'MM']}
+      redirectTo="/swap"
+    >
       {children}
     </RoleProtectedRoute>
   );
 }
 
+/** Dashboard: CEA and above (funded users with market access), ADMIN, or MM. */
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard requireAuth={true} blockRoles={['PENDING']} redirectWhenBlocked="/onboarding">
+    <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
-    </AuthGuard>
+    </RoleProtectedRoute>
   );
 }
 
@@ -257,6 +262,7 @@ function CatchAllRedirect() {
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ThemeTokenOverridesStyle />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Redirect root to login */}
@@ -340,6 +346,16 @@ function App() {
             }
           />
 
+          {/* Full-screen trading terminal - NO header/footer */}
+          <Route
+            path="/cash-market"
+            element={
+              <FundedRoute>
+                <CashMarketProPage />
+              </FundedRoute>
+            }
+          />
+
           {/* Public routes with layout */}
           <Route element={<Layout />}>
             <Route path="/contact" element={<ContactPage />} />
@@ -373,39 +389,15 @@ function App() {
                 </DashboardRoute>
               }
             />
-            {/* FUNDED and ADMIN - Cash Market access */}
-            <Route
-              path="/cash-market"
-              element={
-                <FundedRoute>
-                  <CashMarketPage />
-                </FundedRoute>
-              }
-            />
-            {/* Cash Market Pro - Professional Trading Interface */}
-            <Route
-              path="/cash-market-pro"
-              element={
-                <FundedRoute>
-                  <CashMarketProPage />
-                </FundedRoute>
-              }
-            />
-            {/* ADMIN only - Swap Center access */}
+            {/* Legacy: redirect to main cash market */}
+            <Route path="/cash-market-pro" element={<Navigate to="/cash-market" replace />} />
+            {/* Swap Center: SWAP, EUA_SETTLE, EUA, ADMIN */}
             <Route
               path="/swap"
               element={
-                <AdminRoute>
+                <RoleProtectedRoute allowedRoles={['SWAP', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/swap-old"
-              element={
-                <AdminRoute>
-                  <SwapPage />
-                </AdminRoute>
+                </RoleProtectedRoute>
               }
             />
 
@@ -415,6 +407,22 @@ function App() {
               element={
                 <AdminRoute>
                   <SettingsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/auto-trade"
+              element={
+                <AdminRoute>
+                  <AutoTradePage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/fee-settings"
+              element={
+                <AdminRoute>
+                  <FeeSettingsPage />
                 </AdminRoute>
               }
             />
@@ -447,6 +455,19 @@ function App() {
               }
             />
 
+            {/* Theme - Admin only design system showcase with subpages */}
+            <Route
+              path="/theme"
+              element={
+                <AdminRoute>
+                  <ThemeLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<Navigate to="layout" replace />} />
+              <Route path=":section" element={<ThemeSectionPage />} />
+            </Route>
+
             {/* Backoffice routes - same Layout (Header + Footer) as rest of site */}
             <Route
               path="/backoffice"
@@ -478,6 +499,16 @@ function App() {
             />
             <Route
               path="/backoffice/onboarding/deposits"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/onboarding/aml"
               element={
                 <AdminRoute>
                   <BackofficeErrorBoundary>
@@ -522,16 +553,6 @@ function App() {
                 <AdminRoute>
                   <BackofficeErrorBoundary>
                     <CreateLiquidityPage />
-                  </BackofficeErrorBoundary>
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/backoffice/deposits"
-              element={
-                <AdminRoute>
-                  <BackofficeErrorBoundary>
-                    <BackofficeDepositsPage />
                   </BackofficeErrorBoundary>
                 </AdminRoute>
               }

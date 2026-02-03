@@ -1,16 +1,33 @@
 """
-Cash Market API Router
+CEA Cash Market API Router
 
 Order-driven market with order book, market depth, and FIFO matching.
+Trade CEA certificates with EUR.
 """
 
-import random
+import logging
 import uuid
-from datetime import datetime, timedelta
-from decimal import Decimal
+
+logger = logging.getLogger(__name__)
+from datetime import datetime, timezone, timedelta
+from decimal import Decimal, ROUND_DOWN
 from typing import List, Optional
 
+# Price step for CEA cash market (0.1 EUR)
+PRICE_STEP = Decimal("0.1")
+
+
+def validate_price_step(price: Decimal) -> bool:
+    """
+    Validate that price respects the quote step of 0.1 EUR.
+    Returns True if price is a valid multiple of 0.1.
+    """
+    # Check if price divided by step is a whole number
+    remainder = price % PRICE_STEP
+    return remainder == Decimal("0")
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 
 from ...core.database import get_db
@@ -19,12 +36,16 @@ from ...models.models import (
     AssetType,
     CashMarketTrade,
     Entity,
+    MarketMakerClient,
     MarketType,
     Order,
     OrderStatus,
     Seller,
+    TicketStatus,
     User,
 )
+from ...services.limit_order_matching import LimitOrderMatcher
+from ...services.ticket_service import TicketService
 from ...models.models import CertificateType as CertTypeEnum
 from ...models.models import OrderSide as OrderSideEnum
 from ...schemas.schemas import (
@@ -46,218 +67,33 @@ from ...schemas.schemas import (
     OrderSide,
 )
 from ...services.order_matching import (
-    PLATFORM_FEE_RATE,
+    DEFAULT_FEE_RATE,
     execute_market_buy_order,
+    get_effective_fee_rate,
     get_entity_balance,
     get_real_orderbook,
     preview_buy_order,
 )
 
-router = APIRouter(prefix="/cash-market", tags=["Cash Market"])
+router = APIRouter(prefix="/cash-market", tags=["CEA Cash"])
 
 
-class OrderBookSimulator:
-    """
-    Generates realistic simulated order book data for demo purposes.
-    In production, this would query the actual database orders.
-    """
-
-    # Base prices
-    EUA_BASE_PRICE = 81.0
-    CEA_BASE_PRICE = 14.0
-
-    def __init__(self):
-        self._orderbook_cache = {}
-        self._trades_cache = {}
-        self._cache_time = {}
-
-    def _generate_orders(
-        self, cert_type: str, side: str, count: int, base_price: float
-    ) -> List[dict]:
-        """Generate simulated orders for one side of the book"""
-        orders = []
-
-        if side == "BUY":
-            # Bids below market price, best bid closest to base
-            price_start = base_price * 0.995  # Start 0.5% below
-            price_step = -0.01  # Decrease by $0.01 per level
-        else:
-            # Asks above market price, best ask closest to base
-            price_start = base_price * 1.005  # Start 0.5% above
-            price_step = 0.01  # Increase by $0.01 per level
-
-        for i in range(count):
-            price = round(price_start + (i * price_step), 2)
-
-            # More orders near the spread, fewer further out
-            if i < 5:
-                order_count = random.randint(3, 8)
-                base_qty = random.uniform(500, 2000)
-            elif i < 10:
-                order_count = random.randint(2, 5)
-                base_qty = random.uniform(1000, 5000)
-            else:
-                order_count = random.randint(1, 3)
-                base_qty = random.uniform(2000, 10000)
-
-            quantity = round(base_qty * order_count, 2)
-
-            orders.append(
-                {
-                    "price": price,
-                    "quantity": quantity,
-                    "order_count": order_count,
-                }
-            )
-
-        return orders
-
-    def get_orderbook(self, cert_type: str) -> dict:
-        """Get the complete order book for a certificate type"""
-        cache_key = f"orderbook_{cert_type}"
-
-        # Check cache (30 second TTL for realistic updates)
-        if cache_key in self._cache_time:
-            cache_age = (datetime.utcnow() - self._cache_time[cache_key]).seconds
-            if cache_age < 30 and cache_key in self._orderbook_cache:
-                return self._orderbook_cache[cache_key]
-
-        base_price = self.EUA_BASE_PRICE if cert_type == "EUA" else self.CEA_BASE_PRICE
-
-        # Add some random variance to base price
-        current_price = base_price * (1 + random.uniform(-0.02, 0.02))
-
-        # Generate bids and asks
-        bids = self._generate_orders(cert_type, "BUY", 15, current_price)
-        asks = self._generate_orders(cert_type, "SELL", 15, current_price)
-
-        # Calculate cumulative quantities
-        bid_cumulative = 0
-        for bid in bids:
-            bid_cumulative += bid["quantity"]
-            bid["cumulative_quantity"] = round(bid_cumulative, 2)
-
-        ask_cumulative = 0
-        for ask in asks:
-            ask_cumulative += ask["quantity"]
-            ask["cumulative_quantity"] = round(ask_cumulative, 2)
-
-        # Best bid/ask
-        best_bid = bids[0]["price"] if bids else None
-        best_ask = asks[0]["price"] if asks else None
-        spread = round(best_ask - best_bid, 4) if best_bid and best_ask else None
-
-        # 24h stats
-        volume_24h = round(random.uniform(50000, 200000), 2)
-        change_24h = round(random.uniform(-3.0, 3.0), 2)
-
-        orderbook = {
-            "certificate_type": cert_type,
-            "bids": bids,
-            "asks": asks,
-            "spread": spread,
-            "best_bid": best_bid,
-            "best_ask": best_ask,
-            "last_price": round(current_price, 2),
-            "volume_24h": volume_24h,
-            "change_24h": change_24h,
-        }
-
-        # Cache the result
-        self._orderbook_cache[cache_key] = orderbook
-        self._cache_time[cache_key] = datetime.utcnow()
-
-        return orderbook
-
-    def get_recent_trades(self, cert_type: str, limit: int = 50) -> List[dict]:
-        """Generate simulated recent trades"""
-        cache_key = f"trades_{cert_type}"
-
-        if cache_key in self._cache_time:
-            cache_age = (datetime.utcnow() - self._cache_time[cache_key]).seconds
-            if cache_age < 10 and cache_key in self._trades_cache:
-                return self._trades_cache[cache_key][:limit]
-
-        base_price = self.EUA_BASE_PRICE if cert_type == "EUA" else self.CEA_BASE_PRICE
-        trades = []
-
-        base_time = datetime.utcnow()
-
-        for _i in range(100):  # Generate more than limit for variety
-            # Price with small variance
-            price = round(base_price * (1 + random.uniform(-0.01, 0.01)), 2)
-
-            # Quantity
-            quantity = round(random.uniform(100, 5000), 2)
-
-            # Time (spread over last hour)
-            executed_at = base_time - timedelta(
-                minutes=random.randint(0, 60), seconds=random.randint(0, 59)
-            )
-
-            # Side (slightly favor buys for bullish appearance)
-            side = "BUY" if random.random() < 0.52 else "SELL"
-
-            trades.append(
-                {
-                    "id": str(uuid.uuid4()),
-                    "certificate_type": cert_type,
-                    "price": price,
-                    "quantity": quantity,
-                    "side": side,
-                    "executed_at": executed_at.isoformat(),
-                }
-            )
-
-        # Sort by time (newest first)
-        trades.sort(key=lambda x: x["executed_at"], reverse=True)
-
-        self._trades_cache[cache_key] = trades
-        self._cache_time[cache_key] = datetime.utcnow()
-
-        return trades[:limit]
-
-    def get_market_depth(self, cert_type: str) -> dict:
-        """Get market depth data for chart visualization"""
-        orderbook = self.get_orderbook(cert_type)
-
-        # Convert to cumulative depth points
-        bid_depth = []
-        for bid in orderbook["bids"]:
-            bid_depth.append(
-                {
-                    "price": bid["price"],
-                    "cumulative_quantity": bid["cumulative_quantity"],
-                }
-            )
-
-        ask_depth = []
-        for ask in orderbook["asks"]:
-            ask_depth.append(
-                {
-                    "price": ask["price"],
-                    "cumulative_quantity": ask["cumulative_quantity"],
-                }
-            )
-
-        return {
-            "certificate_type": cert_type,
-            "bids": bid_depth,
-            "asks": ask_depth,
-        }
-
-
-# Singleton instance
-orderbook_simulator = OrderBookSimulator()
+# NOTE: OrderBookSimulator removed - all data is now real from database
 
 
 @router.get("/orderbook/{certificate_type}", response_model=OrderBookResponse)
-async def get_orderbook(certificate_type: CertificateType):
+async def get_orderbook(
+    certificate_type: CertificateType,
+    db=Depends(get_db),  # noqa: B008
+):
     """
-    Get the order book for a specific certificate type.
-    Returns bids (buy orders) and asks (sell orders) aggregated by price level.
+    Get the REAL order book for a specific certificate type.
+    Returns bids (buy orders from clients) and asks (sell orders from Market Makers).
+
+    NOTE: Only CEA is supported. Clients can only BUY, Market Makers provide liquidity.
     """
-    orderbook = orderbook_simulator.get_orderbook(certificate_type.value)
+    # Use real order book from database
+    orderbook = await get_real_orderbook(db, certificate_type.value)
 
     return OrderBookResponse(
         certificate_type=orderbook["certificate_type"],
@@ -269,61 +105,118 @@ async def get_orderbook(certificate_type: CertificateType):
         last_price=orderbook["last_price"],
         volume_24h=orderbook["volume_24h"],
         change_24h=orderbook["change_24h"],
+        high_24h=orderbook.get("high_24h"),
+        low_24h=orderbook.get("low_24h"),
     )
 
 
 @router.get("/depth/{certificate_type}", response_model=MarketDepthResponse)
-async def get_market_depth(certificate_type: CertificateType):
+async def get_market_depth(
+    certificate_type: CertificateType,
+    db=Depends(get_db),  # noqa: B008
+):
     """
-    Get market depth data for visualization.
-    Returns cumulative quantities at each price level.
+    Get REAL market depth data for visualization.
+    Returns cumulative quantities at each price level from actual orders.
     """
-    depth = orderbook_simulator.get_market_depth(certificate_type.value)
+    orderbook = await get_real_orderbook(db, certificate_type.value)
+
+    # Convert to depth points (already have cumulative from get_real_orderbook)
+    bid_depth = [
+        {"price": b["price"], "cumulative_quantity": b["cumulative_quantity"]}
+        for b in orderbook["bids"]
+    ]
+    ask_depth = [
+        {"price": a["price"], "cumulative_quantity": a["cumulative_quantity"]}
+        for a in orderbook["asks"]
+    ]
 
     return MarketDepthResponse(
-        certificate_type=depth["certificate_type"],
-        bids=[MarketDepthPoint(**b) for b in depth["bids"]],
-        asks=[MarketDepthPoint(**a) for a in depth["asks"]],
+        certificate_type=certificate_type.value,
+        bids=[MarketDepthPoint(**b) for b in bid_depth],
+        asks=[MarketDepthPoint(**a) for a in ask_depth],
     )
 
 
 @router.get("/trades/{certificate_type}", response_model=List[CashMarketTradeResponse])
 async def get_recent_trades(
-    certificate_type: CertificateType, limit: int = Query(50, ge=1, le=100)  # noqa: B008
+    certificate_type: CertificateType,
+    limit: int = Query(50, ge=1, le=100),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
 ):
     """
-    Get recent executed trades for a certificate type.
+    Get REAL recent executed trades for a certificate type from database.
     """
-    trades = orderbook_simulator.get_recent_trades(certificate_type.value, limit)
+    cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
+
+    result = await db.execute(
+        select(CashMarketTrade)
+        .where(CashMarketTrade.certificate_type == cert_enum)
+        .order_by(CashMarketTrade.executed_at.desc())
+        .limit(limit)
+    )
+    trades = result.scalars().all()
 
     return [
         CashMarketTradeResponse(
-            id=uuid.UUID(t["id"]),
-            certificate_type=t["certificate_type"],
-            price=t["price"],
-            quantity=t["quantity"],
-            side=t["side"],
-            executed_at=datetime.fromisoformat(t["executed_at"]),
+            id=t.id,
+            certificate_type=t.certificate_type.value,
+            price=float(t.price),
+            quantity=float(t.quantity),
+            side="BUY",  # All trades from client perspective are buys
+            executed_at=t.executed_at,
         )
         for t in trades
     ]
 
 
 @router.get("/stats/{certificate_type}", response_model=MarketStatsResponse)
-async def get_market_stats(certificate_type: CertificateType):
+async def get_market_stats(
+    certificate_type: CertificateType,
+    db=Depends(get_db),  # noqa: B008
+):
     """
-    Get market statistics for a certificate type.
+    Get REAL market statistics for a certificate type from database.
     """
-    orderbook = orderbook_simulator.get_orderbook(certificate_type.value)
-    base_price = orderbook["last_price"]
+    orderbook = await get_real_orderbook(db, certificate_type.value)
+
+    # Get 24h trade stats from database - use naive UTC for DB query
+    cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
+    yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
+
+    result = await db.execute(
+        select(CashMarketTrade)
+        .where(
+            and_(
+                CashMarketTrade.certificate_type == cert_enum,
+                CashMarketTrade.executed_at >= yesterday,
+            )
+        )
+    )
+    trades_24h = result.scalars().all()
+
+    # Calculate real stats
+    if trades_24h:
+        prices = [float(t.price) for t in trades_24h]
+        volumes = [float(t.quantity) for t in trades_24h]
+        high_24h = max(prices)
+        low_24h = min(prices)
+        volume_24h = sum(volumes)
+        # Change calculation: compare last trade to first trade in 24h
+        change_24h = round(((prices[0] - prices[-1]) / prices[-1]) * 100, 2) if len(prices) > 1 else 0.0
+    else:
+        high_24h = orderbook["last_price"]
+        low_24h = orderbook["last_price"]
+        volume_24h = 0.0
+        change_24h = 0.0
 
     return MarketStatsResponse(
         certificate_type=certificate_type.value,
-        last_price=base_price,
-        change_24h=orderbook["change_24h"],
-        high_24h=round(base_price * 1.02, 2),
-        low_24h=round(base_price * 0.98, 2),
-        volume_24h=orderbook["volume_24h"],
+        last_price=orderbook["last_price"],
+        change_24h=change_24h,
+        high_24h=high_24h,
+        low_24h=low_24h,
+        volume_24h=volume_24h,
         total_bids=len(orderbook["bids"]),
         total_asks=len(orderbook["asks"]),
     )
@@ -339,10 +232,34 @@ async def place_order(
     Place a new order in the cash market.
     Creates a real order in the database linked to the user's entity.
     FUNDED or ADMIN only.
+
+    RULE: Regular clients can only place BUY orders (no speculation).
+    Market Makers have full freedom (BID and ASK).
     """
     if not current_user.entity_id:
         raise HTTPException(
             status_code=400, detail="User must have an entity to place orders"
+        )
+
+    # Check if user is a Market Maker (they have full freedom)
+    mm_result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.entity_id == current_user.entity_id)
+    )
+    is_market_maker = mm_result.scalar_one_or_none() is not None
+
+    # Regular clients can only BUY - no speculation allowed
+    if not is_market_maker and order.side.value == "SELL":
+        raise HTTPException(
+            status_code=403,
+            detail="Regular clients can only place BUY orders. SELL orders are reserved for Market Makers."
+        )
+
+    # Validate price step (0.1 EUR)
+    price = Decimal(str(order.price))
+    if not validate_price_step(price):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {order.price}, expected values like 9.30, 9.40, 9.50, etc."
         )
 
     # Create the order in database
@@ -358,6 +275,37 @@ async def place_order(
     )
 
     db.add(new_order)
+    await db.flush()  # Get order ID before ticket creation
+
+    # Create audit ticket for order placement
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="ORDER_PLACED",
+        entity_type="Order",
+        entity_id=new_order.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "certificate_type": order.certificate_type.value,
+            "side": order.side.value,
+            "price": float(order.price),
+            "quantity": float(order.quantity),
+        },
+        response_data={
+            "order_id": str(new_order.id),
+            "status": new_order.status.value,
+        },
+        tags=["order", "cash_market", order.side.value.lower()],
+    )
+
+    # Try to match the order against the book immediately
+    # This ensures we never have crossing orders (negative spread)
+    match_result = await LimitOrderMatcher.match_incoming_order(
+        db=db,
+        incoming_order=new_order,
+        user_id=current_user.id,
+    )
+
     await db.commit()
     await db.refresh(new_order)
 
@@ -437,8 +385,101 @@ async def cancel_order(
     order_id: str, current_user: User = Depends(get_funded_user), db=Depends(get_db)  # noqa: B008
 ):
     """
-    Cancel an open order. FUNDED or ADMIN only.
-    Only the owner (same entity) can cancel their orders.
+    Cancel an open order.
+
+    RULE: Regular clients CANNOT cancel orders - they can only MODIFY price.
+    Only Market Makers can cancel orders.
+    """
+    if not current_user.entity_id:
+        raise HTTPException(status_code=400, detail="User must have an entity")
+
+    # Check if user is a Market Maker (only they can cancel)
+    mm_result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.entity_id == current_user.entity_id)
+    )
+    is_market_maker = mm_result.scalar_one_or_none() is not None
+
+    if not is_market_maker:
+        raise HTTPException(
+            status_code=403,
+            detail="Order cancellation is not allowed. You can only modify the price of your order."
+        )
+
+    # Find the order
+    try:
+        order_uuid = uuid.UUID(order_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid order ID") from e
+
+    result = await db.execute(select(Order).where(Order.id == order_uuid))
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Verify ownership (Market Maker must own the order)
+    if order.entity_id != current_user.entity_id and order.market_maker_id is None:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to cancel this order"
+        )
+
+    # Check if order can be cancelled
+    if order.status not in [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel order with status {order.status.value}",
+        )
+
+    # Capture before state
+    before_state = {
+        "status": order.status.value,
+        "filled_quantity": float(order.filled_quantity) if order.filled_quantity else 0,
+    }
+
+    # Cancel the order
+    order.status = OrderStatus.CANCELLED
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Create audit ticket for order cancellation
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="ORDER_CANCELLED",
+        entity_type="Order",
+        entity_id=order.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={"order_id": order_id},
+        response_data={"cancelled_at": datetime.now(timezone.utc).isoformat()},  # isoformat is string, OK
+        before_state=before_state,
+        after_state={"status": "CANCELLED"},
+        tags=["order", "cancel"],
+    )
+
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Order {order_id} cancelled. Ticket: {ticket.ticket_id}", success=True
+    )
+
+
+class OrderModifyRequest(BaseModel):
+    """Request to modify an existing order's price"""
+    new_price: float = Field(..., gt=0, description="New limit price for the order")
+
+
+@router.put("/orders/{order_id}/price", response_model=OrderResponse)
+async def modify_order_price(
+    order_id: str,
+    request: OrderModifyRequest,
+    current_user: User = Depends(get_funded_user),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
+):
+    """
+    Modify the price of an open order.
+
+    RULE: Regular clients can modify price but NOT cancel orders.
+    This is the only way for clients to adjust their position.
     """
     if not current_user.entity_id:
         raise HTTPException(status_code=400, detail="User must have an entity")
@@ -458,23 +499,65 @@ async def cancel_order(
     # Verify ownership
     if order.entity_id != current_user.entity_id:
         raise HTTPException(
-            status_code=403, detail="Not authorized to cancel this order"
+            status_code=403, detail="Not authorized to modify this order"
         )
 
-    # Check if order can be cancelled
+    # Check if order can be modified
     if order.status not in [OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot cancel order with status {order.status.value}",
+            detail=f"Cannot modify order with status {order.status.value}",
         )
 
-    # Cancel the order
-    order.status = OrderStatus.CANCELLED
-    order.updated_at = datetime.utcnow()
-    await db.commit()
+    # Capture before state
+    before_state = {
+        "price": float(order.price),
+        "status": order.status.value,
+    }
 
-    return MessageResponse(
-        message=f"Order {order_id} cancelled successfully", success=True
+    # Update the price
+    old_price = float(order.price)
+    order.price = Decimal(str(request.new_price))
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Create audit ticket for order modification
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="ORDER_MODIFIED",
+        entity_type="Order",
+        entity_id=order.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "order_id": order_id,
+            "new_price": request.new_price,
+        },
+        response_data={
+            "old_price": old_price,
+            "new_price": request.new_price,
+            "modified_at": datetime.now(timezone.utc).isoformat(),
+        },
+        before_state=before_state,
+        after_state={"price": request.new_price},
+        tags=["order", "modify", "price_change"],
+    )
+
+    await db.commit()
+    await db.refresh(order)
+
+    return OrderResponse(
+        id=order.id,
+        entity_id=order.entity_id,
+        certificate_type=order.certificate_type.value,
+        side=order.side.value,
+        price=float(order.price),
+        quantity=float(order.quantity),
+        filled_quantity=float(order.filled_quantity),
+        remaining_quantity=float(order.quantity - order.filled_quantity),
+        status=order.status.value,
+        created_at=order.created_at,
+        updated_at=order.updated_at,
     )
 
 
@@ -552,7 +635,7 @@ async def get_cea_orderbook(db=Depends(get_db)):  # noqa: B008
         best_ask=best_ask,
         last_price=last_price,
         volume_24h=total_volume,
-        change_24h=random.uniform(-2.0, 2.0),  # Mock 24h change
+        change_24h=0.0,  # TODO: Calculate from real 24h trade data
     )
 
 
@@ -656,7 +739,8 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):  
             certificate_type=CertTypeEnum.CEA,
             price=Decimal(str(order_price_cny)),
             quantity=Decimal(str(qty_to_buy)),
-            executed_at=datetime.utcnow(),
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(trade)
 
@@ -730,6 +814,8 @@ async def get_real_orderbook_endpoint(
         last_price=orderbook["last_price"],
         volume_24h=orderbook["volume_24h"],
         change_24h=orderbook["change_24h"],
+        high_24h=orderbook.get("high_24h"),
+        low_24h=orderbook.get("low_24h"),
     )
 
 
@@ -794,6 +880,11 @@ async def preview_order(
     quantity = Decimal(str(request.quantity)) if request.quantity else None
     limit_price = Decimal(str(request.limit_price)) if request.limit_price else None
 
+    # Get effective fee rate for this entity
+    fee_rate = await get_effective_fee_rate(
+        db, MarketType.CEA_CASH, "BID", current_user.entity_id
+    )
+
     # Get preview
     preview = await preview_buy_order(
         db=db,
@@ -801,6 +892,7 @@ async def preview_order(
         amount_eur=amount_eur,
         quantity=quantity,
         limit_price=limit_price,
+        order_type=request.order_type.value,
         all_or_none=request.all_or_none,
     )
 
@@ -826,7 +918,7 @@ async def preview_order(
         weighted_avg_price=float(preview.weighted_avg_price),
         best_price=float(preview.best_price) if preview.best_price else None,
         worst_price=float(preview.worst_price) if preview.worst_price else None,
-        platform_fee_rate=float(PLATFORM_FEE_RATE),
+        platform_fee_rate=float(fee_rate),
         platform_fee_amount=float(preview.platform_fee_amount),
         total_cost_net=float(preview.total_cost_net),
         net_price_per_unit=float(preview.net_price_per_unit),
@@ -835,6 +927,7 @@ async def preview_order(
         can_execute=preview.can_execute,
         execution_message=preview.execution_message,
         partial_fill=preview.partial_fill,
+        will_be_placed_in_book=preview.will_be_placed_in_book,
     )
 
 
@@ -850,6 +943,11 @@ async def execute_market_order(
     Market orders are filled immediately using FIFO price-time priority.
     A 0.5% platform fee is charged on the transaction value.
     """
+    logger.info(
+        f"Market order request: user={current_user.email}, side={request.side.value}, "
+        f"cert={request.certificate_type.value}, amount_eur={request.amount_eur}, qty={request.quantity}"
+    )
+
     if not current_user.entity_id:
         raise HTTPException(status_code=400, detail="User must have an entity to trade")
 
@@ -876,6 +974,11 @@ async def execute_market_order(
         amount_eur=amount_eur,
         quantity=quantity,
         all_or_none=request.all_or_none,
+    )
+
+    logger.info(
+        f"Market order executed: user={current_user.email}, success={result.success}, "
+        f"qty={result.total_quantity}, cost={result.total_cost_net}, trades={len(result.fills)}"
     )
 
     return OrderExecutionResponse(

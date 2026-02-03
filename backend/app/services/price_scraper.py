@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from ..core.security import RedisManager
 from ..models.models import (
     CertificateType,
+    ExchangeRateSource,
     PriceHistory,
     ScrapeLibrary,
     ScrapeStatus,
@@ -35,7 +36,7 @@ class PriceScraper:
     def __init__(self):
         self.last_eua_price = self.BASE_EUA_EUR
         self.last_cea_price = self.BASE_CEA_EUR
-        self.last_update = datetime.utcnow()
+        self.last_update = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def _apply_variance(self, base_price: float, max_variance: float = 0.02) -> float:
         """Apply realistic price variance (±2% by default)"""
@@ -358,21 +359,67 @@ class PriceScraper:
     async def refresh_source(self, source: ScrapingSource, db) -> None:
         """
         Refresh prices from a source and update the database.
+        For CEA sources, also calculates and stores the EUR-converted price.
         """
+        from sqlalchemy import update
 
         try:
             price = await self.scrape_source(source)
+            # Naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
 
             if price:
-                # Update source with new price
-                source.last_price = Decimal(str(price))
-                source.last_scrape_at = datetime.utcnow()
+                price_decimal = Decimal(str(price))
+
+                # For CEA, calculate EUR price using current exchange rate
+                price_eur = None
+                exchange_rate = None
+                if source.certificate_type == CertificateType.CEA:
+                    try:
+                        # Get CNY to EUR rate (price is in CNY, convert to EUR)
+                        rate = await currency_service.get_rate("CNY", "EUR")
+                        price_eur = (price_decimal * rate).quantize(
+                            Decimal("0.0001")
+                        )
+                        # Store the inverse rate (EUR/CNY) for display purposes
+                        exchange_rate = (Decimal("1.0") / rate).quantize(
+                            Decimal("0.00000001")
+                        )
+                        logger.info(
+                            f"CEA conversion: {price_decimal} CNY * {rate} = {price_eur} EUR "
+                            f"(rate EUR/CNY: {exchange_rate})"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to convert CEA price to EUR: {e}")
+
+                # Use explicit UPDATE statement to ensure all fields are updated
+                update_values = {
+                    "last_price": price_decimal,
+                    "last_scrape_at": now,
+                    "last_scrape_status": ScrapeStatus.SUCCESS,
+                }
+                if price_eur is not None:
+                    update_values["last_price_eur"] = price_eur
+                    update_values["last_exchange_rate"] = exchange_rate
+
+                await db.execute(
+                    update(ScrapingSource)
+                    .where(ScrapingSource.id == source.id)
+                    .values(**update_values)
+                )
+
+                # Update local object for logging
+                source.last_price = price_decimal
+                source.last_scrape_at = now
                 source.last_scrape_status = ScrapeStatus.SUCCESS
+                if price_eur is not None:
+                    source.last_price_eur = price_eur
+                    source.last_exchange_rate = exchange_rate
 
                 # Add to price history
                 history = PriceHistory(
                     certificate_type=source.certificate_type,
-                    price=Decimal(str(price)),
+                    price=price_decimal,
                     currency="EUR"
                     if source.certificate_type == CertificateType.EUA
                     else "CNY",
@@ -383,20 +430,44 @@ class PriceScraper:
                 await db.commit()
                 logger.info(f"Refreshed {source.name}: {price}")
             else:
-                source.last_scrape_at = datetime.utcnow()
-                source.last_scrape_status = ScrapeStatus.FAILED
+                # Use explicit UPDATE for failure case
+                await db.execute(
+                    update(ScrapingSource)
+                    .where(ScrapingSource.id == source.id)
+                    .values(
+                        last_scrape_at=now,
+                        last_scrape_status=ScrapeStatus.FAILED,
+                    )
+                )
                 await db.commit()
                 raise Exception("No price found")
 
         except asyncio.TimeoutError as e:
-            source.last_scrape_at = datetime.utcnow()
-            source.last_scrape_status = ScrapeStatus.TIMEOUT
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            await db.execute(
+                update(ScrapingSource)
+                .where(ScrapingSource.id == source.id)
+                .values(
+                    last_scrape_at=now,
+                    last_scrape_status=ScrapeStatus.TIMEOUT,
+                )
+            )
             await db.commit()
             raise Exception("Scrape timeout") from e
         except Exception:
-            source.last_scrape_at = datetime.utcnow()
-            source.last_scrape_status = ScrapeStatus.FAILED
-            await db.commit()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            try:
+                await db.execute(
+                    update(ScrapingSource)
+                    .where(ScrapingSource.id == source.id)
+                    .values(
+                        last_scrape_at=now,
+                        last_scrape_status=ScrapeStatus.FAILED,
+                    )
+                )
+                await db.commit()
+            except Exception:
+                pass  # Don't fail on update error during exception handling
             raise
 
     async def fetch_prices_from_web(self) -> Optional[Dict]:
@@ -465,7 +536,7 @@ class PriceScraper:
                         "change_24h": float(cached.get("cea_change", 0)),
                     },
                     "updated_at": cached.get(
-                        "updated_at", datetime.utcnow().isoformat()
+                        "updated_at", datetime.now(timezone.utc).isoformat()
                     ),
                 }
 
@@ -484,7 +555,7 @@ class PriceScraper:
         eua_change = round(random.uniform(-3, 3), 2)
         cea_change = round(random.uniform(-2, 2), 2)
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         prices = {
             "eua": {
@@ -524,7 +595,7 @@ class PriceScraper:
         from sqlalchemy import select
 
         days = hours // 24
-        start_date = datetime.utcnow() - timedelta(days=max(days, 1))
+        start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=max(days, 1))
 
         eua_data = []
         cea_data = []
@@ -601,13 +672,173 @@ class PriceScraper:
             else self.BASE_CEA_EUR
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         for i in range(days, -1, -1):
             timestamp = now - timedelta(days=i)
             eua_data.append({"price": base_eua_eur, "timestamp": timestamp.isoformat()})
             cea_data.append({"price": base_cea_eur, "timestamp": timestamp.isoformat()})
 
         return {"eua": eua_data, "cea": cea_data}
+
+    # ==================== Exchange Rate Scraping ====================
+
+    async def scrape_exchange_rate(self, source: ExchangeRateSource) -> Optional[float]:
+        """
+        Scrape exchange rate from a configured source.
+        Supports ECB XML feed and generic scraping.
+        """
+        url = source.url
+        config = source.config or {}
+
+        # Special handling for ECB XML feed
+        if "ecb.europa.eu" in url:
+            return await self._scrape_ecb_rate(source)
+
+        # Generic scraping based on library
+        library = source.scrape_library or ScrapeLibrary.HTTPX
+        if library == ScrapeLibrary.HTTPX:
+            result = await self.scrape_with_httpx(url, config)
+        elif library == ScrapeLibrary.BEAUTIFULSOUP:
+            result = await self.scrape_with_beautifulsoup(url, config)
+        else:
+            result = await self.scrape_with_httpx(url, config)
+
+        if not result or not result.get("success"):
+            error_msg = result.get("error", "Unknown error") if result else "No response"
+            raise Exception(f"Exchange rate scraping failed: {error_msg}")
+
+        # Extract rate based on config
+        rate = self._extract_exchange_rate(result, source, config)
+        return rate
+
+    async def _scrape_ecb_rate(self, source: ExchangeRateSource) -> Optional[float]:
+        """
+        Scrape EUR exchange rates from ECB XML feed.
+        URL: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+        """
+        import xml.etree.ElementTree as ET
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(source.url)
+
+                if response.status_code == 200:
+                    root = ET.fromstring(response.text)
+
+                    # ECB namespace
+                    ns = {
+                        "gesmes": "http://www.gesmes.org/xml/2002-08-01",
+                        "eurofxref": "http://www.ecb.int/vocabulary/2002-08-01/eurofxref",
+                    }
+
+                    # Find the Cube element with rates
+                    for cube in root.findall(".//eurofxref:Cube[@currency]", ns):
+                        currency = cube.get("currency")
+                        if currency == source.to_currency:
+                            rate = float(cube.get("rate"))
+                            logger.info(
+                                f"ECB rate {source.from_currency}/{currency}: {rate}"
+                            )
+                            return rate
+
+                    raise Exception(
+                        f"Currency {source.to_currency} not found in ECB feed"
+                    )
+                else:
+                    raise Exception(f"ECB API returned HTTP {response.status_code}")
+        except ET.ParseError as e:
+            logger.error(f"ECB XML parse error: {e}")
+            raise Exception(f"Failed to parse ECB XML: {e}") from e
+        except Exception as e:
+            logger.error(f"ECB rate scrape failed: {e}")
+            raise
+
+    def _extract_exchange_rate(
+        self, result: Dict, source: ExchangeRateSource, config: Dict
+    ) -> Optional[float]:
+        """Extract exchange rate from scraped content"""
+        content = result.get("content", "")
+        soup = result.get("soup")
+
+        # Check for CSS selector in config
+        if config.get("css_selector") and soup:
+            element = soup.select_one(config["css_selector"])
+            if element:
+                return self._parse_price(element.get_text())
+
+        # Check for regex pattern in config
+        if config.get("regex_pattern"):
+            match = re.search(config["regex_pattern"], content)
+            if match:
+                return self._parse_price(match.group(1))
+
+        return None
+
+    async def refresh_exchange_rate_source(
+        self, source: ExchangeRateSource, db
+    ) -> None:
+        """
+        Refresh exchange rate from a source and update the database.
+        """
+        from sqlalchemy import update
+
+        try:
+            rate = await self.scrape_exchange_rate(source)
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            if rate:
+                rate_decimal = Decimal(str(rate))
+
+                await db.execute(
+                    update(ExchangeRateSource)
+                    .where(ExchangeRateSource.id == source.id)
+                    .values(
+                        last_rate=rate_decimal,
+                        last_scraped_at=now,
+                        last_scrape_status=ScrapeStatus.SUCCESS,
+                    )
+                )
+                await db.commit()
+                logger.info(f"Refreshed exchange rate {source.name}: {rate}")
+            else:
+                await db.execute(
+                    update(ExchangeRateSource)
+                    .where(ExchangeRateSource.id == source.id)
+                    .values(
+                        last_scraped_at=now,
+                        last_scrape_status=ScrapeStatus.FAILED,
+                    )
+                )
+                await db.commit()
+                raise Exception("No rate found")
+        except asyncio.TimeoutError as e:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            await db.execute(
+                update(ExchangeRateSource)
+                .where(ExchangeRateSource.id == source.id)
+                .values(
+                    last_scraped_at=now,
+                    last_scrape_status=ScrapeStatus.TIMEOUT,
+                )
+            )
+            await db.commit()
+            raise Exception("Exchange rate scrape timeout") from e
+        except Exception:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            try:
+                await db.execute(
+                    update(ExchangeRateSource)
+                    .where(ExchangeRateSource.id == source.id)
+                    .values(
+                        last_scraped_at=now,
+                        last_scrape_status=ScrapeStatus.FAILED,
+                    )
+                )
+                await db.commit()
+            except Exception:
+                pass  # Don't fail on update error during exception handling
+            raise
 
 
 # Singleton instance

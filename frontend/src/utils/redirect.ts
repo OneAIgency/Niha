@@ -17,21 +17,36 @@ import type { User } from '../types';
  * ```
  */
 export function getPostLoginRedirect(user: User): string {
-  // Send specific users to onboarding (special case)
-  if (user.email === 'eu@eu.ro') {
+  // Rejected: no access
+  if (user.role === 'REJECTED') {
+    return '/login';
+  }
+
+  // NDA, KYC: onboarding (KYC form)
+  if (user.role === 'NDA' || user.role === 'KYC') {
     return '/onboarding';
   }
 
-  // PENDING users go to onboarding
-  if (user.role === 'PENDING') {
-    return '/onboarding';
-  }
-
-  // APPROVED users go to funding page
-  if (user.role === 'APPROVED') {
+  // APPROVED, FUNDING, AML: funding page
+  if (user.role === 'APPROVED' || user.role === 'FUNDING' || user.role === 'AML') {
     return '/funding';
   }
 
-  // FUNDED and ADMIN users go to dashboard
+  // CEA, CEA_SETTLE: dashboard
+  if (user.role === 'CEA' || user.role === 'CEA_SETTLE') {
+    return '/dashboard';
+  }
+
+  // SWAP: swap page (can execute CEA→EUA swap)
+  if (user.role === 'SWAP') {
+    return '/swap';
+  }
+
+  // EUA_SETTLE: dashboard (waiting for EUA settlement, no swap access)
+  if (user.role === 'EUA_SETTLE') {
+    return '/dashboard';
+  }
+
+  // MM (Market Maker), EUA, ADMIN: full access → dashboard
   return '/dashboard';
 }

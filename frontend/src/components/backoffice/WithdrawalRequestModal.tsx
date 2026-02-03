@@ -7,7 +7,8 @@
  */
 
 import React, { useState } from 'react';
-import { X, Loader2, AlertCircle, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
+import { X, Loader2, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
+import { AlertBanner } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type { AssetType, WithdrawalRequest } from '../../types';
 
@@ -109,19 +110,19 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
 
     try {
       const request: WithdrawalRequest = {
-        asset_type: assetType,
+        assetType: assetType,
         amount: parseFloat(amount),
-        client_notes: clientNotes || undefined,
+        clientNotes: clientNotes || undefined,
       };
 
       if (assetType === 'EUR') {
-        request.destination_bank = destinationBank || undefined;
-        request.destination_iban = destinationIban;
-        request.destination_swift = destinationSwift || undefined;
-        request.destination_account_holder = destinationAccountHolder || undefined;
+        request.destinationBank = destinationBank || undefined;
+        request.destinationIban = destinationIban;
+        request.destinationSwift = destinationSwift || undefined;
+        request.destinationAccountHolder = destinationAccountHolder || undefined;
       } else {
-        request.destination_registry = destinationRegistry;
-        request.destination_account_id = destinationAccountId;
+        request.destinationRegistry = destinationRegistry;
+        request.destinationAccountId = destinationAccountId;
       }
 
       const result = await withdrawalApi.requestWithdrawal(request);
@@ -199,10 +200,7 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Error Alert */}
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                <span className="text-red-400 text-sm">{error}</span>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             {/* Asset Type Selection */}

@@ -1,7 +1,7 @@
 """Logging and Audit Trail API endpoints"""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 from uuid import UUID
 
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
-from ...models.models import TicketLog, TicketStatus, User
+from ...models.models import Entity, TicketLog, TicketStatus, User
 from ...schemas.schemas import TicketLogResponse, TicketLogStats
 
 logger = logging.getLogger(__name__)
@@ -242,16 +242,17 @@ async def get_logging_stats(
     result = await db.execute(action_type_query)
     by_action_type = {row.action_type: row.count for row in result}
 
-    # Top users by action count
+    # Top users by action count (join with Entity for company name)
     user_query = (
         select(
             TicketLog.user_id,
             User.email,
-            User.company_name,
+            Entity.name.label("company_name"),
             func.count().label("action_count"),
         )
         .join(User, TicketLog.user_id == User.id, isouter=True)
-        .group_by(TicketLog.user_id, User.email, User.company_name)
+        .join(Entity, User.entity_id == Entity.id, isouter=True)
+        .group_by(TicketLog.user_id, User.email, Entity.name)
         .order_by(desc("action_count"))
         .limit(10)
     )
@@ -271,8 +272,9 @@ async def get_logging_stats(
     ]
 
     # Actions over time (daily aggregation for last 30 days if no date range specified)
+    # Use naive UTC for DB query
     if not start_date:
-        time_start = datetime.utcnow() - timedelta(days=30)
+        time_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
     else:
         time_start = start_date
 

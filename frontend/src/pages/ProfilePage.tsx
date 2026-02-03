@@ -12,16 +12,16 @@ import {
   Key,
   Eye,
   EyeOff,
-  Check,
   AlertCircle,
-  X,
-  CheckCircle,
+  FlaskConical,
+  Wallet,
+  RefreshCw,
 } from 'lucide-react';
-import { Button, Card, Badge, Input, Subheader } from '../components/common';
+import { Button, Card, Badge, Input, Subheader, NumberInput, formatNumberWithSeparators, AlertBanner } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
-import { usersApi } from '../services/api';
+import { usersApi, adminApi } from '../services/api';
 import { formatRelativeTime } from '../utils';
-import type { Entity } from '../types';
+import type { Entity, EntityBalances } from '../types';
 
 export function ProfilePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -36,17 +36,17 @@ export function ProfilePage() {
 
   // Editable form state
   const [formData, setFormData] = useState({
-    first_name: user?.first_name || '',
-    last_name: user?.last_name || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     phone: user?.phone || '',
     position: user?.position || '',
   });
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -55,11 +55,22 @@ export function ProfilePage() {
   });
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
+  // Testing tools state (admin only)
+  const [selectedRole, setSelectedRole] = useState<string>(user?.role || 'ADMIN');
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [creditAssetType, setCreditAssetType] = useState<'EUR' | 'CEA' | 'EUA'>('EUR');
+  const [creditAmount, setCreditAmount] = useState('10000');
+  const [isCrediting, setIsCrediting] = useState(false);
+  const [balances, setBalances] = useState<EntityBalances | null>(null);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+
   /**
    * Load profile and entity data on component mount.
    * Fetches fresh data from API to ensure up-to-date information.
    */
   useEffect(() => {
+    if (!user) return; // Skip if user not loaded yet
+
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
@@ -67,8 +78,8 @@ export function ProfilePage() {
         // Load fresh profile data from API
         const profile = await usersApi.getProfile();
         setFormData({
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
           phone: profile.phone || '',
           position: profile.position || '',
         });
@@ -88,19 +99,28 @@ export function ProfilePage() {
     };
 
     loadData();
-  }, []);
+  }, [user]);
 
   // Update form data when user changes (from auth store)
   useEffect(() => {
     if (user) {
       setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         phone: user.phone || '',
         position: user.position || '',
       });
     }
   }, [user]);
+
+  // Early return if user is not loaded yet (after all hooks)
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
 
   /**
    * Save profile changes to the backend.
@@ -113,8 +133,8 @@ export function ProfilePage() {
     setSuccessMessage(null);
     try {
       const updatedUser = await usersApi.updateProfile({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         phone: formData.phone,
         position: formData.position,
       });
@@ -166,14 +186,14 @@ export function ProfilePage() {
     setSuccessMessage(null);
 
     // Validate password strength (frontend validation)
-    const errors = validatePassword(passwordForm.new_password);
+    const errors = validatePassword(passwordForm.newPassword);
     if (errors.length > 0) {
       setPasswordErrors(errors);
       return;
     }
 
     // Check password confirmation match
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordErrors(['Passwords do not match']);
       return;
     }
@@ -181,13 +201,13 @@ export function ProfilePage() {
     setIsSaving(true);
     try {
       await usersApi.changePassword(
-        passwordForm.current_password,
-        passwordForm.new_password
+        passwordForm.currentPassword,
+        passwordForm.newPassword
       );
       setSuccessMessage('Password changed successfully');
       setShowPasswordForm(false);
       // Clear form on success
-      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPasswordErrors([]);
       // Auto-dismiss success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -208,9 +228,86 @@ export function ProfilePage() {
     }
   };
 
+  // Available roles for testing
+  const ALL_ROLES = [
+    'ADMIN', 'MM', 'NDA', 'REJECTED', 'KYC', 'APPROVED',
+    'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'
+  ];
+
+  /**
+   * Load admin balances for testing tools
+   */
+  const loadBalances = async () => {
+    if (!isAdmin) return;
+    setIsLoadingBalances(true);
+    try {
+      const data = await adminApi.getMyBalances();
+      setBalances(data);
+    } catch (err) {
+      console.error('Failed to load balances:', err);
+    } finally {
+      setIsLoadingBalances(false);
+    }
+  };
+
+  // Load balances on mount for admin
+  useEffect(() => {
+    if (isAdmin && user?.entityId) {
+      loadBalances();
+    }
+  }, [isAdmin, user?.entityId]);
+
+  /**
+   * Change admin role for testing
+   */
+  const handleChangeRole = async () => {
+    setIsChangingRole(true);
+    setError(null);
+    try {
+      const updatedUser = await adminApi.updateMyRole(selectedRole);
+      if (token) {
+        setAuth(updatedUser, token);
+      }
+      setSuccessMessage(`Role changed to ${selectedRole}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      console.error('Failed to change role:', err);
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to change role');
+    } finally {
+      setIsChangingRole(false);
+    }
+  };
+
+  /**
+   * Credit assets to admin entity
+   */
+  const handleCreditAssets = async () => {
+    const amount = parseFloat(creditAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    setIsCrediting(true);
+    setError(null);
+    try {
+      const newBalances = await adminApi.creditMyEntity(creditAssetType, amount);
+      setBalances(newBalances);
+      setSuccessMessage(`Credited ${formatNumberWithSeparators(amount)} ${creditAssetType}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      console.error('Failed to credit assets:', err);
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to credit assets');
+    } finally {
+      setIsCrediting(false);
+    }
+  };
+
   const getInitials = () => {
-    if (user?.first_name && user?.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
     return user?.email?.substring(0, 2).toUpperCase() || '??';
   };
@@ -219,11 +316,9 @@ export function ProfilePage() {
     switch (role) {
       case 'ADMIN':
         return 'default';
-      case 'FUNDED':
-        return 'success';
-      case 'APPROVED':
+      case 'MM':
         return 'info';
-      case 'PENDING':
+      case 'NDA':
         return 'warning';
       default:
         return 'default';
@@ -249,42 +344,32 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div className="min-h-screen bg-navy-900">
       <Subheader
         icon={<User className="w-5 h-5 text-emerald-500" />}
         title="My Profile"
         description="Manage your personal information and security settings"
         iconBg="bg-emerald-500/20"
       />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="page-container py-8">
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-700 dark:hover:text-red-300"
-              aria-label="Dismiss error"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <AlertBanner
+            variant="error"
+            message={error}
+            onDismiss={() => setError(null)}
+            className="mb-4"
+          />
         )}
 
         {/* Success Display */}
         {successMessage && (
-          <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1">{successMessage}</span>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300"
-              aria-label="Dismiss success message"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <AlertBanner
+            variant="success"
+            message={successMessage}
+            onDismiss={() => setSuccessMessage(null)}
+            className="mb-4"
+          />
         )}
 
         {isLoading ? (
@@ -327,8 +412,8 @@ export function ProfilePage() {
                         onClick={() => {
                           setIsEditing(false);
                           setFormData({
-                            first_name: user?.first_name || '',
-                            last_name: user?.last_name || '',
+                            firstName: user?.firstName || '',
+                            lastName: user?.lastName || '',
                             phone: user?.phone || '',
                             position: user?.position || '',
                           });
@@ -355,7 +440,7 @@ export function ProfilePage() {
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
                     {getInitials()}
                   </div>
-                  <Badge variant={getRoleBadgeVariant(user?.role || 'PENDING')} className="mt-3">
+                  <Badge variant={getRoleBadgeVariant(user?.role || 'NDA')} className="mt-3">
                     {user?.role?.toUpperCase()}
                   </Badge>
                 </div>
@@ -366,14 +451,14 @@ export function ProfilePage() {
                     <>
                       <Input
                         label="First Name"
-                        value={formData.first_name}
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                         placeholder="Enter first name"
                       />
                       <Input
                         label="Last Name"
-                        value={formData.last_name}
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                         placeholder="Enter last name"
                       />
                       <Input
@@ -398,8 +483,8 @@ export function ProfilePage() {
                           Full Name
                         </label>
                         <p className="text-navy-900 dark:text-white font-medium">
-                          {user?.first_name && user?.last_name
-                            ? `${user.first_name} ${user.last_name}`
+                          {user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
                             : 'Not set'}
                         </p>
                       </div>
@@ -462,7 +547,7 @@ export function ProfilePage() {
                       Legal Name
                     </label>
                     <p className="text-navy-900 dark:text-white font-medium">
-                      {entity.legal_name || entity.name}
+                      {entity.legalName || entity.name}
                     </p>
                   </div>
                   <div>
@@ -478,40 +563,144 @@ export function ProfilePage() {
                     <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
                       KYC Status
                     </label>
-                    <Badge variant={getKycBadgeVariant(entity.kyc_status)}>
-                      {entity.kyc_status.toUpperCase()}
+                    <Badge variant={getKycBadgeVariant(entity.kycStatus || 'pending')}>
+                      {(entity.kycStatus || 'pending').toUpperCase()}
                     </Badge>
                   </div>
                 </div>
 
-                {entity.verified && (
-                  <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-emerald-900 dark:text-emerald-100">
-                        Verified Entity
-                      </p>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        Your entity has been verified and approved for trading
-                      </p>
-                    </div>
-                  </div>
-                )}
               </Card>
             </motion.div>
           )}
 
-          {/* Security Card */}
+          {/* Testing Tools Card - Admin only */}
+          {isAdmin && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
+            <Card className="border-2 border-dashed border-amber-500/30 bg-amber-500/5">
+              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+                <FlaskConical className="w-5 h-5 text-amber-500" />
+                Testing Tools
+                <Badge variant="warning" className="ml-2">Admin Only</Badge>
+              </h2>
+
+              <div className="space-y-6">
+                {/* Role Changer */}
+                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-amber-500" />
+                    Change My Role
+                  </h3>
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                    Test the UI from different user perspectives. Note: ADMIN always has access to all features
+                    regardless of displayed role - this only changes what role-specific UI elements are shown.
+                  </p>
+                  <div className="flex gap-3">
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    >
+                      {ALL_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role} {role === user?.role ? '(current)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="primary"
+                      onClick={handleChangeRole}
+                      loading={isChangingRole}
+                      disabled={selectedRole === user?.role}
+                      className="bg-amber-500 hover:bg-amber-600"
+                    >
+                      Change Role
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Asset Credit */}
+                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-amber-500" />
+                    Credit Assets to My Entity
+                  </h3>
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                    Add funds or certificates for testing trading
+                  </p>
+                  <div className="flex gap-3 mb-4">
+                    <select
+                      value={creditAssetType}
+                      onChange={(e) => setCreditAssetType(e.target.value as 'EUR' | 'CEA' | 'EUA')}
+                      className="w-32 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    >
+                      <option value="EUR">EUR</option>
+                      <option value="CEA">CEA</option>
+                      <option value="EUA">EUA</option>
+                    </select>
+                    <NumberInput
+                      value={creditAmount}
+                      onChange={setCreditAmount}
+                      decimals={creditAssetType === 'EUR' ? 2 : 0}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={handleCreditAssets}
+                      loading={isCrediting}
+                      className="bg-amber-500 hover:bg-amber-600"
+                    >
+                      Credit
+                    </Button>
+                  </div>
+
+                  {/* Current Balances */}
+                  <div className="flex items-center gap-4 pt-3 border-t border-navy-200 dark:border-navy-600">
+                    <span className="text-sm text-navy-500 dark:text-navy-400">Current Balances:</span>
+                    {isLoadingBalances ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-navy-400" />
+                    ) : balances ? (
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-emerald-500 font-medium">
+                          €{formatNumberWithSeparators(balances.eur, 'en-US', 2)}
+                        </span>
+                        <span className="text-blue-500 font-medium">
+                          {formatNumberWithSeparators(balances.cea, 'en-US', 0)} CEA
+                        </span>
+                        <span className="text-navy-500 font-medium">
+                          {formatNumberWithSeparators(balances.eua, 'en-US', 0)} EUA
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-navy-400">No entity associated</span>
+                    )}
+                    <button
+                      onClick={loadBalances}
+                      className="ml-auto text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                      title="Refresh balances"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoadingBalances ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+          )}
+
+          {/* Security Card - Admin only */}
+          {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <Card>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-500" />
+                <Shield className="w-5 h-5 text-navy-500" />
                 Security
               </h2>
 
@@ -525,8 +714,8 @@ export function ProfilePage() {
                     <div>
                       <p className="font-medium text-navy-900 dark:text-white">Last Login</p>
                       <p className="text-sm text-navy-500 dark:text-navy-400">
-                        {user?.last_login
-                          ? formatRelativeTime(user.last_login)
+                        {user?.lastLogin
+                          ? formatRelativeTime(user.lastLogin)
                           : 'First session'}
                       </p>
                     </div>
@@ -575,9 +764,9 @@ export function ProfilePage() {
                         <Input
                           label="Current Password"
                           type={showPasswords.current ? 'text' : 'password'}
-                          value={passwordForm.current_password}
+                          value={passwordForm.currentPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, current_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
                           }
                           placeholder="Enter current password"
                         />
@@ -601,9 +790,9 @@ export function ProfilePage() {
                         <Input
                           label="New Password"
                           type={showPasswords.new ? 'text' : 'password'}
-                          value={passwordForm.new_password}
+                          value={passwordForm.newPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, new_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, newPassword: e.target.value })
                           }
                           placeholder="Enter new password"
                         />
@@ -627,9 +816,9 @@ export function ProfilePage() {
                         <Input
                           label="Confirm New Password"
                           type={showPasswords.confirm ? 'text' : 'password'}
-                          value={passwordForm.confirm_password}
+                          value={passwordForm.confirmPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, confirm_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
                           }
                           placeholder="Confirm new password"
                         />
@@ -691,6 +880,7 @@ export function ProfilePage() {
               </div>
             </Card>
           </motion.div>
+          )}
           </div>
         )}
       </div>

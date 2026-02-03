@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Loader2 } from 'lucide-react';
 import { Card } from '../common/Card';
-import { Button } from '../common';
+import { Button, NumberInput, AlertBanner } from '../common';
 import { getMarketMakers, getMarketMakerBalances, placeMarketMakerOrder } from '../../services/api';
 import type { CertificateType } from '../../types';
 import { MarketMakerOrdersList } from './MarketMakerOrdersList';
@@ -18,10 +18,10 @@ interface MarketMaker {
   id: string;
   name: string;
   email?: string;
-  is_active: boolean;
-  cea_balance: number;
-  eua_balance: number;
-  mm_type?: string;
+  isActive: boolean;
+  ceaBalance: number;
+  euaBalance: number;
+  mmType?: string;
 }
 
 export function PlaceMarketOrderSection({
@@ -32,7 +32,7 @@ export function PlaceMarketOrderSection({
 }: PlaceMarketOrderSectionProps) {
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
-  const [mmBalance, setMmBalance] = useState<{ cea_balance: number; eua_balance: number } | null>(
+  const [mmBalance, setMmBalance] = useState<{ ceaBalance: number; euaBalance: number } | null>(
     null
   );
   const [price, setPrice] = useState('');
@@ -50,7 +50,7 @@ export function PlaceMarketOrderSection({
         const data = await getMarketMakers({ is_active: true });
         // Filter only CEA cash sellers with CEA balance > 0
         const ceaCashSellers = data.filter((mm: MarketMaker) => 
-          mm.mm_type === 'CEA_CASH_SELLER' && mm.cea_balance > 0
+          mm.mmType === 'CEA_SELLER' && mm.ceaBalance > 0
         );
         setMarketMakers(ceaCashSellers);
       } catch (err) {
@@ -106,7 +106,7 @@ export function PlaceMarketOrderSection({
 
     // Check balance
     if (mmBalance) {
-      const balance = certificateType === 'CEA' ? mmBalance.cea_balance : mmBalance.eua_balance;
+      const balance = certificateType === 'CEA' ? mmBalance.ceaBalance : mmBalance.euaBalance;
       if (quantityNum > balance) {
         setError(`Insufficient balance. Available: ${balance.toLocaleString()} ${certificateType}`);
         return;
@@ -124,8 +124,8 @@ export function PlaceMarketOrderSection({
         quantity: quantityNum,
       });
 
-      // Show success with ticket_id
-      const ticketId = response.data?.ticket_id || 'N/A';
+      // Show success with ticketId
+      const ticketId = response.data?.ticketId || 'N/A';
       setSuccess(`Order placed successfully! Ticket ID: ${ticketId}`);
 
       // Reset form
@@ -153,8 +153,8 @@ export function PlaceMarketOrderSection({
   const selectedMMData = marketMakers.find(mm => mm.id === selectedMM);
   const availableBalance = mmBalance
     ? certificateType === 'CEA'
-      ? mmBalance.cea_balance
-      : mmBalance.eua_balance
+      ? mmBalance.ceaBalance
+      : mmBalance.euaBalance
     : 0;
 
   return (
@@ -187,7 +187,7 @@ export function PlaceMarketOrderSection({
                 <option value="">Select a market maker</option>
                 {marketMakers.map((mm) => (
                   <option key={mm.id} value={mm.id}>
-                    {mm.name} - {Number(mm.cea_balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} CEA available
+                    {mm.name} - {Number(mm.ceaBalance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} CEA available
                   </option>
                 ))}
               </select>
@@ -224,60 +224,36 @@ export function PlaceMarketOrderSection({
 
           {/* Price */}
           <div>
-            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
-              Price (EUR) *
-            </label>
-            <input
-              type="number"
+            <NumberInput
+              label="Price (EUR) *"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-              required
+              onChange={setPrice}
+              placeholder="0.0"
+              suffix="EUR"
+              decimals={2}
             />
           </div>
 
           {/* Quantity */}
           <div>
-            <label className={`block text-sm ${compact ? 'font-semibold' : 'font-medium'} text-navy-700 dark:text-navy-300 ${compact ? 'mb-2' : 'mb-2'}`}>
-              Quantity ({certificateType}) *
-            </label>
-            <input
-              type="number"
+            <NumberInput
+              label={`Quantity (${certificateType}) *`}
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              step="1"
-              min="1"
+              onChange={setQuantity}
               placeholder="0"
-              className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-              required
+              suffix={certificateType}
+              decimals={0}
             />
           </div>
 
           {/* Error Message */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`${compact ? 'p-2' : 'p-3'} bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400`}
-            >
-              <AlertCircle className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} flex-shrink-0`} />
-              <span className={`${compact ? 'text-xs' : 'text-sm'}`}>{error}</span>
-            </motion.div>
+            <AlertBanner variant="error" message={error} />
           )}
 
           {/* Success Message */}
           {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`${compact ? 'p-2' : 'p-3'} bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-600 dark:text-emerald-400`}
-            >
-              <CheckCircle className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} flex-shrink-0`} />
-              <span className={`${compact ? 'text-xs' : 'text-sm'}`}>{success}</span>
-            </motion.div>
+            <AlertBanner variant="success" message={success} />
           )}
 
           {/* Submit Button */}

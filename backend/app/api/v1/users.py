@@ -1,6 +1,6 @@
 import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,10 +20,13 @@ from ...models.models import (
     Deposit,
     DepositStatus,
     Entity,
+    TicketStatus,
     User,
     UserRole,
     UserSession,
 )
+from ...services import deposit_service
+from ...services.ticket_service import TicketService
 from ...schemas.schemas import (
     ActivityLogResponse,
     MessageResponse,
@@ -177,8 +180,8 @@ async def get_my_sessions(
     """
     Get current user's session history.
     """
-    # Get recent sessions (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # Get recent sessions (last 30 days) - use naive UTC for DB query
+    thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
 
     query = (
         select(UserSession)
@@ -241,15 +244,28 @@ async def report_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Report a wire transfer deposit (APPROVED users only).
+    Report a wire transfer deposit (APPROVED and beyond, ADMIN, or MM users).
     Creates a pending deposit that backoffice will confirm when funds arrive.
+    Also transitions APPROVED users to FUNDING role on first deposit.
     """
-    # Only APPROVED users can report deposits
-    if current_user.role != UserRole.APPROVED:
+    # Match get_approved_user: APPROVED through EUA, plus ADMIN and MM
+    allowed_roles = (
+        UserRole.ADMIN,
+        UserRole.MM,
+        UserRole.APPROVED,
+        UserRole.FUNDING,
+        UserRole.AML,
+        UserRole.CEA,
+        UserRole.CEA_SETTLE,
+        UserRole.SWAP,
+        UserRole.EUA_SETTLE,
+        UserRole.EUA,
+    )
+    if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=403,
             detail=(
-                "Only APPROVED users can report deposits. "
+                "Only APPROVED users and beyond can report deposits. "
                 "Complete KYC verification first."
             ),
         )
@@ -260,28 +276,67 @@ async def report_deposit(
             detail="User must be associated with an entity to report deposits",
         )
 
-    # Generate bank reference
-    chars = string.ascii_uppercase + string.digits
-    bank_ref = f"DEP-{''.join(secrets.choice(chars) for _ in range(8))}"
+    # Capture before state for audit
+    before_state = await TicketService.get_entity_state(db, "User", current_user.id)
 
-    # Create pending deposit
-    deposit = Deposit(
-        entity_id=current_user.entity_id,
-        reported_amount=Decimal(str(deposit_data.amount)),
-        reported_currency=Currency(deposit_data.currency.value),
-        wire_reference=deposit_data.wire_reference,
-        bank_reference=bank_ref,
-        status=DepositStatus.PENDING,
-        reported_at=datetime.utcnow(),
+    # Use deposit_service which handles role transition APPROVED → FUNDING
+    try:
+        deposit = await deposit_service.announce_deposit(
+            db=db,
+            entity_id=current_user.entity_id,
+            user_id=current_user.id,
+            reported_amount=Decimal(str(deposit_data.amount)),
+            reported_currency=Currency(deposit_data.currency.value),
+            source_bank=None,
+            source_iban=None,
+            source_swift=None,
+            client_notes=deposit_data.wire_reference,
+        )
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to announce deposit for user {current_user.id}: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Rollback to prevent partial state on failure
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create deposit: {str(e)}"
+        )
+
+    # Capture after state
+    after_state = await TicketService.get_entity_state(db, "User", current_user.id)
+
+    # Create audit ticket
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="DEPOSIT_ANNOUNCED",
+        entity_type="Deposit",
+        entity_id=deposit.id,
+        status=TicketStatus.SUCCESS,
+        user_id=current_user.id,
+        request_payload={
+            "amount": float(deposit_data.amount),
+            "currency": deposit_data.currency.value,
+            "wire_reference": deposit_data.wire_reference,
+        },
+        response_data={
+            "deposit_id": str(deposit.id),
+            "bank_reference": deposit.bank_reference,
+        },
+        before_state=before_state,
+        after_state=after_state,
+        tags=["deposit", "funding"],
     )
 
-    db.add(deposit)
     await db.commit()
 
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"reported. Reference: {bank_ref}. Awaiting confirmation."
+            f"reported. Reference: {deposit.bank_reference}. "
+            f"Ticket: {ticket.ticket_id}. Awaiting confirmation."
         )
     )
 
@@ -323,6 +378,7 @@ async def get_my_deposits(
             if d.confirmed_at
             else None,
             "notes": d.notes,
+            "ticket_id": d.ticket_id,
             "created_at": d.created_at.isoformat() + "Z",
         }
         for d in deposits
@@ -429,10 +485,11 @@ async def get_funding_instructions(current_user: User = Depends(get_current_user
     Get wire transfer instructions for funding.
     """
     return {
-        "bank_name": "Nihao Group International Bank",
-        "account_name": "Nihao Carbon Trading Ltd",
-        "iban": "LU12 3456 7890 1234 5678",
-        "swift_bic": "NIHALU2X",
+        "bank_name": "HSBC Hong Kong",
+        "bank_address": "1 Queen's Road Central, Hong Kong",
+        "account_name": "Italy Nihao Group Limited",
+        "account_number": "053532610838",
+        "swift_bic": "HSBCHKHHHKH",
         "reference_instructions": (
             "Please include your entity name and the reference number "
             "provided after reporting your deposit."

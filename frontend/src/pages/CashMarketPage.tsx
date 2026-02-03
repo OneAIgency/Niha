@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
-  TradingOrderBook,
+  ProfessionalOrderBook,
   MyOrders,
   UserOrderEntryModal,
 } from '../components/cash-market';
@@ -20,9 +20,9 @@ export function CashMarketPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
   const [userBalances, setUserBalances] = useState<{
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
   } | null>(null);
 
   // Fetch all market data
@@ -84,12 +84,12 @@ export function CashMarketPage() {
           limit_price: order.limitPrice,
         });
 
-        if (preview.can_execute && order.limitPrice) {
+        if (preview.canExecute && order.limitPrice) {
           await cashMarketApi.placeOrder({
             certificate_type: certificateType,
             side: 'BUY',
             price: order.limitPrice,
-            quantity: preview.total_quantity,
+            quantity: preview.totalQuantity,
           });
 
           // Refresh data after placing order
@@ -135,11 +135,11 @@ export function CashMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950 text-[11px]">
+    <div className="min-h-screen bg-navy-900 text-[11px]">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
-        title="CEA Cash Market"
+        title="CEA Cash"
         description="Trade China Emission Allowances"
         iconBg="bg-amber-500/20"
       >
@@ -148,7 +148,7 @@ export function CashMarketPage() {
           <div>
             <span className="text-navy-400 mr-1 text-[10px]">Last</span>
             <span className="font-bold font-mono text-white text-sm">
-              €{formatNumber(orderBook?.last_price)}
+              €{formatNumber(orderBook?.lastPrice)}
             </span>
           </div>
 
@@ -157,16 +157,16 @@ export function CashMarketPage() {
             <span className="text-navy-400 text-[10px]">24h</span>
             {orderBook && (
               <span className={`flex items-center font-semibold ${
-                orderBook.change_24h >= 0
+                orderBook.change24h >= 0
                   ? 'text-emerald-400'
                   : 'text-red-400'
               }`}>
-                {orderBook.change_24h >= 0 ? (
+                {orderBook.change24h >= 0 ? (
                   <TrendingUp className="w-3 h-3 mr-0.5" />
                 ) : (
                   <TrendingDown className="w-3 h-3 mr-0.5" />
                 )}
-                {orderBook.change_24h >= 0 ? '+' : ''}{orderBook.change_24h.toFixed(2)}%
+                {orderBook.change24h >= 0 ? '+' : ''}{orderBook.change24h.toFixed(2)}%
               </span>
             )}
           </div>
@@ -175,7 +175,7 @@ export function CashMarketPage() {
           <div>
             <span className="text-navy-400 mr-1 text-[10px]">Vol</span>
             <span className="font-semibold text-navy-300 font-mono">
-              {orderBook ? formatVolume(orderBook.volume_24h) : '-'}
+              {orderBook ? formatVolume(orderBook.volume24h) : '-'}
             </span>
           </div>
 
@@ -215,8 +215,8 @@ export function CashMarketPage() {
             <div className="p-6">
               <UserOrderEntryModal
                 certificateType={certificateType}
-                availableBalance={userBalances.eur_balance}
-                bestAskPrice={orderBook?.best_ask || null}
+                availableBalance={userBalances.eurBalance}
+                bestAskPrice={orderBook?.bestAsk || null}
                 onOrderSubmit={async (order) => {
                   await handleMarketOrderSubmit(order);
                   setIsOrderPanelOpen(false);
@@ -228,34 +228,35 @@ export function CashMarketPage() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="page-container py-4">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
             <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Trading Order Book with Depth Chart */}
-            <div className="w-full">
-              {orderBook && (
-                <TradingOrderBook
-                  bids={orderBook.bids}
-                  asks={orderBook.asks}
-                  spread={orderBook.spread}
-                  bestBid={orderBook.best_bid}
-                  bestAsk={orderBook.best_ask}
-                />
-              )}
-            </div>
-
-            {/* My Orders - Full Width */}
-            <div className="w-full">
-              <div className="h-[450px]">
-                <MyOrders
-                  orders={myOrders}
-                  onCancelOrder={handleCancelOrder}
+          <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 180px)' }}>
+            {/* Order Book with Market Depth Visualization - Same style as backoffice */}
+            {orderBook && (
+              <div className="flex-1 min-h-0">
+                <ProfessionalOrderBook
+                  orderBook={{
+                    bids: orderBook.bids,
+                    asks: orderBook.asks,
+                    spread: orderBook.spread,
+                    bestBid: orderBook.bestBid,
+                    bestAsk: orderBook.bestAsk,
+                  }}
+                  showFullBook={true}
                 />
               </div>
+            )}
+
+            {/* My Orders - Full Width */}
+            <div className="w-full flex-shrink-0 h-[300px]">
+              <MyOrders
+                orders={myOrders}
+                onCancelOrder={handleCancelOrder}
+              />
             </div>
           </div>
         )}

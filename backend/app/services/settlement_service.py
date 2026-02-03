@@ -6,7 +6,7 @@ for CEA purchases and CEA→EUA swaps through external registries.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -58,7 +58,7 @@ class SettlementService:
         db: AsyncSession, settlement_type: SettlementType, asset_type: CertificateType
     ) -> str:
         """Generate unique settlement batch reference: SET-YYYY-NNNNNN-TYPE"""
-        year = datetime.utcnow().year
+        year = datetime.now(timezone.utc).year
         asset_suffix = asset_type.value
 
         result = await db.execute(
@@ -86,7 +86,7 @@ class SettlementService:
     ) -> SettlementBatch:
         """Create settlement batch for CEA purchase (T+3)"""
         try:
-            today = datetime.utcnow()
+            today = datetime.now(timezone.utc).replace(tzinfo=None)
             expected_date = SettlementService.calculate_business_days(today, 3)
             batch_reference = await SettlementService.generate_batch_reference(
                 db, SettlementType.CEA_PURCHASE, CertificateType.CEA
@@ -217,7 +217,7 @@ class SettlementService:
                 raise ValueError(f"Invalid transition: {old_status} -> {new_status}")
 
             settlement.status = new_status
-            settlement.updated_at = datetime.utcnow()
+            settlement.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             history = SettlementStatusHistory(
                 settlement_batch_id=settlement_id,
@@ -229,6 +229,18 @@ class SettlementService:
 
             if new_status == SettlementStatus.SETTLED:
                 await SettlementService.finalize_settlement(db, settlement, updated_by)
+                # Role transitions (0010): CEA_SETTLE→SWAP, SWAP→EUA_SETTLE, EUA_SETTLE→EUA
+                from .role_transitions import (
+                    transition_cea_settle_to_swap_if_all_cea_settled,
+                    transition_eua_settle_to_eua_if_all_swap_settled,
+                    transition_swap_to_eua_settle_if_cea_zero,
+                )
+                entity_id = settlement.entity_id
+                if settlement.settlement_type == SettlementType.CEA_PURCHASE:
+                    await transition_cea_settle_to_swap_if_all_cea_settled(db, entity_id)
+                elif settlement.settlement_type == SettlementType.SWAP_CEA_TO_EUA:
+                    await transition_swap_to_eua_settle_if_cea_zero(db, entity_id)
+                    await transition_eua_settle_to_eua_if_all_swap_settled(db, entity_id)
 
             await db.commit()
 
@@ -323,7 +335,7 @@ class SettlementService:
     ):
         """Finalize settlement - update EntityHolding"""
         try:
-            settlement.actual_settlement_date = datetime.utcnow()
+            settlement.actual_settlement_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
             asset_type_enum = (
                 AssetType.CEA
@@ -354,7 +366,7 @@ class SettlementService:
                 balance_before = holding.quantity
 
             holding.quantity += settlement.quantity
-            holding.updated_at = datetime.utcnow()
+            holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             transaction = AssetTransaction(
                 entity_id=settlement.entity_id,

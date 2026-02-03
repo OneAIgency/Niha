@@ -8,8 +8,8 @@ interface CreateUserModalProps {
   onClose: () => void;
   newUser: {
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     position: string;
     password: string;
     role: UserRole;
@@ -62,14 +62,14 @@ export function CreateUserModal({
             <Input
               label="First Name"
               placeholder="John"
-              value={newUser.first_name}
-              onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+              value={newUser.firstName}
+              onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
             />
             <Input
               label="Last Name"
               placeholder="Smith"
-              value={newUser.last_name}
-              onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+              value={newUser.lastName}
+              onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
             />
           </div>
           <Input
@@ -87,9 +87,18 @@ export function CreateUserModal({
               onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
               className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
             >
-              <option value="PENDING">Pending</option>
+              <option value="MM">MM (Market Maker)</option>
+              <option value="NDA">NDA</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="KYC">KYC</option>
               <option value="APPROVED">Approved</option>
-              <option value="FUNDED">Funded</option>
+              <option value="FUNDING">Funding</option>
+              <option value="AML">AML</option>
+              <option value="CEA">CEA</option>
+              <option value="CEA_SETTLE">CEA Settle</option>
+              <option value="SWAP">Swap</option>
+              <option value="EUA_SETTLE">EUA Settle</option>
+              <option value="EUA">EUA</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>
@@ -134,7 +143,7 @@ export function CreateUserModal({
             variant="primary"
             onClick={onSubmit}
             loading={saving}
-            disabled={!newUser.email || !newUser.first_name || !newUser.last_name || (!useInvitation && newUser.password.length < 8)}
+            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || (!useInvitation && newUser.password.length < 8)}
           >
             {useInvitation ? (
               <>

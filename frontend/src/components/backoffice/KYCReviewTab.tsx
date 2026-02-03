@@ -78,8 +78,8 @@ export const KYCReviewTab: FC<KYCReviewTabProps> = memo(({
                 key={user.id}
                 userId={user.id}
                 userEmail={user.email}
-                userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                entityName={user.entity_name}
+                userName={`${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                entityName={user.entityName}
                 documents={userDocs}
                 onDocumentApprove={async (docId) => {
                   setActionLoading(`approve-${docId}`);

@@ -2,33 +2,45 @@ import asyncio
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.exceptions import handle_database_error
-from ...core.security import get_admin_user, hash_password
+from ...core.security import get_admin_user, get_current_user, hash_password
 from ...models.models import (
     ActivityLog,
     AuthenticationAttempt,
+    AutoTradeMarketSettings,
+    AutoTradeRule,
+    AutoTradeSettings,
     Certificate,
     CertificateStatus,
     CertificateType,
     ContactRequest,
     ContactStatus,
     Entity,
+    ExchangeRateSource,
     Jurisdiction,
     KYCStatus,
     MailConfig,
     MailProvider,
+    MarketMakerClient,
+    MarketMakerType,
+    Order,
+    OrderSide,
+    OrderStatus,
     ScrapeLibrary,
+    ScrapeStatus,
     ScrapingSource,
     SwapRequest,
     SwapStatus,
@@ -42,8 +54,16 @@ from ...schemas.schemas import (
     AdminUserFullResponse,
     AdminUserUpdate,
     AuthenticationAttemptResponse,
+    AutoTradeMarketSettingsResponse,
+    AutoTradeMarketSettingsUpdate,
+    AutoTradeSettingsResponse,
+    AutoTradeSettingsUpdate,
     ContactRequestUpdate,
+    ExchangeRateSourceCreate,
+    ExchangeRateSourceUpdate,
+    LiquidityStatusResponse,
     MailConfigUpdate,
+    MarketMakerSummary,
     MessageResponse,
     ScrapingSourceCreate,
     ScrapingSourceUpdate,
@@ -73,12 +93,12 @@ async def get_contact_requests(
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
-        query = query.where(ContactRequest.status == status)
+        query = query.where(ContactRequest.user_role == ContactStatus(status))
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
-        count_query = count_query.where(ContactRequest.status == status)
+        count_query = count_query.where(ContactRequest.user_role == ContactStatus(status))
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -97,10 +117,9 @@ async def get_contact_requests(
                 "contact_email": r.contact_email,
                 "contact_name": r.contact_name,
                 "position": r.position,
-                "request_type": r.request_type or "join",
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,
-                "status": r.status.value if r.status else "new",
+                "user_role": r.user_role.value if r.user_role else "NDA",
                 "notes": r.notes,
                 "created_at": (r.created_at.isoformat() + "Z")
                 if r.created_at
@@ -138,7 +157,16 @@ async def update_contact_request(
         raise HTTPException(status_code=404, detail="Contact request not found")
 
     if update.status:
-        contact.status = ContactStatus(update.status)
+        new_status = ContactStatus(update.status)
+        contact.user_role = new_status
+        # When rejecting NDA, also set linked user to REJECTED if one exists (created from this request)
+        if new_status == ContactStatus.REJECTED:
+            user_result = await db.execute(
+                select(User).where(User.email == contact.contact_email)
+            )
+            linked_user = user_result.scalar_one_or_none()
+            if linked_user:
+                linked_user.role = UserRole.REJECTED
     if update.notes:
         contact.notes = update.notes
     if update.agent_id:
@@ -161,10 +189,9 @@ async def update_contact_request(
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
                 "position": contact.position,
-                "request_type": contact.request_type or "join",
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
-                "status": contact.status.value if contact.status else "new",
+                "user_role": contact.user_role.value if contact.user_role else "NDA",
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -222,15 +249,22 @@ async def create_user_from_contact_request(
     """
     Create a new user from an approved contact request.
     Supports two modes:
-    - 'manual': Admin provides password, user can login immediately
-    - 'invitation': Send email invitation, user sets own password
-    Admin only.
+    - 'manual': Admin provides password (required, ≥8 chars), user active immediately.
+    - 'invitation': Send email invitation after commit; user sets password via link (MailConfig for expiry).
+    Creates Entity (name from contact_request, jurisdiction OTHER, KYC PENDING), User (role KYC), sets contact_request.status = KYC. Broadcasts request_updated and user_created on backoffice WebSocket.
+    Admin only. All parameters are Query params.
+    Returns: { message, success: true, user: { id, email, first_name, last_name, role, entity_id, creation_method } }.
+    Errors: 400 (invalid request_id, duplicate email, password validation), 404 (contact request not found), 400/409/500 from handle_database_error (optional details.hint).
     """
-    from datetime import timedelta
+    # Validate request_id as UUID
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
 
     # Get contact request
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact_request = result.scalar_one_or_none()
     if not contact_request:
@@ -254,64 +288,72 @@ async def create_user_from_contact_request(
         else 7
     )
 
-    # Create entity from contact request
-    entity = Entity(
-        name=contact_request.entity_name,
-        jurisdiction=Jurisdiction.OTHER,
-        kyc_status=KYCStatus.PENDING,
-    )
-    db.add(entity)
-    await db.flush()
+    try:
+        # Create entity from contact request
+        entity = Entity(
+            name=contact_request.entity_name,
+            jurisdiction=Jurisdiction.OTHER,
+            kyc_status=KYCStatus.PENDING,
+        )
+        db.add(entity)
+        await db.flush()
 
-    if mode == "manual":
-        # Manual creation with password
-        if not password or len(password) < 8:
-            raise HTTPException(
-                status_code=400,
-                detail="Password required and must be at least 8 characters",
+        if mode == "manual":
+            # Manual creation with password
+            if not password or len(password) < 8:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Password required and must be at least 8 characters",
+                )
+
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                password_hash=hash_password(password),
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                must_change_password=False,
+                is_active=True,
+                creation_method="manual",
+                created_by=admin_user.id,
+            )
+        else:
+            # Send invitation
+            invitation_token = secrets.token_urlsafe(32)
+            user = User(
+                email=email.lower(),
+                first_name=first_name,
+                last_name=last_name,
+                role=UserRole.KYC,
+                entity_id=entity.id,
+                position=position,
+                invitation_token=invitation_token,
+                # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+                invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                invitation_expires_at=(
+                    datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
+                ),
+                must_change_password=True,
+                is_active=False,  # Activate when password is set
+                creation_method="invitation",
+                created_by=admin_user.id,
             )
 
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            password_hash=hash_password(password),
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            must_change_password=False,
-            is_active=True,
-            creation_method="manual",
-            created_by=admin_user.id,
-        )
-    else:
-        # Send invitation
-        invitation_token = secrets.token_urlsafe(32)
-        user = User(
-            email=email.lower(),
-            first_name=first_name,
-            last_name=last_name,
-            role=UserRole.PENDING,
-            entity_id=entity.id,
-            position=position,
-            invitation_token=invitation_token,
-            invitation_sent_at=datetime.utcnow(),
-            invitation_expires_at=(
-                datetime.utcnow() + timedelta(days=invitation_expiry_days)
-            ),
-            must_change_password=True,
-            is_active=False,  # Activate when password is set
-            creation_method="invitation",
-            created_by=admin_user.id,
-        )
+        db.add(user)
 
-    db.add(user)
+        # Update contact request user_role to KYC (approved, user created)
+        contact_request.user_role = ContactStatus.KYC
 
-    # Update contact request status
-    contact_request.status = ContactStatus.ENROLLED
-
-    await db.commit()
-    await db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "create user from contact request", logger) from e
 
     # Send invitation email if applicable
     if mode == "invitation":
@@ -343,14 +385,28 @@ async def create_user_from_contact_request(
         except Exception:
             logger.exception(
                 "Failed to send invitation email for user %s "
-                "(user created, contact ENROLLED)",
+                "(user created, contact request KYC)",
                 user.email,
             )
 
-    # Broadcast updates
+    # Broadcast updates (full payload so realtime hook can replace list item)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
-            "request_updated", {"id": str(contact_request.id), "status": "enrolled"}
+            "request_updated",
+            {
+                "id": str(contact_request.id),
+                "entity_name": contact_request.entity_name,
+                "contact_email": contact_request.contact_email,
+                "contact_name": contact_request.contact_name,
+                "position": contact_request.position,
+                "nda_file_name": contact_request.nda_file_name,
+                "submitter_ip": contact_request.submitter_ip,
+                "user_role": contact_request.user_role.value if contact_request.user_role else "NDA",
+                "notes": contact_request.notes,
+                "created_at": (contact_request.created_at.isoformat() + "Z")
+                if contact_request.created_at
+                else None,
+            },
         )
     )
     asyncio.create_task(
@@ -361,7 +417,7 @@ async def create_user_from_contact_request(
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.role.value,
+                "role": user.role.value,  # KYC
             },
         )
     )
@@ -481,11 +537,11 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
     """
     Get admin dashboard statistics.
     """
-    # Contact requests by status
+    # Contact requests by user_role
     new_contacts = await db.execute(
         select(func.count())
         .select_from(ContactRequest)
-        .where(ContactRequest.status == ContactStatus.NEW)
+        .where(ContactRequest.user_role == ContactStatus.NDA)
     )
     new_count = new_contacts.scalar()
 
@@ -567,7 +623,8 @@ async def update_entity_kyc(
     entity.kyc_status = KYCStatus(kyc_status)
     if kyc_status == "approved":
         entity.verified = True
-        entity.kyc_approved_at = datetime.utcnow()
+        # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+        entity.kyc_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         entity.kyc_approved_by = admin_user.id
 
     await db.commit()
@@ -588,13 +645,37 @@ async def get_users(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all users with optional filters.
-    Admin only.
+    Get users with optional filters.
+    Admin only. By default returns only active users. Use role=DISABLED to list
+    deactivated users (soft-deleted; kept for ticketing, transactions, etc.).
+    Excludes Market Maker users (they have their own management page).
     """
-    query = select(User).order_by(User.created_at.desc())
+    # Subquery to find user IDs that are Market Makers
+    mm_user_ids = select(MarketMakerClient.user_id).where(
+        MarketMakerClient.user_id.isnot(None)
+    ).scalar_subquery()
 
-    if role:
-        query = query.where(User.role == UserRole(role))
+    if role == "DISABLED":
+        query = select(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(False),
+            User.id.notin_(mm_user_ids)
+        )
+    else:
+        query = select(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        ).order_by(User.created_at.desc())
+        count_query = select(func.count()).select_from(User).where(
+            User.is_active.is_(True),
+            User.id.notin_(mm_user_ids)
+        )
+        if role:
+            query = query.where(User.role == UserRole(role))
+            count_query = count_query.where(User.role == UserRole(role))
 
     if search:
         search_term = f"%{search}%"
@@ -603,12 +684,6 @@ async def get_users(
             | (User.first_name.ilike(search_term))
             | (User.last_name.ilike(search_term))
         )
-
-    # Count total
-    count_query = select(func.count()).select_from(User)
-    if role:
-        count_query = count_query.where(User.role == UserRole(role))
-    if search:
         count_query = count_query.where(
             (User.email.ilike(search_term))
             | (User.first_name.ilike(search_term))
@@ -669,6 +744,9 @@ async def create_user(
     Admin only.
     If password is provided, user is created with that password.
     If password is not provided, an invitation email is sent.
+
+    Note: For roles that require an entity (APPROVED and higher), an entity
+    will be auto-created if entity_id is not provided.
     """
     # Check if email already exists
     existing = await db.execute(
@@ -679,6 +757,26 @@ async def create_user(
             status_code=400, detail="User with this email already exists"
         )
 
+    # Roles that need an entity to report deposits
+    ROLES_REQUIRING_ENTITY = {
+        UserRole.APPROVED, UserRole.FUNDING, UserRole.AML,
+        UserRole.CEA, UserRole.CEA_SETTLE, UserRole.SWAP,
+        UserRole.EUA_SETTLE, UserRole.EUA, UserRole.MM,
+    }
+
+    entity_id = user_data.entity_id
+
+    # Auto-create entity for roles that require it
+    if user_data.role in ROLES_REQUIRING_ENTITY and not entity_id:
+        entity = Entity(
+            name=f"{user_data.first_name} {user_data.last_name}",
+            jurisdiction=Jurisdiction.OTHER,
+            kyc_status=KYCStatus.APPROVED if user_data.role == UserRole.APPROVED else KYCStatus.PENDING,
+        )
+        db.add(entity)
+        await db.flush()
+        entity_id = entity.id
+
     # Create user with or without password
     if user_data.password:
         # Create user with password directly
@@ -688,7 +786,7 @@ async def create_user(
             last_name=user_data.last_name,
             password_hash=hash_password(user_data.password),
             role=user_data.role,
-            entity_id=user_data.entity_id,
+            entity_id=entity_id,
             position=user_data.position,
             must_change_password=False,  # Password already set by admin
             is_active=True,
@@ -701,10 +799,11 @@ async def create_user(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             role=user_data.role,
-            entity_id=user_data.entity_id,
+            entity_id=entity_id,
             position=user_data.position,
             invitation_token=invitation_token,
-            invitation_sent_at=datetime.utcnow(),
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
             must_change_password=True,
         )
 
@@ -865,8 +964,8 @@ async def get_user_full_details(
                 last_login_ip = attempt.ip_address
                 break
 
-    # Failed logins in last 24h
-    yesterday = datetime.utcnow() - timedelta(hours=24)
+    # Failed logins in last 24h - use naive UTC for DB query
+    yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
     failed_24h_result = await db.execute(
         select(func.count())
         .select_from(AuthenticationAttempt)
@@ -970,6 +1069,50 @@ async def update_user_full(
     await db.refresh(user)
 
     return UserResponse.model_validate(user)
+
+
+@router.post("/users/{user_id}/create-entity", response_model=MessageResponse)
+async def create_entity_for_user(
+    user_id: str,
+    entity_name: Optional[str] = Query(None, description="Entity name (defaults to user's full name)"),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Create and link an entity for a user who doesn't have one.
+    This is useful for users created directly without going through contact request flow.
+    Admin only.
+    """
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.entity_id:
+        # Already has entity
+        entity_result = await db.execute(
+            select(Entity).where(Entity.id == user.entity_id)
+        )
+        entity = entity_result.scalar_one_or_none()
+        return MessageResponse(
+            message=f"User already has entity: {entity.name if entity else 'unknown'}"
+        )
+
+    # Create new entity
+    name = entity_name or f"{user.first_name} {user.last_name}"
+    entity = Entity(
+        name=name,
+        jurisdiction=Jurisdiction.OTHER,
+        kyc_status=KYCStatus.APPROVED,  # If user is APPROVED, entity should be too
+    )
+    db.add(entity)
+    await db.flush()
+
+    user.entity_id = entity.id
+    await db.commit()
+
+    return MessageResponse(message=f"Created entity '{name}' and linked to user")
 
 
 @router.post("/users/{user_id}/reset-password", response_model=MessageResponse)
@@ -1160,8 +1303,8 @@ async def get_activity_stats(
     )
     active_sessions = active_sessions_result.scalar()
 
-    # Logins today
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Logins today - use naive UTC for DB query
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     logins_today_result = await db.execute(
         select(func.count())
         .select_from(ActivityLog)
@@ -1215,16 +1358,20 @@ async def get_scraping_sources(
             else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
             "scrape_interval_minutes": s.scrape_interval_minutes,
-            "last_scrape_at": s.last_scrape_at.isoformat()
+            "last_scrape_at": (s.last_scrape_at.isoformat() + "Z")
             if s.last_scrape_at
             else None,
             "last_scrape_status": s.last_scrape_status.value
             if s.last_scrape_status
             else None,
             "last_price": float(s.last_price) if s.last_price else None,
+            "last_price_eur": float(s.last_price_eur) if s.last_price_eur else None,
+            "last_exchange_rate": float(s.last_exchange_rate)
+            if s.last_exchange_rate
+            else None,
             "config": s.config,
-            "created_at": s.created_at.isoformat(),
-            "updated_at": s.updated_at.isoformat(),
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
         }
         for s in sources
     ]
@@ -1271,6 +1418,12 @@ async def create_scraping_source(
         if source.last_scrape_status
         else None,
         "last_price": float(source.last_price) if source.last_price else None,
+        "last_price_eur": float(source.last_price_eur)
+        if source.last_price_eur
+        else None,
+        "last_exchange_rate": float(source.last_exchange_rate)
+        if source.last_exchange_rate
+        else None,
         "config": source.config,
         "created_at": source.created_at.isoformat(),
         "updated_at": source.updated_at.isoformat(),
@@ -1315,16 +1468,16 @@ async def update_scraping_source(
 
 
 def _scraping_error_status(e: Exception) -> tuple[int, str]:
-    """Map scraping exceptions to (status_code, detail)."""
-    msg = str(e).strip()
-    if not msg or len(msg) > 200:
-        msg = "Scraping failed. Check URL, selectors, and network."
-    lower = msg.lower()
-    if "timeout" in lower or "timed out" in lower:
-        return (504, msg)
-    if "connection" in lower or "connect" in lower or "connection refused" in lower:
-        return (502, msg)
-    return (500, msg)
+    """Map scraping exceptions to (status_code, detail) with safe error messages."""
+    err_str = str(e).lower().strip()
+    # Rate limiting - return 429 with user-friendly message
+    if "429" in err_str or "rate limit" in err_str or "too many requests" in err_str:
+        return (429, "Rate limited by source. Please wait a few minutes before retrying.")
+    if "timeout" in err_str or "timed out" in err_str:
+        return (504, "Request timed out. Please try again later.")
+    if "connection" in err_str or "connect" in err_str or "connection refused" in err_str:
+        return (502, "Connection error. Check if the source is accessible.")
+    return (500, "Scraping failed. Check URL, selectors, and network.")
 
 
 @router.post("/scraping-sources/{source_id}/test")
@@ -1416,6 +1569,232 @@ async def delete_scraping_source(
 
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
+    )
+
+
+# ==================== Exchange Rate Sources ====================
+
+
+@router.get("/exchange-rate-sources")
+async def get_exchange_rate_sources(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Get all exchange rate source configurations.
+    Admin only.
+    """
+    query = select(ExchangeRateSource).order_by(ExchangeRateSource.created_at.desc())
+    result = await db.execute(query)
+    sources = result.scalars().all()
+
+    return [
+        {
+            "id": str(s.id),
+            "name": s.name,
+            "from_currency": s.from_currency,
+            "to_currency": s.to_currency,
+            "url": s.url,
+            "scrape_library": s.scrape_library.value
+            if s.scrape_library
+            else ScrapeLibrary.HTTPX.value,
+            "is_active": s.is_active,
+            "is_primary": s.is_primary,
+            "scrape_interval_minutes": s.scrape_interval_minutes,
+            "last_rate": float(s.last_rate) if s.last_rate else None,
+            "last_scraped_at": (s.last_scraped_at.isoformat() + "Z")
+            if s.last_scraped_at
+            else None,
+            "last_scrape_status": s.last_scrape_status.value
+            if s.last_scrape_status
+            else None,
+            "config": s.config,
+            "created_at": s.created_at.isoformat() + "Z",
+            "updated_at": s.updated_at.isoformat() + "Z",
+        }
+        for s in sources
+    ]
+
+
+@router.post("/exchange-rate-sources")
+async def create_exchange_rate_source(
+    source_data: ExchangeRateSourceCreate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Create a new exchange rate source.
+    Admin only.
+    """
+    from sqlalchemy import update
+
+    # If marking as primary, unset other primary sources for same pair
+    if source_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source_data.from_currency.upper(),
+                ExchangeRateSource.to_currency == source_data.to_currency.upper(),
+            )
+            .values(is_primary=False)
+        )
+
+    source = ExchangeRateSource(
+        name=source_data.name,
+        from_currency=source_data.from_currency.upper(),
+        to_currency=source_data.to_currency.upper(),
+        url=source_data.url,
+        scrape_library=source_data.scrape_library,
+        scrape_interval_minutes=source_data.scrape_interval_minutes,
+        is_primary=source_data.is_primary,
+        config=source_data.config,
+        is_active=True,
+    )
+
+    db.add(source)
+    await db.commit()
+    await db.refresh(source)
+
+    return {
+        "id": str(source.id),
+        "name": source.name,
+        "from_currency": source.from_currency,
+        "to_currency": source.to_currency,
+        "url": source.url,
+        "scrape_library": source.scrape_library.value,
+        "is_active": source.is_active,
+        "is_primary": source.is_primary,
+        "scrape_interval_minutes": source.scrape_interval_minutes,
+        "last_rate": None,
+        "last_scraped_at": None,
+        "last_scrape_status": None,
+        "config": source.config,
+        "created_at": source.created_at.isoformat() + "Z",
+        "updated_at": source.updated_at.isoformat() + "Z",
+    }
+
+
+@router.put("/exchange-rate-sources/{source_id}")
+async def update_exchange_rate_source(
+    source_id: str,
+    update_data: ExchangeRateSourceUpdate,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Update an exchange rate source configuration."""
+    from sqlalchemy import update
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    # If marking as primary, unset other primary sources
+    if update_data.is_primary:
+        await db.execute(
+            update(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source.from_currency,
+                ExchangeRateSource.to_currency == source.to_currency,
+                ExchangeRateSource.id != source.id,
+            )
+            .values(is_primary=False)
+        )
+
+    if update_data.name is not None:
+        source.name = update_data.name
+    if update_data.url is not None:
+        source.url = update_data.url
+    if update_data.scrape_library is not None:
+        source.scrape_library = update_data.scrape_library
+    if update_data.is_active is not None:
+        source.is_active = update_data.is_active
+    if update_data.is_primary is not None:
+        source.is_primary = update_data.is_primary
+    if update_data.scrape_interval_minutes is not None:
+        source.scrape_interval_minutes = update_data.scrape_interval_minutes
+    if update_data.config is not None:
+        source.config = update_data.config
+
+    await db.commit()
+    return MessageResponse(message="Exchange rate source updated successfully")
+
+
+@router.post("/exchange-rate-sources/{source_id}/test")
+async def test_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Test an exchange rate source by fetching current rate."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        rate = await price_scraper.scrape_exchange_rate(source)
+        return {"success": True, "message": "Rate fetched successfully", "rate": rate}
+    except Exception as e:
+        logger.exception("Exchange rate source test failed")
+        return {"success": False, "message": str(e), "rate": None}
+
+
+@router.post("/exchange-rate-sources/{source_id}/refresh")
+async def refresh_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Force refresh exchange rate from a source."""
+    from ...services.price_scraper import price_scraper
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        await price_scraper.refresh_exchange_rate_source(source, db)
+        return MessageResponse(message="Exchange rate refreshed successfully")
+    except Exception as e:
+        logger.exception("Exchange rate refresh failed")
+        status_code = 408 if "timeout" in str(e).lower() else 500
+        detail = "Request timed out" if status_code == 408 else "Exchange rate refresh failed"
+        raise HTTPException(status_code=status_code, detail=detail) from e
+
+
+@router.delete("/exchange-rate-sources/{source_id}")
+async def delete_exchange_rate_source(
+    source_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Delete an exchange rate source."""
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    await db.delete(source)
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Exchange rate source '{source.name}' deleted successfully"
     )
 
 
@@ -1596,3 +1975,710 @@ async def get_market_overview(
         "top_20_cea_value_usd": round(cea_value_usd, 2),
         "top_20_swap_value_usd": round(swap_value_usd, 2),
     }
+
+
+# ============================================================================
+# Auto Trade Settings Endpoints (Global Liquidity Limits)
+# ============================================================================
+
+
+@router.get("/auto-trade-settings", response_model=list[AutoTradeSettingsResponse])
+async def get_auto_trade_settings(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Get all auto trade settings (one per certificate type)."""
+    result = await db.execute(select(AutoTradeSettings))
+    settings = result.scalars().all()
+    return list(settings)
+
+
+@router.get(
+    "/auto-trade-settings/{certificate_type}",
+    response_model=AutoTradeSettingsResponse,
+)
+async def get_auto_trade_settings_by_type(
+    certificate_type: str,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Get auto trade settings for a specific certificate type."""
+    cert_type = certificate_type.upper()
+    if cert_type not in ("CEA", "EUA"):
+        raise HTTPException(status_code=400, detail="Invalid certificate type. Must be CEA or EUA.")
+
+    result = await db.execute(
+        select(AutoTradeSettings).where(AutoTradeSettings.certificate_type == cert_type)
+    )
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        raise HTTPException(status_code=404, detail=f"Settings not found for {cert_type}")
+
+    return settings
+
+
+@router.put(
+    "/auto-trade-settings/{certificate_type}",
+    response_model=AutoTradeSettingsResponse,
+)
+async def update_auto_trade_settings(
+    certificate_type: str,
+    updates: AutoTradeSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Update auto trade settings for a certificate type."""
+    cert_type = certificate_type.upper()
+    if cert_type not in ("CEA", "EUA"):
+        raise HTTPException(status_code=400, detail="Invalid certificate type. Must be CEA or EUA.")
+
+    result = await db.execute(
+        select(AutoTradeSettings).where(AutoTradeSettings.certificate_type == cert_type)
+    )
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        raise HTTPException(status_code=404, detail=f"Settings not found for {cert_type}")
+
+    # Apply updates
+    update_data = updates.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(settings, field, value)
+
+    settings.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    try:
+        await db.commit()
+        await db.refresh(settings)
+        return settings
+    except Exception as e:
+        await db.rollback()
+        handle_database_error(e, "updating auto trade settings")
+
+
+@router.get(
+    "/auto-trade-settings/{certificate_type}/liquidity",
+    response_model=LiquidityStatusResponse,
+)
+async def get_liquidity_status(
+    certificate_type: str,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Get current liquidity status for a certificate type."""
+    cert_type = certificate_type.upper()
+    if cert_type not in ("CEA", "EUA"):
+        raise HTTPException(status_code=400, detail="Invalid certificate type. Must be CEA or EUA.")
+
+    # Get settings
+    result = await db.execute(
+        select(AutoTradeSettings).where(AutoTradeSettings.certificate_type == cert_type)
+    )
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        raise HTTPException(status_code=404, detail=f"Settings not found for {cert_type}")
+
+    # Map string to enum
+    cert_type_enum = CertificateType.CEA if cert_type == "CEA" else CertificateType.EUA
+
+    # Calculate current ASK liquidity (SELL orders)
+    ask_result = await db.execute(
+        select(func.sum(Order.price * (Order.quantity - Order.filled_quantity)))
+        .where(
+            Order.certificate_type == cert_type_enum,
+            Order.side == OrderSide.SELL,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            Order.market_maker_id.isnot(None),  # Only MM orders
+        )
+    )
+    ask_liquidity = ask_result.scalar() or 0
+
+    # Calculate current BID liquidity (BUY orders)
+    bid_result = await db.execute(
+        select(func.sum(Order.price * (Order.quantity - Order.filled_quantity)))
+        .where(
+            Order.certificate_type == cert_type_enum,
+            Order.side == OrderSide.BUY,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            Order.market_maker_id.isnot(None),  # Only MM orders
+        )
+    )
+    bid_liquidity = bid_result.scalar() or 0
+
+    # Calculate percentages
+    ask_percentage = None
+    bid_percentage = None
+
+    if settings.target_ask_liquidity and settings.target_ask_liquidity > 0:
+        ask_percentage = (ask_liquidity / settings.target_ask_liquidity) * 100
+
+    if settings.target_bid_liquidity and settings.target_bid_liquidity > 0:
+        bid_percentage = (bid_liquidity / settings.target_bid_liquidity) * 100
+
+    return LiquidityStatusResponse(
+        certificate_type=cert_type,
+        ask_liquidity=ask_liquidity,
+        bid_liquidity=bid_liquidity,
+        target_ask_liquidity=settings.target_ask_liquidity,
+        target_bid_liquidity=settings.target_bid_liquidity,
+        ask_percentage=ask_percentage,
+        bid_percentage=bid_percentage,
+        liquidity_limit_enabled=settings.liquidity_limit_enabled,
+    )
+
+
+# ============================================================================
+# Auto Trade Market Settings Endpoints (Per-market-side settings)
+# ============================================================================
+
+# Mapping from market_key to market maker types
+MARKET_KEY_TO_MM_TYPES = {
+    "CEA_BID": [MarketMakerType.CEA_BUYER],
+    "CEA_ASK": [MarketMakerType.CEA_SELLER],
+    "EUA_SWAP": [MarketMakerType.EUA_OFFER],
+}
+
+
+async def _check_is_online(db: AsyncSession, market_key: str) -> bool:
+    """Check if any auto-trade rules for this market are actively running.
+
+    A market is considered "online" if:
+    - Settings are enabled AND
+    - At least one enabled rule exists with recent execution activity
+    """
+    mm_types = MARKET_KEY_TO_MM_TYPES.get(market_key, [])
+    if not mm_types:
+        return False
+
+    # Get market makers for this market
+    mm_result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.mm_type.in_(mm_types))
+    )
+    market_makers = list(mm_result.scalars().all())
+    if not market_makers:
+        return False
+
+    # Check if any enabled rules exist with recent activity
+    mm_ids = [mm.id for mm in market_makers]
+    rules_result = await db.execute(
+        select(AutoTradeRule).where(
+            AutoTradeRule.market_maker_id.in_(mm_ids),
+            AutoTradeRule.enabled == True,  # noqa: E712
+        )
+    )
+    enabled_rules = list(rules_result.scalars().all())
+
+    if not enabled_rules:
+        return False
+
+    # Check if any rule has been executed recently (within 2x its interval)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for rule in enabled_rules:
+        if rule.last_executed_at:
+            interval = rule.interval_seconds or 60
+            max_gap = timedelta(seconds=interval * 2)
+            if (now - rule.last_executed_at) < max_gap:
+                return True
+
+    return False
+
+
+@router.get("/auto-trade-market-settings", response_model=list[AutoTradeMarketSettingsResponse])
+async def get_all_market_settings(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Get all per-market-side auto trade settings with associated market makers."""
+    result = await db.execute(select(AutoTradeMarketSettings))
+    all_settings = list(result.scalars().all())
+
+    responses = []
+    for settings in all_settings:
+        # Get associated market makers based on market_key
+        mm_types = MARKET_KEY_TO_MM_TYPES.get(settings.market_key, [])
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(MarketMakerClient.mm_type.in_(mm_types))
+        )
+        market_makers = list(mm_result.scalars().all())
+
+        # Calculate current liquidity
+        current_liquidity = await _calculate_market_liquidity(db, settings.market_key)
+        liquidity_percentage = None
+        if settings.target_liquidity and settings.target_liquidity > 0:
+            from decimal import Decimal
+            liquidity_percentage = (current_liquidity / settings.target_liquidity) * Decimal("100")
+
+        # Check if auto-trader is actively running
+        is_online = settings.enabled and await _check_is_online(db, settings.market_key)
+
+        responses.append(AutoTradeMarketSettingsResponse(
+            id=settings.id,
+            market_key=settings.market_key,
+            enabled=settings.enabled,
+            target_liquidity=settings.target_liquidity,
+            price_deviation_pct=settings.price_deviation_pct,
+            avg_order_count=settings.avg_order_count,
+            min_order_volume_eur=settings.min_order_volume_eur,
+            volume_variety=settings.volume_variety,
+            interval_seconds=settings.interval_seconds,
+            max_liquidity_threshold=settings.max_liquidity_threshold,
+            internal_trade_interval=settings.internal_trade_interval,
+            internal_trade_volume_min=settings.internal_trade_volume_min,
+            internal_trade_volume_max=settings.internal_trade_volume_max,
+            created_at=settings.created_at,
+            updated_at=settings.updated_at,
+            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
+            current_liquidity=current_liquidity,
+            liquidity_percentage=liquidity_percentage,
+            is_online=is_online,
+        ))
+
+    return responses
+
+
+@router.get("/auto-trade-market-settings/{market_key}", response_model=AutoTradeMarketSettingsResponse)
+async def get_market_settings(
+    market_key: str,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Get auto trade settings for a specific market side."""
+    market_key_upper = market_key.upper()
+    if market_key_upper not in MARKET_KEY_TO_MM_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid market_key. Must be one of: {list(MARKET_KEY_TO_MM_TYPES.keys())}"
+        )
+
+    result = await db.execute(
+        select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == market_key_upper)
+    )
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        raise HTTPException(status_code=404, detail=f"Settings for {market_key_upper} not found")
+
+    # Get associated market makers
+    mm_types = MARKET_KEY_TO_MM_TYPES.get(market_key_upper, [])
+    mm_result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.mm_type.in_(mm_types))
+    )
+    market_makers = list(mm_result.scalars().all())
+
+    # Calculate current liquidity
+    current_liquidity = await _calculate_market_liquidity(db, market_key_upper)
+    liquidity_percentage = None
+    if settings.target_liquidity and settings.target_liquidity > 0:
+        from decimal import Decimal
+        liquidity_percentage = (current_liquidity / settings.target_liquidity) * Decimal("100")
+
+    # Check if auto-trader is actively running
+    is_online = settings.enabled and await _check_is_online(db, market_key_upper)
+
+    return AutoTradeMarketSettingsResponse(
+        id=settings.id,
+        market_key=settings.market_key,
+        enabled=settings.enabled,
+        target_liquidity=settings.target_liquidity,
+        price_deviation_pct=settings.price_deviation_pct,
+        avg_order_count=settings.avg_order_count,
+        min_order_volume_eur=settings.min_order_volume_eur,
+        volume_variety=settings.volume_variety,
+        interval_seconds=settings.interval_seconds,
+        max_liquidity_threshold=settings.max_liquidity_threshold,
+        internal_trade_interval=settings.internal_trade_interval,
+        internal_trade_volume_min=settings.internal_trade_volume_min,
+        internal_trade_volume_max=settings.internal_trade_volume_max,
+        created_at=settings.created_at,
+        updated_at=settings.updated_at,
+        market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
+        current_liquidity=current_liquidity,
+        liquidity_percentage=liquidity_percentage,
+        is_online=is_online,
+    )
+
+
+@router.put("/auto-trade-market-settings/{market_key}", response_model=AutoTradeMarketSettingsResponse)
+async def update_market_settings(
+    market_key: str,
+    updates: AutoTradeMarketSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """Update auto trade settings for a specific market side."""
+    market_key_upper = market_key.upper()
+    if market_key_upper not in MARKET_KEY_TO_MM_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid market_key. Must be one of: {list(MARKET_KEY_TO_MM_TYPES.keys())}"
+        )
+
+    try:
+        result = await db.execute(
+            select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == market_key_upper)
+        )
+        settings = result.scalar_one_or_none()
+
+        if not settings:
+            raise HTTPException(status_code=404, detail=f"Settings for {market_key_upper} not found")
+
+        # Update fields
+        update_data = updates.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(settings, field, value)
+
+        settings.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # Get associated market makers
+        mm_types = MARKET_KEY_TO_MM_TYPES.get(market_key_upper, [])
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(MarketMakerClient.mm_type.in_(mm_types))
+        )
+        market_makers = list(mm_result.scalars().all())
+
+        # Create/update auto-trade rules for each market maker
+        await _sync_auto_trade_rules(db, settings, market_makers, market_key_upper)
+
+        await db.commit()
+        await db.refresh(settings)
+
+        # Calculate current liquidity
+        current_liquidity = await _calculate_market_liquidity(db, market_key_upper)
+        liquidity_percentage = None
+        if settings.target_liquidity and settings.target_liquidity > 0:
+            from decimal import Decimal
+            liquidity_percentage = (current_liquidity / settings.target_liquidity) * Decimal("100")
+
+        # Check if auto-trader is actively running
+        is_online = settings.enabled and await _check_is_online(db, market_key_upper)
+
+        return AutoTradeMarketSettingsResponse(
+            id=settings.id,
+            market_key=settings.market_key,
+            enabled=settings.enabled,
+            target_liquidity=settings.target_liquidity,
+            price_deviation_pct=settings.price_deviation_pct,
+            avg_order_count=settings.avg_order_count,
+            min_order_volume_eur=settings.min_order_volume_eur,
+            volume_variety=settings.volume_variety,
+            interval_seconds=settings.interval_seconds,
+            max_liquidity_threshold=settings.max_liquidity_threshold,
+            internal_trade_interval=settings.internal_trade_interval,
+            internal_trade_volume_min=settings.internal_trade_volume_min,
+            internal_trade_volume_max=settings.internal_trade_volume_max,
+            created_at=settings.created_at,
+            updated_at=settings.updated_at,
+            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
+            current_liquidity=current_liquidity,
+            liquidity_percentage=liquidity_percentage,
+            is_online=is_online,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        handle_database_error(e, "updating market settings")
+
+
+async def _calculate_market_liquidity(db: AsyncSession, market_key: str) -> "Decimal":
+    """Calculate current liquidity for a market side."""
+    from decimal import Decimal
+
+    # Map market_key to certificate_type and side
+    if market_key == "CEA_BID":
+        cert_type = CertificateType.CEA
+        side = OrderSide.BUY
+    elif market_key == "CEA_ASK":
+        cert_type = CertificateType.CEA
+        side = OrderSide.SELL
+    elif market_key == "EUA_SWAP":
+        cert_type = CertificateType.EUA
+        side = OrderSide.SELL  # Swap offers are on ASK side
+    else:
+        return Decimal("0")
+
+    # Calculate: SUM(price * remaining_quantity) for open MM orders
+    result = await db.execute(
+        select(func.sum(Order.price * (Order.quantity - Order.filled_quantity)))
+        .where(
+            Order.certificate_type == cert_type,
+            Order.side == side,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            Order.market_maker_id.isnot(None),
+        )
+    )
+    return Decimal(str(result.scalar() or 0))
+
+
+async def _sync_auto_trade_rules(
+    db: AsyncSession,
+    settings: AutoTradeMarketSettings,
+    market_makers: list,
+    market_key: str
+) -> None:
+    """Create or update auto-trade rules for each market maker based on market settings.
+
+    Each market maker gets one rule that mirrors the market settings.
+    Rules are created if they don't exist, or updated if they do.
+    """
+    from app.models.models import AutoTradeRule, AutoTradePriceMode, AutoTradeQuantityMode
+
+    # Determine order side based on market key
+    if market_key == "CEA_BID":
+        side = OrderSide.BUY
+        rule_name_prefix = "Liquidity Engine BID"
+    elif market_key == "CEA_ASK":
+        side = OrderSide.SELL
+        rule_name_prefix = "Liquidity Engine ASK"
+    elif market_key == "EUA_SWAP":
+        side = OrderSide.SELL  # Swap offers are sells
+        rule_name_prefix = "Liquidity Engine SWAP"
+    else:
+        return
+
+    for mm in market_makers:
+        # Check if rule already exists for this market maker and side
+        rule_result = await db.execute(
+            select(AutoTradeRule).where(
+                AutoTradeRule.market_maker_id == mm.id,
+                AutoTradeRule.side == side,
+                AutoTradeRule.name.like("Liquidity Engine%")
+            )
+        )
+        rule = rule_result.scalar_one_or_none()
+
+        # Calculate min quantity based on target liquidity and avg_order_count
+        min_quantity = None
+        if settings.target_liquidity and settings.avg_order_count:
+            from decimal import Decimal
+            # Each order should be roughly target / avg_order_count EUR value
+            # Assuming price ~70 EUR/CEA for quantity calculation
+            avg_order_value = settings.target_liquidity / Decimal(str(settings.avg_order_count))
+            min_quantity = max(Decimal("1"), avg_order_value / Decimal("70"))
+
+        if rule:
+            # Update existing rule
+            rule.enabled = settings.enabled
+            rule.interval_seconds = settings.interval_seconds
+            rule.price_mode = AutoTradePriceMode.RANDOM_SPREAD
+            rule.spread_min = settings.price_deviation_pct or Decimal("0.01")
+            rule.spread_max = (settings.price_deviation_pct or Decimal("0.01")) * Decimal("3")
+            rule.max_price_deviation = settings.price_deviation_pct
+            rule.quantity_mode = AutoTradeQuantityMode.RANDOM_RANGE
+            rule.min_quantity = min_quantity or Decimal("1")
+            rule.max_quantity = (min_quantity or Decimal("1")) * Decimal(str(1 + (settings.volume_variety or 0.5)))
+            rule.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            # Schedule next execution if enabled
+            if settings.enabled and not rule.next_execution_at:
+                rule.next_execution_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        else:
+            # Create new rule
+            rule = AutoTradeRule(
+                market_maker_id=mm.id,
+                name=f"{rule_name_prefix} - {mm.name}",
+                enabled=settings.enabled,
+                side=side,
+                order_type="LIMIT",
+                price_mode=AutoTradePriceMode.RANDOM_SPREAD,
+                spread_min=settings.price_deviation_pct or Decimal("0.01"),
+                spread_max=(settings.price_deviation_pct or Decimal("0.01")) * Decimal("3"),
+                max_price_deviation=settings.price_deviation_pct,
+                quantity_mode=AutoTradeQuantityMode.RANDOM_RANGE,
+                min_quantity=min_quantity or Decimal("1"),
+                max_quantity=(min_quantity or Decimal("1")) * Decimal(str(1 + (settings.volume_variety or 0.5))),
+                interval_mode="fixed",
+                interval_seconds=settings.interval_seconds,
+                next_execution_at=datetime.now(timezone.utc).replace(tzinfo=None) if settings.enabled else None,
+            )
+            db.add(rule)
+
+
+# ============================================================================
+# ADMIN TESTING TOOLS
+# ============================================================================
+
+class AdminRoleUpdateRequest(BaseModel):
+    """Request to change admin's own role for testing"""
+    role: str
+
+
+class AdminCreditRequest(BaseModel):
+    """Request to credit assets to admin's own entity"""
+    asset_type: str  # EUR, CEA, EUA
+    amount: Decimal = Field(..., gt=0)
+
+
+class EntityBalancesResponse(BaseModel):
+    """Response with entity balances"""
+    eur: Decimal
+    cea: Decimal
+    eua: Decimal
+
+
+@router.put("/me/role", response_model=UserResponse)
+async def update_my_role(
+    request: AdminRoleUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update admin's own role for testing purposes.
+
+    This allows admins to test the platform from different user perspectives
+    by temporarily changing their role.
+
+    Note: Uses get_current_user instead of get_admin_user to allow
+    restoring ADMIN role even when currently in a different role.
+    Only the original admin user (by email) can use this endpoint.
+    """
+    logger = logging.getLogger(__name__)
+    logger.info(f"update_my_role called with role={request.role} by {current_user.email}")
+
+    # Security: Only allow the designated admin email to use this endpoint
+    ADMIN_EMAILS = ["admin@nihaogroup.com"]  # Add more as needed
+    if current_user.email not in ADMIN_EMAILS:
+        raise HTTPException(
+            status_code=403,
+            detail="Only designated admin users can change their role for testing"
+        )
+
+    try:
+        # Validate role
+        role_upper = request.role.upper()
+        valid_roles = [r.value for r in UserRole]
+        if role_upper not in valid_roles:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid role. Must be one of: {valid_roles}"
+            )
+
+        # Re-fetch user in current session to avoid detached instance error
+        result = await db.execute(select(User).where(User.id == current_user.id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Update role
+        user.role = UserRole(role_upper)
+        user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        await db.commit()
+        await db.refresh(user)
+
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            phone=user.phone,
+            position=user.position,
+            role=user.role.value,
+            entity_id=user.entity_id,
+            is_active=user.is_active,
+            must_change_password=user.must_change_password,
+            last_login=user.last_login,
+            created_at=user.created_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error updating admin role: {e}")
+        await db.rollback()
+        raise handle_database_error(e, "updating admin role") from e
+
+
+@router.post("/me/credit", response_model=EntityBalancesResponse)
+async def credit_my_entity(
+    request: AdminCreditRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Credit assets to admin's own entity for testing purposes.
+
+    This allows admins to quickly add EUR, CEA, or EUA to their entity
+    for testing trading functionality.
+    """
+    from app.models.models import AssetType, EntityHolding, AssetTransaction, TransactionType
+    from app.services.balance_utils import update_entity_balance, get_entity_balance
+
+    try:
+        # Check admin has an entity
+        if not current_user.entity_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Admin user does not have an associated entity. Create one first."
+            )
+
+        # Validate asset type
+        asset_type_upper = request.asset_type.upper()
+        try:
+            asset_type = AssetType(asset_type_upper)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid asset type. Must be one of: EUR, CEA, EUA"
+            )
+
+        # Credit the entity using ADJUSTMENT type (for admin credits)
+        new_balance = await update_entity_balance(
+            db=db,
+            entity_id=current_user.entity_id,
+            asset_type=asset_type,
+            amount=request.amount,
+            transaction_type=TransactionType.ADJUSTMENT,
+            created_by=current_user.id,
+            notes=f"Admin testing credit: {request.amount} {asset_type_upper}",
+        )
+
+        await db.commit()
+
+        # Get all balances
+        eur_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+        cea_balance = await get_entity_balance(db, current_user.entity_id, AssetType.CEA)
+        eua_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUA)
+
+        return EntityBalancesResponse(
+            eur=eur_balance,
+            cea=cea_balance,
+            eua=eua_balance,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "crediting admin entity") from e
+
+
+@router.get("/me/balances", response_model=EntityBalancesResponse)
+async def get_my_balances(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """Get admin's entity balances."""
+    from app.models.models import AssetType
+    from app.services.balance_utils import get_entity_balance
+
+    try:
+        if not current_user.entity_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Admin user does not have an associated entity."
+            )
+
+        eur_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+        cea_balance = await get_entity_balance(db, current_user.entity_id, AssetType.CEA)
+        eua_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUA)
+
+        return EntityBalancesResponse(
+            eur=eur_balance,
+            cea=cea_balance,
+            eua=eua_balance,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise handle_database_error(e, "getting admin balances") from e

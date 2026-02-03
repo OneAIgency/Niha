@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -17,10 +17,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
 from ...models.models import (
+    AMLStatus,
     AssetTransaction,
     AssetType,
     Currency,
@@ -29,6 +31,7 @@ from ...models.models import (
     DocumentStatus,
     Entity,
     EntityHolding,
+    HoldType,
     KYCDocument,
     KYCStatus,
     Trade,
@@ -37,6 +40,7 @@ from ...models.models import (
     UserRole,
     UserSession,
 )
+from ...services.deposit_service import calculate_business_days, calculate_hold_period
 from ...schemas.schemas import (
     AddAssetRequest,
     AssetTransactionResponse,
@@ -49,6 +53,7 @@ from ...schemas.schemas import (
     UserApprovalRequest,
 )
 from ...services.email_service import email_service
+from ...services.balance_utils import update_entity_balance
 
 # Constants for deposit validation
 MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
@@ -78,7 +83,7 @@ class BackofficeConnectionManager:
         message = {
             "type": event_type,
             "data": data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         disconnected = []
         for connection in self.active_connections:
@@ -110,7 +115,7 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
             {
                 "type": "connected",
                 "message": "Connected to backoffice realtime updates",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -119,7 +124,7 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
             await asyncio.sleep(30)
             try:
                 await websocket.send_json(
-                    {"type": "heartbeat", "timestamp": datetime.utcnow().isoformat()}
+                    {"type": "heartbeat", "timestamp": datetime.now(timezone.utc).isoformat()}
                 )
             except Exception:
                 break
@@ -138,10 +143,10 @@ async def get_pending_users(
     Get users awaiting approval (pending status with submitted KYC).
     Admin only.
     """
-    # Get pending users who have submitted KYC
+    # Get pending users in KYC (awaiting backoffice approve/reject after KYC submission)
     query = (
         select(User)
-        .where(User.role == UserRole.PENDING)
+        .where(User.role == UserRole.KYC)
         .where(User.is_active.is_(True))
         .order_by(User.created_at.desc())
     )
@@ -192,7 +197,7 @@ async def approve_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Approve a pending user. Changes role from PENDING to APPROVED.
+    Approve KYC: user.role KYC → APPROVED. User gets access to funding page.
     Admin only.
     """
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -201,13 +206,12 @@ async def approve_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.role != UserRole.PENDING:
+    if user.role != UserRole.KYC:
         raise HTTPException(
             status_code=400,
-            detail=f"User is not pending approval (current role: {user.role.value})",
+            detail=f"User is not in KYC review (current role: {user.role.value})",
         )
 
-    # Update user role
     user.role = UserRole.APPROVED
 
     # Update entity KYC status if exists
@@ -218,7 +222,8 @@ async def approve_user(
         entity = entity_result.scalar_one_or_none()
         if entity:
             entity.kyc_status = KYCStatus.APPROVED
-            entity.kyc_approved_at = datetime.utcnow()
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            entity.kyc_approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             entity.kyc_approved_by = admin_user.id
             entity.verified = True
 
@@ -241,7 +246,7 @@ async def reject_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Reject a pending user.
+    Reject KYC: set user.role to REJECTED and entity KYC status to rejected.
     Admin only.
     """
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
@@ -249,6 +254,8 @@ async def reject_user(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = UserRole.REJECTED
 
     # Update entity KYC status if exists
     if user.entity_id:
@@ -259,46 +266,9 @@ async def reject_user(
         if entity:
             entity.kyc_status = KYCStatus.REJECTED
 
-    # Deactivate user account
-    user.is_active = False
-
     await db.commit()
 
     return MessageResponse(message=f"User {user.email} has been rejected")
-
-
-@router.put("/users/{user_id}/fund", response_model=MessageResponse)
-async def fund_user(
-    user_id: str,
-    admin_user: User = Depends(get_admin_user),  # noqa: B008
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-):
-    """
-    Mark a user as funded. Changes role from APPROVED to FUNDED.
-    Admin only.
-    """
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user.role not in [UserRole.APPROVED, UserRole.PENDING]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"User cannot be funded (current role: {user.role.value})",
-        )
-
-    user.role = UserRole.FUNDED
-    await db.commit()
-
-    # Send funding confirmation email
-    try:
-        await email_service.send_account_funded(user.email, user.first_name)
-    except Exception:
-        pass
-
-    return MessageResponse(message=f"User {user.email} has been marked as funded")
 
 
 @router.get("/kyc-documents")
@@ -379,7 +349,8 @@ async def review_kyc_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     document.status = review.status
-    document.reviewed_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    document.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     document.reviewed_by = admin_user.id
     if review.notes:
         document.notes = review.notes
@@ -527,10 +498,18 @@ async def get_all_deposits(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all deposits, optionally filtered by status or entity.
-    Admin only.
+    Get all deposits, optionally filtered by status or entity_id. Admin only.
+
+    Query: status (optional), entity_id (optional UUID). Returns list of deposit objects
+    (id, entity_id, entity_name, user_email, user_role, amount, currency, status, ...).
+    Uses selectinload(Deposit.entity), selectinload(Deposit.user), and a single batch query for fallback users
+    (deposits without reporting user) to avoid N+1.
     """
-    query = select(Deposit).order_by(Deposit.created_at.desc())
+    query = (
+        select(Deposit)
+        .options(selectinload(Deposit.entity), selectinload(Deposit.user))
+        .order_by(Deposit.created_at.desc())
+    )
 
     if status:
         try:
@@ -549,34 +528,49 @@ async def get_all_deposits(
     result = await db.execute(query)
     deposits = result.scalars().all()
 
+    # Batch-fetch first user per entity for deposits without reporting user
+    entity_ids_needing_fallback = list(
+        {d.entity_id for d in deposits if not d.user_id and d.entity_id}
+    )
+    fallback_user_by_entity: dict[UUID, User] = {}
+    if entity_ids_needing_fallback:
+        fallback_result = await db.execute(
+            select(User)
+            .where(User.entity_id.in_(entity_ids_needing_fallback))
+            .order_by(User.entity_id, User.created_at.asc())
+        )
+        seen: set[UUID] = set()
+        for u in fallback_result.scalars().all():
+            if u.entity_id and u.entity_id not in seen:
+                seen.add(u.entity_id)
+                fallback_user_by_entity[u.entity_id] = u
+
     deposits_with_entity = []
     for dep in deposits:
-        # Get entity info
-        entity_result = await db.execute(
-            select(Entity).where(Entity.id == dep.entity_id)
-        )
-        entity = entity_result.scalar_one_or_none()
-
-        # Get primary user email for entity
+        entity = dep.entity
+        reporting_user = dep.user
         user_email = None
-        if entity:
-            user_result = await db.execute(
-                select(User).where(User.entity_id == entity.id).limit(1)
-            )
-            user = user_result.scalar_one_or_none()
-            user_email = user.email if user else None
+        user_role = None
+        if reporting_user:
+            user_email = reporting_user.email
+            user_role = reporting_user.role.value
+        elif dep.entity_id and dep.entity_id in fallback_user_by_entity:
+            u = fallback_user_by_entity[dep.entity_id]
+            user_email = u.email
+            user_role = u.role.value
 
         deposits_with_entity.append(
             {
                 "id": str(dep.id),
                 "entity_id": str(dep.entity_id),
-                "entity_name": entity.name if entity else None,
-                "user_email": user_email,
+                "entity_name": (entity.name if entity else None) or "—",
+                "user_email": user_email or "",
+                "user_role": user_role,
                 "reported_amount": float(dep.reported_amount)
-                if dep.reported_amount
+                if dep.reported_amount is not None
                 else None,
                 "reported_currency": dep.reported_currency.value
-                if dep.reported_currency
+                if dep.reported_currency is not None
                 else None,
                 "amount": float(dep.amount) if dep.amount else None,
                 "currency": dep.currency.value if dep.currency else None,
@@ -605,8 +599,16 @@ async def create_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Create and confirm a deposit for an entity.
-    This is used when backoffice receives a wire transfer.
+    Create and confirm a deposit for an entity (direct create, no client announce).
+
+    Use when backoffice receives a wire transfer **without** a prior client
+    announce. Credited immediately; no AML hold. No user role transitions.
+
+    For the 0010 flow (announce → confirm → clear), use instead:
+    - Client: POST /deposits/announce (APPROVED→FUNDING).
+    - Admin: POST /deposits/{id}/confirm (deposit_service, ON_HOLD, FUNDING→AML)
+      or PUT /backoffice/deposits/{id}/confirm (immediate confirm, FUNDING→AML).
+    - Admin: POST /deposits/{id}/clear when hold expires (AML→CEA).
     Admin only.
     """
     # Validate deposit amount
@@ -660,7 +662,8 @@ async def create_deposit(
         wire_reference=deposit_data.wire_reference,
         bank_reference=bank_ref,
         status=DepositStatus.CONFIRMED,
-        confirmed_at=datetime.utcnow(),
+        # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+        confirmed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         confirmed_by=admin_user.id,
         notes=deposit_data.notes,
     )
@@ -671,13 +674,9 @@ async def create_deposit(
     entity.balance_currency = deposit_currency
     entity.total_deposited = (entity.total_deposited or Decimal("0")) + deposit_amount
 
-    # Find users for this entity and upgrade to FUNDED if APPROVED
+    # Find users for this entity (for notification only; no role transitions on direct create)
     users_result = await db.execute(select(User).where(User.entity_id == entity.id))
     users = users_result.scalars().all()
-
-    for user in users:
-        if user.role == UserRole.APPROVED:
-            user.role = UserRole.FUNDED
 
     await db.commit()
 
@@ -691,7 +690,7 @@ async def create_deposit(
     return MessageResponse(
         message=(
             f"Deposit of {deposit_data.amount} {deposit_data.currency.value} "
-            f"confirmed for {entity.name}. Users upgraded to FUNDED."
+            f"confirmed for {entity.name}."
         )
     )
 
@@ -753,8 +752,11 @@ async def confirm_pending_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Confirm a pending deposit with actual received amount.
-    Updates entity balance and upgrades users to FUNDED status.
+    Confirm a pending deposit (client-announced) with actual received amount.
+
+    Use when the client has announced via POST /deposits/announce and the
+    deposit is PENDING. Sets deposit to ON_HOLD with AML hold period calculated,
+    and transitions user FUNDING → AML. Funds are NOT credited until clear_deposit.
     Admin only.
     """
     # Get deposit with row lock
@@ -793,29 +795,42 @@ async def confirm_pending_deposit(
 
     confirmed_currency = Currency(confirmation.currency.value)
 
-    # Update deposit with confirmed values
+    # Calculate AML hold period
+    hold_type, hold_days = await calculate_hold_period(
+        db, deposit.entity_id, confirmed_amount
+    )
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    hold_expires_at = calculate_business_days(now, hold_days)
+
+    # Update deposit with confirmed values - set to ON_HOLD for AML review
     deposit.amount = confirmed_amount
     deposit.currency = confirmed_currency
-    deposit.status = DepositStatus.CONFIRMED
-    deposit.confirmed_at = datetime.utcnow()
+    deposit.status = DepositStatus.ON_HOLD
+    deposit.hold_type = hold_type.value
+    deposit.hold_days_required = hold_days
+    deposit.hold_expires_at = hold_expires_at
+    deposit.aml_status = AMLStatus.ON_HOLD.value
+    deposit.confirmed_at = now
     deposit.confirmed_by = admin_user.id
     if confirmation.notes:
         deposit.notes = confirmation.notes
 
-    # Update entity balance
-    entity.balance_amount = (entity.balance_amount or Decimal("0")) + confirmed_amount
-    entity.balance_currency = confirmed_currency
-    entity.total_deposited = (entity.total_deposited or Decimal("0")) + confirmed_amount
+    # NOTE: Funds are NOT credited yet - they will be credited when clear_deposit is called
+    # after AML review is complete. Entity balance is NOT updated here.
 
-    # Upgrade users from APPROVED to FUNDED
-    users_result = await db.execute(select(User).where(User.entity_id == entity.id))
+    # Role transition: FUNDING → AML when backoffice confirms transfer (client waits for AML)
+    users_result = await db.execute(
+        select(User).where(
+            User.entity_id == entity.id,
+            User.role == UserRole.FUNDING,
+        )
+    )
     users = users_result.scalars().all()
-
-    upgraded_count = 0
-    for user in users:
-        if user.role == UserRole.APPROVED:
-            user.role = UserRole.FUNDED
-            upgraded_count += 1
+    upgraded_count = len(users)
+    for u in users:
+        u.role = UserRole.AML
+    await db.flush()
 
     await db.commit()
 
@@ -835,13 +850,17 @@ async def confirm_pending_deposit(
             "entity_name": entity.name,
             "amount": float(confirmed_amount),
             "currency": confirmed_currency.value,
+            "hold_type": hold_type.value,
+            "hold_days": hold_days,
+            "hold_expires_at": hold_expires_at.isoformat(),
         },
     )
 
     return MessageResponse(
         message=(
-            f"Deposit confirmed: {confirmed_amount} {confirmed_currency.value} "
-            f"for {entity.name}. {upgraded_count} user(s) upgraded to FUNDED."
+            f"Deposit confirmed and placed ON_HOLD: {confirmed_amount} {confirmed_currency.value} "
+            f"for {entity.name}. Hold: {hold_type.value} ({hold_days} days, expires {hold_expires_at.date()}). "
+            f"{upgraded_count} user(s) upgraded to AML."
         )
     )
 
@@ -872,6 +891,64 @@ async def reject_pending_deposit(
     await db.commit()
 
     return MessageResponse(message="Deposit rejected")
+
+
+@router.post("/entities/{entity_id}/sync-balance", response_model=MessageResponse)
+async def sync_entity_balance(
+    entity_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Sync entity.balance_amount to EntityHolding (EUR).
+    Used to fix cases where balance was credited to Entity but not EntityHolding.
+    Admin only.
+    """
+    entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
+    entity = entity_result.scalar_one_or_none()
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    if not entity.balance_amount or entity.balance_amount <= 0:
+        raise HTTPException(status_code=400, detail="Entity has no balance to sync")
+
+    # Check current EntityHolding EUR balance
+    holding_result = await db.execute(
+        select(EntityHolding).where(
+            EntityHolding.entity_id == entity.id,
+            EntityHolding.asset_type == AssetType.EUR,
+        )
+    )
+    holding = holding_result.scalar_one_or_none()
+    current_holding_balance = Decimal(str(holding.quantity)) if holding else Decimal("0")
+
+    # Calculate difference
+    target_balance = Decimal(str(entity.balance_amount))
+    difference = target_balance - current_holding_balance
+
+    if difference <= 0:
+        return MessageResponse(
+            message=f"EntityHolding already has {current_holding_balance} EUR (entity.balance_amount: {target_balance}). No sync needed."
+        )
+
+    # Credit the difference to EntityHolding
+    await update_entity_balance(
+        db=db,
+        entity_id=entity.id,
+        asset_type=AssetType.EUR,
+        amount=difference,
+        transaction_type=TransactionType.ADJUSTMENT,
+        created_by=admin_user.id,
+        reference="balance_sync",
+        notes=f"Sync entity.balance_amount to EntityHolding (+{difference} EUR)",
+    )
+
+    await db.commit()
+
+    return MessageResponse(
+        message=f"Synced {difference} EUR to EntityHolding for {entity.name}. New balance: {target_balance} EUR"
+    )
 
 
 @router.get("/entities/{entity_id}/balance")
@@ -1010,7 +1087,8 @@ async def add_asset_to_entity(
 
     # Update holding
     holding.quantity = balance_after
-    holding.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit transaction
     transaction = AssetTransaction(
@@ -1034,19 +1112,7 @@ async def add_asset_to_entity(
             entity.total_deposited or Decimal("0")
         ) + amount_to_add
 
-    # Upgrade user(s) to FUNDED if they have any balance now
-    if balance_after > 0:
-        users_result = await db.execute(
-            select(User).where(
-                User.entity_id == UUID(entity_id),
-                User.role.in_([UserRole.APPROVED, UserRole.PENDING]),
-            )
-        )
-        users = users_result.scalars().all()
-        for user in users:
-            if user.role in [UserRole.APPROVED, UserRole.PENDING]:
-                user.role = UserRole.FUNDED
-
+    # Role transitions defined later
     await db.commit()
 
     asset_label = {
@@ -1261,7 +1327,8 @@ async def update_asset_balance(
 
     # Update the holding
     holding.quantity = new_balance
-    holding.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit transaction
     transaction = AssetTransaction(
@@ -1402,7 +1469,8 @@ async def admin_cancel_order(
 
     # Cancel the order
     order.status = ModelOrderStatus.CANCELLED
-    order.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.commit()
 
@@ -1460,7 +1528,8 @@ async def admin_update_order(
             )
         order.quantity = Decimal(str(new_quantity))
 
-    order.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.commit()
 

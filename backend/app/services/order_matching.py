@@ -1,12 +1,15 @@
 """
 Order Matching Service
 
-FIFO price-time priority matching engine for the Cash Market.
+FIFO price-time priority matching engine for the CEA Cash market.
 Handles order preview, market orders, and limit orders with proper fee calculations.
 """
 
+import logging
 from dataclasses import dataclass
-from datetime import datetime
+
+logger = logging.getLogger(__name__)
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -20,19 +23,83 @@ from ..models.models import (
     CashMarketTrade,
     CertificateType,
     Entity,
+    EntityFeeOverride,
     EntityHolding,
     MarketType,
     Order,
     OrderSide,
     OrderStatus,
     Seller,
+    TradingFeeConfig,
     TransactionType,
 )
 from ..services.currency_service import currency_service
 from ..services.settlement_service import SettlementService
 
-# Platform fee rate: 0.5%
-PLATFORM_FEE_RATE = Decimal("0.005")
+# Default platform fee rate: 0.5% (fallback if no config exists)
+DEFAULT_FEE_RATE = Decimal("0.005")
+
+
+async def get_effective_fee_rate(
+    db: AsyncSession,
+    market: MarketType,
+    side: str,
+    entity_id: Optional[UUID] = None,
+) -> Decimal:
+    """
+    Get the effective fee rate for a transaction.
+
+    Priority:
+    1. Entity override (if exists and has value for this side)
+    2. Market default from trading_fee_configs
+    3. Hardcoded fallback (0.5%)
+
+    Args:
+        db: Database session
+        market: Market type (CEA_CASH or SWAP)
+        side: "BID" or "ASK"
+        entity_id: Optional entity ID to check for overrides
+
+    Returns:
+        Decimal: Fee rate (e.g., 0.005 for 0.5%)
+    """
+    side_upper = side.upper()
+
+    # 1. Check for entity override
+    if entity_id:
+        result = await db.execute(
+            select(EntityFeeOverride).where(
+                and_(
+                    EntityFeeOverride.entity_id == entity_id,
+                    EntityFeeOverride.market == market,
+                    EntityFeeOverride.is_active == True,
+                )
+            )
+        )
+        override = result.scalar_one_or_none()
+
+        if override:
+            override_rate = (
+                override.bid_fee_rate if side_upper == "BID" else override.ask_fee_rate
+            )
+            if override_rate is not None:
+                return Decimal(str(override_rate))
+
+    # 2. Get market default
+    result = await db.execute(
+        select(TradingFeeConfig).where(TradingFeeConfig.market == market)
+    )
+    config = result.scalar_one_or_none()
+
+    if config:
+        return (
+            Decimal(str(config.bid_fee_rate))
+            if side_upper == "BID"
+            else Decimal(str(config.ask_fee_rate))
+        )
+
+    # 3. Fallback to default
+    return DEFAULT_FEE_RATE
 
 # EUR migration date - orders created before this are in CNY, after are in EUR
 # Set to deployment date of this feature
@@ -67,6 +134,7 @@ class OrderPreviewResult:
     can_execute: bool
     execution_message: str
     partial_fill: bool
+    will_be_placed_in_book: bool = False  # True for LIMIT orders waiting in book
 
 
 async def normalize_order_price_to_eur(order: Order) -> Decimal:
@@ -141,7 +209,7 @@ async def update_entity_balance(
 
     if holding:
         holding.quantity = balance_after
-        holding.updated_at = datetime.utcnow()
+        holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         # Create new holding
         holding = EntityHolding(
@@ -206,6 +274,7 @@ async def preview_buy_order(
     amount_eur: Optional[Decimal] = None,
     quantity: Optional[Decimal] = None,
     limit_price: Optional[Decimal] = None,
+    order_type: str = "MARKET",
     all_or_none: bool = False,
 ) -> OrderPreviewResult:
     """
@@ -219,12 +288,18 @@ async def preview_buy_order(
         entity_id: Buyer's entity ID
         amount_eur: EUR amount to spend (mutually exclusive with quantity)
         quantity: CEA quantity to buy (mutually exclusive with amount_eur)
-        limit_price: Maximum price in CNY (for limit orders)
+        limit_price: Maximum price in EUR (for limit orders)
+        order_type: "MARKET" or "LIMIT" - affects behavior when no liquidity
         all_or_none: If True, only return fills if entire order can be matched
 
     Returns:
         OrderPreviewResult with all fill and fee details
     """
+    # Get dynamic fee rate for buyer (BID side)
+    fee_rate = await get_effective_fee_rate(
+        db, MarketType.CEA_CASH, "BID", entity_id
+    )
+
     # Get available balance
     available_eur = await get_entity_balance(db, entity_id, AssetType.EUR)
 
@@ -249,6 +324,31 @@ async def preview_buy_order(
     sell_orders = await get_cea_sell_orders(db, limit_price)
 
     if not sell_orders:
+        # For LIMIT orders without immediate liquidity, allow placement in order book
+        if order_type == "LIMIT" and limit_price is not None:
+            # Calculate estimated quantity based on limit price and amount
+            estimated_quantity = Decimal("0")
+            if amount_eur is not None:
+                # Estimate: quantity = amount / (price * (1 + fee))
+                estimated_quantity = amount_eur / (limit_price * (Decimal("1") + fee_rate))
+
+            return OrderPreviewResult(
+                fills=[],
+                total_quantity=estimated_quantity,
+                total_cost_gross=amount_eur if amount_eur else Decimal("0"),
+                weighted_avg_price=limit_price,
+                best_price=None,
+                worst_price=None,
+                platform_fee_amount=(amount_eur * fee_rate) if amount_eur else Decimal("0"),
+                total_cost_net=amount_eur * (Decimal("1") + fee_rate) if amount_eur else Decimal("0"),
+                net_price_per_unit=limit_price * (Decimal("1") + fee_rate),
+                can_execute=True,  # Can place in book
+                execution_message=f"Order will be placed in order book at €{limit_price:.2f}",
+                partial_fill=False,
+                will_be_placed_in_book=True,
+            )
+
+        # MARKET orders without liquidity cannot execute
         return OrderPreviewResult(
             fills=[],
             total_quantity=Decimal("0"),
@@ -270,10 +370,10 @@ async def preview_buy_order(
     if amount_eur is not None:
         # Use minimum of requested amount and available balance
         spending_limit_net = min(amount_eur, available_eur)
-        max_gross = spending_limit_net / (Decimal("1") + PLATFORM_FEE_RATE)
+        max_gross = spending_limit_net / (Decimal("1") + fee_rate)
     else:
         # For quantity-based, we'll calculate as we go
-        max_gross = available_eur / (Decimal("1") + PLATFORM_FEE_RATE)
+        max_gross = available_eur / (Decimal("1") + fee_rate)
 
     # Simulate FIFO matching
     fills: List[OrderFillResult] = []
@@ -308,16 +408,16 @@ async def preview_buy_order(
             qty_to_buy = min(remaining_qty, remaining_order_qty)
             # But also check if we have enough funds
             cost_for_qty = qty_to_buy * order_price_eur
-            fee_for_cost = cost_for_qty * PLATFORM_FEE_RATE
+            fee_for_cost = cost_for_qty * fee_rate
             total_needed = cost_for_qty + fee_for_cost
             if total_needed > available_eur - total_cost_gross - (
-                total_cost_gross * PLATFORM_FEE_RATE
+                total_cost_gross * fee_rate
             ):
                 # Adjust quantity to what we can afford
                 max_gross_remaining = (
                     available_eur
-                    - total_cost_gross * (Decimal("1") + PLATFORM_FEE_RATE)
-                ) / (Decimal("1") + PLATFORM_FEE_RATE)
+                    - total_cost_gross * (Decimal("1") + fee_rate)
+                ) / (Decimal("1") + fee_rate)
                 qty_to_buy = min(qty_to_buy, max_gross_remaining / order_price_eur)
 
         if qty_to_buy <= Decimal("0"):
@@ -351,7 +451,7 @@ async def preview_buy_order(
             remaining_qty -= qty_to_buy
 
     # Calculate summary
-    platform_fee_amount = total_cost_gross * PLATFORM_FEE_RATE
+    platform_fee_amount = total_cost_gross * fee_rate
     total_cost_net = total_cost_gross + platform_fee_amount
     weighted_avg_price = (
         (total_cost_gross / total_quantity)
@@ -519,9 +619,14 @@ async def execute_market_buy_order(
             certificate_type=CertificateType.CEA,
             price=fill.price,
             quantity=fill.quantity,
-            executed_at=datetime.utcnow(),
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(trade)
+
+        logger.info(
+            f"Trade executed: buyer_order={buy_order.id}, seller_order={sell_order.id}, "
+            f"qty={fill.quantity}, price={fill.price} EUR, cost={fill.cost_eur} EUR"
+        )
 
         # Update sell order
         sell_order.filled_quantity = (
@@ -531,7 +636,7 @@ async def execute_market_buy_order(
             sell_order.status = OrderStatus.FILLED
         else:
             sell_order.status = OrderStatus.PARTIALLY_FILLED
-        sell_order.updated_at = datetime.utcnow()
+        sell_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Update seller stats (only for legacy sellers, not Market Makers)
         if sell_order.seller_id:
@@ -558,6 +663,10 @@ async def execute_market_buy_order(
             f"{preview.weighted_avg_price:.4f} EUR/CEA"
         ),
     )
+
+    # Role transition: CEA → CEA_SETTLE when entity EUR balance reaches 0
+    from .role_transitions import transition_cea_to_cea_settle_if_eur_zero
+    await transition_cea_to_cea_settle_if_eur_zero(db, entity_id, new_eur_balance)
 
     # Create settlement batch for CEA delivery (T+3)
     # CEA will be credited when settlement is finalized, not immediately
@@ -693,8 +802,37 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
     spread = round(best_ask - best_bid, 4) if best_ask and best_bid else None
     last_price = best_ask or best_bid or (63.0 if certificate_type == "CEA" else 81.0)
 
-    total_ask_volume = sum(a["quantity"] for a in asks)
-    total_bid_volume = sum(b["quantity"] for b in bids)
+    # Get 24h trade stats
+    time_24h_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
+    trades_result = await db.execute(
+        select(CashMarketTrade)
+        .where(
+            and_(
+                CashMarketTrade.certificate_type == cert_enum,
+                CashMarketTrade.executed_at >= time_24h_ago,
+            )
+        )
+        .order_by(CashMarketTrade.executed_at.desc())
+    )
+    trades_24h = trades_result.scalars().all()
+
+    # Calculate 24h stats from actual trades
+    if trades_24h:
+        trade_prices = [float(t.price) for t in trades_24h]
+        trade_volumes = [float(t.quantity) for t in trades_24h]
+        high_24h = max(trade_prices)
+        low_24h = min(trade_prices)
+        volume_24h = sum(trade_volumes)
+        # Change: compare most recent to oldest in 24h period
+        change_24h = round(((trade_prices[0] - trade_prices[-1]) / trade_prices[-1]) * 100, 2) if len(trade_prices) > 1 else 0.0
+        # Use most recent trade price as last_price if available
+        last_price = trade_prices[0]
+    else:
+        # No trades in 24h - use current best prices as fallback
+        high_24h = last_price
+        low_24h = last_price
+        volume_24h = 0.0
+        change_24h = 0.0
 
     return {
         "certificate_type": certificate_type,
@@ -704,6 +842,8 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
         "best_bid": best_bid,
         "best_ask": best_ask,
         "last_price": last_price,
-        "volume_24h": total_ask_volume + total_bid_volume,
-        "change_24h": 0.0,  # Would need historical data
+        "volume_24h": volume_24h,
+        "change_24h": change_24h,
+        "high_24h": high_24h,
+        "low_24h": low_24h,
     }

@@ -98,7 +98,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
                       {order.side}
                     </span>
                     <span className="text-sm text-navy-700 dark:text-navy-300">
-                      {order.certificate_type}
+                      {order.certificateType}
                     </span>
                   </div>
                   {getStatusBadge(order.status)}
@@ -114,7 +114,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
                   <div>
                     <span className="text-navy-500 dark:text-navy-400">Quantity</span>
                     <p className="font-mono text-navy-900 dark:text-white">
-                      {order.remaining_quantity.toLocaleString()} / {order.quantity.toLocaleString()}
+                      {order.remainingQuantity.toLocaleString()} / {order.quantity.toLocaleString()}
                     </p>
                   </div>
                   <div>
@@ -126,7 +126,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
                   <div>
                     <span className="text-navy-500 dark:text-navy-400">Time</span>
                     <p className="text-navy-700 dark:text-navy-300">
-                      {formatTime(order.created_at)}
+                      {formatTime(order.createdAt)}
                     </p>
                   </div>
                 </div>

@@ -76,10 +76,10 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
             </span>
           </div>
         </div>
-        <div className={cn('flex items-center gap-1', getChangeColor(prices.eua.change_24h))}>
-          {getTrendIcon(prices.eua.change_24h)}
+        <div className={cn('flex items-center gap-1', getChangeColor(prices.eua.change24h))}>
+          {getTrendIcon(prices.eua.change24h)}
           <span className="text-sm font-medium">
-            {formatPercent(prices.eua.change_24h)}
+            {formatPercent(prices.eua.change24h)}
           </span>
         </div>
       </div>
@@ -106,10 +106,10 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
             </span>
           </div>
         </div>
-        <div className={cn('flex items-center gap-1', getChangeColor(prices.cea.change_24h))}>
-          {getTrendIcon(prices.cea.change_24h)}
+        <div className={cn('flex items-center gap-1', getChangeColor(prices.cea.change24h))}>
+          {getTrendIcon(prices.cea.change24h)}
           <span className="text-sm font-medium">
-            {formatPercent(prices.cea.change_24h)}
+            {formatPercent(prices.cea.change24h)}
           </span>
         </div>
       </div>
@@ -122,7 +122,7 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
           Swap Rate
         </span>
         <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
-          1 EUA = {prices.swap_rate.toFixed(2)} CEA
+          1 EUA = {prices.swapRate.toFixed(2)} CEA
         </span>
       </div>
     </div>
