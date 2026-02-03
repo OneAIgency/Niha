@@ -39,7 +39,6 @@ router = APIRouter(prefix="/swaps", tags=["Swap"])
 
 
 class SwapDirection(str, Enum):
-    EUA_TO_CEA = "eua_to_cea"
     CEA_TO_EUA = "cea_to_eua"
     ALL = "all"
 
@@ -91,29 +90,28 @@ async def get_current_swap_rate(
     current_user: User = Depends(get_swap_user),  # noqa: B008
 ):
     """
-    Get current swap rate between EUA and CEA. SWAP+ or ADMIN only (0010 §8).
-    Returns how many CEA you get for 1 EUA.
+    Get current swap rate for CEA → EUA swaps. SWAP+ or ADMIN only (0010 §8).
+    Returns the CEA/EUA ratio (how many EUA you get for 1 CEA).
     """
     prices = await price_scraper.get_current_prices()
 
     eua_price = prices["eua"]["price"]
     cea_price = prices["cea"]["price"]
 
-    # Calculate rate: How many CEA for 1 EUA
-    if cea_price > 0:
-        swap_rate = eua_price / cea_price
+    # Calculate CEA/EUA ratio: How many EUA for 1 CEA
+    if eua_price > 0:
+        cea_to_eua_ratio = cea_price / eua_price
     else:
-        # Fallback if CEA price is 0/invalid to avoid ZeroDivisionError
-        swap_rate = 5.8 
+        # Fallback if EUA price is 0/invalid to avoid ZeroDivisionError
+        cea_to_eua_ratio = 0.12
 
     return {
-        "eua_to_cea": round(swap_rate, 4),
-        "cea_to_eua": round(1 / swap_rate, 4),
+        "cea_to_eua": round(cea_to_eua_ratio, 4),
         "eua_price_eur": eua_price,
         "cea_price_eur": cea_price,
-        "explanation": f"1 EUA = {swap_rate:.2f} CEA at current market rates",
+        "explanation": f"1 CEA = {cea_to_eua_ratio:.4f} EUA at current market rates",
         "platform_fee_pct": 0.5,  # 0.5% platform fee
-        "effective_rate": round(swap_rate * 0.995, 4),
+        "effective_rate": round(cea_to_eua_ratio * 0.995, 4),
     }
 
 

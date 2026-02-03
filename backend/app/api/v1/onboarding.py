@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -328,7 +328,8 @@ async def submit_for_review(
         )
         entity = entity_result.scalar_one_or_none()
         if entity:
-            entity.kyc_submitted_at = datetime.utcnow()
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            entity.kyc_submitted_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for KYC submission
     ticket = await TicketService.create_ticket(
@@ -343,7 +344,7 @@ async def submit_for_review(
             "document_types": [d.document_type.value for d in documents],
         },
         response_data={
-            "submission_time": datetime.utcnow().isoformat(),
+            "submission_time": datetime.now(timezone.utc).isoformat(),
         },
         tags=["kyc", "submission"],
     )

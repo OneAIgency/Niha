@@ -36,6 +36,7 @@ from ...schemas.schemas import (
     MarketMakerResponse,
     MarketMakerTransactionResponse,
     MarketMakerUpdate,
+    ResetPasswordRequest,
 )
 from ...services.market_maker_service import MarketMakerService
 from ...services.ticket_service import TicketService
@@ -292,7 +293,7 @@ async def fill_spread(
 
 @router.post("/reset-all", response_model=dict)
 async def reset_all_market_makers(
-    password: str = Query(..., description="Reset password for confirmation"),  # noqa: B008
+    request: ResetPasswordRequest,
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
@@ -309,7 +310,7 @@ async def reset_all_market_makers(
     """
     # Validate password
     RESET_PASSWORD = "Niha010!"
-    if password != RESET_PASSWORD:
+    if request.password != RESET_PASSWORD:
         raise HTTPException(status_code=403, detail="Invalid reset password")
 
     from ...models.models import CashMarketTrade, TicketLog
@@ -875,6 +876,99 @@ async def deposit_eur_to_market_maker(
 # =============================================================================
 
 
+@router.get("/auto-trade-rules/monitor", response_model=dict)
+async def monitor_auto_trade_rules(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Get monitoring status for all auto-trade rules across all market makers.
+    Returns health status, last execution time, and next scheduled execution.
+
+    Admin-only endpoint.
+    """
+    from datetime import datetime, timezone
+
+    # Get all auto trade rules with their market makers
+    result = await db.execute(
+        select(AutoTradeRule, MarketMakerClient)
+        .join(MarketMakerClient, AutoTradeRule.market_maker_id == MarketMakerClient.id)
+        .order_by(MarketMakerClient.name, AutoTradeRule.name)
+    )
+    rows = result.all()
+
+    now = datetime.now(timezone.utc)
+    rules_status = []
+
+    for rule, mm in rows:
+        # Determine health status
+        health = "healthy"
+        health_reason = None
+
+        if not rule.enabled:
+            health = "disabled"
+            health_reason = "Rule is disabled"
+        elif not mm.is_active:
+            health = "inactive"
+            health_reason = "Market maker is inactive"
+        elif rule.next_execution_at:
+            # Make next_execution_at timezone-aware for comparison
+            next_exec = rule.next_execution_at
+            if next_exec.tzinfo is None:
+                next_exec = next_exec.replace(tzinfo=timezone.utc)
+
+            # If next execution was more than 5 minutes ago, something might be wrong
+            overdue_seconds = (now - next_exec).total_seconds()
+            if overdue_seconds > 300:  # 5 minutes overdue
+                health = "overdue"
+                health_reason = f"Overdue by {int(overdue_seconds // 60)} minutes"
+            elif overdue_seconds > 60:  # 1 minute overdue
+                health = "delayed"
+                health_reason = f"Delayed by {int(overdue_seconds)} seconds"
+
+        # Calculate time until next execution
+        time_until_next = None
+        if rule.next_execution_at and rule.enabled:
+            next_exec = rule.next_execution_at
+            if next_exec.tzinfo is None:
+                next_exec = next_exec.replace(tzinfo=timezone.utc)
+            time_until_next = int((next_exec - now).total_seconds())
+
+        rules_status.append({
+            "id": str(rule.id),
+            "name": rule.name,
+            "market_maker_id": str(mm.id),
+            "market_maker_name": mm.name,
+            "enabled": rule.enabled,
+            "side": rule.side.value if rule.side else None,
+            "health": health,
+            "health_reason": health_reason,
+            "last_executed_at": rule.last_executed_at.isoformat() if rule.last_executed_at else None,
+            "next_execution_at": rule.next_execution_at.isoformat() if rule.next_execution_at else None,
+            "time_until_next_seconds": time_until_next,
+            "execution_count": rule.execution_count or 0,
+            "interval_seconds": rule.interval_seconds or (rule.interval_minutes * 60 if rule.interval_minutes else 60),
+        })
+
+    # Summary stats
+    total = len(rules_status)
+    enabled = sum(1 for r in rules_status if r["enabled"])
+    healthy = sum(1 for r in rules_status if r["health"] == "healthy")
+    overdue = sum(1 for r in rules_status if r["health"] == "overdue")
+
+    return {
+        "summary": {
+            "total_rules": total,
+            "enabled": enabled,
+            "disabled": total - enabled,
+            "healthy": healthy,
+            "overdue": overdue,
+        },
+        "rules": rules_status,
+        "timestamp": now.isoformat(),
+    }
+
+
 @router.get(
     "/{market_maker_id}/auto-trade-rules",
     response_model=List[AutoTradeRuleResponse],
@@ -926,9 +1020,12 @@ async def list_auto_trade_rules(
             min_quantity=rule.min_quantity,
             max_quantity=rule.max_quantity,
             interval_mode=rule.interval_mode,
-            interval_minutes=rule.interval_minutes,
+            interval_minutes=rule.interval_minutes or 1,
             interval_min_minutes=rule.interval_min_minutes,
             interval_max_minutes=rule.interval_max_minutes,
+            interval_seconds=rule.interval_seconds,
+            interval_min_seconds=rule.interval_min_seconds,
+            interval_max_seconds=rule.interval_max_seconds,
             min_balance=rule.min_balance,
             max_active_orders=rule.max_active_orders,
             last_executed_at=rule.last_executed_at,

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -20,6 +20,7 @@ from ...schemas.schemas import (
     MagicLinkVerify,
     MessageResponse,
     PasswordLoginRequest,
+    SetupPasswordRequest,
     TokenResponse,
     UserResponse,
 )
@@ -30,15 +31,48 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Rate limiting constants
+AUTH_RATE_LIMIT_REQUESTS = 5  # Max requests per window
+AUTH_RATE_LIMIT_WINDOW = 60  # Window in seconds (1 minute)
+
+
+async def check_auth_rate_limit(request: Request):
+    """
+    Rate limit authentication endpoints by IP address.
+    Raises 429 Too Many Requests if limit exceeded.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"auth:{client_ip}"
+
+    allowed, remaining = await RedisManager.check_rate_limit(
+        rate_key, AUTH_RATE_LIMIT_REQUESTS, AUTH_RATE_LIMIT_WINDOW
+    )
+
+    if not allowed:
+        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many authentication attempts. Please try again later.",
+            headers={"Retry-After": str(AUTH_RATE_LIMIT_WINDOW)},
+        )
+
+    return remaining
+
 
 @router.post("/magic-link", response_model=MessageResponse)
 async def request_magic_link(
-    request: MagicLinkRequest, db: AsyncSession = Depends(get_db)  # noqa: B008
+    request: MagicLinkRequest,
+    http_request: Request,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Request a magic link for passwordless authentication.
     Sends an email with a one-time login link.
+    Rate limited to prevent abuse.
     """
+    # Check rate limit
+    await check_auth_rate_limit(http_request)
+
     email = request.email.lower()
 
     # Check if user exists, if not create one
@@ -131,7 +165,8 @@ async def verify_magic_link(
     db.add(auth_attempt)
 
     # Update last login
-    user.last_login = datetime.utcnow()
+    # Use naive UTC to match Column(DateTime) / TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for magic link login
     ticket = await TicketService.create_ticket(
@@ -142,7 +177,7 @@ async def verify_magic_link(
         status=TicketStatus.SUCCESS,
         user_id=user.id,
         request_payload={"email": email, "method": "magic_link"},
-        response_data={"login_time": datetime.utcnow().isoformat()},
+        response_data={"login_time": datetime.now(timezone.utc).isoformat()},
         ip_address=ip_address,
         user_agent=user_agent,
         tags=["auth", "login", "magic_link"],
@@ -168,7 +203,11 @@ async def password_login(
 ):
     """
     Login with email and password.
+    Rate limited to prevent brute force attacks.
     """
+    # Check rate limit
+    await check_auth_rate_limit(request)
+
     email = login_request.email.lower()
 
     # Extract client info for logging
@@ -221,7 +260,8 @@ async def password_login(
     await log_auth_attempt(user.id, True)
 
     # Update last login
-    user.last_login = datetime.utcnow()
+    # Use naive UTC to match Column(DateTime) / TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for login
     ticket = await TicketService.create_ticket(
@@ -232,7 +272,7 @@ async def password_login(
         status=TicketStatus.SUCCESS,
         user_id=user.id,
         request_payload={"email": email},
-        response_data={"login_time": datetime.utcnow().isoformat()},
+        response_data={"login_time": datetime.now(timezone.utc).isoformat()},
         ip_address=ip_address,
         user_agent=user_agent,
         tags=["auth", "login"],
@@ -251,10 +291,33 @@ async def password_login(
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout():
+async def logout(
+    request: Request,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
     """
-    Logout user. In a real app, this would invalidate the JWT.
+    Logout user by blacklisting their JWT token.
+    The token will remain blacklisted until its original expiration time.
     """
+    # Get the Authorization header
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return MessageResponse(message="Successfully logged out", success=True)
+
+    token = auth_header.replace("Bearer ", "")
+
+    # Decode token to get expiration time
+    payload = verify_token(token)
+    if payload and "exp" in payload:
+        # Calculate remaining time until token expiration
+        exp_timestamp = payload["exp"]
+        now_timestamp = datetime.now(timezone.utc).timestamp()
+        remaining_seconds = max(int(exp_timestamp - now_timestamp), 0)
+
+        # Blacklist the token until it expires
+        if remaining_seconds > 0:
+            await RedisManager.blacklist_token(token, remaining_seconds)
+
     return MessageResponse(message="Successfully logged out", success=True)
 
 
@@ -270,7 +333,8 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
     if not user:
         raise HTTPException(status_code=404, detail="Invalid invitation link")
 
-    if user.invitation_expires_at and user.invitation_expires_at < datetime.utcnow():
+    # Use naive UTC for comparison with DB timestamp
+    if user.invitation_expires_at and user.invitation_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=410, detail="Invitation link has expired")
 
     return {
@@ -283,7 +347,8 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
 
 @router.post("/setup-password", response_model=TokenResponse)
 async def setup_password_from_invitation(
-    token: str, password: str, confirm_password: str, db: AsyncSession = Depends(get_db)  # noqa: B008
+    request: SetupPasswordRequest,  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Set password from invitation link.
@@ -293,6 +358,10 @@ async def setup_password_from_invitation(
     - At least 1 special character
     """
     import re
+
+    token = request.token
+    password = request.password
+    confirm_password = request.confirm_password
 
     # Validate passwords match
     if password != confirm_password:
@@ -321,8 +390,8 @@ async def setup_password_from_invitation(
             status_code=401, detail="Invalid or expired invitation link"
         )
 
-    # Check expiration
-    if user.invitation_expires_at and user.invitation_expires_at < datetime.utcnow():
+    # Check expiration (use naive UTC for comparison with DB timestamp)
+    if user.invitation_expires_at and user.invitation_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=401, detail="Invitation link has expired")
 
     # Set password and activate
@@ -331,7 +400,8 @@ async def setup_password_from_invitation(
     user.invitation_expires_at = None
     user.must_change_password = False
     user.is_active = True
-    user.last_login = datetime.utcnow()
+    # Use naive UTC to match Column(DateTime) / TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
 
     await db.commit()
     await db.refresh(user)
@@ -344,31 +414,5 @@ async def setup_password_from_invitation(
     )
 
 
-async def get_current_user(
-    token: str = Depends(lambda: None),  # Would come from header  # noqa: B008
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-) -> User:
-    """
-    Dependency to get current authenticated user from JWT token.
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    payload = verify_token(token)
-    if payload is None:
-        raise credentials_exception
-
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise credentials_exception
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise credentials_exception
-
-    return user
+# Note: get_current_user is defined in core/security.py
+# Use: from app.core.security import get_current_user

@@ -5,8 +5,11 @@ Order-driven market with order book, market depth, and FIFO matching.
 Trade CEA certificates with EUR.
 """
 
+import logging
 import uuid
-from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal, ROUND_DOWN
 from typing import List, Optional
 
@@ -175,9 +178,9 @@ async def get_market_stats(
     """
     orderbook = await get_real_orderbook(db, certificate_type.value)
 
-    # Get 24h trade stats from database
+    # Get 24h trade stats from database - use naive UTC for DB query
     cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
-    yesterday = datetime.utcnow() - timedelta(hours=24)
+    yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
 
     result = await db.execute(
         select(CashMarketTrade)
@@ -433,7 +436,8 @@ async def cancel_order(
 
     # Cancel the order
     order.status = OrderStatus.CANCELLED
-    order.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for order cancellation
     ticket = await TicketService.create_ticket(
@@ -444,7 +448,7 @@ async def cancel_order(
         status=TicketStatus.SUCCESS,
         user_id=current_user.id,
         request_payload={"order_id": order_id},
-        response_data={"cancelled_at": datetime.utcnow().isoformat()},
+        response_data={"cancelled_at": datetime.now(timezone.utc).isoformat()},  # isoformat is string, OK
         before_state=before_state,
         after_state={"status": "CANCELLED"},
         tags=["order", "cancel"],
@@ -512,7 +516,8 @@ async def modify_order_price(
     # Update the price
     old_price = float(order.price)
     order.price = Decimal(str(request.new_price))
-    order.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for order modification
     ticket = await TicketService.create_ticket(
@@ -529,7 +534,7 @@ async def modify_order_price(
         response_data={
             "old_price": old_price,
             "new_price": request.new_price,
-            "modified_at": datetime.utcnow().isoformat(),
+            "modified_at": datetime.now(timezone.utc).isoformat(),
         },
         before_state=before_state,
         after_state={"price": request.new_price},
@@ -732,7 +737,8 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):  
             certificate_type=CertTypeEnum.CEA,
             price=Decimal(str(order_price_cny)),
             quantity=Decimal(str(qty_to_buy)),
-            executed_at=datetime.utcnow(),
+            # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(trade)
 
@@ -882,6 +888,7 @@ async def preview_order(
         amount_eur=amount_eur,
         quantity=quantity,
         limit_price=limit_price,
+        order_type=request.order_type.value,
         all_or_none=request.all_or_none,
     )
 
@@ -916,6 +923,7 @@ async def preview_order(
         can_execute=preview.can_execute,
         execution_message=preview.execution_message,
         partial_fill=preview.partial_fill,
+        will_be_placed_in_book=preview.will_be_placed_in_book,
     )
 
 
@@ -931,6 +939,11 @@ async def execute_market_order(
     Market orders are filled immediately using FIFO price-time priority.
     A 0.5% platform fee is charged on the transaction value.
     """
+    logger.info(
+        f"Market order request: user={current_user.email}, side={request.side.value}, "
+        f"cert={request.certificate_type.value}, amount_eur={request.amount_eur}, qty={request.quantity}"
+    )
+
     if not current_user.entity_id:
         raise HTTPException(status_code=400, detail="User must have an entity to trade")
 
@@ -957,6 +970,11 @@ async def execute_market_order(
         amount_eur=amount_eur,
         quantity=quantity,
         all_or_none=request.all_or_none,
+    )
+
+    logger.info(
+        f"Market order executed: user={current_user.email}, success={result.success}, "
+        f"qty={result.total_quantity}, cost={result.total_cost_net}, trades={len(result.fills)}"
     )
 
     return OrderExecutionResponse(

@@ -1,7 +1,7 @@
 """Admin Market Orders API - Place/cancel orders on behalf of Market Makers"""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -676,7 +676,8 @@ async def cancel_market_order(
 
     # Cancel the order
     order.status = OrderStatus.CANCELLED
-    order.updated_at = datetime.utcnow()
+    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+    order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Capture after state
     after_state = {
@@ -803,7 +804,8 @@ async def cleanup_dust_orders(
         # Mark as filled (set filled_quantity = quantity)
         order.filled_quantity = order.quantity
         order.status = OrderStatus.FILLED
-        order.updated_at = datetime.utcnow()
+        # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
+        order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         cleaned_count += 1
         logger.info(
             f"Cleaned dust order {order.id}: {order.side.value} {remaining} {cert_type.value} @ {order.price}"

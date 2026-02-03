@@ -1,6 +1,6 @@
 import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -180,8 +180,8 @@ async def get_my_sessions(
     """
     Get current user's session history.
     """
-    # Get recent sessions (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # Get recent sessions (last 30 days) - use naive UTC for DB query
+    thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
 
     query = (
         select(UserSession)
@@ -244,16 +244,28 @@ async def report_deposit(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Report a wire transfer deposit (APPROVED or ADMIN users).
+    Report a wire transfer deposit (APPROVED and beyond, ADMIN, or MM users).
     Creates a pending deposit that backoffice will confirm when funds arrive.
-    Also transitions APPROVED users to FUNDING role.
+    Also transitions APPROVED users to FUNDING role on first deposit.
     """
-    # APPROVED and ADMIN can report deposits; others must complete KYC first
-    if current_user.role not in (UserRole.APPROVED, UserRole.ADMIN):
+    # Match get_approved_user: APPROVED through EUA, plus ADMIN and MM
+    allowed_roles = (
+        UserRole.ADMIN,
+        UserRole.MM,
+        UserRole.APPROVED,
+        UserRole.FUNDING,
+        UserRole.AML,
+        UserRole.CEA,
+        UserRole.CEA_SETTLE,
+        UserRole.SWAP,
+        UserRole.EUA_SETTLE,
+        UserRole.EUA,
+    )
+    if current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=403,
             detail=(
-                "Only APPROVED users can report deposits. "
+                "Only APPROVED users and beyond can report deposits. "
                 "Complete KYC verification first."
             ),
         )
@@ -268,17 +280,30 @@ async def report_deposit(
     before_state = await TicketService.get_entity_state(db, "User", current_user.id)
 
     # Use deposit_service which handles role transition APPROVED → FUNDING
-    deposit = await deposit_service.announce_deposit(
-        db=db,
-        entity_id=current_user.entity_id,
-        user_id=current_user.id,
-        reported_amount=Decimal(str(deposit_data.amount)),
-        reported_currency=Currency(deposit_data.currency.value),
-        source_bank=None,
-        source_iban=None,
-        source_swift=None,
-        client_notes=deposit_data.wire_reference,
-    )
+    try:
+        deposit = await deposit_service.announce_deposit(
+            db=db,
+            entity_id=current_user.entity_id,
+            user_id=current_user.id,
+            reported_amount=Decimal(str(deposit_data.amount)),
+            reported_currency=Currency(deposit_data.currency.value),
+            source_bank=None,
+            source_iban=None,
+            source_swift=None,
+            client_notes=deposit_data.wire_reference,
+        )
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to announce deposit for user {current_user.id}: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Rollback to prevent partial state on failure
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create deposit: {str(e)}"
+        )
 
     # Capture after state
     after_state = await TicketService.get_entity_state(db, "User", current_user.id)
@@ -353,6 +378,7 @@ async def get_my_deposits(
             if d.confirmed_at
             else None,
             "notes": d.notes,
+            "ticket_id": d.ticket_id,
             "created_at": d.created_at.isoformat() + "Z",
         }
         for d in deposits

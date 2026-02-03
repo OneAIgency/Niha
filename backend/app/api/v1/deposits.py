@@ -8,7 +8,7 @@ Endpoints for deposit lifecycle:
 All deposit management routes with AML hold support.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
@@ -164,6 +164,7 @@ class DepositDetailResponse(BaseModel):
     rejected_by: Optional[str] = None
     rejection_reason: Optional[str] = None
     admin_notes: Optional[str] = None
+    ticket_id: Optional[str] = None  # Ticket ID for the deposit announcement
 
     class Config:
         from_attributes = True
@@ -277,6 +278,7 @@ def deposit_to_response(deposit, include_entity: bool = True, include_relations:
         rejected_by=rejected_by_name,
         rejection_reason=deposit.rejection_reason,
         admin_notes=deposit.admin_notes,
+        ticket_id=deposit.ticket_id,
     )
 
 
@@ -397,7 +399,8 @@ async def preview_hold_period(
         db=db, entity_id=current_user.entity_id, amount=amount
     )
 
-    release_date = deposit_service.calculate_business_days(datetime.utcnow(), hold_days)
+    # Use naive UTC for date calculation
+    release_date = deposit_service.calculate_business_days(datetime.now(timezone.utc).replace(tzinfo=None), hold_days)
 
     reasons = {
         "FIRST_DEPOSIT": "First deposit requires extended verification",

@@ -1,7 +1,7 @@
 """Logging and Audit Trail API endpoints"""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 from uuid import UUID
 
@@ -272,8 +272,9 @@ async def get_logging_stats(
     ]
 
     # Actions over time (daily aggregation for last 30 days if no date range specified)
+    # Use naive UTC for DB query
     if not start_date:
-        time_start = datetime.utcnow() - timedelta(days=30)
+        time_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
     else:
         time_start = start_date
 
