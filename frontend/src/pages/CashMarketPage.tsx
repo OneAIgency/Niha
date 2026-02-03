@@ -84,12 +84,12 @@ export function CashMarketPage() {
           limit_price: order.limitPrice,
         });
 
-        if (preview.can_execute && order.limitPrice) {
+        if (preview.canExecute && order.limitPrice) {
           await cashMarketApi.placeOrder({
             certificate_type: certificateType,
             side: 'BUY',
             price: order.limitPrice,
-            quantity: preview.total_quantity,
+            quantity: preview.totalQuantity,
           });
 
           // Refresh data after placing order
@@ -234,30 +234,29 @@ export function CashMarketPage() {
             <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 180px)' }}>
             {/* Order Book with Market Depth Visualization - Same style as backoffice */}
             {orderBook && (
-              <ProfessionalOrderBook
-                orderBook={{
-                  bids: orderBook.bids,
-                  asks: orderBook.asks,
-                  spread: orderBook.spread,
-                  best_bid: orderBook.best_bid,
-                  best_ask: orderBook.best_ask,
-                }}
-                showFullBook={true}
-                maxHeight="calc(100vh - 350px)"
-              />
+              <div className="flex-1 min-h-0">
+                <ProfessionalOrderBook
+                  orderBook={{
+                    bids: orderBook.bids,
+                    asks: orderBook.asks,
+                    spread: orderBook.spread,
+                    best_bid: orderBook.best_bid,
+                    best_ask: orderBook.best_ask,
+                  }}
+                  showFullBook={true}
+                />
+              </div>
             )}
 
             {/* My Orders - Full Width */}
-            <div className="w-full">
-              <div className="h-[450px]">
-                <MyOrders
-                  orders={myOrders}
-                  onCancelOrder={handleCancelOrder}
-                />
-              </div>
+            <div className="w-full flex-shrink-0 h-[300px]">
+              <MyOrders
+                orders={myOrders}
+                onCancelOrder={handleCancelOrder}
+              />
             </div>
           </div>
         )}

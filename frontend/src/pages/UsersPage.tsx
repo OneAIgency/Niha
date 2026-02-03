@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Trash2,
   Eye,
+  ArrowDownUp,
 } from 'lucide-react';
 import { Button, Card, Badge, ConfirmationModal } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
@@ -213,6 +214,30 @@ export function UsersPage() {
 
   const handleDeactivateUser = (user: UserWithEntity) => {
     setDeactivateUser(user);
+  };
+
+  const handleSyncBalance = async (entityId: string) => {
+    try {
+      const result = await backofficeApi.syncEntityBalance(entityId);
+      alert(result.message);
+      // Refresh user list to show updated balance
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to sync balance:', error);
+      alert('Failed to sync balance');
+    }
+  };
+
+  const handleCreateEntityForUser = async (user: UserWithEntity) => {
+    try {
+      const result = await adminApi.createEntityForUser(user.id);
+      alert(result.message);
+      // Refresh user list to show entity_id
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to create entity:', error);
+      alert('Failed to create entity for user');
+    }
   };
 
   const confirmDeactivateUser = async () => {
@@ -537,19 +562,40 @@ export function UsersPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      {user.entity_id && (
+                      {user.entity_id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAddAssetUser({
+                              id: user.id,
+                              entityId: user.entity_id!,
+                              entityName: user.entity_name || 'Unknown Entity'
+                            })}
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            title="Add Asset"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSyncBalance(user.entity_id!)}
+                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title="Sync Balance (fix legacy deposits)"
+                          >
+                            <ArrowDownUp className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setAddAssetUser({
-                            id: user.id,
-                            entityId: user.entity_id!,
-                            entityName: user.entity_name || 'Unknown Entity'
-                          })}
-                          className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                          title="Add Asset"
+                          onClick={() => handleCreateEntityForUser(user)}
+                          className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                          title="Create Entity (required for deposits)"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Building2 className="w-4 h-4" />
                         </Button>
                       )}
                       {user.is_active !== false && (

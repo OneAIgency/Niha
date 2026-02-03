@@ -9,8 +9,12 @@ import {
   Wifi,
   WifiOff,
   Banknote,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Timer,
 } from 'lucide-react';
-import { Button } from '../components/common';
+import { Button, Card, Badge } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import {
   ContactRequestsTab,
@@ -49,17 +53,19 @@ interface IPLookupResult {
   as: string;
 }
 
-type OnboardingSubpage = 'requests' | 'kyc' | 'deposits';
+type OnboardingSubpage = 'requests' | 'kyc' | 'deposits' | 'aml';
 
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
-  { path: 'deposits', label: 'Deposits/AML', icon: Banknote },
+  { path: 'deposits', label: 'Deposits', icon: Banknote },
+  { path: 'aml', label: 'AML', icon: Shield },
 ];
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
   if (pathname.endsWith('/kyc') || pathname.includes('/onboarding/kyc')) return 'kyc';
   if (pathname.endsWith('/deposits') || pathname.includes('/onboarding/deposits')) return 'deposits';
+  if (pathname.endsWith('/aml') || pathname.includes('/onboarding/aml')) return 'aml';
   return 'requests';
 }
 
@@ -105,7 +111,7 @@ export function BackofficeOnboardingPage() {
   const [showIpModal, setShowIpModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
-  const [onHoldDeposits, setOnHoldDeposits] = useState<Deposit[]>([]);
+  const [amlDeposits, setAmlDeposits] = useState<Deposit[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -137,10 +143,7 @@ export function BackofficeOnboardingPage() {
           file_name: d.file_name ?? d.fileName,
         })));
       } else if (activeSubpage === 'deposits') {
-        const [pendingRes, onHoldRes] = await Promise.all([
-          backofficeApi.getPendingDeposits(),
-          backofficeApi.getOnHoldDeposits({ include_expired: true }),
-        ]);
+        const pendingRes = await backofficeApi.getPendingDeposits();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setPendingDeposits(pendingRes.map((d: any): PendingDeposit => ({
           id: d.id,
@@ -157,7 +160,9 @@ export function BackofficeOnboardingPage() {
           notes: d.notes ?? null,
           created_at: d.created_at ?? d.createdAt ?? '',
         })));
-        setOnHoldDeposits(onHoldRes.deposits || []);
+      } else if (activeSubpage === 'aml') {
+        const onHoldRes = await backofficeApi.getOnHoldDeposits({ include_expired: true });
+        setAmlDeposits(onHoldRes.deposits || []);
       }
     } catch (err) {
       logger.error('Failed to load data', err);
@@ -274,14 +279,28 @@ export function BackofficeOnboardingPage() {
     }
   };
 
-  const handleClearDeposit = async (depositId: string, forceClear?: boolean, notes?: string) => {
-    setActionLoading(`clear-${depositId}`);
+  // AML Tab handlers
+  const handleClearAML = async (depositId: string) => {
+    setActionLoading(`aml-clear-${depositId}`);
     try {
-      await backofficeApi.clearDeposit(depositId, { force_clear: forceClear, admin_notes: notes });
-      setOnHoldDeposits(prev => prev.filter(d => d.id !== depositId));
+      await backofficeApi.clearDeposit(depositId, { force_clear: true, admin_notes: 'AML cleared by admin' });
+      setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
     } catch (err) {
-      logger.error('Failed to clear deposit', err);
-      setError('Failed to clear deposit');
+      logger.error('Failed to clear AML deposit', err);
+      setError('Failed to clear AML deposit');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectAML = async (depositId: string) => {
+    setActionLoading(`aml-reject-${depositId}`);
+    try {
+      await backofficeApi.rejectDeposit(depositId);
+      setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
+    } catch (err) {
+      logger.error('Failed to reject AML deposit', err);
+      setError('Failed to reject AML deposit');
     } finally {
       setActionLoading(null);
     }
@@ -376,7 +395,7 @@ export function BackofficeOnboardingPage() {
       {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
         const to = `/backoffice/onboarding/${path}`;
         const isActive = activeSubpage === path;
-        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : (pendingDeposits.length + onHoldDeposits.length);
+        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : pendingDeposits.length;
         return (
           <Link
             key={path}
@@ -489,13 +508,118 @@ export function BackofficeOnboardingPage() {
       {activeSubpage === 'deposits' && (
         <PendingDepositsTab
           pendingDeposits={pendingDeposits}
-          onHoldDeposits={onHoldDeposits}
           loading={loading}
           onConfirm={handleConfirmDeposit}
           onReject={handleRejectDeposit}
-          onClear={handleClearDeposit}
           actionLoading={actionLoading}
         />
+      )}
+
+      {activeSubpage === 'aml' && (
+        <Card>
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+              AML Review Queue
+            </h2>
+            <Badge variant="warning" className="ml-2">
+              {amlDeposits.length} pending
+            </Badge>
+          </div>
+
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : amlDeposits.length === 0 ? (
+            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+              <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No deposits pending AML review</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {amlDeposits.map((deposit) => {
+                const holdExpiresAt = deposit.hold_expires_at ?? (deposit as unknown as { holdExpiresAt?: string }).holdExpiresAt;
+                const isExpired = holdExpiresAt ? new Date(holdExpiresAt) <= new Date() : false;
+                const entityName = deposit.entity_name ?? (deposit as unknown as { entityName?: string }).entityName ?? 'Unknown';
+                const userEmail = deposit.user_email ?? (deposit as unknown as { userEmail?: string }).userEmail ?? '';
+                const amount = deposit.amount ? Number(deposit.amount) : 0;
+                const currency = deposit.currency || 'EUR';
+
+                return (
+                  <div
+                    key={deposit.id}
+                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                            {entityName}
+                          </h3>
+                          <Badge variant="warning">AML Hold</Badge>
+                          {isExpired && (
+                            <Badge variant="success">Ready to Clear</Badge>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Amount:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                              €{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {currency}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200">{userEmail}</span>
+                          </div>
+                          {holdExpiresAt && (
+                            <div className="flex items-center gap-1">
+                              <Timer className="w-4 h-4 text-navy-400" />
+                              <span className="text-navy-500 dark:text-navy-400">Hold expires:</span>
+                              <span className={`ml-1 font-medium ${isExpired ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {isExpired ? 'Expired' : new Date(holdExpiresAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRejectAML(deposit.id)}
+                          loading={actionLoading === `aml-reject-${deposit.id}`}
+                          disabled={actionLoading !== null}
+                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleClearAML(deposit.id)}
+                          loading={actionLoading === `aml-clear-${deposit.id}`}
+                          disabled={actionLoading !== null}
+                          className={isExpired ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          {isExpired ? 'Clear' : 'Force Clear'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
       )}
 
       <DocumentViewerModal

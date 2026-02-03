@@ -17,7 +17,6 @@ import { useAuthStore } from '../stores/useStore';
 import type { SwapCalculation } from '../types';
 
 interface SwapRate {
-  euaToCea: number;
   ceaToEua: number;
   euaPriceEur: number;
   ceaPriceEur: number;
@@ -67,23 +66,32 @@ export function CeaSwapMarketPage() {
   const fetchData = useCallback(async () => {
     try {
       setSwapError(null);
-      const [rateData, balancesData, orderbookData] = await Promise.all([
-        swapsApi.getRate(),
-        cashMarketApi.getUserBalances(),
-        swapsApi.getOrderbook(),
-      ]);
-      // Transform snake_case API response to camelCase interface
-      setSwapRate({
-        euaToCea: rateData.eua_to_cea,
-        ceaToEua: rateData.cea_to_eua,
-        euaPriceEur: rateData.eua_price_eur,
-        ceaPriceEur: rateData.cea_price_eur,
-        platformFeePct: rateData.platform_fee_pct,
-        effectiveRate: rateData.effective_rate,
-      });
-      setUserBalances(balancesData);
+
+      // Always fetch orderbook (doesn't require auth)
+      const orderbookData = await swapsApi.getOrderbook();
       setOrderbook(orderbookData.asks);
       setTotalEuaAvailable(orderbookData.totalEuaAvailable);
+
+      // Try to fetch rate and balances (requires auth)
+      try {
+        const [rateData, balancesData] = await Promise.all([
+          swapsApi.getRate(),
+          cashMarketApi.getUserBalances(),
+        ]);
+
+        // Transform snake_case API response to camelCase interface
+        setSwapRate({
+          ceaToEua: rateData.cea_to_eua,
+          euaPriceEur: rateData.eua_price_eur,
+          ceaPriceEur: rateData.cea_price_eur,
+          platformFeePct: rateData.platform_fee_pct,
+          effectiveRate: rateData.effective_rate,
+        });
+        setUserBalances(balancesData);
+      } catch (authError) {
+        console.warn('Could not fetch rate/balances (auth required):', authError);
+        // Still show orderbook even if not authenticated
+      }
     } catch (error) {
       console.error('Error fetching swap data:', error);
       setSwapError('Failed to load swap data. Please try again.');
@@ -126,8 +134,10 @@ export function CeaSwapMarketPage() {
 
   // Derived values
   const ceaBalance = userBalances?.cea_balance ?? 0;
-  const ceaToEuaRate = swapRate?.ceaToEua ?? 0;
-  const euaToCeaRate = swapRate?.euaToCea ?? 0;
+
+  // Get ratio from swapRate or fallback to best orderbook ratio
+  const bestOrderbookRatio = orderbook.length > 0 ? orderbook[0].ratio : 0;
+  const ceaToEuaRate = swapRate?.ceaToEua ?? bestOrderbookRatio;
   const platformFeePct = swapRate?.platformFeePct ?? 0.5;
 
   // Calculate weighted average ratio from orderbook for the user's CEA amount
@@ -264,9 +274,9 @@ export function CeaSwapMarketPage() {
         iconBg="bg-violet-500/20"
       >
         <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">Rate</span>
+          <span className="text-navy-600 dark:text-navy-400 mr-2">CEA/EUA Ratio</span>
           <span className="font-bold font-mono text-white text-lg">
-            {swapRate ? `1:${formatNumber(euaToCeaRate, 2)}` : '...'}
+            {ceaToEuaRate > 0 ? formatNumber(ceaToEuaRate, 4) : '...'}
           </span>
         </div>
 
@@ -523,7 +533,7 @@ export function CeaSwapMarketPage() {
                   </div>
                 </div>
                 <div className="text-center text-sm text-navy-500 dark:text-navy-500 mt-4">
-                  Rate: 1 EUA = {formatNumber(euaToCeaRate, 2)} CEA
+                  Ratio: 1 CEA = {formatNumber(ceaToEuaRate, 4)} EUA
                 </div>
               </div>
 
@@ -722,8 +732,8 @@ export function CeaSwapMarketPage() {
                   <span className="text-blue-400 font-mono">{formatNumber(netEua, 0)} tonnes</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-navy-600 dark:text-navy-400">Rate</span>
-                  <span className="text-white font-mono">1:{formatNumber(euaToCeaRate, 2)}</span>
+                  <span className="text-navy-600 dark:text-navy-400">Ratio (CEA/EUA)</span>
+                  <span className="text-white font-mono">{formatNumber(ceaToEuaRate, 4)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">Status</span>

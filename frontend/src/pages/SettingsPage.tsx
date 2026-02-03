@@ -96,6 +96,7 @@ export function SettingsPage() {
       setSources(sourcesData);
       setMailSettings(mailData);
       setExchangeRateSources(exchangeData);
+
       setMailForm({
         provider: mailData.provider,
         use_env_credentials: mailData.use_env_credentials,
@@ -347,6 +348,21 @@ export function SettingsPage() {
     }
   };
 
+  /** Display label for scrape status (correct spelling: Success, Failed, Timeout). */
+  const getStatusLabel = (status?: string) => {
+    if (!status) return 'Unknown';
+    switch (status.toLowerCase()) {
+      case 'success':
+        return 'Success';
+      case 'failed':
+        return 'Failed';
+      case 'timeout':
+        return 'Timeout';
+      default:
+        return status;
+    }
+  };
+
   const formatTimeAgo = (timestamp?: string) => {
     if (!timestamp) return 'Never';
     // Normalize: append 'Z' if missing to treat naive timestamps as UTC
@@ -522,9 +538,9 @@ export function SettingsPage() {
                           </td>
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-1">
-                              {getStatusIcon(source.last_scrape_status)}
-                              <span className="text-[10px] capitalize text-navy-600 dark:text-navy-300">
-                                {source.last_scrape_status || 'Unknown'}
+                              {getStatusIcon(source.lastScrapeStatus ?? source.last_scrape_status)}
+                              <span className="text-[10px] text-navy-600 dark:text-navy-300">
+                                {getStatusLabel(source.lastScrapeStatus ?? source.last_scrape_status)}
                               </span>
                             </div>
                           </td>
@@ -652,8 +668,8 @@ export function SettingsPage() {
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-1">
                               {getStatusIcon(source.lastScrapeStatus)}
-                              <span className="text-[10px] capitalize text-navy-600 dark:text-navy-300">
-                                {source.lastScrapeStatus || 'pending'}
+                              <span className="text-[10px] text-navy-600 dark:text-navy-300">
+                                {source.lastScrapeStatus ? getStatusLabel(source.lastScrapeStatus) : 'Pending'}
                               </span>
                             </div>
                           </td>

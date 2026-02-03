@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   TrendingUp,
@@ -7,7 +7,6 @@ import {
   BarChart3,
   Activity,
   Clock,
-  ArrowUpDown,
   AlertCircle,
   X,
   ArrowLeft,
@@ -17,11 +16,10 @@ import { useNavigate } from 'react-router-dom';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi } from '../services/api';
 import { UserOrderEntryModal } from '../components/cash-market/UserOrderEntryModal';
-import { Card, Button } from '../components/common';
+import { Card } from '../components/common';
 import type {
   OrderBookLevel,
   Order,
-  OrderSide,
   CashMarketTrade,
 } from '../types';
 
@@ -47,14 +45,12 @@ function ProfessionalOrderBook({
   onPriceClick,
 }: ProfessionalOrderBookProps) {
   // Calculate total liquidity for BID and ASK sides
-  const { totalBidQty, totalBidEur, totalAskQty, totalAskEur } = useMemo(() => {
-    const bidQty = bids.reduce((sum, b) => sum + b.quantity, 0);
-    const askQty = asks.reduce((sum, a) => sum + a.quantity, 0);
+  const { totalBidEur, totalAskEur } = useMemo(() => {
     // For BID: value = sum of (quantity * price) for each level
     const bidEur = bids.reduce((sum, b) => sum + b.quantity * b.price, 0);
     // For ASK: value = sum of (quantity * price) for each level
     const askEur = asks.reduce((sum, a) => sum + a.quantity * a.price, 0);
-    return { totalBidQty: bidQty, totalBidEur: bidEur, totalAskQty: askQty, totalAskEur: askEur };
+    return { totalBidEur: bidEur, totalAskEur: askEur };
   }, [bids, asks]);
 
   // Calculate cumulative values for each level
@@ -213,212 +209,6 @@ function ProfessionalOrderBook({
 }
 
 // =============================================================================
-// TRADE PANEL COMPONENT (COMPACT)
-// =============================================================================
-
-interface TradePanelProProps {
-  bestBid: number | null;
-  bestAsk: number | null;
-  lastPrice: number | null;
-  selectedPrice?: number;
-  availableEur: number;
-  availableCea: number;
-  onPlaceOrder?: (order: { side: OrderSide; price: number; quantity: number }) => Promise<void>;
-}
-
-function TradePanelPro({
-  bestBid,
-  bestAsk,
-  lastPrice,
-  selectedPrice,
-  availableEur,
-  availableCea,
-  onPlaceOrder,
-}: TradePanelProProps) {
-  const [side, setSide] = useState<OrderSide>('BUY');
-  const [orderType, setOrderType] = useState<'LIMIT' | 'MARKET'>('LIMIT');
-  const [price, setPrice] = useState(selectedPrice?.toString() || lastPrice?.toString() || '');
-  const [quantity, setQuantity] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (selectedPrice) {
-      setPrice(selectedPrice.toString());
-    }
-  }, [selectedPrice]);
-
-  const priceNum = parseFloat(price) || 0;
-  const quantityNum = parseFloat(quantity) || 0;
-  const total = priceNum * quantityNum;
-  const isBuy = side === 'BUY';
-
-  const setMarketPrice = () => {
-    if (side === 'BUY' && bestAsk) {
-      setPrice(bestAsk.toString());
-    } else if (side === 'SELL' && bestBid) {
-      setPrice(bestBid.toString());
-    }
-  };
-
-  const setQuickQuantity = (percent: number) => {
-    if (side === 'BUY' && priceNum > 0) {
-      const maxQty = Math.floor((availableEur ?? 0) / priceNum);
-      setQuantity(Math.floor(maxQty * percent / 100).toString());
-    } else if (side === 'SELL') {
-      setQuantity(Math.floor((availableCea ?? 0) * percent / 100).toString());
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!onPlaceOrder || priceNum <= 0 || quantityNum <= 0) return;
-    setIsSubmitting(true);
-    try {
-      await onPlaceOrder({ side, price: priceNum, quantity: quantityNum });
-      setQuantity('');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="h-full bg-navy-900 rounded border border-navy-800 flex flex-col">
-      {/* Buy/Sell Tabs */}
-      <div className="grid grid-cols-2">
-        <button
-          onClick={() => setSide('BUY')}
-          className={`py-2 text-[11px] font-bold transition-colors ${
-            side === 'BUY'
-              ? 'bg-emerald-500 text-white'
-              : 'bg-navy-800 text-navy-400 hover:bg-emerald-900/30'
-          }`}
-        >
-          BUY
-        </button>
-        <button
-          disabled
-          className="py-2 text-[11px] font-bold bg-navy-800/50 text-navy-600 cursor-not-allowed"
-          title="Selling is not available"
-        >
-          SELL
-        </button>
-      </div>
-
-      <div className="p-2 space-y-2 flex-1 flex flex-col">
-        {/* Order Type */}
-        <div className="flex gap-1">
-          {(['LIMIT', 'MARKET'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setOrderType(type)}
-              className={`flex-1 py-1 rounded text-[10px] font-semibold transition-colors ${
-                orderType === type
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                  : 'bg-navy-800 text-navy-400 border border-navy-700 hover:bg-navy-700'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
-        {/* Price Input */}
-        {orderType === 'LIMIT' && (
-          <div>
-            <div className="flex justify-between items-center mb-0.5">
-              <label className="text-[10px] text-navy-400">Price (EUR)</label>
-              <button
-                type="button"
-                onClick={setMarketPrice}
-                className="text-[9px] text-amber-400 hover:underline font-medium"
-              >
-                {side === 'BUY' ? 'Best Ask' : 'Best Bid'}
-              </button>
-            </div>
-            <input
-              type="number"
-              step="0.1"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0.0"
-              className="w-full h-7 px-2 text-[11px] font-mono bg-navy-950 border border-navy-700 rounded text-white placeholder-navy-600 focus:border-amber-500 focus:outline-none"
-            />
-          </div>
-        )}
-
-        {/* Quantity Input */}
-        <div>
-          <label className="text-[10px] text-navy-400 block mb-0.5">
-            Quantity (CEA)
-          </label>
-          <input
-            type="number"
-            step="1"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            placeholder="0"
-            className="w-full h-7 px-2 text-[11px] font-mono bg-navy-950 border border-navy-700 rounded text-white placeholder-navy-600 focus:border-amber-500 focus:outline-none"
-          />
-          {/* Quick Quantity Buttons */}
-          <div className="flex gap-1 mt-1">
-            {[25, 50, 75, 100].map((pct) => (
-              <button
-                key={pct}
-                onClick={() => setQuickQuantity(pct)}
-                className="flex-1 py-1 rounded text-[9px] font-medium border border-navy-700 text-navy-400 hover:bg-navy-800 transition-colors"
-              >
-                {pct}%
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Total */}
-        <div className="flex justify-between items-center py-1.5 border-y border-navy-700">
-          <span className="text-[10px] text-navy-400">Total</span>
-          <span className="text-[13px] font-bold font-mono text-white">
-            €{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-
-        {/* Submit Button */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          disabled={priceNum <= 0 || quantityNum <= 0 || isSubmitting}
-          onClick={handleSubmit}
-          className={`w-full py-2 rounded font-bold text-[11px] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-            isBuy
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
-              : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-          }`}
-        >
-          {isSubmitting ? 'Processing...' : `${side} CEA`}
-        </motion.button>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Available Balance */}
-        <div className="p-1.5 rounded bg-navy-800/50 space-y-1 text-[10px]">
-          <div className="flex justify-between">
-            <span className="text-navy-500">Available EUR</span>
-            <span className="font-mono text-white">
-              €{(availableEur ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-navy-500">Available CEA</span>
-            <span className="font-mono text-white">
-              {(availableCea ?? 0).toLocaleString()}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
 // RECENT TRADES COMPONENT (COMPACT)
 // =============================================================================
 
@@ -495,57 +285,6 @@ function RecentTrades({ trades }: RecentTradesProps) {
             );
           })
         )}
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// DEPTH CHART COMPONENT (COMPACT)
-// =============================================================================
-
-interface DepthChartMiniProps {
-  bids: OrderBookLevel[];
-  asks: OrderBookLevel[];
-}
-
-function DepthChartMini({ bids, asks }: DepthChartMiniProps) {
-  const maxDepth = Math.max(
-    ...bids.map(b => b.cumulative_quantity),
-    ...asks.map(a => a.cumulative_quantity),
-    1
-  );
-
-  return (
-    <div className="bg-navy-900 rounded border border-navy-800 p-2">
-      <h4 className="text-[10px] font-semibold text-white mb-1 flex items-center gap-1">
-        <ArrowUpDown className="w-3 h-3 text-amber-500" />
-        Market Depth
-      </h4>
-      <div className="flex items-end gap-[1px] h-10">
-        {/* Bids (reversed) */}
-        {[...bids].reverse().map((bid, i) => (
-          <div
-            key={`bid-${i}`}
-            className="flex-1 rounded-t bg-gradient-to-t from-emerald-500/40 to-emerald-500/10"
-            style={{ height: `${(bid.cumulative_quantity / maxDepth) * 100}%` }}
-          />
-        ))}
-        {/* Divider */}
-        <div className="w-[1px] h-full bg-navy-600" />
-        {/* Asks */}
-        {asks.map((ask, i) => (
-          <div
-            key={`ask-${i}`}
-            className="flex-1 rounded-t bg-gradient-to-t from-red-500/40 to-red-500/10"
-            style={{ height: `${(ask.cumulative_quantity / maxDepth) * 100}%` }}
-          />
-        ))}
-      </div>
-      <div className="flex justify-between mt-1 text-[9px] text-navy-500 font-mono">
-        <span>€{bids[bids.length - 1]?.price.toFixed(1) || '-'}</span>
-        <span className="text-amber-500">Spread</span>
-        <span>€{asks[asks.length - 1]?.price.toFixed(1) || '-'}</span>
       </div>
     </div>
   );
@@ -821,12 +560,10 @@ export function CashMarketProPage() {
     refresh,
   } = useCashMarket('CEA', 5000);
 
-  const [selectedPrice, setSelectedPrice] = useState<number | undefined>(undefined);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
   // Real user balances from API (with safe defaults)
   const availableEur = balances?.eur ?? 0;
-  const availableCea = balances?.cea ?? 0;
 
   // Navigate back to dashboard
   const handleBack = () => {
@@ -843,51 +580,38 @@ export function CashMarketProPage() {
     }
   };
 
-  // Handle order placement via API
-  const handlePlaceOrder = async (order: { side: OrderSide; price: number; quantity: number }) => {
-    try {
-      await cashMarketApi.placeOrder({
-        certificate_type: 'CEA',
-        side: order.side,
-        price: order.price,
-        quantity: order.quantity,
-      });
-      await refresh();
-    } catch (err) {
-      console.error('Failed to place order:', err);
-    }
-  };
-
   // Handle market order submission from modal
   const handleMarketOrderSubmit = async (order: {
     orderType: 'MARKET' | 'LIMIT';
     limitPrice?: number;
     amountEur: number;
   }) => {
+    console.log('handleMarketOrderSubmit called with:', order);
     try {
       if (order.orderType === 'MARKET') {
+        console.log('Executing MARKET order...');
         await cashMarketApi.executeMarketOrder({
           certificate_type: 'CEA',
           side: 'BUY',
           amount_eur: order.amountEur,
         });
       } else if (order.limitPrice) {
-        const preview = await cashMarketApi.previewOrder({
+        // For LIMIT orders, calculate quantity from amount and price
+        // quantity = amount / (price * (1 + fee_rate))
+        // Using 0.5% fee rate
+        const feeRate = 0.005;
+        const quantity = order.amountEur / (order.limitPrice * (1 + feeRate));
+        console.log('Placing LIMIT order:', { price: order.limitPrice, quantity: Math.floor(quantity) });
+
+        const result = await cashMarketApi.placeOrder({
           certificate_type: 'CEA',
           side: 'BUY',
-          amount_eur: order.amountEur,
-          order_type: 'LIMIT',
-          limit_price: order.limitPrice,
+          price: order.limitPrice,
+          quantity: Math.floor(quantity), // Integer quantity for certificates
         });
-        if (preview.can_execute) {
-          await cashMarketApi.placeOrder({
-            certificate_type: 'CEA',
-            side: 'BUY',
-            price: order.limitPrice,
-            quantity: preview.total_quantity,
-          });
-        }
+        console.log('LIMIT order placed successfully:', result);
       }
+      console.log('Order completed, refreshing...');
       await refresh();
       setIsOrderModalOpen(false);
     } catch (err) {
@@ -967,7 +691,6 @@ export function CashMarketProPage() {
                 spread={safeOrderBook.spread}
                 bestBid={safeOrderBook.best_bid}
                 bestAsk={safeOrderBook.best_ask}
-                onPriceClick={setSelectedPrice}
               />
             </div>
           </div>

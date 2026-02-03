@@ -373,7 +373,6 @@ export function MarketOrdersPage() {
                 onPriceClick={handlePriceClick}
                 onOrderBookData={handleOrderBookData}
                 showFullBook={certificateType === 'CEA'}
-                maxHeight="calc(100vh - 280px)"
               />
             </div>
           ) : (

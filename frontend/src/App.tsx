@@ -70,6 +70,7 @@ const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.Logging
 const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
 const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
 const FeeSettingsPage = lazy(() => import('./pages').then(m => ({ default: m.FeeSettingsPage })));
+const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -87,6 +88,8 @@ const PageLoader = () => (
  * CRITICAL: This component handles ALL auth-based redirects to prevent loops.
  * Do NOT add redirect logic elsewhere (LoginPage, individual routes, etc.)
  * Order: authentication → allowedRoles → blockRoles.
+ *
+ * ADMIN SUPERUSER: ADMIN role bypasses all role checks and has access to everything.
  */
 function AuthGuard({
   children,
@@ -121,6 +124,11 @@ function AuthGuard({
     // Rejected users have no access
     if (user.role === 'REJECTED') {
       return <Navigate to="/login" replace />;
+    }
+
+    // ADMIN SUPERUSER: bypass all role checks - ADMIN has access to everything
+    if (user.role === 'ADMIN') {
+      return <>{children}</>;
     }
 
     // Check role-based access (allowed roles)
@@ -398,6 +406,14 @@ function App() {
               element={
                 <AdminRoute>
                   <SettingsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/auto-trade"
+              element={
+                <AdminRoute>
+                  <AutoTradePage />
                 </AdminRoute>
               }
             />

@@ -105,6 +105,7 @@ export function CreateLiquidityPage() {
   const [swapMaxOrder, setSwapMaxOrder] = useState<string>('10000000');
   const [swapOrderCount, setSwapOrderCount] = useState<string>('50');
   const [swapRatioSpread, setSwapRatioSpread] = useState<string>('5'); // % spread around base ratio
+  const [swapDiversity, setSwapDiversity] = useState<string>('5'); // 1-10: volume variation
 
   // Swap preview and creation state
   const [swapPreview, setSwapPreview] = useState<SwapLiquidityPreview | null>(null);
@@ -597,7 +598,8 @@ export function CreateLiquidityPage() {
     ratioSpread: number, // percentage spread from base ratio
     baseRatio: number,
     marketMakers: SwapMarketMaker[],
-    targetOfferCount: number
+    targetOfferCount: number,
+    diversity: number // 1-10: controls volume variation
   ): GeneratedSwapOffer[] => {
     if (totalEurNeeded <= 0 || marketMakers.length === 0 || targetOfferCount <= 0 || baseRatio <= 0) {
       return [];
@@ -622,7 +624,10 @@ export function CreateLiquidityPage() {
 
     // Calculate target EUR per offer
     const avgOfferEur = totalEurNeeded / targetOfferCount;
-    const variationPercent = 0.3; // 30% variation for diversity
+
+    // Diversity: 1 = no variation (0%), 10 = max variation (90%)
+    // Linear mapping: diversity 1-10 → variation 0-90%
+    const variationPercent = ((diversity - 1) / 9) * 0.9;
 
     let remainingEur = totalEurNeeded;
 
@@ -696,6 +701,7 @@ export function CreateLiquidityPage() {
         return;
       }
 
+      const diversityVal = parseFloat(swapDiversity) || 5;
       const offers = generateSwapOffers(
         targetEur,
         minOrderVal,
@@ -703,7 +709,8 @@ export function CreateLiquidityPage() {
         spreadVal,
         swapRatio,
         swapMMs,
-        orderCountVal
+        orderCountVal,
+        diversityVal
       );
 
       if (offers.length === 0) {
@@ -784,7 +791,7 @@ export function CreateLiquidityPage() {
           eua_quantity: offer.eua_quantity,
         });
 
-        const logEntry = `✓ #${offerNum} | ${offer.market_maker_name} | ${offer.ratio.toFixed(4)} CEA/EUA | ${offer.eua_quantity.toFixed(2)} EUA | ID: ${result.order_id}`;
+        const logEntry = `✓ #${offerNum} | ${offer.market_maker_name} | ${offer.ratio.toFixed(4)} CEA/EUA | ${offer.eua_quantity.toFixed(2)} EUA | ID: ${result.orderId}`;
         logs.push(logEntry);
         successCount++;
 
@@ -1438,6 +1445,20 @@ export function CreateLiquidityPage() {
                           decimals={0}
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                        Diversity (1-10)
+                        <span className="text-navy-400 ml-1">• 1=uniform, 10=very varied</span>
+                      </label>
+                      <NumberInput
+                        value={swapDiversity}
+                        onChange={setSwapDiversity}
+                        decimals={0}
+                        min={1}
+                        max={10}
+                      />
                     </div>
 
                     {/* Ratio Range Preview */}

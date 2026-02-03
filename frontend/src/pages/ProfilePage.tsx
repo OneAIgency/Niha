@@ -12,16 +12,18 @@ import {
   Key,
   Eye,
   EyeOff,
-  Check,
   AlertCircle,
   X,
   CheckCircle,
+  FlaskConical,
+  Wallet,
+  RefreshCw,
 } from 'lucide-react';
-import { Button, Card, Badge, Input, Subheader } from '../components/common';
+import { Button, Card, Badge, Input, Subheader, NumberInput, formatNumberWithSeparators } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
-import { usersApi } from '../services/api';
+import { usersApi, adminApi } from '../services/api';
 import { formatRelativeTime } from '../utils';
-import type { Entity } from '../types';
+import type { Entity, EntityBalances } from '../types';
 
 export function ProfilePage() {
   const { user, token, setAuth } = useAuthStore();
@@ -54,6 +56,15 @@ export function ProfilePage() {
     confirm: false,
   });
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+
+  // Testing tools state (admin only)
+  const [selectedRole, setSelectedRole] = useState<string>(user?.role || 'ADMIN');
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [creditAssetType, setCreditAssetType] = useState<'EUR' | 'CEA' | 'EUA'>('EUR');
+  const [creditAmount, setCreditAmount] = useState('10000');
+  const [isCrediting, setIsCrediting] = useState(false);
+  const [balances, setBalances] = useState<EntityBalances | null>(null);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
 
   /**
    * Load profile and entity data on component mount.
@@ -216,6 +227,83 @@ export function ProfilePage() {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Available roles for testing
+  const ALL_ROLES = [
+    'ADMIN', 'MM', 'NDA', 'REJECTED', 'KYC', 'APPROVED',
+    'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'
+  ];
+
+  /**
+   * Load admin balances for testing tools
+   */
+  const loadBalances = async () => {
+    if (!isAdmin) return;
+    setIsLoadingBalances(true);
+    try {
+      const data = await adminApi.getMyBalances();
+      setBalances(data);
+    } catch (err) {
+      console.error('Failed to load balances:', err);
+    } finally {
+      setIsLoadingBalances(false);
+    }
+  };
+
+  // Load balances on mount for admin
+  useEffect(() => {
+    if (isAdmin && user?.entity_id) {
+      loadBalances();
+    }
+  }, [isAdmin, user?.entity_id]);
+
+  /**
+   * Change admin role for testing
+   */
+  const handleChangeRole = async () => {
+    setIsChangingRole(true);
+    setError(null);
+    try {
+      const updatedUser = await adminApi.updateMyRole(selectedRole);
+      if (token) {
+        setAuth(updatedUser, token);
+      }
+      setSuccessMessage(`Role changed to ${selectedRole}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      console.error('Failed to change role:', err);
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to change role');
+    } finally {
+      setIsChangingRole(false);
+    }
+  };
+
+  /**
+   * Credit assets to admin entity
+   */
+  const handleCreditAssets = async () => {
+    const amount = parseFloat(creditAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    setIsCrediting(true);
+    setError(null);
+    try {
+      const newBalances = await adminApi.creditMyEntity(creditAssetType, amount);
+      setBalances(newBalances);
+      setSuccessMessage(`Credited ${formatNumberWithSeparators(amount)} ${creditAssetType}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      console.error('Failed to credit assets:', err);
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to credit assets');
+    } finally {
+      setIsCrediting(false);
     }
   };
 
@@ -493,30 +581,134 @@ export function ProfilePage() {
                   </div>
                 </div>
 
-                {entity.verified && (
-                  <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-emerald-900 dark:text-emerald-100">
-                        Verified Entity
-                      </p>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                        Your entity has been verified and approved for trading
-                      </p>
-                    </div>
-                  </div>
-                )}
               </Card>
             </motion.div>
           )}
 
-          {/* Security Card */}
+          {/* Testing Tools Card - Admin only */}
+          {isAdmin && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+          >
+            <Card className="border-2 border-dashed border-amber-500/30 bg-amber-500/5">
+              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+                <FlaskConical className="w-5 h-5 text-amber-500" />
+                Testing Tools
+                <Badge variant="warning" className="ml-2">Admin Only</Badge>
+              </h2>
+
+              <div className="space-y-6">
+                {/* Role Changer */}
+                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-amber-500" />
+                    Change My Role
+                  </h3>
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                    Test the UI from different user perspectives. Note: ADMIN always has access to all features
+                    regardless of displayed role - this only changes what role-specific UI elements are shown.
+                  </p>
+                  <div className="flex gap-3">
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    >
+                      {ALL_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role} {role === user?.role ? '(current)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="primary"
+                      onClick={handleChangeRole}
+                      loading={isChangingRole}
+                      disabled={selectedRole === user?.role}
+                      className="bg-amber-500 hover:bg-amber-600"
+                    >
+                      Change Role
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Asset Credit */}
+                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-amber-500" />
+                    Credit Assets to My Entity
+                  </h3>
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                    Add funds or certificates for testing trading
+                  </p>
+                  <div className="flex gap-3 mb-4">
+                    <select
+                      value={creditAssetType}
+                      onChange={(e) => setCreditAssetType(e.target.value as 'EUR' | 'CEA' | 'EUA')}
+                      className="w-32 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    >
+                      <option value="EUR">EUR</option>
+                      <option value="CEA">CEA</option>
+                      <option value="EUA">EUA</option>
+                    </select>
+                    <NumberInput
+                      value={creditAmount}
+                      onChange={setCreditAmount}
+                      decimals={creditAssetType === 'EUR' ? 2 : 0}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={handleCreditAssets}
+                      loading={isCrediting}
+                      className="bg-amber-500 hover:bg-amber-600"
+                    >
+                      Credit
+                    </Button>
+                  </div>
+
+                  {/* Current Balances */}
+                  <div className="flex items-center gap-4 pt-3 border-t border-navy-200 dark:border-navy-600">
+                    <span className="text-sm text-navy-500 dark:text-navy-400">Current Balances:</span>
+                    {isLoadingBalances ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-navy-400" />
+                    ) : balances ? (
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-emerald-500 font-medium">
+                          €{formatNumberWithSeparators(balances.eur, 'en-US', 2)}
+                        </span>
+                        <span className="text-blue-500 font-medium">
+                          {formatNumberWithSeparators(balances.cea, 'en-US', 0)} CEA
+                        </span>
+                        <span className="text-purple-500 font-medium">
+                          {formatNumberWithSeparators(balances.eua, 'en-US', 0)} EUA
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-navy-400">No entity associated</span>
+                    )}
+                    <button
+                      onClick={loadBalances}
+                      className="ml-auto text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                      title="Refresh balances"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isLoadingBalances ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+          )}
+
+          {/* Security Card - Admin only */}
+          {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
           >
             <Card>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
@@ -700,6 +892,7 @@ export function ProfilePage() {
               </div>
             </Card>
           </motion.div>
+          )}
           </div>
         )}
       </div>
