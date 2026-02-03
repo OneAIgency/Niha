@@ -37,6 +37,7 @@ import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard
  */
 
 const SECTIONS = [
+  { id: 'layout', label: 'Page Layout', icon: Layers },
   { id: 'colors', label: 'Colors', icon: Palette },
   { id: 'typography', label: 'Typography', icon: Type },
   { id: 'buttons', label: 'Buttons', icon: Square },
@@ -134,6 +135,182 @@ export function ThemePage() {
       </div>
 
       <div className="space-y-16">
+        {/* PAGE LAYOUT SECTION */}
+        <section
+          id="layout"
+          ref={(el) => { sectionRefs.current['layout'] = el; }}
+        >
+          <SectionHeader title="Standard Page Layout" />
+          <p className={`text-sm ${textSecondary} mb-6`}>
+            Every page follows this structure. Fixed header and subheader, optional sticky subsubheader, then page content.
+          </p>
+
+          {/* Visual Layout Mockup */}
+          <div className="rounded-2xl border-2 border-navy-600 overflow-hidden bg-navy-900/50">
+            {/* HEADER */}
+            <div className="bg-navy-900 border-b-2 border-navy-700 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-1">
+                    <span className="text-white font-bold">NIHAO</span>
+                    <span className="text-emerald-400 font-bold">GROUP</span>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-4 text-sm text-navy-400">
+                    <span>Dashboard</span>
+                    <span>Funding</span>
+                    <span className="text-white">CEA Cash</span>
+                    <span>Swap</span>
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">U</div>
+              </div>
+              <div className="absolute -right-2 top-1/2 -translate-y-1/2 bg-emerald-500 text-white text-xs px-2 py-1 rounded-l font-medium hidden lg:block">
+                HEADER (fixed)
+              </div>
+            </div>
+
+            {/* SUBHEADER */}
+            <div className="bg-navy-800 border-b-2 border-navy-700 px-4 py-3 relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Page Title</h3>
+                    <p className="text-xs text-navy-400">Page description here</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="px-3 py-1.5 text-xs font-medium rounded-lg bg-navy-600 text-white">Tab 1</button>
+                  <button className="px-3 py-1.5 text-xs font-medium rounded-lg text-navy-400 hover:bg-navy-700">Tab 2</button>
+                </div>
+              </div>
+              <div className="absolute -right-2 top-1/2 -translate-y-1/2 bg-blue-500 text-white text-xs px-2 py-1 rounded-l font-medium hidden lg:block">
+                SUBHEADER (fixed)
+              </div>
+            </div>
+
+            {/* SUBSUBHEADER */}
+            <div className="bg-navy-900/80 border-b border-navy-700 px-4 py-2 relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button className="px-2.5 py-1 text-xs font-medium rounded-md bg-navy-700 text-white flex items-center gap-1">
+                    All <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">24</span>
+                  </button>
+                  <button className="px-2.5 py-1 text-xs font-medium rounded-md text-navy-400">Pending</button>
+                  <button className="px-2.5 py-1 text-xs font-medium rounded-md text-navy-400">Completed</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="p-1.5 rounded-lg text-navy-400 hover:bg-navy-700">
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                  <button className="p-1.5 rounded-lg text-navy-400 hover:bg-navy-700">
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="absolute -right-2 top-1/2 -translate-y-1/2 bg-amber-500 text-white text-xs px-2 py-1 rounded-l font-medium hidden lg:block">
+                SUBSUBHEADER (sticky)
+              </div>
+            </div>
+
+            {/* PAGE CONTENT */}
+            <div className="p-4 relative" style={{ backgroundColor: 'var(--page-bg-bg)' }}>
+              <div className="max-w-4xl mx-auto space-y-4">
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {['Total Value', 'Cash (EUR)', 'CEA', 'EUA'].map((label, i) => (
+                    <div key={label} className="content_wrapper p-3">
+                      <p className="text-xs text-navy-400">{label}</p>
+                      <p className="text-lg font-bold text-white font-mono">€{(Math.random() * 10000).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {/* Main Card */}
+                  <div className="lg:col-span-2 content_wrapper_last">
+                    <div className="px-4 py-3 border-b border-navy-700 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-emerald-400" />
+                        <span className="text-sm font-semibold text-white">Main Content Card</span>
+                      </div>
+                      <button className="text-xs text-navy-400 hover:text-white">View All</button>
+                    </div>
+                    <div className="p-4">
+                      <div className="h-24 rounded-lg border-2 border-dashed border-navy-700 flex items-center justify-center">
+                        <span className="text-xs text-navy-500">Table / List / Chart content here</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sidebar Card */}
+                  <div className="content_wrapper_last">
+                    <div className="px-4 py-3 border-b border-navy-700">
+                      <span className="text-sm font-semibold text-white">Quick Actions</span>
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <button className="btn-primary w-full text-sm py-2">Primary Action</button>
+                      <button className="btn-outline w-full text-sm py-2">Secondary Action</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -right-2 top-4 bg-navy-600 text-white text-xs px-2 py-1 rounded-l font-medium hidden lg:block">
+                PAGE CONTENT
+              </div>
+            </div>
+          </div>
+
+          {/* Layout Rules */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-4">
+              <h4 className="text-sm font-semibold text-white mb-3">Layout Components</h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">Header</code>
+                  <span className="text-navy-400">Fixed, z-50, h-16/h-20</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-blue-400">Subheader</code>
+                  <span className="text-navy-400">Fixed below header, .subheader-bar</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-amber-400">SubSubHeader</code>
+                  <span className="text-navy-400">Sticky, .subsubheader-bar (optional)</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-navy-300">Page Content</code>
+                  <span className="text-navy-400">.page-bg + .page-container</span>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <h4 className="text-sm font-semibold text-white mb-3">Content Components</h4>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">.content_wrapper</code>
+                  <span className="text-navy-400">Stat cards, value displays</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">.content_wrapper_last</code>
+                  <span className="text-navy-400">Section cards, panels</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">.table-container</code>
+                  <span className="text-navy-400">Data tables</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">&lt;Card /&gt;</code>
+                  <span className="text-navy-400">Generic content wrapper</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
+
         {/* COLORS SECTION */}
         <section
           id="colors"
