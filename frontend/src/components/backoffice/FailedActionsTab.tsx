@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, AlertTriangle, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
-import { Button } from '../common';
+import { Button, AlertBanner } from '../common';
 import { getFailedActions } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
@@ -188,10 +188,7 @@ export function FailedActionsTab() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
-        </div>
+        <AlertBanner variant="error" message={error} />
       )}
 
       {/* Success Message */}
@@ -199,7 +196,7 @@ export function FailedActionsTab() {
         <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-8 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-              <AlertCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">

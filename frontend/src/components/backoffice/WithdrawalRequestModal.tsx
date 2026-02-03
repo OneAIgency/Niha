@@ -7,7 +7,8 @@
  */
 
 import React, { useState } from 'react';
-import { X, Loader2, AlertCircle, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
+import { X, Loader2, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
+import { AlertBanner } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type { AssetType, WithdrawalRequest } from '../../types';
 
@@ -199,10 +200,7 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Error Alert */}
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-3 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                <span className="text-red-400 text-sm">{error}</span>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             {/* Asset Type Selection */}

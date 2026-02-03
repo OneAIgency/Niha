@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, DollarSign, Leaf, Wind, Plus, AlertCircle } from 'lucide-react';
-import { Button } from '../common';
+import { X, DollarSign, Leaf, Wind, Plus } from 'lucide-react';
+import { Button, AlertBanner } from '../common';
 import { backofficeApi } from '../../services/api';
 import { cn } from '../../utils';
 import type { AssetType } from '../../types';
@@ -304,14 +304,7 @@ export function AddAssetModal({
 
                 {/* Error Message */}
                 {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2 text-red-600 dark:text-red-400"
-                  >
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">{error}</span>
-                  </motion.div>
+                  <AlertBanner variant="error" message={error} />
                 )}
               </div>
 

@@ -13,13 +13,11 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  X,
-  CheckCircle,
   FlaskConical,
   Wallet,
   RefreshCw,
 } from 'lucide-react';
-import { Button, Card, Badge, Input, Subheader, NumberInput, formatNumberWithSeparators } from '../components/common';
+import { Button, Card, Badge, Input, Subheader, NumberInput, formatNumberWithSeparators, AlertBanner } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
 import { usersApi, adminApi } from '../services/api';
 import { formatRelativeTime } from '../utils';
@@ -356,32 +354,22 @@ export function ProfilePage() {
       <div className="page-container py-8">
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-700 dark:hover:text-red-300"
-              aria-label="Dismiss error"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <AlertBanner
+            variant="error"
+            message={error}
+            onDismiss={() => setError(null)}
+            className="mb-4"
+          />
         )}
 
         {/* Success Display */}
         {successMessage && (
-          <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1">{successMessage}</span>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300"
-              aria-label="Dismiss success message"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <AlertBanner
+            variant="success"
+            message={successMessage}
+            onDismiss={() => setSuccessMessage(null)}
+            className="mb-4"
+          />
         )}
 
         {isLoading ? (

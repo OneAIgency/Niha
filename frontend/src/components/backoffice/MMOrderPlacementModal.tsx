@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
-import { Button } from '../common';
+import { X, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { AlertBanner, Button } from '../common';
 import { getMarketMakers, getMarketMakerBalances } from '../../services/api';
 import { formatCurrency, formatQuantity } from '../../utils';
 
@@ -368,10 +368,7 @@ export function MMOrderPlacementModal({
 
               {/* Error Display */}
               {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-                </div>
+                <AlertBanner variant="error" message={error} />
               )}
 
               {/* Action Buttons */}

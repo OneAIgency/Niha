@@ -8,10 +8,9 @@ import {
   Wind,
   ArrowUpRight,
   Clock,
-  AlertCircle,
 } from 'lucide-react';
 import { Card } from '../common/Card';
-import { Button, Badge, ConfirmationModal } from '../common';
+import { Button, Badge, ConfirmationModal, AlertBanner } from '../common';
 import { DataTable, type Column } from '../common/DataTable';
 import { getMarketMakerOrders, cancelMarketMakerOrder, getMarketMakers } from '../../services/api';
 import type { MarketMakerOrder, CertificateType } from '../../types';
@@ -348,10 +347,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">{error}</span>
-        </div>
+        <AlertBanner variant="error" message={error} className="mb-4" />
       )}
 
       {/* Orders Table */}

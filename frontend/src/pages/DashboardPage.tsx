@@ -32,6 +32,7 @@ import {
   ProgressBar,
   Skeleton,
   Subheader,
+  AlertBanner,
   type Column,
   type Tab,
 } from '../components/common';
@@ -637,10 +638,9 @@ export function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-3"
+            className="mb-6"
           >
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            <span className="text-red-300">{error}</span>
+            <AlertBanner variant="error" message={error} />
           </motion.div>
         )}
 

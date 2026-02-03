@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, RefreshCw, AlertCircle, X, Leaf, Wind, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { Button, DataTable, Badge, type Column } from '../common';
+import { Plus, RefreshCw, Leaf, Wind, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Button, DataTable, Badge, AlertBanner, type Column } from '../common';
 import { getMarketMakerBalances, getMarketMakerTransactions } from '../../services/api';
 import { formatQuantity, formatRelativeTime } from '../../utils';
 import { cn } from '../../utils';
@@ -170,13 +170,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
     <div className="p-6 space-y-6">
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-          <button onClick={() => setError(null)} className="ml-auto">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <AlertBanner variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
       {/* Balances Section */}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, RefreshCw, AlertCircle } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
-import { Button } from '../common';
+import { Button, AlertBanner } from '../common';
 import { getTickets } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
@@ -251,10 +251,7 @@ export function AllTicketsTab() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
-        </div>
+        <AlertBanner variant="error" message={error} />
       )}
 
       {/* Table */}

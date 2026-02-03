@@ -23,7 +23,7 @@ import {
   RefreshCw,
   Eye,
 } from 'lucide-react';
-import { Button, Card, Badge, ClientStatusBadge } from '../common';
+import { Button, Card, Badge, ClientStatusBadge, AlertBanner } from '../common';
 import { formatCurrency, formatRelativeTime } from '../../utils';
 import { backofficeApi } from '../../services/api';
 import type {
@@ -517,9 +517,7 @@ export function AMLDepositsTab() {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             <div>
@@ -643,9 +641,7 @@ export function AMLDepositsTab() {
             )}
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             <div>
@@ -706,9 +702,7 @@ export function AMLDepositsTab() {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             <div>

@@ -13,7 +13,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   Loader2,
   RefreshCw,
   DollarSign,
@@ -21,6 +20,7 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
+import { AlertBanner } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type {
   Withdrawal,
@@ -241,16 +241,7 @@ export const WithdrawalsTab: React.FC = () => {
 
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-red-500" />
-          <span className="text-red-700 dark:text-red-400">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-400"
-          >
-            ×
-          </button>
-        </div>
+        <AlertBanner variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
       {/* Tabs */}

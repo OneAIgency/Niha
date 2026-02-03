@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, UserPlus, Copy, AlertTriangle, Check, Loader2 } from 'lucide-react';
+import { AlertBanner } from '../common';
 import { adminApi } from '../../services/api';
 import type { ContactRequestResponse } from '../../types';
 
@@ -347,9 +348,7 @@ export function ApproveInviteModal({
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
+              <AlertBanner variant="error" message={error} />
             )}
 
             {/* Success Message */}

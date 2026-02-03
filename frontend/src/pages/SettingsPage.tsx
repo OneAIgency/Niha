@@ -14,7 +14,7 @@ import {
   Save,
   DollarSign,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader } from '../components/common';
+import { Button, Card, Badge, Subheader, AlertBanner } from '../components/common';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
@@ -397,23 +397,12 @@ export function SettingsPage() {
       <div className="page-container py-8">
 
         {error && (
-          <div
-            className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 px-4 py-3 text-red-800 dark:text-red-200"
-            role="alert"
-          >
-            <span className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden />
-              {error}
-            </span>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="rounded-lg p-1 hover:bg-red-200/50 dark:hover:bg-red-800/50 focus:ring-2 focus:ring-red-500"
-              aria-label="Dismiss error"
-            >
-              <XCircle className="w-5 h-5" />
-            </button>
-          </div>
+          <AlertBanner
+            variant="error"
+            message={error}
+            onDismiss={() => setError(null)}
+            className="mb-6"
+          />
         )}
 
         <div className="space-y-8">

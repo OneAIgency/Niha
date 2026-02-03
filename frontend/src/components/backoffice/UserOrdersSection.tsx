@@ -14,7 +14,7 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react';
-import { Button, Badge, ConfirmationModal } from '../common';
+import { Button, Badge, ConfirmationModal, AlertBanner } from '../common';
 import { backofficeApi } from '../../services/api';
 import { cn, formatRelativeTime } from '../../utils';
 import type { Order } from '../../types';
@@ -168,10 +168,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
+            <AlertBanner variant="error" message={error} />
           )}
         </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useId } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, CheckCircle, Loader2, Info } from 'lucide-react';
-import { Button, NumberInput } from '../common';
+import { CheckCircle, Loader2, Info } from 'lucide-react';
+import { Button, NumberInput, AlertBanner } from '../common';
 import { getMarketMakers, getMarketMakerBalances, feesApi } from '../../services/api';
 import { formatCurrency, formatQuantity } from '../../utils';
 import type { CertificateType } from '../../types';
@@ -624,16 +624,7 @@ export function PlaceOrder({
 
       {/* Error Display */}
       {error && (
-        <div 
-          id={errorId}
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-          className={`${compact ? 'p-4' : 'p-3'} bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2`}
-        >
-          <AlertCircle className={`${compact ? 'w-5 h-5' : 'w-4 h-4'} text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5`} aria-hidden="true" />
-          <p className={`${compact ? 'text-sm' : 'text-sm'} text-red-700 dark:text-red-400`}>{error}</p>
-        </div>
+        <AlertBanner variant="error" message={error} />
       )}
 
       {/* Success Message */}

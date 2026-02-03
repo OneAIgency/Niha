@@ -19,7 +19,7 @@ import {
   FileText,
   Target,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, SubheaderNavButtonAction } from '../components/common';
+import { Button, Card, Badge, Subheader, SubheaderNavButtonAction, AlertBanner } from '../components/common';
 import { usersApi } from '../services/api';
 import { formatRelativeTime, formatCurrency } from '../utils';
 import { useAuthStore } from '../stores/useStore';
@@ -541,17 +541,11 @@ export function FundingPage() {
                     </div>
 
                     {error && (
-                      <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400">
-                        <AlertCircle className="w-5 h-5" />
-                        <span>{error}</span>
-                      </div>
+                      <AlertBanner variant="error" message={error} />
                     )}
 
                     {successMessage && (
-                      <div className="p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg flex items-center gap-2 text-emerald-400">
-                        <CheckCircle className="w-5 h-5" />
-                        <span>{successMessage}</span>
-                      </div>
+                      <AlertBanner variant="success" message={successMessage} />
                     )}
 
                     <Button

@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback, useId } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
-import { Button } from '../common';
+import { X, Loader2, Trash2 } from 'lucide-react';
+import { Button, AlertBanner } from '../common';
 import { formatCurrency, formatQuantity } from '../../utils';
 import type { CertificateType } from '../../types';
 
@@ -53,8 +53,6 @@ export function EditOrderModal({
   onSuccess,
 }: EditOrderModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const errorId = useId();
-  const successId = useId();
 
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -377,28 +375,12 @@ export function EditOrderModal({
 
                 {/* Error Display */}
                 {error && (
-                  <div
-                    id={errorId}
-                    role="alert"
-                    aria-live="assertive"
-                    className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2"
-                  >
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-                  </div>
+                  <AlertBanner variant="error" message={error} />
                 )}
 
                 {/* Success Display */}
                 {success && (
-                  <div
-                    id={successId}
-                    role="status"
-                    aria-live="polite"
-                    className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2"
-                  >
-                    <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                    <span className="text-sm text-emerald-700 dark:text-emerald-400">{success}</span>
-                  </div>
+                  <AlertBanner variant="success" message={success} />
                 )}
 
                 {/* Actions */}
