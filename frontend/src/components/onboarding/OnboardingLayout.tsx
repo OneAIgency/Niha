@@ -179,7 +179,7 @@ export default function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen bg-navy-900">
+    <div className="min-h-screen bg-navy-900 pt-16 md:pt-20">
       {/* Main Header - consistent with rest of app */}
       <Header />
 
