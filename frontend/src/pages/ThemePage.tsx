@@ -412,6 +412,140 @@ export function ThemePage() {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* SUBSUBHEADER ANATOMY */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-amber-500 flex items-center justify-center text-xs font-bold text-navy-900">3</span>
+              SubSubHeader
+            </h3>
+            <p className={`text-sm ${textSecondary} mb-4`}>
+              Optional bar below Subheader for page-specific filters, toggles, and actions. NOT fixed - flows with content or can be sticky.
+            </p>
+
+            {/* SubSubHeader Visual */}
+            <div className="rounded-xl border-2 border-amber-500/50 overflow-hidden bg-navy-900/80">
+              {/* Actual SubSubHeader Mockup */}
+              <div className="px-4 sm:px-6 lg:px-8 py-3 border-b border-navy-700">
+                <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+                  {/* Left side: Filters/Toggles */}
+                  <div className="flex items-center gap-2 group">
+                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg bg-navy-700 text-white flex items-center gap-1.5">
+                      All
+                      <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">24</span>
+                    </button>
+                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg text-navy-400 hover:bg-navy-700/50">
+                      Pending
+                      <span className="ml-1.5 bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">3</span>
+                    </button>
+                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg text-navy-400 hover:bg-navy-700/50">Completed</button>
+                    <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Filter Tabs</span>
+                  </div>
+
+                  {/* Right side: Actions */}
+                  <div className="flex items-center gap-2 group">
+                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
+                      <Search className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 rounded-lg text-navy-400 hover:bg-navy-700/50 hover:text-white">
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Actions</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SubSubHeader Specs */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Position</p>
+                <code className="text-sm text-amber-400">static (or sticky)</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Class</p>
+                <code className="text-sm text-amber-400">.subsubheader-bar</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Background</p>
+                <code className="text-sm text-amber-400">bg-navy-900/80</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Border</p>
+                <code className="text-sm text-amber-400">border-b border-navy-700</code>
+              </div>
+            </div>
+
+            {/* SubSubHeader Structure */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Side */}
+              <div className="p-4 rounded-lg bg-navy-800/30 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-3 uppercase tracking-wider">Left Side (left prop)</p>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-400">
+                      <code>Filter tabs</code>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/30 text-sm text-blue-400">
+                      <code>EUA/CEA toggle</code>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                      <code>Status filters</code>
+                    </span>
+                  </div>
+                  <p className="text-xs text-navy-500 mt-2">
+                    Use <code className="bg-navy-700 px-1 rounded">.subsubheader-nav-btn</code> for filter buttons
+                  </p>
+                  <p className="text-xs text-navy-500">
+                    Use <code className="bg-navy-700 px-1 rounded">.subsubheader-nav-badge</code> for count badges
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Side */}
+              <div className="p-4 rounded-lg bg-navy-800/30 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-3 uppercase tracking-wider">Right Side (children)</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                    <Search className="w-3 h-3" />
+                    <code>Search</code>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                    <RefreshCw className="w-3 h-3" />
+                    <code>Refresh</code>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                    <Download className="w-3 h-3" />
+                    <code>Export</code>
+                  </span>
+                </div>
+                <div className="mt-3 p-2 rounded bg-navy-900/50 border border-navy-700">
+                  <p className="text-xs text-navy-500 font-mono">
+                    &lt;SubSubHeader left=&#123;&lt;Filters /&gt;&#125;&gt;<br />
+                    &nbsp;&nbsp;&lt;Button&gt;Action&lt;/Button&gt;<br />
+                    &lt;/SubSubHeader&gt;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* When to Use Note */}
+            <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-amber-300 font-medium">When to Use</p>
+                <p className="text-xs text-amber-400/80 mt-1">
+                  Use SubSubHeader for <strong>page-specific</strong> filters and actions (e.g., Backoffice tabs, Order filters).
+                  Don't put page-specific content in the main Subheader — that's for title and navigation only.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
           {/* FULL PAGE LAYOUT VISUAL */}
           {/* ═══════════════════════════════════════════════════════════════ */}
           <div className="mb-8">
