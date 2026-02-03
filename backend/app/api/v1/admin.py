@@ -1774,7 +1774,8 @@ async def refresh_exchange_rate_source(
     except Exception as e:
         logger.exception("Exchange rate refresh failed")
         status_code = 408 if "timeout" in str(e).lower() else 500
-        raise HTTPException(status_code=status_code, detail=str(e)) from e
+        detail = "Request timed out" if status_code == 408 else "Exchange rate refresh failed"
+        raise HTTPException(status_code=status_code, detail=detail) from e
 
 
 @router.delete("/exchange-rate-sources/{source_id}")
