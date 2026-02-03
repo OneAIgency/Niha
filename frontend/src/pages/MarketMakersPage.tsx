@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, RefreshCw, AlertCircle, X, RotateCcw, Loader2, ShieldAlert } from 'lucide-react';
-import { Button, Card, Input } from '../components/common';
+import { Users, RefreshCw, RotateCcw, Loader2, ShieldAlert } from 'lucide-react';
+import { Button, Card, Input, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { MarketMakersList } from '../components/backoffice/MarketMakersList';
 import { CreateMarketMakersModal } from '../components/backoffice/CreateMarketMakersModal';
@@ -133,13 +133,12 @@ export function MarketMakersPage() {
     >
       {/* Error Display */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-          <button onClick={() => setError(null)} className="ml-auto">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <AlertBanner
+          variant="error"
+          message={error}
+          onDismiss={() => setError(null)}
+          className="mb-4"
+        />
       )}
 
       {/* Market Makers List */}

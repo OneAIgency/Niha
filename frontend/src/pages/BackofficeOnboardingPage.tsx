@@ -3,8 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   FileText,
   Users,
-  AlertCircle,
-  X,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -14,7 +12,7 @@ import {
   XCircle,
   Timer,
 } from 'lucide-react';
-import { Button, Card, Badge } from '../components/common';
+import { Button, Card, Badge, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import {
   ContactRequestsTab,
@@ -461,18 +459,12 @@ export function BackofficeOnboardingPage() {
       subSubHeader={subSubHeaderRight}
     >
       {error && (
-        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          {error}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="ml-auto p-1 rounded-xl text-navy-400 hover:bg-navy-700 hover:text-white"
-            aria-label="Dismiss"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <AlertBanner
+          variant="error"
+          message={error}
+          onDismiss={() => setError(null)}
+          className="mb-4"
+        />
       )}
 
       {activeSubpage === 'requests' && (

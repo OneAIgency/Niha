@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Banknote, ArrowLeftRight, TrendingUp, TrendingDown, RefreshCw, Loader2, Zap, AlertCircle, Wind, Trash2 } from 'lucide-react';
 import { BackofficeLayout } from '../components/layout/BackofficeLayout';
-import { Button, NumberInput } from '../components/common';
+import { AlertBanner, Button, NumberInput } from '../components/common';
 import { cn } from '../utils';
 import { cashMarketApi, getMarketMakers, getMarketMakerBalances, pricesApi, placeMarketMakerOrder, swapsApi } from '../services/api';
 import type { MarketMaker } from '../types';
@@ -887,11 +887,7 @@ export function CreateLiquidityPage() {
         <div className="space-y-6">
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3 text-red-400">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-              <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-300">×</button>
-            </div>
+            <AlertBanner variant="error" message={error} onDismiss={() => setError(null)} />
           )}
 
           {/* Cash Market Analysis - Two Columns */}
@@ -1279,11 +1275,7 @@ export function CreateLiquidityPage() {
         <div className="space-y-6">
           {/* Error Message */}
           {swapError && (
-            <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3 text-red-400">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{swapError}</span>
-              <button onClick={() => setSwapError(null)} className="ml-auto text-red-400 hover:text-red-300">×</button>
-            </div>
+            <AlertBanner variant="error" message={swapError} onDismiss={() => setSwapError(null)} />
           )}
 
           {/* Create Swap Liquidity */}

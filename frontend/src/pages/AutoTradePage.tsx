@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Zap,
   Power,
-  AlertCircle,
   Activity,
   Save,
   CheckCircle,
@@ -14,7 +13,7 @@ import {
   AlertTriangle,
   XCircle,
 } from 'lucide-react';
-import { Card, NumberInput, Button, formatNumberWithSeparators } from '../components/common';
+import { Card, NumberInput, Button, formatNumberWithSeparators, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { adminApi, getAutoTradeMonitor } from '../services/api';
 import type { AutoTradeMarketSettings, AutoTradeMarketSettingsUpdate } from '../types';
@@ -790,16 +789,12 @@ export function AutoTradePage() {
         <div className="page-container py-8">
           {/* Error Alert */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-              <button
-                onClick={() => setError(null)}
-                className="ml-auto text-red-400 hover:text-red-300"
-              >
-                Dismiss
-              </button>
-            </div>
+            <AlertBanner
+              variant="error"
+              message={error}
+              onDismiss={() => setError(null)}
+              className="mb-6"
+            />
           )}
 
           {/* Monitor Panel */}

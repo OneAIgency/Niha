@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Settings, Percent, Building2, Plus, Pencil, Trash2, Save, RefreshCw } from 'lucide-react';
 import { feesApi, adminApi } from '../services/api';
 import { BackofficeLayout } from '../components/layout';
+import { AlertBanner } from '../components/common';
 import type {
   TradingFeeConfig,
   EntityFeeOverride,
@@ -215,15 +216,14 @@ export function FeeSettingsPage() {
 
       {/* Messages */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-600 dark:text-red-400">
-          {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
-        </div>
+        <AlertBanner
+          variant="error"
+          message={error}
+          onDismiss={() => setError(null)}
+        />
       )}
       {successMessage && (
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 text-emerald-600 dark:text-emerald-400">
-          {successMessage}
-        </div>
+        <AlertBanner variant="success" message={successMessage} />
       )}
 
       {/* Default Market Fees */}

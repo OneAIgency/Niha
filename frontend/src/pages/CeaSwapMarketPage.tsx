@@ -12,7 +12,7 @@ import {
   Leaf
 } from 'lucide-react';
 import { swapsApi, cashMarketApi, usersApi } from '../services/api';
-import { Subheader } from '../components/common';
+import { Subheader, AlertBanner } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
 import type { SwapCalculation } from '../types';
 
@@ -577,9 +577,7 @@ export function CeaSwapMarketPage() {
               </div>
 
               {swapError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6">
-                  <p className="text-sm text-red-400">{swapError}</p>
-                </div>
+                <AlertBanner variant="error" message={swapError} className="mb-6" />
               )}
 
               <div className="flex gap-3">
@@ -659,9 +657,7 @@ export function CeaSwapMarketPage() {
               </label>
 
               {swapError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6">
-                  <p className="text-sm text-red-400">{swapError}</p>
-                </div>
+                <AlertBanner variant="error" message={swapError} className="mb-6" />
               )}
 
               <div className="flex gap-3">
