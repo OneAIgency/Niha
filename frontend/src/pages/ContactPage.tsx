@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Building2, User, Users, CheckCircle, ArrowRight } from 'lucide-react';
-import { Button, Input, Card } from '../components/common';
+import { Button, Input, Card, AlertBanner } from '../components/common';
 import { contactApi } from '../services/api';
 import { isValidEmail, isCorporateEmail, sanitizeFormData } from '../utils';
 
@@ -187,7 +187,7 @@ export function ContactPage() {
                 />
 
                 {errors.submit && (
-                  <p className="text-red-500 text-sm">{errors.submit}</p>
+                  <AlertBanner variant="error" message={errors.submit} />
                 )}
 
                 <Button
