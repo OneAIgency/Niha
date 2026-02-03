@@ -176,8 +176,8 @@ export function PendingSettlements() {
 
         <div className="space-y-3">
           {settlements.map((settlement) => {
-            const daysRemaining = calculateDaysRemaining(settlement.expected_settlement_date);
-            const progress = settlement.progress_percent || 0;
+            const daysRemaining = calculateDaysRemaining(settlement.expectedSettlementDate);
+            const progress = settlement.progressPercent || 0;
 
             return (
               <motion.div
@@ -195,7 +195,7 @@ export function PendingSettlements() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-navy-900 dark:text-white">
-                          {settlement.settlement_type === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
+                          {settlement.settlementType === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
                         </span>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-medium ${getStatusColor(settlement.status)}`}>
                           {getStatusIcon(settlement.status)}
@@ -203,7 +203,7 @@ export function PendingSettlements() {
                         </span>
                       </div>
                       <p className="text-xs text-navy-500 dark:text-navy-400 font-mono">
-                        {settlement.batch_reference}
+                        {settlement.batchReference}
                       </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-navy-400 dark:text-navy-500 group-hover:text-navy-600 dark:group-hover:text-navy-300 transition-colors" />
@@ -220,7 +220,7 @@ export function PendingSettlements() {
                     <div>
                       <div className="text-xs text-navy-500 dark:text-navy-400 mb-0.5">Value</div>
                       <div className="text-sm font-mono font-medium text-navy-900 dark:text-white">
-                        {formatCurrency(settlement.total_value_eur, 'EUR')}
+                        {formatCurrency(settlement.totalValueEur, 'EUR')}
                       </div>
                     </div>
                     <div>

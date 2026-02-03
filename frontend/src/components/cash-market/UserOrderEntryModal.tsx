@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, TrendingUp, Loader2, AlertCircle } from 'lucide-react';
+import { ShoppingCart, TrendingUp, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { Card } from '../common/Card';
 import { NumberInput } from '../common/NumberInput';
 import { cashMarketApi } from '../../services/api';
@@ -18,33 +18,34 @@ interface UserOrderEntryModalProps {
 }
 
 interface OrderPreview {
-  certificate_type: string;
+  certificateType: string;
   side: string;
-  order_type: string;
-  amount_eur: number | null;
-  quantity_requested: number | null;
-  limit_price: number | null;
-  all_or_none: boolean;
+  orderType: string;
+  amountEur: number | null;
+  quantityRequested: number | null;
+  limitPrice: number | null;
+  allOrNone: boolean;
   fills: Array<{
-    seller_code: string;
+    sellerCode: string;
     price: number;
     quantity: number;
     cost: number;
   }>;
-  total_quantity: number;
-  total_cost_gross: number;
-  weighted_avg_price: number;
-  best_price: number | null;
-  worst_price: number | null;
-  platform_fee_rate: number;
-  platform_fee_amount: number;
-  total_cost_net: number;
-  net_price_per_unit: number;
-  available_balance: number;
-  remaining_balance: number;
-  can_execute: boolean;
-  execution_message: string;
-  partial_fill: boolean;
+  totalQuantity?: number;
+  totalCostGross?: number;
+  weightedAvgPrice?: number;
+  bestPrice: number | null;
+  worstPrice: number | null;
+  platformFeeRate?: number;
+  platformFeeAmount?: number;
+  totalCostNet?: number;
+  netPricePerUnit?: number;
+  availableBalance?: number;
+  remainingBalance?: number;
+  canExecute: boolean;
+  executionMessage: string;
+  partialFill: boolean;
+  willBePlacedInBook?: boolean;  // True for LIMIT orders waiting in order book
 }
 
 export function UserOrderEntryModal({
@@ -61,12 +62,25 @@ export function UserOrderEntryModal({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-set amount to full balance when market order type is selected
+  // Track the last orderType to detect changes
+  const prevOrderTypeRef = useRef(orderType);
+
+  // Auto-set amount to full balance when:
+  // 1. Component mounts with MARKET order type
+  // 2. User switches TO MARKET order type
+  // Don't re-run when availableBalance changes due to polling (which would reset user edits)
   useEffect(() => {
+    const isOrderTypeChange = prevOrderTypeRef.current !== orderType;
+    prevOrderTypeRef.current = orderType;
+
+    // Only set amount if switching to MARKET or on initial mount
     if (orderType === 'MARKET' && availableBalance > 0) {
-      setAmountEur(availableBalance.toFixed(2));
+      // On initial mount or when switching to MARKET, set to full balance
+      if (isOrderTypeChange || amountEur === '') {
+        setAmountEur(availableBalance.toFixed(2));
+      }
     }
-  }, [orderType, availableBalance]);
+  }, [orderType, availableBalance, amountEur]);
 
   // Fetch preview when amount or price changes (debounced)
   const fetchPreview = useCallback(
@@ -127,8 +141,11 @@ export function UserOrderEntryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit called, preview:', preview);
+    console.log('canExecute:', preview?.canExecute, 'amountEur:', amountEur, 'orderType:', orderType);
 
-    if (!preview?.can_execute) {
+    if (!preview?.canExecute) {
+      console.log('Returning early: preview.canExecute is false');
       return;
     }
 
@@ -144,12 +161,14 @@ export function UserOrderEntryModal({
     }
 
     setIsSubmitting(true);
+    console.log('Calling onOrderSubmit with:', { orderType, limitPrice: price, amountEur: amount });
     try {
       await onOrderSubmit({
         orderType,
         limitPrice: price,
         amountEur: amount,
       });
+      console.log('onOrderSubmit completed successfully');
 
       // Reset form after successful submission
       setAmountEur('');
@@ -165,41 +184,41 @@ export function UserOrderEntryModal({
   const canSubmit =
     !isSubmitting &&
     !isLoadingPreview &&
-    preview?.can_execute &&
+    preview?.canExecute &&
     parseFloat(amountEur) > 0 &&
     (orderType === 'MARKET' || parseFloat(limitPrice) > 0);
 
   return (
     <Card
       className="w-full"
-      padding="lg"
+      padding="md"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-emerald-500 rounded-lg">
-          <ShoppingCart className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-2 mb-3">
+        <div className="p-1.5 bg-emerald-500 rounded-md">
+          <ShoppingCart className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-navy-900 dark:text-white">
+          <h2 className="text-base font-bold text-navy-900 dark:text-white leading-tight">
             Buy {certificateType} Certificates
           </h2>
-          <p className="text-sm text-navy-600 dark:text-navy-400">
+          <p className="text-xs text-navy-600 dark:text-navy-400">
             Available: €{availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Order Type Toggle */}
         <div>
-          <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
+          <label className="text-xs font-medium text-navy-700 dark:text-navy-300 block mb-1">
             Order Type
           </label>
-          <div className="flex rounded-lg overflow-hidden border-2 border-navy-200 dark:border-navy-600">
+          <div className="flex rounded-md overflow-hidden border border-navy-200 dark:border-navy-600">
             <button
               type="button"
               onClick={() => setOrderType('MARKET')}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+              className={`flex-1 py-1.5 text-xs font-semibold transition-colors ${
                 orderType === 'MARKET'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
@@ -210,7 +229,7 @@ export function UserOrderEntryModal({
             <button
               type="button"
               onClick={() => setOrderType('LIMIT')}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+              className={`flex-1 py-1.5 text-xs font-semibold transition-colors ${
                 orderType === 'LIMIT'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700'
@@ -219,7 +238,7 @@ export function UserOrderEntryModal({
               Limit Order
             </button>
           </div>
-          <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+          <p className="text-[10px] text-navy-500 dark:text-navy-400 mt-0.5">
             {orderType === 'MARKET'
               ? 'Execute immediately at best available price'
               : 'Execute only at specified price or better'}
@@ -227,10 +246,10 @@ export function UserOrderEntryModal({
         </div>
 
         {/* Input Grid */}
-        <div className={`grid ${orderType === 'LIMIT' ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+        <div className={`grid ${orderType === 'LIMIT' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
           {/* Amount Input */}
           <div>
-            <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
+            <label className="text-xs font-medium text-navy-700 dark:text-navy-300 block mb-1">
               Amount (EUR)
             </label>
             <div className="relative">
@@ -241,12 +260,12 @@ export function UserOrderEntryModal({
                 suffix="EUR"
                 decimals={2}
                 error={parseFloat(amountEur) > availableBalance ? 'Insufficient balance' : undefined}
-                className="pr-16"
+                className="pr-16 text-sm py-1.5"
               />
               <button
                 type="button"
                 onClick={handleMaxClick}
-                className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors z-10"
+                className="absolute right-12 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors z-10"
               >
                 MAX
               </button>
@@ -265,7 +284,7 @@ export function UserOrderEntryModal({
                 decimals={2}
               />
               {bestAskPrice && (
-                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                <p className="text-[10px] text-navy-500 dark:text-navy-400 mt-0.5">
                   Best Ask: €{bestAskPrice.toFixed(2)}
                 </p>
               )}
@@ -274,38 +293,38 @@ export function UserOrderEntryModal({
 
           {/* Estimated Quantity (read-only) */}
           <div>
-            <label className="text-sm font-medium text-navy-700 dark:text-navy-300 block mb-2">
+            <label className="text-xs font-medium text-navy-700 dark:text-navy-300 block mb-1">
               Est. Quantity
             </label>
-            <div className="px-3 py-2.5 rounded-lg border-2 border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900 text-navy-900 dark:text-white font-mono flex items-center justify-between">
+            <div className="px-2 py-1.5 rounded-md border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900 text-navy-900 dark:text-white font-mono text-sm flex items-center justify-between">
               {isLoadingPreview ? (
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-              ) : preview ? (
-                <span>{preview.total_quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+              ) : preview && preview.totalQuantity != null ? (
+                <span>{preview.totalQuantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               ) : (
                 <span className="text-navy-400">-</span>
               )}
-              <span className="text-xs text-navy-500 ml-2">{certificateType}</span>
+              <span className="text-[10px] text-navy-500 ml-1">{certificateType}</span>
             </div>
           </div>
         </div>
 
         {/* Preview Section */}
         {isLoadingPreview && (
-          <div className="flex items-center justify-center py-6 bg-white dark:bg-navy-800 rounded-lg border-2 border-navy-200 dark:border-navy-600">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mr-2" />
-            <span className="text-sm text-navy-600 dark:text-navy-400">Loading preview...</span>
+          <div className="flex items-center justify-center py-3 bg-white dark:bg-navy-800 rounded-md border border-navy-200 dark:border-navy-600">
+            <Loader2 className="w-4 h-4 animate-spin text-emerald-500 mr-1.5" />
+            <span className="text-xs text-navy-600 dark:text-navy-400">Loading preview...</span>
           </div>
         )}
 
         {previewError && (
-          <div className="flex items-start gap-2 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border-2 border-red-300 dark:border-red-700">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-300 dark:border-red-700">
+            <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-900 dark:text-red-100">
+              <p className="text-xs font-medium text-red-900 dark:text-red-100">
                 Preview Error
               </p>
-              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+              <p className="text-[10px] text-red-700 dark:text-red-300">
                 {previewError}
               </p>
             </div>
@@ -313,17 +332,17 @@ export function UserOrderEntryModal({
         )}
 
         {preview && !isLoadingPreview && (
-          <div className="p-4 bg-white dark:bg-navy-800 rounded-lg border-2 border-navy-200 dark:border-navy-600 space-y-3">
-            <h3 className="text-sm font-semibold text-navy-900 dark:text-white mb-2">
+          <div className="p-2 bg-white dark:bg-navy-800 rounded-md border border-navy-200 dark:border-navy-600 space-y-1.5">
+            <h3 className="text-xs font-semibold text-navy-900 dark:text-white">
               Order Preview
             </h3>
 
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1 text-xs">
               {/* Quantity */}
               <div className="flex justify-between">
                 <span className="text-navy-600 dark:text-navy-400">Quantity</span>
                 <span className="font-mono font-semibold text-navy-900 dark:text-white">
-                  {preview.total_quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {certificateType}
+                  {(preview.totalQuantity ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {certificateType}
                 </span>
               </div>
 
@@ -331,7 +350,7 @@ export function UserOrderEntryModal({
               <div className="flex justify-between">
                 <span className="text-navy-600 dark:text-navy-400">Avg Price</span>
                 <span className="font-mono font-semibold text-navy-900 dark:text-white">
-                  ${preview.weighted_avg_price.toFixed(2)}
+                  ${(preview.weightedAvgPrice ?? 0).toFixed(2)}
                 </span>
               </div>
 
@@ -339,55 +358,71 @@ export function UserOrderEntryModal({
               <div className="flex justify-between">
                 <span className="text-navy-600 dark:text-navy-400">Cost</span>
                 <span className="font-mono font-semibold text-navy-900 dark:text-white">
-                  €{preview.total_cost_gross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  €{(preview.totalCostGross ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               {/* Platform Fee */}
               <div className="flex justify-between">
                 <span className="text-navy-600 dark:text-navy-400">
-                  Platform Fee ({(preview.platform_fee_rate * 100).toFixed(2)}%)
+                  Platform Fee ({((preview.platformFeeRate ?? 0) * 100).toFixed(2)}%)
                 </span>
                 <span className="font-mono font-semibold text-navy-600 dark:text-navy-400">
-                  €{preview.platform_fee_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  €{(preview.platformFeeAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               {/* Divider */}
-              <div className="border-t-2 border-navy-200 dark:border-navy-600 pt-2 mt-2">
+              <div className="border-t border-navy-200 dark:border-navy-600 pt-1 mt-1">
                 {/* Total Cost */}
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-navy-900 dark:text-white">Total Cost</span>
-                  <span className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                    €{preview.total_cost_net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                    €{(preview.totalCostNet ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 {/* Remaining Balance */}
-                <div className="flex justify-between mt-2">
-                  <span className="text-sm text-navy-600 dark:text-navy-400">Remaining Balance</span>
-                  <span className="text-sm font-mono font-semibold text-navy-900 dark:text-white">
-                    €{preview.remaining_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="flex justify-between mt-1">
+                  <span className="text-xs text-navy-600 dark:text-navy-400">Remaining Balance</span>
+                  <span className="text-xs font-mono font-semibold text-navy-900 dark:text-white">
+                    €{(preview.remainingBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Execution Message */}
-            {!preview.can_execute && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-300 dark:border-red-700">
-                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-red-900 dark:text-red-100">
-                  {preview.execution_message}
+            {!preview.canExecute && (
+              <div className="flex items-start gap-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-300 dark:border-red-700">
+                <AlertCircle className="w-3 h-3 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-red-900 dark:text-red-100">
+                  {preview.executionMessage}
                 </p>
               </div>
             )}
 
-            {preview.can_execute && (
-              <div className="flex items-start gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-300 dark:border-emerald-700">
-                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-emerald-900 dark:text-emerald-100">
-                  {preview.execution_message}
+            {/* Limit order will be placed in book (no immediate liquidity) */}
+            {preview.canExecute && preview.willBePlacedInBook && (
+              <div className="flex items-start gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-300 dark:border-blue-700">
+                <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-[10px]">
+                  <p className="text-blue-900 dark:text-blue-100 font-medium">
+                    {preview.executionMessage}
+                  </p>
+                  <p className="text-blue-700 dark:text-blue-300 mt-0.5">
+                    Your order will wait until a seller matches your price
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Immediate execution available */}
+            {preview.canExecute && !preview.willBePlacedInBook && (
+              <div className="flex items-start gap-1.5 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-300 dark:border-emerald-700">
+                <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-emerald-900 dark:text-emerald-100">
+                  {preview.executionMessage}
                 </p>
               </div>
             )}
@@ -400,20 +435,27 @@ export function UserOrderEntryModal({
           whileTap={canSubmit ? { scale: 0.99 } : {}}
           type="submit"
           disabled={!canSubmit}
-          className={`w-full py-3.5 rounded-xl font-semibold text-white transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full py-2.5 rounded-lg font-semibold text-sm text-white transition-colors flex items-center justify-center gap-1.5 ${
             canSubmit
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25'
+              ? preview?.willBePlacedInBook
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md shadow-blue-500/25'
+                : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md shadow-emerald-500/25'
               : 'bg-navy-300 dark:bg-navy-700 cursor-not-allowed'
           }`}
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               <span>Placing Order...</span>
+            </>
+          ) : preview?.willBePlacedInBook ? (
+            <>
+              <Clock className="w-4 h-4" />
+              <span>Place Limit Order</span>
             </>
           ) : (
             <>
-              <TrendingUp className="w-5 h-5" />
+              <TrendingUp className="w-4 h-4" />
               <span>Buy {certificateType}</span>
             </>
           )}

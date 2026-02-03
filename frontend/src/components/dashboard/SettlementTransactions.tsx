@@ -158,7 +158,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
             className="p-4 hover:bg-navy-100 dark:hover:bg-navy-800/50 transition-colors cursor-pointer"
             role="button"
             tabIndex={0}
-            aria-label={`View details for ${settlement.batch_reference}`}
+            aria-label={`View details for ${settlement.batchReference}`}
             onClick={() => onSettlementClick?.(settlement)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -171,19 +171,19 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
               {/* Left: Type and Details */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  {getTypeIcon(settlement.settlement_type)}
+                  {getTypeIcon(settlement.settlementType)}
                   <span className="text-sm font-medium text-white">
-                    {getTypeLabel(settlement.settlement_type)}
+                    {getTypeLabel(settlement.settlementType)}
                   </span>
                   <span className="text-xs text-navy-600 dark:text-navy-400 font-mono">
-                    {settlement.batch_reference}
+                    {settlement.batchReference}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-navy-300 dark:text-navy-300 mb-3">
                   <div className="flex items-center gap-1">
                     <span className="text-navy-500 dark:text-navy-500">Asset:</span>
-                    <span className="font-medium">{settlement.asset_type}</span>
+                    <span className="font-medium">{settlement.assetType}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-navy-500 dark:text-navy-500">Quantity:</span>
@@ -194,7 +194,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                   <div className="flex items-center gap-1">
                     <span className="text-navy-500 dark:text-navy-500">Value:</span>
                     <span className="font-mono font-medium">
-                      {formatCurrency(settlement.total_value_eur, 'EUR')}
+                      {formatCurrency(settlement.totalValueEur, 'EUR')}
                     </span>
                   </div>
                 </div>
@@ -203,12 +203,12 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                 <div className="mb-2">
                   <div className="flex items-center justify-between text-xs text-navy-600 dark:text-navy-400 mb-1">
                     <span>Progress</span>
-                    <span>{Math.round(settlement.progress_percent ?? 0)}%</span>
+                    <span>{Math.round(settlement.progressPercent ?? 0)}%</span>
                   </div>
                   <div className="w-full bg-navy-200 dark:bg-navy-700 rounded-full h-1.5">
                     <div
                       className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${settlement.progress_percent ?? 0}%` }}
+                      style={{ width: `${settlement.progressPercent ?? 0}%` }}
                     />
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                 <div className="flex items-center gap-1 text-xs text-navy-600 dark:text-navy-400">
                   <Calendar className="w-3 h-3" />
                   <span>
-                    Expected: {formatDate(settlement.expected_settlement_date)}
+                    Expected: {formatDate(settlement.expectedSettlementDate)}
                   </span>
                 </div>
               </div>

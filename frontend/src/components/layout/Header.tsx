@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette, Activity } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,6 +55,7 @@ export function Header() {
   };
 
   // Build navigation links based on user role (0010 flow)
+  // ADMIN sees ALL navigation options (superuser access)
   const navLinks = useMemo(() => {
     if (!isAuthenticated) {
       return [{ href: '/contact', label: 'Contact', icon: null }];
@@ -62,18 +63,34 @@ export function Header() {
     if (!role) return [];
 
     const links: { href: string; label: string; icon: LucideIcon | null }[] = [];
-    // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + ADMIN/MM
-    const canCashMarket = ['CEA', 'CEA_SETTLE', 'ADMIN', 'MM'].includes(role);
-    // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + ADMIN/MM
-    const canSwap = ['SWAP', 'ADMIN', 'MM'].includes(role);
-    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM'].includes(role);
+
+    // ADMIN superuser: show ALL navigation options
+    if (isAdmin) {
+      links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+      links.push({ href: '/funding', label: 'Funding', icon: null });
+      links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
+      links.push({ href: '/swap', label: 'Swap', icon: null });
+      links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+      return links;
+    }
+
+    // Regular users: show only their allowed sections
+    // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + MM
+    const canCashMarket = ['CEA', 'CEA_SETTLE', 'MM'].includes(role);
+    // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + MM
+    const canSwap = ['SWAP', 'MM'].includes(role);
+    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canOnboarding = ['NDA', 'KYC'].includes(role);
 
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
     if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
     if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
+    if (canOnboarding) links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
 
     return links;
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated, role, isAdmin]);
 
   return (
     <header
@@ -197,6 +214,18 @@ export function Header() {
 
                         {isAdmin && (
                           <>
+                            <button
+                              onClick={() => handleMenuItemClick('/auto-trade')}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                                isDark
+                                  ? 'text-navy-200 hover:bg-navy-700'
+                                  : 'text-navy-700 hover:bg-navy-50'
+                              )}
+                            >
+                              <Activity className="w-4 h-4" />
+                              Auto Trade
+                            </button>
                             <button
                               onClick={() => handleMenuItemClick('/settings')}
                               className={cn(

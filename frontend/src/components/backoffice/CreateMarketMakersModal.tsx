@@ -40,7 +40,7 @@ const initialConfig = (mmType: MarketMakerType, mmName: string): RefundConfig =>
 export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMarketMakersModalProps) {
   const { prices, loading: pricesLoading } = usePrices();
   const [loading, setLoading] = useState(true);
-  const [existingMMs, setExistingMMs] = useState<MarketMaker[]>([]);
+  const [_existingMMs, setExistingMMs] = useState<MarketMaker[]>([]);
 
   const [ceaBuyer, setCeaBuyer] = useState<RefundConfig>(initialConfig('CEA_BUYER', 'CEA Buyer'));
   const [ceaSeller, setCeaSeller] = useState<RefundConfig>(initialConfig('CEA_SELLER', 'CEA Seller'));

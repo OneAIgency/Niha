@@ -140,66 +140,52 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             </div>
           );
         } else if (row.mm_type === 'CEA_SELLER') {
+          const ceaAvailableValue = ceaBal.available * (prices?.cea?.price || 0);
+          const ceaSold = ceaBal.total - ceaBal.available;
+          const ceaSoldValue = ceaSold * (prices?.cea?.price || 0);
           return (
             <div className="text-right">
-              {/* Available - Highlighted */}
+              {/* Available CEA - Highlighted */}
               <div className="flex items-center justify-end gap-2">
                 <Leaf className="w-4 h-4 text-amber-500" />
                 <span className="font-mono font-bold text-lg text-amber-600 dark:text-amber-400">
                   {loadingBalances ? '...' : formatQuantity(ceaBal.available)} CEA
                 </span>
               </div>
-              {/* Initial & Locked - Secondary, stacked */}
-              {!loadingBalances && ceaBal.locked > 0 && (
+              {/* EUR Value of Available CEA */}
+              {!loadingBalances && (
+                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(ceaAvailableValue, 'EUR')}
+                </div>
+              )}
+              {/* CEA Sold with value */}
+              {!loadingBalances && ceaSold > 0 && (
                 <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
-                  <div>Initial: {formatQuantity(ceaBal.total)} CEA</div>
-                  <div className="flex items-center justify-end gap-1">
-                    <Lock className="w-3 h-3" />
-                    {formatQuantity(ceaBal.locked)} CEA
+                  <div>Sold: {formatQuantity(ceaSold)} CEA</div>
+                  <div className="font-mono text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(ceaSoldValue, 'EUR')}
                   </div>
                 </div>
               )}
             </div>
           );
         } else { // EUA_OFFER
+          const euaAvailableValue = euaBal.available * (prices?.eua?.price || 0);
           return (
-            <div className="space-y-3">
-              {/* CEA Available */}
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Leaf className="w-4 h-4 text-amber-500" />
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                    {loadingBalances ? '...' : formatQuantity(ceaBal.available)} CEA
-                  </span>
-                </div>
-                {!loadingBalances && ceaBal.locked > 0 && (
-                  <div className="mt-0.5 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
-                    <div>Init: {formatQuantity(ceaBal.total)}</div>
-                    <div className="flex items-center justify-end gap-1">
-                      <Lock className="w-3 h-3" />
-                      {formatQuantity(ceaBal.locked)}
-                    </div>
-                  </div>
-                )}
+            <div className="text-right">
+              {/* EUA Available - Highlighted */}
+              <div className="flex items-center justify-end gap-2">
+                <Wind className="w-4 h-4 text-blue-500" />
+                <span className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
+                  {loadingBalances ? '...' : formatQuantity(euaBal.available)} EUA
+                </span>
               </div>
-              {/* EUA Available */}
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Wind className="w-4 h-4 text-blue-500" />
-                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                    {loadingBalances ? '...' : formatQuantity(euaBal.available)} EUA
-                  </span>
+              {/* EUR Value of Available EUA */}
+              {!loadingBalances && (
+                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(euaAvailableValue, 'EUR')}
                 </div>
-                {!loadingBalances && euaBal.locked > 0 && (
-                  <div className="mt-0.5 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
-                    <div>Init: {formatQuantity(euaBal.total)}</div>
-                    <div className="flex items-center justify-end gap-1">
-                      <Lock className="w-3 h-3" />
-                      {formatQuantity(euaBal.locked)}
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           );
         }
@@ -283,10 +269,22 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             const cashBuyers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_BUYER');
             const ceaSellers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_SELLER');
 
-            const totalEURAvailable = getTotalAvailable('eur', mm => mm.mm_type === 'CEA_BUYER');
-            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'CEA_SELLER');
-            const ceaValue = totalCEAAvailable * prices.cea.price;
-            const ceaCashTotal = totalEURAvailable + ceaValue;
+            // Compute values using actual balances from detailedBalances state
+            let totalEUR = 0;
+            let totalCEA = 0;
+            cashBuyers.forEach(mm => {
+              const val = Number(detailedBalances[mm.id]?.eur?.available) || 0;
+              totalEUR += val;
+            });
+            ceaSellers.forEach(mm => {
+              const val = Number(detailedBalances[mm.id]?.cea?.available) || 0;
+              totalCEA += val;
+            });
+            const ceaPrice = Number(prices?.cea?.price) || 0;
+            const ceaValueEur = totalCEA * ceaPrice;
+            // Ensure final sum is valid (prefixed for future use)
+            const _ceaCashTotal = (Number(totalEUR) || 0) + (Number(ceaValueEur) || 0);
+            void _ceaCashTotal; // Suppress unused variable warning
 
             return ceaCashMMs.length > 0 ? (
               <Card className="overflow-hidden">
@@ -308,7 +306,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                     <div className="text-right">
                       <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
                       <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
-                        {formatCurrency(ceaCashTotal, 'EUR')}
+                        {formatCurrency(totalEUR + ceaValueEur, 'EUR')}
                       </div>
                     </div>
                   </div>
@@ -323,7 +321,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                       <span className="text-sm font-medium text-navy-600 dark:text-navy-300">Cash Available</span>
                     </div>
                     <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(totalEURAvailable, 'EUR')}
+                      {formatCurrency(totalEUR, 'EUR')}
                     </div>
                     <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                       {cashBuyers.length} Cash Buyer{cashBuyers.length !== 1 ? 's' : ''}
@@ -337,10 +335,10 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                       <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
                     </div>
                     <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {formatQuantity(totalCEAAvailable)} CEA
+                      {formatQuantity(totalCEA)} CEA
                     </div>
                     <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {formatCurrency(ceaValue, 'EUR')} · {ceaSellers.length} Seller{ceaSellers.length !== 1 ? 's' : ''}
+                      {formatCurrency(ceaValueEur, 'EUR')} · {ceaSellers.length} Seller{ceaSellers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
@@ -351,11 +349,15 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
           {/* Swap Market Summary */}
           {(() => {
             const swapMMs = marketMakers.filter(mm => mm.mm_type === 'EUA_OFFER');
-            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'EUA_OFFER');
-            const totalEUAAvailable = getTotalAvailable('eua', mm => mm.mm_type === 'EUA_OFFER');
-            const ceaValue = totalCEAAvailable * prices.cea.price;
-            const euaValue = totalEUAAvailable * prices.eua.price;
-            const swapTotal = ceaValue + euaValue;
+            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'EUA_OFFER') || 0;
+            const totalEUAAvailable = getTotalAvailable('eua', mm => mm.mm_type === 'EUA_OFFER') || 0;
+            const ceaPriceSwap = prices?.cea?.price || 0;
+            const euaPriceSwap = prices?.eua?.price || 0;
+            const ceaValue = totalCEAAvailable * ceaPriceSwap;
+            const euaValue = totalEUAAvailable * euaPriceSwap;
+            const safeCeaVal = typeof ceaValue === 'number' && Number.isFinite(ceaValue) ? ceaValue : 0;
+            const safeEuaVal = typeof euaValue === 'number' && Number.isFinite(euaValue) ? euaValue : 0;
+            const swapTotal = safeCeaVal + safeEuaVal;
 
             return swapMMs.length > 0 ? (
               <Card className="overflow-hidden">
@@ -425,23 +427,26 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               </span>
               <div className="text-right">
                 <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(
-                    marketMakers.reduce((sum, mm) => {
-                      const eurBal = detailedBalances[mm.id]?.eur?.available || 0;
-                      const ceaBal = detailedBalances[mm.id]?.cea?.available || 0;
-                      const euaBal = detailedBalances[mm.id]?.eua?.available || 0;
+                  {(() => {
+                    const total = marketMakers.reduce((sum, mm) => {
+                      const eurBal = Number(detailedBalances[mm.id]?.eur?.available) || 0;
+                      const ceaBal = Number(detailedBalances[mm.id]?.cea?.available) || 0;
+                      const euaBal = Number(detailedBalances[mm.id]?.eua?.available) || 0;
 
-                      let value = sum;
+                      let value = Number(sum) || 0;
                       // Add EUR for CEA_BUYER
                       if (mm.mm_type === 'CEA_BUYER') {
                         value += eurBal;
                       }
                       // Add CEA/EUA value for all types
-                      value += (ceaBal * prices.cea.price) + (euaBal * prices.eua.price);
+                      const ceaP = Number(prices?.cea?.price) || 0;
+                      const euaP = Number(prices?.eua?.price) || 0;
+                      value += ceaBal * ceaP;
+                      value += euaBal * euaP;
                       return value;
-                    }, 0),
-                    'EUR'
-                  )}
+                    }, 0);
+                    return formatCurrency(total, 'EUR');
+                  })()}
                 </div>
                 <div className="text-xs text-navy-500 dark:text-navy-400">
                   Across {marketMakers.length} Market Makers

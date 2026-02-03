@@ -120,9 +120,9 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
   };
 
   const calculateDaysRemaining = () => {
-    if (!settlement?.expected_settlement_date || settlement.status === 'SETTLED') return null;
+    if (!settlement?.expectedSettlementDate || settlement.status === 'SETTLED') return null;
 
-    const expected = new Date(settlement.expected_settlement_date);
+    const expected = new Date(settlement.expectedSettlementDate);
     const now = new Date();
     const diff = Math.ceil((expected.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -172,9 +172,9 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-1">
-                {settlement.settlement_type === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
+                {settlement.settlementType === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA'}
               </h2>
-              <p className="text-sm text-navy-500 dark:text-navy-400 font-mono">{settlement.batch_reference}</p>
+              <p className="text-sm text-navy-500 dark:text-navy-400 font-mono">{settlement.batchReference}</p>
             </div>
             <button
               onClick={onClose}
@@ -246,7 +246,7 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Asset Type</div>
-              <div className="text-sm font-medium text-navy-900 dark:text-white">{settlement.asset_type}</div>
+              <div className="text-sm font-medium text-navy-900 dark:text-white">{settlement.assetType}</div>
             </div>
             <div>
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Quantity</div>
@@ -263,20 +263,20 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
             <div>
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Total Value</div>
               <div className="text-sm font-mono font-medium text-navy-900 dark:text-white">
-                {formatCurrency(settlement.total_value_eur, 'EUR')}
+                {formatCurrency(settlement.totalValueEur, 'EUR')}
               </div>
             </div>
             <div>
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Expected Settlement</div>
               <div className="text-sm font-medium text-navy-900 dark:text-white">
-                {formatDate(settlement.expected_settlement_date)}
+                {formatDate(settlement.expectedSettlementDate)}
               </div>
             </div>
-            {settlement.actual_settlement_date && (
+            {settlement.actualSettlementDate && (
               <div>
                 <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Actual Settlement</div>
                 <div className="text-sm font-medium text-navy-900 dark:text-white">
-                  {formatDate(settlement.actual_settlement_date)}
+                  {formatDate(settlement.actualSettlementDate)}
                 </div>
               </div>
             )}
@@ -304,7 +304,7 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
                           {getStatusLabel(entry.status)}
                         </span>
                         <span className="text-xs text-navy-500 dark:text-navy-400">
-                          {formatDate(entry.created_at)}
+                          {formatDate(entry.createdAt)}
                         </span>
                       </div>
                       {entry.notes && (
@@ -318,10 +318,10 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
           )}
 
           {/* Additional Info */}
-          {settlement.registry_reference && (
+          {settlement.registryReference && (
             <div className="mb-4">
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Registry Reference</div>
-              <div className="text-sm font-mono text-navy-900 dark:text-white">{settlement.registry_reference}</div>
+              <div className="text-sm font-mono text-navy-900 dark:text-white">{settlement.registryReference}</div>
             </div>
           )}
 
