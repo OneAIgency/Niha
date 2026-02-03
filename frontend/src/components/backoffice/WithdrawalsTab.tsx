@@ -20,7 +20,7 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
-import { AlertBanner } from '../common';
+import { AlertBanner, LoadingState } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type {
   Withdrawal,
@@ -190,7 +190,7 @@ export const WithdrawalsTab: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-navy-600" />
+        <LoadingState variant="spinner" size="lg" />
       </div>
     );
   }

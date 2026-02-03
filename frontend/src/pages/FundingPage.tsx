@@ -8,7 +8,6 @@ import {
   XCircle,
   AlertCircle,
   Copy,
-  Loader2,
   ArrowRight,
   Banknote,
   Info,
@@ -19,7 +18,7 @@ import {
   FileText,
   Target,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, SubheaderNavButtonAction, AlertBanner } from '../components/common';
+import { Button, Card, Badge, Subheader, SubheaderNavButtonAction, AlertBanner, PageLoadingState } from '../components/common';
 import { usersApi } from '../services/api';
 import { formatRelativeTime, formatCurrency } from '../utils';
 import { useAuthStore } from '../stores/useStore';
@@ -233,8 +232,8 @@ export function FundingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      <div className="min-h-screen bg-navy-900">
+        <PageLoadingState text="Loading funding information..." />
       </div>
     );
   }

@@ -12,7 +12,6 @@ import {
   Check,
   Settings,
   Zap,
-  Loader2,
   Activity,
   Target,
   ChevronDown,
@@ -22,7 +21,7 @@ import {
   BarChart3,
   Sparkles,
 } from 'lucide-react';
-import { Button } from '../common';
+import { Button, LoadingState } from '../common';
 import {
   getAutoTradeRules,
   createAutoTradeRule,
@@ -259,7 +258,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        <LoadingState variant="spinner" size="lg" />
       </div>
     );
   }
