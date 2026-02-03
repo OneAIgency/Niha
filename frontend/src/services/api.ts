@@ -23,7 +23,9 @@ import type {
   UserSession,
   CertificateType,
   OrderSide,
+  OrderStatus,
   Order,
+  MarketType,
   OrderBook,
   MarketDepth,
   CashMarketTrade,
@@ -44,6 +46,7 @@ import type {
   HoldCalculation,
   Entity,
   EntityBalance,
+  EntityBalances,
   MarketMaker,
   MarketMakerType,
   MarketMakerQueryParams,
@@ -63,6 +66,10 @@ import type {
   EntityFeeOverride,
   EntityFeeOverrideCreate,
   EffectiveFeeResponse,
+  AutoTradeSettings,
+  LiquidityStatus,
+  AutoTradeMarketSettings,
+  AutoTradeMarketSettingsUpdate,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -301,8 +308,10 @@ export const authApi = {
     password: string,
     confirmPassword: string
   ): Promise<{ access_token: string; user: User }> => {
-    const { data } = await api.post('/auth/setup-password', null, {
-      params: { token, password, confirm_password: confirmPassword }
+    const { data } = await api.post('/auth/setup-password', {
+      token,
+      password,
+      confirm_password: confirmPassword
     });
     return data;
   },
@@ -519,8 +528,8 @@ export const swapsApi = {
   getRate: async (): Promise<{
     eua_to_cea: number;
     cea_to_eua: number;
-    eua_price_usd: number;
-    cea_price_usd: number;
+    eua_price_eur: number;
+    cea_price_eur: number;
     explanation: string;
     platform_fee_pct: number;
     effective_rate: number;
@@ -598,6 +607,69 @@ export const swapsApi = {
     count: number;
   }> => {
     const { data } = await api.get('/swaps/offers');
+    return data;
+  },
+
+  getOrderbook: async (): Promise<{
+    asks: Array<{
+      ratio: number;
+      euaQuantity: number;
+      ordersCount: number;
+      cumulativeEua: number;
+      depthPct: number;
+    }>;
+    totalEuaAvailable: number;
+    levelsCount: number;
+  }> => {
+    const { data } = await api.get('/swaps/orderbook');
+    // Data is already transformed by axios interceptor, just return it
+    return data;
+  },
+
+  createSwapOffer: async (offer: {
+    market_maker_id: string;
+    ratio: number;
+    eua_quantity: number;
+  }): Promise<{
+    success: boolean;
+    orderId: string;  // Transformed by axios interceptor from order_id
+    marketMakerId: string;
+    marketMakerName: string;
+    ratio: number;
+    euaQuantity: number;
+    status: string;
+    createdAt: string;
+  }> => {
+    const { data } = await api.post('/swaps/offers', offer);
+    return data;
+  },
+
+  createSwapOffersBatch: async (offers: Array<{
+    market_maker_id: string;
+    ratio: number;
+    eua_quantity: number;
+  }>): Promise<{
+    success: boolean;
+    created_count: number;
+    offers: Array<{
+      market_maker_id: string;
+      market_maker_name: string;
+      ratio: number;
+      eua_quantity: number;
+    }>;
+  }> => {
+    const { data } = await api.post('/swaps/offers/batch', { offers });
+    return data;
+  },
+
+  resetSwapLiquidity: async (confirmationCode: string): Promise<{
+    success: boolean;
+    message: string;
+    deleted_count: number;
+  }> => {
+    const { data } = await api.delete('/swaps/offers/reset', {
+      data: { confirmation_code: confirmationCode },
+    });
     return data;
   },
 };
@@ -858,6 +930,13 @@ export const adminApi = {
     return data;
   },
 
+  // Create entity for user (for users created without entity who need to report deposits)
+  createEntityForUser: async (id: string, entityName?: string): Promise<MessageResponse> => {
+    const params = entityName ? { entity_name: entityName } : {};
+    const { data } = await api.post(`/admin/users/${id}/create-entity`, null, { params });
+    return data;
+  },
+
   // Get user auth history
   getUserAuthHistory: async (
     id: string,
@@ -1015,6 +1094,82 @@ export const adminApi = {
     const { data } = await api.get('/admin/entities');
     return data.data;  // API returns { data: [...] }
   },
+
+  // Auto Trade Settings (Liquidity Limits)
+  getAutoTradeSettings: async (): Promise<AutoTradeSettings[]> => {
+    const { data } = await api.get('/admin/auto-trade-settings');
+    return data;
+  },
+
+  getAutoTradeSettingsByType: async (certificateType: string): Promise<AutoTradeSettings> => {
+    const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}`);
+    return data;
+  },
+
+  updateAutoTradeSettings: async (
+    certificateType: string,
+    payload: {
+      target_ask_liquidity?: number | null;
+      target_bid_liquidity?: number | null;
+      liquidity_limit_enabled?: boolean;
+    }
+  ): Promise<AutoTradeSettings> => {
+    const { data } = await api.put(`/admin/auto-trade-settings/${certificateType}`, payload);
+    return data;
+  },
+
+  getLiquidityStatus: async (certificateType: string): Promise<LiquidityStatus> => {
+    const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}/liquidity`);
+    return data;
+  },
+
+  // Per-market-side auto trade settings
+  getMarketSettings: async (): Promise<AutoTradeMarketSettings[]> => {
+    const { data } = await api.get('/admin/auto-trade-market-settings');
+    return data;
+  },
+
+  getMarketSettingsByKey: async (marketKey: string): Promise<AutoTradeMarketSettings> => {
+    const { data } = await api.get(`/admin/auto-trade-market-settings/${marketKey}`);
+    return data;
+  },
+
+  updateMarketSettings: async (
+    marketKey: string,
+    payload: AutoTradeMarketSettingsUpdate
+  ): Promise<AutoTradeMarketSettings> => {
+    const { data } = await api.put(`/admin/auto-trade-market-settings/${marketKey}`, payload);
+    return data;
+  },
+
+  // ==================== Admin Testing Tools ====================
+
+  /**
+   * Update admin's own role for testing purposes
+   */
+  updateMyRole: async (role: string): Promise<User> => {
+    const { data } = await api.put('/admin/me/role', { role });
+    return data;
+  },
+
+  /**
+   * Credit assets to admin's own entity for testing
+   */
+  creditMyEntity: async (assetType: string, amount: number): Promise<EntityBalances> => {
+    const { data } = await api.post('/admin/me/credit', {
+      asset_type: assetType,
+      amount,
+    });
+    return data;
+  },
+
+  /**
+   * Get admin's entity balances
+   */
+  getMyBalances: async (): Promise<EntityBalances> => {
+    const { data } = await api.get('/admin/me/balances');
+    return data;
+  },
 };
 
 // Backoffice API (KYC review, user approvals)
@@ -1100,6 +1255,12 @@ export const backofficeApi = {
 
   getEntityBalance: async (entityId: string): Promise<EntityBalance> => {
     const { data } = await api.get(`/backoffice/entities/${entityId}/balance`);
+    return data;
+  },
+
+  // Sync entity.balance_amount to EntityHolding (fix for legacy deposits)
+  syncEntityBalance: async (entityId: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/backoffice/entities/${entityId}/sync-balance`);
     return data;
   },
 
@@ -1394,7 +1555,21 @@ export const cashMarketApi = {
     certificate_type?: CertificateType;
   }): Promise<Order[]> => {
     const { data } = await api.get('/cash-market/orders/my', { params });
-    return data;
+    // Normalize response to match TypeScript types (Axios transforms to camelCase)
+    return (data || []).map((order: Record<string, unknown>) => ({
+      id: order.id as string,
+      entity_id: (order.entityId ?? order.entity_id) as string,
+      certificate_type: (order.certificateType ?? order.certificate_type) as CertificateType,
+      side: order.side as OrderSide,
+      price: order.price as number,
+      quantity: order.quantity as number,
+      filled_quantity: (order.filledQuantity ?? order.filled_quantity ?? 0) as number,
+      remaining_quantity: (order.remainingQuantity ?? order.remaining_quantity ?? 0) as number,
+      status: order.status as OrderStatus,
+      market: (order.market as MarketType) || undefined,
+      created_at: (order.createdAt ?? order.created_at) as string,
+      updated_at: (order.updatedAt ?? order.updated_at) as string | undefined,
+    }));
   },
 
   cancelOrder: async (orderId: string): Promise<MessageResponse> => {
@@ -1458,33 +1633,33 @@ export const cashMarketApi = {
     limit_price?: number;
     all_or_none?: boolean;
   }): Promise<{
-    certificate_type: string;
+    certificateType: string;
     side: string;
-    order_type: string;
-    amount_eur: number | null;
-    quantity_requested: number | null;
-    limit_price: number | null;
-    all_or_none: boolean;
+    orderType: string;
+    amountEur: number | null;
+    quantityRequested: number | null;
+    limitPrice: number | null;
+    allOrNone: boolean;
     fills: Array<{
-      seller_code: string;
+      sellerCode: string;
       price: number;
       quantity: number;
       cost: number;
     }>;
-    total_quantity: number;
-    total_cost_gross: number;
-    weighted_avg_price: number;
-    best_price: number | null;
-    worst_price: number | null;
-    platform_fee_rate: number;
-    platform_fee_amount: number;
-    total_cost_net: number;
-    net_price_per_unit: number;
-    available_balance: number;
-    remaining_balance: number;
-    can_execute: boolean;
-    execution_message: string;
-    partial_fill: boolean;
+    totalQuantity: number;
+    totalCostGross: number;
+    weightedAvgPrice: number;
+    bestPrice: number | null;
+    worstPrice: number | null;
+    platformFeeRate: number;
+    platformFeeAmount: number;
+    totalCostNet: number;
+    netPricePerUnit: number;
+    availableBalance: number;
+    remainingBalance: number;
+    canExecute: boolean;
+    executionMessage: string;
+    partialFill: boolean;
   }> => {
     const { data } = await api.post('/cash-market/order/preview', request);
     return data;
@@ -1623,7 +1798,7 @@ export const resetAllMarketMakers = async (password: string): Promise<{
   orders_deleted: number;
   ticket_id: string;
 }> => {
-  const { data } = await api.post(`/admin/market-makers/reset-all?password=${encodeURIComponent(password)}`);
+  const { data } = await api.post('/admin/market-makers/reset-all', { password });
   return data;
 };
 
@@ -1747,34 +1922,37 @@ export const getMarketMakerBalances = async (id: string): Promise<{
 // Auto Trade Rules API
 export interface AutoTradeRule {
   id: string;
-  market_maker_id: string;
+  marketMakerId: string;
   name: string;
   enabled: boolean;
   side: 'BUY' | 'SELL';
-  order_type: 'LIMIT' | 'MARKET';
-  price_mode: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
-  fixed_price?: number;
-  spread_from_best?: number;
-  spread_min?: number;
-  spread_max?: number;
-  percentage_from_market?: number;
-  max_price_deviation?: number;
-  quantity_mode: 'fixed' | 'percentage_of_balance' | 'random_range';
-  fixed_quantity?: number;
-  percentage_of_balance?: number;
-  min_quantity?: number;
-  max_quantity?: number;
-  interval_mode: 'fixed' | 'random';
-  interval_minutes: number;
-  interval_min_minutes?: number;
-  interval_max_minutes?: number;
-  min_balance?: number;
-  max_active_orders?: number;
-  last_executed_at?: string;
-  next_execution_at?: string;
-  execution_count: number;
-  created_at: string;
-  updated_at: string;
+  orderType: 'LIMIT' | 'MARKET';
+  priceMode: 'fixed' | 'spread_from_best' | 'random_spread' | 'percentage_from_market';
+  fixedPrice?: number;
+  spreadFromBest?: number;
+  spreadMin?: number;
+  spreadMax?: number;
+  percentageFromMarket?: number;
+  maxPriceDeviation?: number;
+  quantityMode: 'fixed' | 'percentage_of_balance' | 'random_range';
+  fixedQuantity?: number;
+  percentageOfBalance?: number;
+  minQuantity?: number;
+  maxQuantity?: number;
+  intervalMode: 'fixed' | 'random';
+  intervalMinutes: number;
+  intervalMinMinutes?: number;
+  intervalMaxMinutes?: number;
+  intervalSeconds?: number | null;
+  intervalMinSeconds?: number | null;
+  intervalMaxSeconds?: number | null;
+  minBalance?: number;
+  maxActiveOrders?: number;
+  lastExecutedAt?: string;
+  nextExecutionAt?: string;
+  executionCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AutoTradeRuleCreate {
@@ -1798,6 +1976,9 @@ export interface AutoTradeRuleCreate {
   interval_minutes?: number;
   interval_min_minutes?: number;
   interval_max_minutes?: number;
+  interval_seconds?: number | null;
+  interval_min_seconds?: number | null;
+  interval_max_seconds?: number | null;
   min_balance?: number;
   max_active_orders?: number;
 }
@@ -1823,6 +2004,9 @@ export interface AutoTradeRuleUpdate {
   interval_minutes?: number;
   interval_min_minutes?: number | null;
   interval_max_minutes?: number | null;
+  interval_seconds?: number | null;
+  interval_min_seconds?: number | null;
+  interval_max_seconds?: number | null;
   min_balance?: number | null;
   max_active_orders?: number | null;
 }
@@ -1859,6 +2043,40 @@ export const deleteAutoTradeRule = async (
   const { data } = await api.delete(
     `/admin/market-makers/${marketMakerId}/auto-trade-rules/${ruleId}`
   );
+  return data;
+};
+
+// Auto Trade Monitor
+export interface AutoTradeRuleStatus {
+  id: string;
+  name: string;
+  market_maker_id: string;
+  market_maker_name: string;
+  enabled: boolean;
+  side: string | null;
+  health: 'healthy' | 'disabled' | 'inactive' | 'overdue' | 'delayed';
+  health_reason: string | null;
+  last_executed_at: string | null;
+  next_execution_at: string | null;
+  time_until_next_seconds: number | null;
+  execution_count: number;
+  interval_seconds: number;
+}
+
+export interface AutoTradeMonitorResponse {
+  summary: {
+    total_rules: number;
+    enabled: number;
+    disabled: number;
+    healthy: number;
+    overdue: number;
+  };
+  rules: AutoTradeRuleStatus[];
+  timestamp: string;
+}
+
+export const getAutoTradeMonitor = async (): Promise<AutoTradeMonitorResponse> => {
+  const { data } = await api.get('/admin/market-makers/auto-trade-rules/monitor');
   return data;
 };
 

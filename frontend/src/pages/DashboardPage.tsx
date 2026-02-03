@@ -40,6 +40,30 @@ import { SettlementTransactions } from '../components/dashboard/SettlementTransa
 import { SettlementDetails } from '../components/dashboard/SettlementDetails';
 import type { Order, SettlementBatch, SwapRequest } from '../types';
 
+/**
+ * Helper to safely get Order fields (handles both camelCase from Axios and snake_case from TypeScript types).
+ * Axios interceptor transforms snake_case → camelCase, but TypeScript types still use snake_case.
+ */
+const getOrderField = (order: Order, field: 'createdAt' | 'certificateType' | 'filledQuantity' | 'remainingQuantity'): string | number => {
+  const o = order as unknown as Record<string, unknown>;
+  const snakeMap: Record<string, string> = {
+    createdAt: 'created_at',
+    certificateType: 'certificate_type',
+    filledQuantity: 'filled_quantity',
+    remainingQuantity: 'remaining_quantity',
+  };
+  return (o[field] ?? o[snakeMap[field]] ?? '') as string | number;
+};
+
+/**
+ * Safely parse a date string, returning null if invalid
+ */
+const safeParseDate = (dateStr: unknown): Date | null => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
 interface EntityBalance {
   entity_id: string;
   entity_name: string;
@@ -463,17 +487,20 @@ export function DashboardPage() {
   const orderTransactions: Transaction[] = orders.map(order => {
     // Check if this is a swap order (SWAP market orders use price field for ratio)
     const isSwap = order.market === 'SWAP';
-    
+    // Get fields safely (handles Axios camelCase transformation)
+    const certType = getOrderField(order, 'certificateType') as string || 'CEA';
+    const createdDate = safeParseDate(getOrderField(order, 'createdAt'));
+
     return {
       id: order.id,
-      date: new Date(order.created_at).toLocaleString(),
+      date: createdDate?.toLocaleString() || 'Unknown',
       type: isSwap ? 'SWAP' : order.side,
-      description: isSwap 
-        ? `SWAP ${order.certificate_type}` 
-        : `${order.side} ${order.certificate_type}`,
+      description: isSwap
+        ? `SWAP ${certType}`
+        : `${order.side} ${certType}`,
       details: isSwap
-        ? `${formatNumber(order.quantity)} ${order.certificate_type} @ ratio ${order.price.toFixed(4)}`
-        : `${formatNumber(order.quantity)} ${order.certificate_type} @ €${order.price.toFixed(2)}`,
+        ? `${formatNumber(order.quantity)} ${certType} @ ratio ${order.price.toFixed(4)}`
+        : `${formatNumber(order.quantity)} ${certType} @ €${order.price.toFixed(2)}`,
       amount: isSwap ? null : (order.side === 'BUY' ? -(order.quantity * order.price) : (order.quantity * order.price)),
       status: order.status === 'FILLED' ? 'completed' : order.status === 'CANCELLED' ? 'cancelled' : 'pending',
       ref: order.id.substring(0, 16),
@@ -488,13 +515,17 @@ export function DashboardPage() {
     const fromQty = swap.quantity;
     const toQty = swap.equivalent_quantity || (swap.quantity * (swap.desired_rate || 0));
     const rate = swap.desired_rate || (toQty / fromQty);
-    
+    const s = swap as unknown as Record<string, unknown>; // Axios transforms to camelCase
+    const createdDate = safeParseDate(s.createdAt ?? swap.created_at);
+    const fromType = (s.fromType as string) ?? swap.from_type ?? 'CEA';
+    const toType = (s.toType as string) ?? swap.to_type ?? 'EUA';
+
     return {
       id: swap.id,
-      date: new Date(swap.created_at).toLocaleString(),
+      date: createdDate?.toLocaleString() || 'Unknown',
       type: 'SWAP',
-      description: `SWAP ${swap.from_type} → ${swap.to_type}`,
-      details: `${formatNumber(fromQty)} ${swap.from_type} → ${formatNumber(toQty)} ${swap.to_type} @ ${rate.toFixed(4)}`,
+      description: `SWAP ${fromType} → ${toType}`,
+      details: `${formatNumber(fromQty)} ${fromType} → ${formatNumber(toQty)} ${toType} @ ${rate.toFixed(4)}`,
       amount: null, // Swaps don't have EUR amount
       status: swap.status === 'completed' || swap.status === 'matched' ? 'completed' : 'pending',
       ref: swap.anonymous_code || swap.id.substring(0, 16),
@@ -1026,7 +1057,7 @@ export function DashboardPage() {
                           </div>
                           <div className="text-left">
                             <div className="font-medium text-white text-sm">
-                              {order.side} {order.certificate_type}
+                              {order.side} {getOrderField(order, 'certificateType') || 'CEA'}
                             </div>
                             <div className="text-xs text-navy-500">
                               {formatNumber(order.quantity)} @ €{order.price.toFixed(2)}
@@ -1059,21 +1090,24 @@ export function DashboardPage() {
                           >
                             <div className="px-4 pb-4 space-y-3">
                               {/* Progress */}
-                              {order.filled_quantity > 0 && (
-                                <div>
-                                  <div className="flex items-center justify-between text-xs mb-2">
-                                    <span className="text-navy-400">Filled</span>
-                                    <span className="text-white font-mono">
-                                      {formatNumber(order.filled_quantity)} / {formatNumber(order.quantity)}
-                                    </span>
+                              {(() => {
+                                const filled = Number(getOrderField(order, 'filledQuantity')) || 0;
+                                return filled > 0 && (
+                                  <div>
+                                    <div className="flex items-center justify-between text-xs mb-2">
+                                      <span className="text-navy-400">Filled</span>
+                                      <span className="text-white font-mono">
+                                        {formatNumber(filled)} / {formatNumber(order.quantity)}
+                                      </span>
+                                    </div>
+                                    <ProgressBar
+                                      value={(filled / order.quantity) * 100}
+                                      variant="success"
+                                      size="sm"
+                                    />
                                   </div>
-                                  <ProgressBar
-                                    value={(order.filled_quantity / order.quantity) * 100}
-                                    variant="success"
-                                    size="sm"
-                                  />
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Details */}
                               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -1086,7 +1120,7 @@ export function DashboardPage() {
                                 <div className="bg-navy-800/50 rounded-lg p-3">
                                   <div className="text-navy-500 mb-1">Created</div>
                                   <div className="font-mono text-white">
-                                    {new Date(order.created_at).toLocaleDateString()}
+                                    {safeParseDate(getOrderField(order, 'createdAt'))?.toLocaleDateString() || 'Unknown'}
                                   </div>
                                 </div>
                               </div>
