@@ -1468,19 +1468,16 @@ async def update_scraping_source(
 
 
 def _scraping_error_status(e: Exception) -> tuple[int, str]:
-    """Map scraping exceptions to (status_code, detail)."""
-    msg = str(e).strip()
-    if not msg or len(msg) > 200:
-        msg = "Scraping failed. Check URL, selectors, and network."
-    lower = msg.lower()
+    """Map scraping exceptions to (status_code, detail) with safe error messages."""
+    err_str = str(e).lower().strip()
     # Rate limiting - return 429 with user-friendly message
-    if "429" in lower or "rate limit" in lower or "too many requests" in lower:
+    if "429" in err_str or "rate limit" in err_str or "too many requests" in err_str:
         return (429, "Rate limited by source. Please wait a few minutes before retrying.")
-    if "timeout" in lower or "timed out" in lower:
-        return (504, msg)
-    if "connection" in lower or "connect" in lower or "connection refused" in lower:
-        return (502, msg)
-    return (500, msg)
+    if "timeout" in err_str or "timed out" in err_str:
+        return (504, "Request timed out. Please try again later.")
+    if "connection" in err_str or "connect" in err_str or "connection refused" in err_str:
+        return (502, "Connection error. Check if the source is accessible.")
+    return (500, "Scraping failed. Check URL, selectors, and network.")
 
 
 @router.post("/scraping-sources/{source_id}/test")
@@ -1774,7 +1771,8 @@ async def refresh_exchange_rate_source(
     except Exception as e:
         logger.exception("Exchange rate refresh failed")
         status_code = 408 if "timeout" in str(e).lower() else 500
-        raise HTTPException(status_code=status_code, detail=str(e)) from e
+        detail = "Request timed out" if status_code == 408 else "Exchange rate refresh failed"
+        raise HTTPException(status_code=status_code, detail=detail) from e
 
 
 @router.delete("/exchange-rate-sources/{source_id}")

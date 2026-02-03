@@ -149,6 +149,9 @@ async def create_seed_users():
             entity = entity_map.get(entity_name) if entity_name else None
             entity_id = entity.id if entity else None
 
+            # Log prefix without exposing full email
+            email_prefix = user_data['email'].split('@')[0][:3] + '***'
+
             if not existing_user:
                 user = User(
                     email=user_data["email"],
@@ -161,20 +164,18 @@ async def create_seed_users():
                     entity_id=entity_id,
                 )
                 db.add(user)
-                logger.info(
-                    f"Created seed user: {user_data['email']} (entity: {entity_name})"
-                )
+                logger.info(f"Created seed user: {email_prefix} (entity: {entity_name})")
             else:
                 # Update existing user's entity_id if not set
                 if not existing_user.entity_id and entity_id:
                     existing_user.entity_id = entity_id
-                    logger.info(f"Updated seed user entity: {user_data['email']}")
+                    logger.info(f"Updated seed user entity: {email_prefix}")
                 elif not existing_user.password_hash:
                     existing_user.password_hash = hash_password(user_data["password"])
                     existing_user.role = user_data["role"]
-                    logger.info(f"Updated seed user password: {user_data['email']}")
+                    logger.info(f"Updated seed user password: {email_prefix}")
                 else:
-                    logger.info(f"Seed user already exists: {user_data['email']}")
+                    logger.info(f"Seed user already exists: {email_prefix}")
 
         # Seed NDA contact request for test@test.ro (appears in onboarding/requests and users)
         result = await db.execute(

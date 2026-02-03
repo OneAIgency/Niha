@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
 import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal, AlertBanner, Modal, LoadingState, FormSection, FormRow, FormActions, Input } from '../components/common';
+import { TokenEditor, ThemeExportImport } from '../components/theme';
+import { DESIGN_TOKEN_CATEGORIES } from '../theme';
 
 /**
  * Theme Sample Page - Design System Showcase
@@ -54,6 +56,11 @@ export function ThemePage() {
         <p className={`mt-1 text-sm ${textSecondary}`}>
           All standardized components displayed in {theme} mode. Click section tabs above to navigate.
         </p>
+      </div>
+
+      {/* Theme Export/Import Controls */}
+      <div className="mb-8">
+        <ThemeExportImport />
       </div>
 
       <div className="space-y-16">
@@ -726,6 +733,12 @@ export function ThemePage() {
               </div>
             </div>
           </div>
+
+          {/* Container Token Editor */}
+          <TokenEditor
+            tokens={DESIGN_TOKEN_CATEGORIES.containers.tokens}
+            title="Edit Container Tokens"
+          />
         </section>
 
         {/* COLORS SECTION */}
@@ -775,6 +788,12 @@ export function ThemePage() {
               </Card>
             ))}
           </div>
+
+          {/* Color Token Editor */}
+          <TokenEditor
+            tokens={DESIGN_TOKEN_CATEGORIES.colors.tokens}
+            title="Edit Color Tokens"
+          />
         </section>
 
         {/* TYPOGRAPHY SECTION */}
@@ -808,6 +827,77 @@ export function ThemePage() {
               </div>
             </div>
           </Card>
+
+          {/* Typography Token Editor */}
+          <TokenEditor
+            tokens={DESIGN_TOKEN_CATEGORIES.typography.tokens}
+            title="Edit Typography Tokens"
+          />
+        </section>
+
+        {/* SPACING & RADIUS SECTION */}
+        <section id="spacing">
+          <SectionHeader title="Spacing & Radius" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Spacing Scale */}
+            <Card className="p-6">
+              <p className={`text-sm font-medium ${textSecondary} mb-4`}>Spacing Scale</p>
+              <div className="space-y-3">
+                {[
+                  { name: 'space-1', value: '4px', var: '--space-1' },
+                  { name: 'space-2', value: '8px', var: '--space-2' },
+                  { name: 'space-3', value: '12px', var: '--space-3' },
+                  { name: 'space-4', value: '16px', var: '--space-4' },
+                  { name: 'space-6', value: '24px', var: '--space-6' },
+                  { name: 'space-8', value: '32px', var: '--space-8' },
+                ].map((s) => (
+                  <div key={s.name} className="flex items-center gap-3">
+                    <div
+                      className="h-4 bg-emerald-500 rounded"
+                      style={{ width: `var(${s.var})` }}
+                    />
+                    <span className={`text-xs font-mono ${textMuted}`}>{s.name}</span>
+                    <span className={`text-xs ${textSecondary}`}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Radius Scale */}
+            <Card className="p-6">
+              <p className={`text-sm font-medium ${textSecondary} mb-4`}>Border Radius</p>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { name: 'SM', var: '--radius-sm' },
+                  { name: 'MD', var: '--radius-md' },
+                  { name: 'LG', var: '--radius-lg' },
+                  { name: 'XL', var: '--radius-xl' },
+                  { name: '2XL', var: '--radius-2xl' },
+                  { name: 'Full', var: '--radius-full' },
+                ].map((r) => (
+                  <div key={r.name} className="flex flex-col items-center gap-2">
+                    <div
+                      className="w-16 h-16 bg-navy-700 border-2 border-emerald-500"
+                      style={{ borderRadius: `var(${r.var})` }}
+                    />
+                    <span className={`text-xs font-mono ${textMuted}`}>{r.name}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Spacing Token Editor */}
+          <TokenEditor
+            tokens={DESIGN_TOKEN_CATEGORIES.spacing.tokens}
+            title="Edit Spacing Tokens"
+          />
+
+          {/* Radius Token Editor */}
+          <TokenEditor
+            tokens={DESIGN_TOKEN_CATEGORIES.radius.tokens}
+            title="Edit Radius Tokens"
+          />
         </section>
 
         {/* BUTTONS SECTION */}

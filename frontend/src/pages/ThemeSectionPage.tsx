@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
 import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
+import { TokenEditor, ThemeExportImport } from '../components/theme';
+import { DESIGN_TOKEN_CATEGORIES } from '../theme';
 
 /**
  * Theme Section Page - Renders individual design system sections based on route
@@ -440,6 +442,12 @@ function ContainersSection({ textSecondary }: { textSecondary: string }) {
           </div>
         </div>
       </div>
+
+      {/* Container Token Editor */}
+      <TokenEditor
+        tokens={DESIGN_TOKEN_CATEGORIES.containers.tokens}
+        title="Edit Container Tokens"
+      />
     </>
   );
 }
@@ -451,6 +459,12 @@ function ColorsSection({ textPrimary, textSecondary, isDark }: { textPrimary: st
   return (
     <>
       <SectionHeader title="Color Palette" />
+
+      {/* Theme Export/Import Controls */}
+      <div className="mb-6">
+        <ThemeExportImport />
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {[
           { name: 'Navy', shades: ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'], base: 'navy' },
@@ -493,6 +507,12 @@ function ColorsSection({ textPrimary, textSecondary, isDark }: { textPrimary: st
           </Card>
         ))}
       </div>
+
+      {/* Color Token Editor */}
+      <TokenEditor
+        tokens={DESIGN_TOKEN_CATEGORIES.colors.tokens}
+        title="Edit Color Tokens"
+      />
     </>
   );
 }
@@ -530,6 +550,24 @@ function TypographySection({ textPrimary, textSecondary, textMuted }: { textPrim
           </div>
         </div>
       </Card>
+
+      {/* Typography Token Editor */}
+      <TokenEditor
+        tokens={DESIGN_TOKEN_CATEGORIES.typography.tokens}
+        title="Edit Typography Tokens"
+      />
+
+      {/* Spacing Token Editor */}
+      <TokenEditor
+        tokens={DESIGN_TOKEN_CATEGORIES.spacing.tokens}
+        title="Edit Spacing Tokens"
+      />
+
+      {/* Radius Token Editor */}
+      <TokenEditor
+        tokens={DESIGN_TOKEN_CATEGORIES.radius.tokens}
+        title="Edit Radius Tokens"
+      />
     </>
   );
 }
