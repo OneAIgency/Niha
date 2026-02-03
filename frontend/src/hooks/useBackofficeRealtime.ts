@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useBackofficeStore, KYCDocumentBackoffice } from '../stores/useStore';
 import { backofficeRealtimeApi, adminApi, backofficeApi, BackofficeWebSocketMessage } from '../services/api';
 import type { ContactRequestResponse } from '../types';
-import { transformKeysToSnakeCase, isPlainObject } from '../utils/dataTransform';
+import { isPlainObject } from '../utils/dataTransform';
 import { logger } from '../utils/logger';
 
 const RECONNECT_DELAY = 3000; // 3 seconds
@@ -30,9 +30,8 @@ function ensurePlainObject<T>(obj: unknown): T {
 
 /**
  * Backoffice realtime hook: WebSocket + polling for contact requests and KYC documents.
- * Contact request data from the API and WebSocket is transformed to camelCase by the axios/WS
- * layer; this hook normalizes it back to snake_case before storing so backoffice components
- * (ContactRequestsTab, modals) receive entity_name, contact_email, etc.
+ * Contact request data from the API and WebSocket is in camelCase (transformed by axios interceptor).
+ * Data is stored as-is in camelCase to match TypeScript types (entityName, contactEmail, etc.).
  */
 export function useBackofficeRealtime() {
   const {
@@ -61,11 +60,8 @@ export function useBackofficeRealtime() {
     try {
       const response = await adminApi.getContactRequests({ per_page: 100 });
       if (mountedRef.current) {
-        // API response is transformed to camelCase by interceptor; backoffice expects snake_case
-        const normalized = response.data.map((r: unknown) =>
-          transformKeysToSnakeCase<ContactRequestResponse>(ensurePlainObject(r))
-        );
-        setContactRequests(normalized);
+        // API response is already in camelCase from axios interceptor
+        setContactRequests(response.data as ContactRequestResponse[]);
       }
     } catch (err) {
       logger.error('Failed to fetch contact requests', err);
@@ -99,17 +95,16 @@ export function useBackofficeRealtime() {
 
       case 'new_request':
         if (message.data) {
-          // WebSocket payload is camelCase; backoffice expects snake_case
-          const plain = ensurePlainObject(message.data);
-          const newRequest = transformKeysToSnakeCase<ContactRequestResponse>(plain);
+          // WebSocket payload is already camelCase
+          const newRequest = ensurePlainObject<ContactRequestResponse>(message.data);
           addContactRequest(newRequest);
         }
         break;
 
       case 'request_updated':
         if (message.data) {
-          const plain = ensurePlainObject(message.data);
-          const updatedRequest = transformKeysToSnakeCase<ContactRequestResponse>(plain);
+          // WebSocket payload is already camelCase
+          const updatedRequest = ensurePlainObject<ContactRequestResponse>(message.data);
           updateContactRequest(updatedRequest);
         }
         break;
