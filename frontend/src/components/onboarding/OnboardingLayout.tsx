@@ -1,6 +1,66 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, createContext, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+
+// Context for embedded mode - when true, OnboardingLayout renders content only (no header/footer)
+const EmbeddedContext = createContext(false);
+export const EmbeddedProvider = ({ children }: { children: ReactNode }) => (
+  <EmbeddedContext.Provider value={true}>{children}</EmbeddedContext.Provider>
+);
+export const useEmbedded = () => useContext(EmbeddedContext);
+
+// Navigation context for embedded mode - allows parent to handle navigation
+type SectionKey = 'funding' | 'overview' | 'market' | 'about' | 'cea' | 'eua' | 'eu-entities' | 'strategy';
+type NavigationHandler = (section: SectionKey) => void;
+const NavigationContext = createContext<NavigationHandler | null>(null);
+export const NavigationProvider = ({ children, onNavigate }: { children: ReactNode; onNavigate: NavigationHandler }) => (
+  <NavigationContext.Provider value={onNavigate}>{children}</NavigationContext.Provider>
+);
+export const useOnboardingNavigation = () => useContext(NavigationContext);
+
+// Map onboarding paths to section keys
+const pathToSection: Record<string, SectionKey> = {
+  '/onboarding': 'overview',
+  '/onboarding/market-overview': 'market',
+  '/onboarding/about-nihao': 'about',
+  '/onboarding/cea-holders': 'cea',
+  '/onboarding/eua-holders': 'eua',
+  '/onboarding/eu-entities': 'eu-entities',
+  '/onboarding/strategic-advantage': 'strategy',
+};
+
+// Custom Link component that uses navigation context when embedded
+interface OnboardingLinkProps {
+  to: string;
+  children: ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function OnboardingLink({ to, children, className, style }: OnboardingLinkProps) {
+  const isEmbedded = useEmbedded();
+  const onNavigate = useOnboardingNavigation();
+
+  // If embedded and we have a navigation handler, use it
+  if (isEmbedded && onNavigate && pathToSection[to]) {
+    return (
+      <button
+        onClick={() => onNavigate(pathToSection[to])}
+        className={className}
+        style={style}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  // Otherwise use regular Link
+  return (
+    <Link to={to} className={className} style={style}>
+      {children}
+    </Link>
+  );
+}
 import {
   Upload,
   CheckCircle,
@@ -54,6 +114,8 @@ interface OnboardingLayoutProps {
   title?: string;
   subtitle?: string;
   showBreadcrumb?: boolean;
+  /** When true, only renders the content without header/footer/nav - for embedding in other pages */
+  embedded?: boolean;
 }
 
 export default function OnboardingLayout({
@@ -61,11 +123,16 @@ export default function OnboardingLayout({
   title,
   subtitle,
   showBreadcrumb = true,
+  embedded = false,
 }: OnboardingLayoutProps) {
   const { logout, user } = useAuthStore();
   const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [kycProgress, setKycProgress] = useState(0);
+
+  // Check if embedded via context (from EmbeddedProvider)
+  const isEmbeddedContext = useEmbedded();
+  const isEmbedded = embedded || isEmbeddedContext;
 
   // Post-KYC users have already completed KYC - hide the KYC button for them
   const POST_KYC_ROLES = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA'];
@@ -95,6 +162,29 @@ export default function OnboardingLayout({
   };
 
   const currentNavItem = navItems.find(item => item.path === location.pathname);
+
+  // When embedded, only render the content without header/footer/nav
+  if (isEmbedded) {
+    return (
+      <div style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>
+        {/* Page Title */}
+        {title && (
+          <div className="max-w-7xl mx-auto px-8 pt-8 pb-4">
+            <h2 className="text-4xl font-extrabold mb-2">{title}</h2>
+            {subtitle && (
+              <p className="text-lg" style={{ color: colors.textSecondary }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+        )}
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-8 py-8">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.bgDark, color: colors.textPrimary }}>

@@ -110,16 +110,13 @@ const PlatformWorkflow = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {[
-              { num: 1, title: 'Initial Application', time: 'Instant', desc: 'Submit account opening application via platform' },
-              { num: 2, title: 'KYC Documentation', time: 'Instant', desc: 'Upload via secure portal, multi-format acceptance' },
-              { num: 3, title: 'Due Diligence', time: '5-10 days', desc: 'Third-party verification, AML/sanctions screening' },
-              { num: 4, title: 'Enhanced DD', time: '3-7 days', desc: 'If required for specific jurisdictions' },
-              { num: 5, title: 'Final Approval', time: 'Instant', desc: 'Account credentials, trading platform access enabled' },
-            ].map((item) => (
-              <div key={item.num} className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.bgCard }}>
-                <div className="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center text-sm font-bold" style={{ backgroundColor: colors.secondary, color: 'white' }}>
-                  {item.num}
-                </div>
+              { title: 'Initial Application', time: 'Instant', desc: 'Submit account opening application via platform' },
+              { title: 'KYC Documentation', time: 'Instant', desc: 'Upload via secure portal, multi-format acceptance' },
+              { title: 'Due Diligence', time: '5-10 days', desc: 'Third-party verification, AML/sanctions screening' },
+              { title: 'Enhanced DD', time: '3-7 days', desc: 'If required for specific jurisdictions' },
+              { title: 'Final Approval', time: 'Instant', desc: 'Account credentials, trading platform access enabled' },
+            ].map((item, idx) => (
+              <div key={idx} className="p-3 rounded-lg text-center" style={{ backgroundColor: colors.bgCard }}>
                 <div className="font-medium text-xs mb-1" style={{ color: colors.textPrimary }}>{item.title}</div>
                 <div className="text-xs mb-1" style={{ color: colors.accent }}>{item.time}</div>
                 <div className="text-xs" style={{ color: colors.textMuted }}>{item.desc}</div>
@@ -874,18 +871,17 @@ const KycDocumentation = () => {
   const [activeCategory, setActiveCategory] = useState('corporate');
 
   const categories = [
-    { id: 'corporate', label: 'Corporate Info', icon: Building2, count: 4 },
-    { id: 'beneficial', label: 'Beneficial Ownership', icon: Users, count: 4 },
-    { id: 'financial', label: 'Financial', icon: DollarSign, count: 4 },
-    { id: 'compliance', label: 'Compliance', icon: Shield, count: 4 },
-    { id: 'business', label: 'Business & Funds', icon: Briefcase, count: 3 },
-    { id: 'verification', label: 'Verification', icon: BadgeCheck, count: 4 },
+    { id: 'corporate', label: 'Corporate Info', icon: Building2 },
+    { id: 'beneficial', label: 'Beneficial Ownership', icon: Users },
+    { id: 'financial', label: 'Financial', icon: DollarSign },
+    { id: 'compliance', label: 'Compliance', icon: Shield },
+    { id: 'business', label: 'Business & Funds', icon: Briefcase },
+    { id: 'verification', label: 'Verification', icon: BadgeCheck },
   ];
 
-  const documents: Record<string, { num: number; title: string; details: string[] }[]> = {
+  const documents: Record<string, { title: string; details: string[] }[]> = {
     corporate: [
       {
-        num: 1,
         title: 'Certificate of Incorporation/Registration',
         details: [
           'Official document from company registry',
@@ -895,7 +891,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 2,
         title: 'Articles of Association / Constitutional Documents',
         details: [
           'Complete corporate bylaws',
@@ -905,7 +900,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 3,
         title: 'Board Resolution (Authorizing Carbon Trading)',
         details: [
           'Trading in carbon allowances authorization',
@@ -916,7 +910,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 4,
         title: 'Certificate of Good Standing',
         details: [
           'From company registry (EU member state registry)',
@@ -928,7 +921,6 @@ const KycDocumentation = () => {
     ],
     beneficial: [
       {
-        num: 5,
         title: 'Beneficial Ownership Declaration',
         details: [
           'Complete declaration of all beneficial owners (25%+ ownership)',
@@ -938,7 +930,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 6,
         title: 'Shareholder Register',
         details: [
           'Official shareholder list',
@@ -948,7 +939,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 7,
         title: 'Organizational Chart',
         details: [
           'Visual representation of corporate structure',
@@ -958,7 +948,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 8,
         title: 'Beneficial Owner Identification Documents',
         details: [
           'For each beneficial owner (25%+):',
@@ -970,7 +959,6 @@ const KycDocumentation = () => {
     ],
     financial: [
       {
-        num: 9,
         title: 'Recent Financial Statements',
         details: [
           'Last 2-3 years of audited financial statements:',
@@ -981,7 +969,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 10,
         title: 'Bank Reference Letter',
         details: [
           'From company\'s primary bank',
@@ -991,7 +978,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 11,
         title: 'Tax Compliance Certificate',
         details: [
           'Proof of good standing with tax authorities',
@@ -1001,7 +987,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 12,
         title: 'Credit Rating or Financial Verification',
         details: [
           'Optional: Credit rating from Dun & Bradstreet or similar',
@@ -1012,7 +997,6 @@ const KycDocumentation = () => {
     ],
     compliance: [
       {
-        num: 13,
         title: 'Regulatory Licenses and Approvals',
         details: [
           'If applicable: Financial services licenses',
@@ -1022,7 +1006,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 14,
         title: 'Compliance Policies and Procedures',
         details: [
           'AML/CFT policy documentation',
@@ -1032,7 +1015,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 15,
         title: 'List of Directors and Managers',
         details: [
           'Names and titles of all board members and senior management',
@@ -1042,7 +1024,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 16,
         title: 'Authorized Signatories Documentation',
         details: [
           'Board resolution identifying authorized individuals for:',
@@ -1054,7 +1035,6 @@ const KycDocumentation = () => {
     ],
     business: [
       {
-        num: 17,
         title: 'Business Description and Purpose Statement',
         details: [
           'Detailed description of company business',
@@ -1064,7 +1044,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 18,
         title: 'Use of Funds Statement',
         details: [
           'Description of intended use of Nihao account funds:',
@@ -1075,7 +1054,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 19,
         title: 'Anticipated Trading Activity Plan',
         details: [
           '12-month projection of:',
@@ -1088,7 +1066,6 @@ const KycDocumentation = () => {
     ],
     verification: [
       {
-        num: 20,
         title: 'Corporate Website and Business Verification',
         details: [
           'Corporate website review (if applicable)',
@@ -1098,7 +1075,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 21,
         title: 'Sanctions and PEP Screening Declarations',
         details: [
           'Company declaration that:',
@@ -1108,7 +1084,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 22,
         title: 'Negative Screening Results',
         details: [
           'OFAC Specially Designated Nationals (SDN) list',
@@ -1118,7 +1093,6 @@ const KycDocumentation = () => {
         ],
       },
       {
-        num: 23,
         title: 'Adverse Media and Reputational Screening',
         details: [
           'Google News search & major news database',
@@ -1148,11 +1122,6 @@ const KycDocumentation = () => {
             >
               <Icon className="w-4 h-4" />
               {cat.label}
-              <span className="px-1.5 py-0.5 rounded text-xs" style={{
-                backgroundColor: activeCategory === cat.id ? 'rgba(255,255,255,0.2)' : colors.bgCard,
-              }}>
-                {cat.count}
-              </span>
             </button>
           );
         })}
@@ -1168,59 +1137,19 @@ const KycDocumentation = () => {
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          {documents[activeCategory].map((doc) => (
-            <div key={doc.num} className="p-4 rounded-lg border" style={{ borderColor: colors.border, backgroundColor: colors.bgCard }}>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm" style={{ backgroundColor: colors.primary, color: 'white' }}>
-                  {doc.num}
-                </div>
-                <div>
-                  <h5 className="font-semibold text-sm mb-2" style={{ color: colors.textPrimary }}>{doc.title}</h5>
-                  <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
-                    {doc.details.map((detail, idx) => (
-                      <li key={idx}>• {detail}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+          {documents[activeCategory].map((doc, idx) => (
+            <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: colors.border, backgroundColor: colors.bgCard }}>
+              <h5 className="font-semibold text-sm mb-2" style={{ color: colors.textPrimary }}>{doc.title}</h5>
+              <ul className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
+                {doc.details.map((detail, detailIdx) => (
+                  <li key={detailIdx}>• {detail}</li>
+                ))}
+              </ul>
             </div>
           ))}
         </motion.div>
       </AnimatePresence>
 
-      {/* Document Summary Table */}
-      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCardHover }}>
-        <h5 className="font-semibold mb-3" style={{ color: colors.textPrimary }}>Document Summary by Entity Type</h5>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr style={{ backgroundColor: colors.bgCard }}>
-                <th className="px-3 py-2 text-left" style={{ color: colors.textPrimary }}>Entity Type</th>
-                <th className="px-3 py-2 text-center" style={{ color: colors.textPrimary }}>Core Docs</th>
-                <th className="px-3 py-2 text-center" style={{ color: colors.textPrimary }}>Additional</th>
-                <th className="px-3 py-2 text-center" style={{ color: colors.textPrimary }}>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { type: 'Manufacturing Company (EU ETS)', core: '1-6, 9-11, 13, 15-17', add: '18-23', total: '18-22' },
-                { type: 'Financial Institution', core: '1-6, 9-12, 14-17', add: '18-23', total: '18-23' },
-                { type: 'Investment Fund/Asset Manager', core: '1-6, 9-12, 14-17', add: '18-23', total: '18-23' },
-                { type: 'Large Multinational Corporation', core: '1-8, 9-11, 13-17', add: '18-23', total: '20-25' },
-                { type: 'Private Company', core: '1-6, 9-11, 15-17', add: '18-23', total: '18-22' },
-                { type: 'Government Entity / SOE', core: '1-7, 9-10, 15-17, 22-23', add: '18-21', total: '15-20' },
-              ].map((row, idx) => (
-                <tr key={row.type} style={{ backgroundColor: idx % 2 === 0 ? colors.bgCardHover : colors.bgCard }}>
-                  <td className="px-3 py-2" style={{ color: colors.textPrimary }}>{row.type}</td>
-                  <td className="px-3 py-2 text-center" style={{ color: colors.textSecondary }}>{row.core}</td>
-                  <td className="px-3 py-2 text-center" style={{ color: colors.textSecondary }}>{row.add}</td>
-                  <td className="px-3 py-2 text-center font-bold" style={{ color: colors.primary }}>{row.total}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {/* Best Practices */}
       <div className="p-4 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
@@ -1378,12 +1307,12 @@ const TimelineAndSummary = () => {
 
 const Conclusion = () => {
   const benefits = [
-    { num: 1, name: 'Price optimization', desc: 'via bilateral negotiation and timing flexibility' },
-    { num: 2, name: 'Cost reduction', desc: 'through consolidated transaction infrastructure' },
-    { num: 3, name: 'Settlement speed', desc: 'through instant confirmation and streamlined processing' },
-    { num: 4, name: 'Regulatory advantages', desc: 'from private market structure' },
-    { num: 5, name: 'Operational efficiency', desc: 'through customized settlement' },
-    { num: 6, name: 'Strategic positioning', desc: 'in emerging global carbon markets' },
+    { name: 'Price optimization', desc: 'via bilateral negotiation and timing flexibility' },
+    { name: 'Cost reduction', desc: 'through consolidated transaction infrastructure' },
+    { name: 'Settlement speed', desc: 'through instant confirmation and streamlined processing' },
+    { name: 'Regulatory advantages', desc: 'from private market structure' },
+    { name: 'Operational efficiency', desc: 'through customized settlement' },
+    { name: 'Strategic positioning', desc: 'in emerging global carbon markets' },
   ];
 
   return (
@@ -1397,11 +1326,8 @@ const Conclusion = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {benefits.map((benefit) => (
-            <div key={benefit.num} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style={{ backgroundColor: colors.primary }}>
-                {benefit.num}
-              </div>
+          {benefits.map((benefit, idx) => (
+            <div key={idx} className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: colors.bgCard }}>
               <div>
                 <span className="font-semibold" style={{ color: colors.textPrimary }}>{benefit.name}</span>
                 <span className="text-sm ml-1" style={{ color: colors.textSecondary }}>{benefit.desc}</span>

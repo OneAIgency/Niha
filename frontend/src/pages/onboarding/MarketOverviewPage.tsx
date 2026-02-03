@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   TrendingUp,
   ChevronRight,
@@ -14,7 +13,7 @@ import {
   Calendar,
   Layers,
 } from 'lucide-react';
-import { OnboardingLayout, colors, LivePriceComparison } from '@/components/onboarding';
+import { OnboardingLayout, colors, LivePriceComparison, OnboardingLink } from '@/components/onboarding';
 
 // Color mapping helper for EU ETS phases
 const phaseColorMap: Record<string, { bg: string; border: string; text: string }> = {
@@ -1003,34 +1002,34 @@ export default function MarketOverviewPage() {
           The fundamental differences between EU ETS and China ETS—particularly the foreign participation restriction—create a structural market opportunity.
           The significant price differential, combined with different compliance cycles and market maturities, enables sophisticated bilateral deal structuring.
         </p>
-        <Link
+        <OnboardingLink
           to="/onboarding/about-nihao"
           className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
         >
           Learn About Nihao Group
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </section>
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-8" style={{ borderTop: `1px solid ${colors.border}` }}>
-        <Link
+        <OnboardingLink
           to="/onboarding"
           className="flex items-center gap-2 text-sm hover:underline"
           style={{ color: colors.textSecondary }}
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           Back to Overview
-        </Link>
-        <Link
+        </OnboardingLink>
+        <OnboardingLink
           to="/onboarding/about-nihao"
           className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
         >
           Next: About Nihao Group
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </div>
     </OnboardingLayout>
   );

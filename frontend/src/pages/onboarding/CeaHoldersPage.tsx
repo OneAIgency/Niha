@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   Factory,
   BarChart3,
@@ -20,7 +19,7 @@ import {
   Lock,
   Users,
 } from 'lucide-react';
-import { OnboardingLayout, colors } from '@/components/onboarding';
+import { OnboardingLayout, colors, OnboardingLink } from '@/components/onboarding';
 
 // Color mapping helper for CEA holder categories
 const ceaColorMap: Record<string, { bg: string; border: string; text: string; bgLight: string }> = {
@@ -1488,31 +1487,31 @@ export default function CeaHoldersPage() {
         <p className="text-lg mb-6 max-w-4xl mx-auto" style={{ color: colors.textSecondary }}>
           The economic, regulatory, operational, and strategic advantages of private bilateral deals through Nihao Group significantly exceed the benefits of direct SEEE exchange trading for most non-EU CEA holders. The aggregate advantage ranges from <strong style={{ color: colors.textPrimary }}>8-25%</strong> depending on entity category, with particular benefits for financial trading companies (15-25%), export-focused manufacturers (12-18%), and conglomerate trading arms (12-20%).
         </p>
-        <Link
+        <OnboardingLink
           to="/onboarding/eua-holders"
           className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-blue-500 to-violet-500"
         >
           Explore EUA Holder Advantages
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </section>
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-8 border-t border-navy-600">
-        <Link
+        <OnboardingLink
           to="/onboarding/about-nihao"
           className="flex items-center gap-2 text-sm hover:underline text-navy-400"
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           Back to About Nihao
-        </Link>
-        <Link
+        </OnboardingLink>
+        <OnboardingLink
           to="/onboarding/eua-holders"
           className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-blue-500 to-violet-500"
         >
           Next: For EUA Holders
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </div>
     </OnboardingLayout>
   );

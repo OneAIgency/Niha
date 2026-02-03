@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   Building2,
   Globe,
@@ -20,7 +19,7 @@ import {
   Briefcase,
   MapPin,
 } from 'lucide-react';
-import { OnboardingLayout, colors } from '@/components/onboarding';
+import { OnboardingLayout, colors, OnboardingLink } from '@/components/onboarding';
 
 // Color mapping helper for service offerings
 const serviceColorMap: Record<string, { bg: string; border: string; text: string }> = {
@@ -1307,33 +1306,33 @@ export default function AboutNihaoPage() {
           <strong style={{ color: colors.textPrimary }}> Technology platform advantage</strong> (proprietary matching and compliance), and
           <strong style={{ color: colors.textPrimary }}> Relationship advantage</strong> (trust-based partnerships).
         </p>
-        <Link
+        <OnboardingLink
           to="/onboarding/cea-holders"
           className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
         >
           Explore CEA Holder Advantages
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </section>
 
       {/* Navigation */}
       <div className="flex justify-between items-center pt-8" style={{ borderTop: `1px solid ${colors.border}` }}>
-        <Link
+        <OnboardingLink
           to="/onboarding/market-overview"
           className="flex items-center gap-2 text-sm hover:underline"
           style={{ color: colors.textSecondary }}
         >
           <ChevronRight className="w-4 h-4 rotate-180" />
           Back to Market Overview
-        </Link>
-        <Link
+        </OnboardingLink>
+        <OnboardingLink
           to="/onboarding/cea-holders"
           className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 bg-gradient-to-br from-red-600 to-orange-500"
         >
           Next: For CEA Holders
           <ArrowRight className="w-5 h-5" />
-        </Link>
+        </OnboardingLink>
       </div>
     </OnboardingLayout>
   );

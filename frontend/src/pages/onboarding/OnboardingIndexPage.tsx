@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -14,7 +13,7 @@ import {
   Clock,
   Target,
 } from 'lucide-react';
-import { OnboardingLayout, colors } from '@/components/onboarding';
+import { OnboardingLayout, colors, OnboardingLink } from '@/components/onboarding';
 
 // Color mapping for section cards
 const cardColorMap: Record<string, {
@@ -254,21 +253,21 @@ export default function OnboardingIndexPage() {
             Your gateway to the world&apos;s two largest carbon markets. We bridge the EU ETS and China ETS through innovative bilateral trading solutions, delivering 15-25% value improvement to our clients.
           </p>
           <div className="flex justify-center gap-4">
-            <Link
+            <OnboardingLink
               to="/onboarding/market-overview"
               className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
               style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
             >
               Start Learning
               <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
+            </OnboardingLink>
+            <OnboardingLink
               to="/onboarding/eu-entities"
               className="px-6 py-3 rounded-xl font-semibold transition-all hover:bg-white/10"
               style={{ backgroundColor: colors.bgCard, border: `1px solid ${colors.border}`, color: colors.textPrimary }}
             >
               View Workflow
-            </Link>
+            </OnboardingLink>
           </div>
         </motion.div>
       </section>
@@ -317,7 +316,7 @@ export default function OnboardingIndexPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <Link
+                <OnboardingLink
                   to={card.path}
                   className="block rounded-2xl p-6 transition-all hover:scale-[1.01] bg-navy-800 border border-navy-600"
                 >
@@ -389,7 +388,7 @@ export default function OnboardingIndexPage() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </OnboardingLink>
               </motion.div>
             );
           })}
@@ -477,14 +476,14 @@ export default function OnboardingIndexPage() {
             Complete your KYC documentation to access the Nihao marketplace and start benefiting from bilateral carbon trading opportunities.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link
+            <OnboardingLink
               to="/onboarding/market-overview"
               className="flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white text-lg transition-all hover:scale-105"
               style={{ background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)` }}
             >
               Start with Market Overview
               <ArrowRight className="w-5 h-5" />
-            </Link>
+            </OnboardingLink>
           </div>
         </div>
       </section>
