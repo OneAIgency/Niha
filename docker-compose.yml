@@ -11,6 +11,7 @@ services:
       POSTGRES_USER: niha_user
       POSTGRES_PASSWORD: niha_secure_pass_2024
       POSTGRES_DB: niha_carbon
+      TZ: Europe/Bucharest
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -25,6 +26,8 @@ services:
   # Redis Cache (no container_name to avoid stale-reference issues on rebuild)
   redis:
     image: redis:7-alpine
+    environment:
+      - TZ=Europe/Bucharest
     ports:
       - "6379:6379"
     volumes:
@@ -47,6 +50,7 @@ services:
       - SECRET_KEY=your-super-secret-key-change-in-production
       - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://platonos.mooo.com,https://platonos.mooo.com,http://192.168.10.42:5173,http://192.168.10.42:8000
       - ENVIRONMENT=development
+      - TZ=Europe/Bucharest
     ports:
       - "8000:8000"
     volumes:
@@ -64,6 +68,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     container_name: niha_frontend
+    environment:
+      - TZ=Europe/Bucharest
     ports:
       - "5173:5173"
     volumes:
