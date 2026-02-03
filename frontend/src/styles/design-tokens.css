@@ -10,84 +10,85 @@
 
 :root {
   /* ========================================
-     COLOR SYSTEM - LIGHT MODE (DEFAULT)
+     COLOR SYSTEM - DARK MODE (DEFAULT)
+     NIHA Platform uses dark theme exclusively
      ======================================== */
 
   /* Background Colors */
-  --color-background: #f8fafc;           /* navy-50 - Page background */
-  --color-surface: #ffffff;              /* Card/panel background */
-  --color-surface-elevated: #f1f5f9;     /* navy-100 - Hover states */
-  --color-surface-muted: #e2e8f0;        /* navy-200 - Disabled backgrounds */
+  --color-background: #0f172a;           /* navy-900 */
+  --color-surface: #1e293b;              /* navy-800 */
+  --color-surface-elevated: #334155;     /* navy-700 */
+  --color-surface-muted: #475569;        /* navy-600 */
 
   /* Text Colors */
-  --color-text-primary: #0f172a;         /* navy-900 - Main text */
-  --color-text-secondary: #475569;       /* navy-600 - Secondary text */
-  --color-text-muted: #64748b;           /* navy-500 - Placeholder text */
-  --color-text-inverse: #ffffff;         /* White text on dark backgrounds */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #cbd5e1;       /* navy-200 */
+  --color-text-muted: #94a3b8;           /* navy-400 */
+  --color-text-inverse: #0f172a;         /* navy-900 */
 
   /* Border Colors */
-  --color-border: #e2e8f0;               /* navy-200 - Default borders */
-  --color-border-strong: #cbd5e1;        /* navy-300 - Emphasized borders */
-  --color-border-muted: #f1f5f9;         /* navy-100 - Subtle dividers */
+  --color-border: #334155;               /* navy-700 */
+  --color-border-strong: #475569;        /* navy-600 */
+  --color-border-muted: #1e293b;         /* navy-800 */
 
-  /* Card back: a few steps above layout (navy-50). Not too bright. */
-  --color-card-back-bg: #f1f5f9;        /* navy-100 – one step above layout */
-  --color-card-back-border: #e2e8f0;    /* navy-200 */
+  /* Card back: a few steps above layout (navy-950). Not too bright. */
+  --color-card-back-bg: #0f172a;        /* navy-900 – one step above layout */
+  --color-card-back-border: #1e293b;    /* navy-800 */
   --radius-card-back: 0.75rem;           /* 12px – less rounded than 2xl */
 
   /* Editable theme tokens (overridable from theme/containers) */
-  --content-wrapper-bg: #e2e8f0;        /* navy-200 light */
-  --content-wrapper-border: #cbd5e1;    /* navy-300 */
+  --content-wrapper-bg: #1e293b;        /* navy-800 */
+  --content-wrapper-border: #334155;    /* navy-700 */
   --content-wrapper-radius: 0.75rem;
   --content-wrapper-padding: 1.25rem;
-  --page-bg-bg: #f8fafc;                /* navy-50 */
+  --page-bg-bg: #0f172a;                /* navy-900 */
   --page-container-dark-bg: #020617;     /* navy-950 */
 
-  /* Brand Colors - Emerald (Primary) */
-  --color-primary: #10b981;              /* emerald-500 - Primary brand */
-  --color-primary-hover: #059669;        /* emerald-600 - Hover state */
-  --color-primary-active: #047857;       /* emerald-700 - Active state */
-  --color-primary-light: #d1fae5;        /* emerald-100 - Light background */
-  --color-primary-dark: #064e3b;         /* emerald-900 - Dark variant */
+  /* Brand Colors - Emerald (adjusted for dark) */
+  --color-primary: #34d399;              /* emerald-400 - Lighter for dark bg */
+  --color-primary-hover: #10b981;        /* emerald-500 */
+  --color-primary-active: #059669;       /* emerald-600 */
+  --color-primary-light: rgba(16, 185, 129, 0.2);
+  --color-primary-dark: #064e3b;         /* emerald-900 */
 
-  /* Certificate Colors */
-  --color-eua: #3b82f6;                  /* blue-500 - EUA certificates */
-  --color-eua-light: #dbeafe;            /* blue-100 */
-  --color-eua-dark: #1e3a8a;             /* blue-900 */
-  --color-eua-text: #1e40af;             /* blue-700 */
+  /* Certificate Colors (Dark Mode) */
+  --color-eua: #60a5fa;                  /* blue-400 - Lighter for dark */
+  --color-eua-light: rgba(59, 130, 246, 0.2);
+  --color-eua-dark: #1e3a8a;
+  --color-eua-text: #60a5fa;
 
-  --color-cea: #f59e0b;                  /* amber-500 - CEA certificates */
-  --color-cea-light: #fef3c7;            /* amber-100 */
-  --color-cea-dark: #78350f;             /* amber-900 */
-  --color-cea-text: #b45309;             /* amber-700 */
+  --color-cea: #fbbf24;                  /* amber-400 - Lighter for dark */
+  --color-cea-light: rgba(245, 158, 11, 0.2);
+  --color-cea-dark: #78350f;
+  --color-cea-text: #fbbf24;
 
-  /* Trading Colors */
-  --color-bid: #10b981;                  /* emerald-500 - Buy orders */
-  --color-bid-hover: #34d399;            /* emerald-400 */
-  --color-bid-light: #d1fae5;            /* emerald-100 */
-  --color-bid-bg: rgba(16, 185, 129, 0.1);
+  /* Trading Colors (Dark Mode) */
+  --color-bid: #34d399;                  /* emerald-400 */
+  --color-bid-hover: #10b981;            /* emerald-500 */
+  --color-bid-light: rgba(16, 185, 129, 0.2);
+  --color-bid-bg: rgba(16, 185, 129, 0.15);
 
-  --color-ask: #ef4444;                  /* red-500 - Sell orders */
-  --color-ask-hover: #f87171;            /* red-400 */
-  --color-ask-light: #fee2e2;            /* red-100 */
-  --color-ask-bg: rgba(239, 68, 68, 0.1);
+  --color-ask: #f87171;                  /* red-400 */
+  --color-ask-hover: #ef4444;            /* red-500 */
+  --color-ask-light: rgba(239, 68, 68, 0.2);
+  --color-ask-bg: rgba(239, 68, 68, 0.15);
 
-  /* Status Colors */
-  --color-success: #10b981;              /* emerald-500 */
-  --color-success-light: #d1fae5;        /* emerald-100 */
-  --color-success-text: #065f46;         /* emerald-800 */
+  /* Status Colors (Dark Mode) */
+  --color-success: #34d399;              /* emerald-400 */
+  --color-success-light: rgba(16, 185, 129, 0.2);
+  --color-success-text: #6ee7b7;         /* emerald-300 */
 
-  --color-warning: #f59e0b;              /* amber-500 */
-  --color-warning-light: #fef3c7;        /* amber-100 */
-  --color-warning-text: #92400e;         /* amber-800 */
+  --color-warning: #fbbf24;              /* amber-400 */
+  --color-warning-light: rgba(245, 158, 11, 0.2);
+  --color-warning-text: #fcd34d;         /* amber-300 */
 
-  --color-error: #ef4444;                /* red-500 */
-  --color-error-light: #fee2e2;          /* red-100 */
-  --color-error-text: #991b1b;           /* red-800 */
+  --color-error: #f87171;                /* red-400 */
+  --color-error-light: rgba(239, 68, 68, 0.2);
+  --color-error-text: #fca5a5;           /* red-300 */
 
-  --color-info: #3b82f6;                 /* blue-500 */
-  --color-info-light: #dbeafe;           /* blue-100 */
-  --color-info-text: #1e40af;            /* blue-700 */
+  --color-info: #60a5fa;                 /* blue-400 */
+  --color-info-light: rgba(59, 130, 246, 0.2);
+  --color-info-text: #93c5fd;            /* blue-300 */
 
   /* Subheader nav (subpage button states – e.g. backoffice) */
   --color-subheader-nav-active-bg: #475569;   /* navy-600 – opened subpage */
@@ -112,6 +113,7 @@
   --color-subheader-border: #334155;   /* navy-700 */
   --subheader-padding-x: 1.5rem;   /* 24px */
   --subheader-padding-y: 1rem;   /* 16px */
+  --subheader-bar-min-height: 5.0625rem;   /* ~81px – spacer so content doesn’t sit under fixed bar */
 
   /* SubSubHeader bar (child bar under Subheader – filters, actions) */
   --color-subsubheader-bg: rgba(15, 23, 42, 0.8);   /* navy-900/80 */
@@ -475,11 +477,27 @@
   color: var(--color-subsubheader-nav-badge-text);
 }
 
-/* Subheader bar (page section title – single source of truth for bar styling) */
+/* Subheader bar (page section title – fixed below main header app-wide) */
 .subheader-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 4rem; /* h-16 = 64px (header height on mobile) */
+  z-index: var(--z-elevated);
   background-color: var(--color-subheader-bg);
   border-bottom: 1px solid var(--color-subheader-border);
   padding: var(--subheader-padding-y) var(--subheader-padding-x);
+}
+
+@media (min-width: 768px) {
+  .subheader-bar {
+    top: 5rem; /* h-20 = 80px (header height on desktop) */
+  }
+}
+
+/* Spacer so main content starts below the fixed subheader bar */
+.subheader-bar-spacer {
+  min-height: var(--subheader-bar-min-height);
 }
 
 /* SubSubHeader bar (child bar under Subheader – filters, actions) */

@@ -11,11 +11,11 @@
   }
 
   body {
-    @apply bg-navy-50 dark:bg-navy-950 text-navy-900 dark:text-white antialiased transition-colors duration-300;
+    @apply bg-navy-950 text-white antialiased transition-colors duration-300;
   }
 
   * {
-    @apply border-navy-200 dark:border-navy-700;
+    @apply border-navy-700;
   }
 }
 
@@ -30,7 +30,7 @@
 
   /* Content wrapper: panel container with header/content sections, overflow hidden for child borders */
   .content_wrapper_last {
-    @apply bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 overflow-hidden;
+    @apply bg-navy-800 rounded-xl border border-navy-700 overflow-hidden;
   }
 
   .content_wrapper_last-hover {
@@ -39,7 +39,7 @@
 
   /* Contact request list row: compact card for Entitate, Nume, Data completării + actions */
   .card_contact_request_list {
-    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-navy-200/80 dark:border-navy-600/80 bg-navy-50/80 dark:bg-navy-800/50 text-sm;
+    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-navy-600/80 bg-navy-800/50 text-sm;
   }
 
   .btn {
@@ -55,7 +55,7 @@
   }
 
   .btn-outline {
-    @apply btn border-2 border-navy-200 dark:border-navy-600 text-navy-700 dark:text-navy-200 hover:bg-navy-50 dark:hover:bg-navy-700 focus:ring-navy-500;
+    @apply btn border-2 border-navy-600 text-navy-200 hover:bg-navy-700 focus:ring-navy-500;
   }
 
   .btn-ghost {
@@ -63,7 +63,7 @@
   }
 
   .input {
-    @apply w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border border-navy-600 bg-navy-800 text-white placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
   }
 
   .label {
@@ -95,11 +95,11 @@
   }
 
   .stat-card {
-    @apply bg-gradient-to-br from-white to-navy-50 dark:from-navy-800 dark:to-navy-900 rounded-2xl p-6 border border-navy-100 dark:border-navy-700;
+    @apply bg-gradient-to-br from-navy-800 to-navy-900 rounded-2xl p-6 border border-navy-700;
   }
 
   .table-row {
-    @apply border-b border-navy-100 dark:border-navy-700 hover:bg-navy-50 dark:hover:bg-navy-800 transition-colors;
+    @apply border-b border-navy-700 hover:bg-navy-800 transition-colors;
   }
 
   .section-title {
@@ -185,7 +185,7 @@
      TABLE COMPONENTS
      ======================================== */
   .table-container {
-    @apply bg-white dark:bg-navy-800 rounded-xl overflow-hidden border border-navy-100 dark:border-navy-700;
+    @apply bg-navy-800 rounded-xl overflow-hidden border border-navy-700;
   }
 
   .table-container-dark {
@@ -205,7 +205,7 @@
   }
 
   .table-row-hover {
-    @apply border-b border-navy-100 dark:border-navy-700/50 hover:bg-navy-50 dark:hover:bg-navy-700/50 transition-colors;
+    @apply border-b border-navy-700/50 hover:bg-navy-700/50 transition-colors;
   }
 
   .table-row-dark {
@@ -222,11 +222,11 @@
 
   /* Grid Tables (Order Book style) */
   .grid-table-header {
-    @apply grid text-xs text-navy-500 dark:text-navy-400 px-4 py-2 border-b border-navy-100 dark:border-navy-700/50;
+    @apply grid text-xs text-navy-400 px-4 py-2 border-b border-navy-700/50;
   }
 
   .grid-table-row {
-    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-navy-50 dark:hover:bg-navy-800/50 transition-colors;
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-navy-800/50 transition-colors;
   }
 
   .grid-table-row-bid {
@@ -287,7 +287,7 @@
   }
 
   .tab-toggle {
-    @apply flex rounded-lg overflow-hidden border border-navy-200 dark:border-navy-600;
+    @apply flex rounded-lg overflow-hidden border border-navy-600;
   }
 
   .tab-toggle-item {
@@ -303,7 +303,7 @@
   }
 
   .tab-toggle-item-inactive {
-    @apply bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700;
+    @apply bg-navy-800 text-navy-400 hover:bg-navy-700;
   }
 
   /* Buy/Sell Tabs */
@@ -316,7 +316,7 @@
   }
 
   .trade-tab-buy-inactive {
-    @apply bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20;
+    @apply bg-navy-800 text-navy-400 hover:bg-emerald-900/20;
   }
 
   .trade-tab-sell-active {
@@ -324,7 +324,7 @@
   }
 
   .trade-tab-sell-inactive {
-    @apply bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-red-50 dark:hover:bg-red-900/20;
+    @apply bg-navy-800 text-navy-400 hover:bg-red-900/20;
   }
 
   /* ========================================
@@ -346,8 +346,8 @@
     @apply bg-amber-100 dark:bg-amber-900/30;
   }
 
-  .stat-card-icon-purple {
-    @apply bg-purple-100 dark:bg-purple-900/30;
+  .stat-card-icon-navy {
+    @apply bg-navy-100 dark:bg-navy-900/30;
   }
 
   .stat-card-icon-red {
@@ -416,7 +416,7 @@
   }
 
   .progress-fill-gradient {
-    @apply h-full bg-gradient-to-r from-amber-500 to-violet-500 rounded-full;
+    @apply h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full;
   }
 
   /* ========================================
@@ -439,18 +439,18 @@
   }
 
   .skeleton-card {
-    @apply p-4 animate-pulse bg-navy-50 dark:bg-navy-700/50 rounded-xl;
+    @apply p-4 animate-pulse bg-navy-700/50 rounded-xl;
   }
 
   /* ========================================
      FORM COMPONENTS
      ======================================== */
   .form-input {
-    @apply w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
+    @apply w-full px-3 py-2 rounded-lg border border-navy-600 bg-navy-800 text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
   }
 
   .form-input-lg {
-    @apply w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border border-navy-600 bg-navy-800 text-white placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
   }
 
   .form-label {

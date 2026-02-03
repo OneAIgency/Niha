@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useUIStore, useThemeTokenStore } from '../stores/useStore';
+import { useThemeTokenStore } from '../stores/useStore';
 import { Card, PageHeader } from '../components/common';
 import { X } from 'lucide-react';
 import { THEME_ELEMENT_CONFIG } from '../theme';
@@ -9,17 +9,16 @@ import { THEME_ELEMENT_CONFIG } from '../theme';
  * Click any element to edit its theme parameters; overrides are saved and applied app-wide.
  */
 export function ThemeContainersPage() {
-  const { theme } = useUIStore();
   const overrides = useThemeTokenStore((s) => s.overrides);
   const setOverride = useThemeTokenStore((s) => s.setOverride);
   const resetElementOverrides = useThemeTokenStore((s) => s.resetElementOverrides);
 
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
 
-  const isDark = theme === 'dark';
-  const textPrimary = isDark ? 'text-white' : 'text-navy-900';
-  const textSecondary = isDark ? 'text-navy-400' : 'text-navy-600';
-  const sectionBorder = isDark ? 'border-navy-700' : 'border-navy-200';
+  // Dark mode only - no theme switching needed
+  const textPrimary = 'text-white';
+  const textSecondary = 'text-navy-400';
+  const sectionBorder = 'border-navy-700';
 
   const handleElementClick = useCallback((elementId: string) => {
     setSelectedElement((prev) => (prev === elementId ? null : elementId));
@@ -108,7 +107,7 @@ export function ThemeContainersPage() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <div className="subheader-bar rounded-t-xl" aria-hidden>
+              <div className="rounded-t-xl bg-navy-800 border-b border-navy-700 px-4 py-3" aria-hidden>
                 <div className="max-w-7xl mx-auto flex items-center gap-3 py-2">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 font-bold text-sm">T</div>
                   <div>
@@ -123,7 +122,7 @@ export function ThemeContainersPage() {
               </p>
             </div>
             <div className="space-y-2">
-              <div className="subsubheader-bar rounded-t-xl" aria-hidden>
+              <div className="rounded-t-xl bg-navy-900/80 border-b border-navy-700 px-4 py-2" aria-hidden>
                 <div className="max-w-7xl w-full mx-auto flex items-center justify-between text-sm text-navy-400">
                   <span>Left (filters, tabs)</span>
                   <span>Right (actions)</span>
@@ -139,7 +138,7 @@ export function ThemeContainersPage() {
           {/* SubSubHeader Navigation Buttons */}
           <div className="mt-6 space-y-2">
             <h3 className={`text-lg font-semibold ${textPrimary} mb-3`}>SubSubHeader Navigation Buttons</h3>
-            <div className="subsubheader-bar rounded-xl" aria-hidden>
+            <div className="rounded-xl bg-navy-900/80 border-b border-navy-700 px-4 py-2" aria-hidden>
               <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
                 <nav className="flex items-center gap-2">
                   <button className="subsubheader-nav-btn subsubheader-nav-btn-active">
@@ -188,7 +187,7 @@ export function ThemeContainersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <div
-                className={`page-container rounded-xl border-2 ${sectionBorder} py-6 px-4 bg-white dark:bg-navy-800/50`}
+                className={`page-container rounded-xl border-2 ${sectionBorder} py-6 px-4 bg-navy-800/50`}
                 aria-hidden
               >
                 <p className={`text-sm ${textSecondary} text-center`}>Centered, max-w-7xl, responsive padding</p>
@@ -200,7 +199,7 @@ export function ThemeContainersPage() {
             </div>
             <div className="space-y-2">
               <div
-                className={`content-container-narrow rounded-xl border-2 ${sectionBorder} py-6 px-6 bg-white dark:bg-navy-800/50`}
+                className={`content-container-narrow rounded-xl border-2 ${sectionBorder} py-6 px-6 bg-navy-800/50`}
                 aria-hidden
               >
                 <p className={`text-sm ${textSecondary} text-center`}>max-w-6xl, px-6</p>

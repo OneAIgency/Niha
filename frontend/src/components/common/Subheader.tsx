@@ -17,8 +17,6 @@ interface SubheaderProps {
   to?: string;
   /** Icon container background color class (default: bg-emerald-500/20) */
   iconBg?: string;
-  /** When true, bar stays fixed at top on scroll (use in scrollable page layouts) */
-  sticky?: boolean;
 }
 
 /**
@@ -50,7 +48,6 @@ export function Subheader({
   className,
   to,
   iconBg = 'bg-emerald-500/20',
-  sticky = false,
 }: SubheaderProps) {
   const content = (
     <>
@@ -65,37 +62,34 @@ export function Subheader({
   );
 
   return (
-    <div
-      className={cn(
-        'subheader-bar',
-        sticky && 'page-section-header-sticky',
-        className
-      )}
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          {/* Left side: Icon, Title, Description */}
-          {to ? (
-            <Link
-              to={to}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
-            >
-              {content}
-            </Link>
-          ) : (
-            <div className="flex items-center gap-3">
-              {content}
-            </div>
-          )}
+    <>
+      <div className={cn('subheader-bar', className)}>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Left side: Icon, Title, Description */}
+            {to ? (
+              <Link
+                to={to}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                {content}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-3">
+                {content}
+              </div>
+            )}
 
-          {/* Right side: Page-specific content */}
-          {children && (
-            <div className="flex items-center gap-6 text-sm">
-              {children}
-            </div>
-          )}
+            {/* Right side: Page-specific content */}
+            {children && (
+              <div className="flex items-center gap-6 text-sm">
+                {children}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+      <div className="subheader-bar-spacer" aria-hidden="true" />
+    </>
   );
 }

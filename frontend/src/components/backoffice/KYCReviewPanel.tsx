@@ -88,7 +88,7 @@ export function KYCReviewPanel({
       <div className="p-4 border-b border-navy-100 dark:border-navy-700 bg-gradient-to-r from-navy-50 to-transparent dark:from-navy-900/50">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg">
               {userName?.charAt(0)?.toUpperCase() || userEmail.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -112,7 +112,7 @@ export function KYCReviewPanel({
             <p className="text-sm text-navy-500 dark:text-navy-400">
               {uploadedRequired} of {REQUIRED_DOCUMENT_COUNT} required uploaded
             </p>
-            <p className="text-sm font-medium text-teal-600 dark:text-teal-400">
+            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
               {approvedRequired} of {REQUIRED_DOCUMENT_COUNT} approved
             </p>
           </div>
@@ -126,7 +126,7 @@ export function KYCReviewPanel({
           </div>
           <div className="h-2 bg-navy-200 dark:bg-navy-700 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
+              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}

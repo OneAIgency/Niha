@@ -170,18 +170,16 @@ const applyTheme = (theme: 'light' | 'dark') => {
   }
 };
 
-// Get initial theme from localStorage or system preference
+// Get initial theme from localStorage or default to dark
 const getInitialTheme = (): 'light' | 'dark' => {
+  // Always default to dark theme for NIHA platform
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('theme');
     if (stored === 'dark' || stored === 'light') {
       return stored;
     }
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
   }
-  return 'light';
+  return 'dark';
 };
 
 export const useUIStore = create<UIState>((set, get) => {

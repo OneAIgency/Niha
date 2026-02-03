@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
 import {
-  Sun,
   Check,
   AlertCircle,
   AlertTriangle,
@@ -10,10 +8,6 @@ import {
   TrendingDown,
   Leaf,
   Wind,
-  Euro,
-  User,
-  Settings,
-  Bell,
   Search,
   Download,
   Upload,
@@ -25,260 +19,312 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
-  CreditCard,
+  Palette,
+  Type,
+  Square,
+  Table2,
+  Layers,
+  Loader2,
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
-import { Card, PageHeader, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
+import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
 
 /**
- * Theme sample page – Admin only.
- * Displays all design system elements in the current theme (light/dark) with standard layout.
+ * Theme Sample Page - Design System Showcase
+ *
+ * Organized sections with sticky tab navigation for easy browsing.
+ * Shows all standardized components in the current theme (light/dark).
  */
+
+const SECTIONS = [
+  { id: 'colors', label: 'Colors', icon: Palette },
+  { id: 'typography', label: 'Typography', icon: Type },
+  { id: 'buttons', label: 'Buttons', icon: Square },
+  { id: 'inputs', label: 'Inputs', icon: Square },
+  { id: 'badges', label: 'Badges', icon: Layers },
+  { id: 'tabs', label: 'Tabs & Toggles', icon: Layers },
+  { id: 'cards', label: 'Cards', icon: Square },
+  { id: 'tables', label: 'Tables', icon: Table2 },
+  { id: 'feedback', label: 'Feedback', icon: AlertCircle },
+  { id: 'loading', label: 'Loading', icon: Loader2 },
+] as const;
+
+type SectionId = typeof SECTIONS[number]['id'];
+
 export function ThemePage() {
   const { theme } = useUIStore();
   const isDark = theme === 'dark';
+  const [activeSection, setActiveSection] = useState<SectionId>('colors');
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // State for interactive components
   const [activeTab, setActiveTab] = useState('tab1');
-  const [activeToggle, setActiveToggle] = useState('option1');
   const [activeCertToggle, setActiveCertToggle] = useState('eua');
   const [activeTradeToggle, setActiveTradeToggle] = useState('buy');
   const [showModal, setShowModal] = useState(false);
 
-  const sectionCls = isDark
-    ? 'border-navy-700 bg-navy-800'
-    : 'border-navy-200 bg-white';
   const textPrimary = isDark ? 'text-white' : 'text-navy-900';
   const textSecondary = isDark ? 'text-navy-400' : 'text-navy-600';
   const textMuted = isDark ? 'text-navy-500' : 'text-navy-500';
 
-  return (
-    <>
-      <PageHeader
-          title="Theme Sample"
-          subtitle={`Current theme: ${theme} · All design elements in one view`}
-          className="mb-10"
-        />
+  // Scroll to section when tab is clicked
+  const scrollToSection = (sectionId: SectionId) => {
+    setActiveSection(sectionId);
+    const element = sectionRefs.current[sectionId];
+    if (element) {
+      const offset = 140; // Account for sticky header
+      const top = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
-        <div className="space-y-12">
-        {/* Colors */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Color Palette
-          </h2>
-          <div className={`h-1 w-20 rounded-full bg-emerald-500 mb-6`} />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  // Update active section based on scroll position
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 200;
+
+      for (const section of SECTIONS) {
+        const element = sectionRefs.current[section.id];
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div className="relative">
+      {/* Sticky Section Navigation */}
+      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-navy-50/95 dark:bg-navy-950/95 backdrop-blur-sm border-b border-navy-200 dark:border-navy-800">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {SECTIONS.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                onClick={() => scrollToSection(section.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'text-navy-600 dark:text-navy-400 hover:bg-navy-200 dark:hover:bg-navy-800'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {section.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Page Header */}
+      <div className="mt-6 mb-8">
+        <h1 className={`text-2xl font-bold ${textPrimary}`}>Design System Sample</h1>
+        <p className={`mt-1 text-sm ${textSecondary}`}>
+          All standardized components displayed in {theme} mode. Click section tabs above to navigate.
+        </p>
+      </div>
+
+      <div className="space-y-16">
+        {/* COLORS SECTION */}
+        <section
+          id="colors"
+          ref={(el) => { sectionRefs.current['colors'] = el; }}
+        >
+          <SectionHeader title="Color Palette" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {[
+              { name: 'Navy', shades: ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'], base: 'navy' },
+              { name: 'Emerald', shades: ['100', '400', '500', '600'], base: 'emerald' },
+              { name: 'Blue', shades: ['100', '400', '500', '600'], base: 'blue' },
+              { name: 'Amber', shades: ['100', '400', '500', '600'], base: 'amber' },
+              { name: 'Red', shades: ['100', '400', '500', '600'], base: 'red' },
+            ].map((color) => (
+              <div key={color.name} className="space-y-2">
+                <p className={`text-sm font-semibold ${textPrimary}`}>{color.name}</p>
+                <div className="space-y-1">
+                  {color.shades.map((shade) => (
+                    <div
+                      key={shade}
+                      className={`h-8 rounded-lg bg-${color.base}-${shade} flex items-center justify-end px-2`}
+                    >
+                      <span className={`text-xs font-mono ${parseInt(shade) > 400 ? 'text-white' : 'text-navy-900'}`}>
+                        {shade}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { name: 'Background', class: isDark ? 'bg-navy-950' : 'bg-navy-50' },
               { name: 'Surface', class: isDark ? 'bg-navy-800' : 'bg-white' },
-              { name: 'Primary', class: 'bg-emerald-500' },
+              { name: 'Primary (CTA)', class: 'bg-emerald-500' },
               { name: 'EUA', class: 'bg-blue-500' },
               { name: 'CEA', class: 'bg-amber-500' },
-              { name: 'Bid', class: 'bg-emerald-500' },
-              { name: 'Ask', class: 'bg-red-500' },
               { name: 'Success', class: 'bg-emerald-500' },
               { name: 'Warning', class: 'bg-amber-500' },
               { name: 'Error', class: 'bg-red-500' },
             ].map((c) => (
-              <div
-                key={c.name}
-                className={`rounded-xl border p-4 ${sectionCls}`}
-              >
-                <div className={`h-12 rounded-lg ${c.class} mb-2`} />
-                <p className={`text-sm font-medium ${textPrimary}`}>{c.name}</p>
-              </div>
+              <Card key={c.name} className="p-3">
+                <div className={`h-10 rounded-lg ${c.class} mb-2`} />
+                <p className={`text-xs font-medium ${textSecondary}`}>{c.name}</p>
+              </Card>
             ))}
           </div>
         </section>
 
-        {/* Typography */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Typography
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* TYPOGRAPHY SECTION */}
+        <section
+          id="typography"
+          ref={(el) => { sectionRefs.current['typography'] = el; }}
+        >
+          <SectionHeader title="Typography" />
           <Card className="p-6 space-y-4">
-            <p className={`text-xs ${textMuted}`}>text-xs – Labels, badges</p>
-            <p className={`text-sm ${textSecondary}`}>text-sm – Secondary text</p>
-            <p className={`text-base ${textPrimary}`}>text-base – Body text</p>
-            <p className={`text-lg font-semibold ${textPrimary}`}>
-              text-lg – Emphasized
-            </p>
-            <p className={`text-xl font-bold ${textPrimary}`}>
-              text-xl – Section heading
-            </p>
-            <p className={`text-2xl font-bold ${textPrimary}`}>
-              text-2xl – Page subtitle
-            </p>
-            <p className={`text-3xl font-bold ${textPrimary}`}>
-              text-3xl – Page title
-            </p>
-            <p className="font-mono text-lg font-semibold text-emerald-500">
-              font-mono – €99.50 | 1,234.56
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <p className={`text-xs ${textMuted}`}>text-xs - Labels, captions</p>
+                <p className={`text-sm ${textSecondary}`}>text-sm - Secondary text</p>
+                <p className={`text-base ${textPrimary}`}>text-base - Body text</p>
+                <p className={`text-lg font-semibold ${textPrimary}`}>text-lg - Emphasized</p>
+                <p className={`text-xl font-bold ${textPrimary}`}>text-xl - Section heading</p>
+                <p className={`text-2xl font-bold ${textPrimary}`}>text-2xl - Page title</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className={`text-xs ${textMuted} mb-1`}>Monospace (prices, IDs)</p>
+                  <p className="font-mono text-xl font-semibold text-emerald-500">€99.50</p>
+                </div>
+                <div>
+                  <p className={`text-xs ${textMuted} mb-1`}>Positive change</p>
+                  <p className="font-mono text-lg font-semibold text-emerald-500">+2.5%</p>
+                </div>
+                <div>
+                  <p className={`text-xs ${textMuted} mb-1`}>Negative change</p>
+                  <p className="font-mono text-lg font-semibold text-red-500">-1.2%</p>
+                </div>
+              </div>
+            </div>
           </Card>
         </section>
 
-        {/* Buttons */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Buttons
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* BUTTONS SECTION */}
+        <section
+          id="buttons"
+          ref={(el) => { sectionRefs.current['buttons'] = el; }}
+        >
+          <SectionHeader title="Buttons" />
           <Card className="p-6 space-y-6">
-            <div className="flex flex-wrap gap-4">
-              <Button variant="primary" size="sm">
-                Primary Small
-              </Button>
-              <Button variant="primary" size="md">
-                Primary Medium
-              </Button>
-              <Button variant="primary" size="lg">
-                Primary Large
-              </Button>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Variants</p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="primary">Primary</Button>
+                <Button variant="secondary">Secondary</Button>
+                <Button variant="outline">Outline</Button>
+                <Button variant="ghost">Ghost</Button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Button variant="secondary" size="md">
-                Secondary
-              </Button>
-              <Button variant="outline" size="md">
-                Outline
-              </Button>
-              <Button variant="ghost" size="md">
-                Ghost
-              </Button>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Sizes</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary" size="sm">Small</Button>
+                <Button variant="primary" size="md">Medium</Button>
+                <Button variant="primary" size="lg">Large</Button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Button variant="primary" size="md" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                With Icon
-              </Button>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>With Icons</p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="primary" className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+                <Button variant="secondary" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </Button>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>States</p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="primary" disabled>Disabled</Button>
+                <Button variant="primary" loading>Loading</Button>
+              </div>
             </div>
           </Card>
         </section>
 
-        {/* Inputs */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Inputs
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-4">
-            <div>
-              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
-                Default
-              </label>
-              <input
-                type="text"
-                placeholder="Enter text..."
-                className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
-              />
-            </div>
-            <div>
-              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
-                With icon
-              </label>
-              <div className="relative">
-                <Search
-                  className={`absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${textMuted}`}
-                />
+        {/* INPUTS SECTION */}
+        <section
+          id="inputs"
+          ref={(el) => { sectionRefs.current['inputs'] = el; }}
+        >
+          <SectionHeader title="Inputs" />
+          <Card className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>Default</label>
                 <input
                   type="text"
-                  placeholder="Search..."
-                  className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
+                  placeholder="Enter text..."
+                  className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
                 />
               </div>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-red-500">
-                Error
-              </label>
-              <input
-                type="text"
-                placeholder="Error state"
-                className={`w-full rounded-xl border-2 border-red-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDark ? 'bg-navy-800 text-white' : 'bg-white text-navy-900'}`}
-              />
-              <p className="mt-1 text-xs text-red-500">This field is required</p>
-            </div>
-            <div>
-              <label className={`mb-2 block text-sm font-medium ${textMuted}`}>
-                Disabled
-              </label>
-              <input
-                type="text"
-                placeholder="Disabled"
-                disabled
-                className={`w-full cursor-not-allowed rounded-xl border-2 px-4 py-3 ${isDark ? 'border-navy-700 bg-navy-800/50 text-navy-500' : 'border-navy-200 bg-navy-100 text-navy-400'}`}
-              />
-            </div>
-          </Card>
-        </section>
-
-        {/* Badges */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Badges
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-6">
-            <div className="flex flex-wrap gap-3">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <Check className="h-3 w-3" />
-                Success
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                <AlertTriangle className="h-3 w-3" />
-                Warning
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'}`}>
-                <AlertCircle className="h-3 w-3" />
-                Error
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700'}`}>
-                <Info className="h-3 w-3" />
-                Info
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold ${isDark ? 'border-blue-500/50 bg-blue-500/20 text-blue-400' : 'border-blue-200 bg-blue-100 text-blue-700'}`}>
-                <Leaf className="h-4 w-4" />
-                EUA
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold ${isDark ? 'border-amber-500/50 bg-amber-500/20 text-amber-400' : 'border-amber-200 bg-amber-100 text-amber-700'}`}>
-                <Wind className="h-4 w-4" />
-                CEA
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                <TrendingUp className="h-4 w-4" />
-                BID €99.50
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold ${isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'}`}>
-                <TrendingDown className="h-4 w-4" />
-                ASK €101.25
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Bell className={`h-6 w-6 ${textSecondary}`} />
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  3
-                </span>
+              <div>
+                <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>With Icon</label>
+                <div className="relative">
+                  <Search className={`absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${textMuted}`} />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-red-500">Error State</label>
+                <input
+                  type="text"
+                  placeholder="Error state"
+                  className={`w-full rounded-xl border-2 border-red-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDark ? 'bg-navy-800 text-white' : 'bg-white text-navy-900'}`}
+                />
+                <p className="mt-1 text-xs text-red-500">This field is required</p>
+              </div>
+              <div>
+                <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>Select</label>
+                <div className="relative">
+                  <select className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}>
+                    <option>Select an option...</option>
+                    <option>Option 1</option>
+                    <option>Option 2</option>
+                  </select>
+                  <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
+                </div>
               </div>
             </div>
           </Card>
         </section>
 
-        {/* Badge Component */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Badge Component
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* BADGES SECTION */}
+        <section
+          id="badges"
+          ref={(el) => { sectionRefs.current['badges'] = el; }}
+        >
+          <SectionHeader title="Badges" />
           <Card className="p-6 space-y-6">
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Status Variants</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Status Badges (Component)</p>
               <div className="flex flex-wrap gap-3">
                 <Badge variant="default">Default</Badge>
                 <Badge variant="success">Success</Badge>
@@ -288,34 +334,58 @@ export function ThemePage() {
               </div>
             </div>
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Color Variants</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Color Badges</p>
               <div className="flex flex-wrap gap-3">
                 <Badge variant="eua">EUA</Badge>
                 <Badge variant="cea">CEA</Badge>
                 <Badge variant="blue">Blue</Badge>
-                <Badge variant="purple">Purple</Badge>
+                <Badge variant="navy">Navy</Badge>
                 <Badge variant="amber">Amber</Badge>
                 <Badge variant="emerald">Emerald</Badge>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>With Icons</p>
+              <div className="flex flex-wrap gap-3">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
+                  <Check className="h-3 w-3" /> Approved
+                </span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
+                  <AlertTriangle className="h-3 w-3" /> Pending
+                </span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'}`}>
+                  <AlertCircle className="h-3 w-3" /> Failed
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Certificate Badges</p>
+              <div className="flex flex-wrap gap-3">
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold ${isDark ? 'border-blue-500/50 bg-blue-500/20 text-blue-400' : 'border-blue-200 bg-blue-100 text-blue-700'}`}>
+                  <Leaf className="h-4 w-4" /> EUA
+                </span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold ${isDark ? 'border-amber-500/50 bg-amber-500/20 text-amber-400' : 'border-amber-200 bg-amber-100 text-amber-700'}`}>
+                  <Wind className="h-4 w-4" /> CEA
+                </span>
               </div>
             </div>
           </Card>
         </section>
 
-        {/* Tabs */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Tabs
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* TABS & TOGGLES SECTION */}
+        <section
+          id="tabs"
+          ref={(el) => { sectionRefs.current['tabs'] = el; }}
+        >
+          <SectionHeader title="Tabs & Toggles" />
           <Card className="p-6 space-y-8">
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default Variant</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default Tabs</p>
               <Tabs
                 tabs={[
                   { id: 'tab1', label: 'Overview' },
                   { id: 'tab2', label: 'Analytics', badge: 5 },
                   { id: 'tab3', label: 'Reports' },
-                  { id: 'tab4', label: 'Disabled', disabled: true },
                 ]}
                 activeTab={activeTab}
                 onChange={setActiveTab}
@@ -335,56 +405,7 @@ export function ThemePage() {
               />
             </div>
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Underline Variant</p>
-              <Tabs
-                tabs={[
-                  { id: 'tab1', label: 'Overview' },
-                  { id: 'tab2', label: 'Analytics' },
-                  { id: 'tab3', label: 'Reports' },
-                ]}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                variant="underline"
-              />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Toggle Variant (Full Width)</p>
-              <Tabs
-                tabs={[
-                  { id: 'tab1', label: 'Overview' },
-                  { id: 'tab2', label: 'Analytics' },
-                  { id: 'tab3', label: 'Reports' },
-                ]}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                variant="toggle"
-                fullWidth
-              />
-            </div>
-          </Card>
-        </section>
-
-        {/* Toggle Groups */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Toggle Groups
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-8">
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default Toggle</p>
-              <ToggleGroup
-                options={[
-                  { value: 'option1', label: 'Option 1' },
-                  { value: 'option2', label: 'Option 2' },
-                  { value: 'option3', label: 'Option 3' },
-                ]}
-                value={activeToggle}
-                onChange={setActiveToggle}
-              />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Certificate Toggle (EUA / CEA)</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Certificate Toggle</p>
               <ToggleGroup
                 options={[
                   { value: 'eua', label: 'EUA', colorScheme: 'eua', icon: <Leaf className="w-4 h-4" /> },
@@ -395,7 +416,7 @@ export function ThemePage() {
               />
             </div>
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Trade Toggle (Buy / Sell)</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Buy/Sell Toggle</p>
               <ToggleGroup
                 options={[
                   { value: 'buy', label: 'Buy', colorScheme: 'buy', icon: <ArrowUpRight className="w-4 h-4" /> },
@@ -408,80 +429,12 @@ export function ThemePage() {
           </Card>
         </section>
 
-        {/* Progress Bars */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Progress Bars
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-6">
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Default</p>
-              <ProgressBar value={65} />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>With Label</p>
-              <ProgressBar value={45} showLabel label="Completion Progress" />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Gradient</p>
-              <ProgressBar value={80} variant="gradient" size="lg" />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Status Variants</p>
-              <div className="space-y-4">
-                <ProgressBar value={100} variant="success" showLabel label="Success" />
-                <ProgressBar value={75} variant="warning" showLabel label="Warning" />
-                <ProgressBar value={30} variant="danger" showLabel label="Danger" />
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Sizes</p>
-              <div className="space-y-4">
-                <ProgressBar value={60} size="sm" />
-                <ProgressBar value={60} size="md" />
-                <ProgressBar value={60} size="lg" />
-              </div>
-            </div>
-          </Card>
-        </section>
-
-        {/* Skeleton Loaders */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Skeleton Loaders
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-6">
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Text Variants</p>
-              <div className="space-y-4">
-                <Skeleton variant="text" />
-                <Skeleton variant="text" lines={3} />
-                <Skeleton variant="textLg" />
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Shape Variants</p>
-              <div className="flex items-center gap-4">
-                <Skeleton variant="circular" width={48} height={48} />
-                <Skeleton variant="avatar" />
-                <Skeleton variant="rectangular" width={100} height={60} />
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Card Skeleton</p>
-              <Skeleton variant="card" />
-            </div>
-          </Card>
-        </section>
-
-        {/* Stat Cards */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Stat Cards
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* CARDS SECTION */}
+        <section
+          id="cards"
+          ref={(el) => { sectionRefs.current['cards'] = el; }}
+        >
+          <SectionHeader title="Cards & Stats" />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatCard
               icon={<Wallet className="w-5 h-5" />}
@@ -507,203 +460,19 @@ export function ThemePage() {
               trend={{ value: 5.7, direction: 'up' }}
               subtitle="Certificates"
             />
-            <StatCard
-              icon={<CreditCard className="w-5 h-5" />}
-              iconColor="purple"
-              title="Pending Orders"
-              value="23"
-              subtitle="Active in market"
-            />
-            <StatCard
-              title="Minimal Variant"
-              value="€99.50"
-              valueColor="emerald"
-              subtitle="Current price"
-              variant="minimal"
-            />
-            <StatCard
-              icon={<Activity className="w-5 h-5" />}
-              iconColor="emerald"
-              title="Loading State"
-              value="..."
-              loading
-            />
           </div>
-        </section>
-
-        {/* Modals */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Modals
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-6">
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Confirmation Modal</p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="primary" onClick={() => setShowModal(true)}>
-                  Open Confirmation Modal
-                </Button>
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Modal Variants Preview</p>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className={`rounded-xl p-4 border ${isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'}`}>
-                  <div className="flex items-center gap-2 text-red-500 mb-2">
-                    <AlertTriangle className="w-5 h-5" />
-                    <span className="font-semibold">Danger</span>
-                  </div>
-                  <p className={`text-sm ${textSecondary}`}>For destructive actions</p>
-                </div>
-                <div className={`rounded-xl p-4 border ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'}`}>
-                  <div className="flex items-center gap-2 text-amber-500 mb-2">
-                    <AlertTriangle className="w-5 h-5" />
-                    <span className="font-semibold">Warning</span>
-                  </div>
-                  <p className={`text-sm ${textSecondary}`}>For important warnings</p>
-                </div>
-                <div className={`rounded-xl p-4 border ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'}`}>
-                  <div className="flex items-center gap-2 text-blue-500 mb-2">
-                    <Info className="w-5 h-5" />
-                    <span className="font-semibold">Info</span>
-                  </div>
-                  <p className={`text-sm ${textSecondary}`}>For informational dialogs</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-          <ConfirmationModal
-            isOpen={showModal}
-            onClose={() => setShowModal(false)}
-            onConfirm={() => setShowModal(false)}
-            title="Confirm Action"
-            message="Are you sure you want to proceed with this action? This cannot be undone."
-            confirmText="Confirm"
-            cancelText="Cancel"
-            variant="danger"
-            details={[
-              { label: 'Order ID', value: 'ORD-12345' },
-              { label: 'Amount', value: '€1,234.56' },
-            ]}
-          />
-        </section>
-
-        {/* Alerts & Toasts */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Alerts & Notifications
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-4">
-            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-emerald-50 border border-emerald-200'}`}>
-              <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-              <div className="flex-1">
-                <p className={`font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>Success</p>
-                <p className={`text-sm ${isDark ? 'text-emerald-400/80' : 'text-emerald-600'}`}>Your order has been placed successfully.</p>
-              </div>
-              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-emerald-500/20 text-emerald-400' : 'hover:bg-emerald-100 text-emerald-600'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-amber-50 border border-amber-200'}`}>
-              <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
-              <div className="flex-1">
-                <p className={`font-semibold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>Warning</p>
-                <p className={`text-sm ${isDark ? 'text-amber-400/80' : 'text-amber-600'}`}>Your session will expire in 5 minutes.</p>
-              </div>
-              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-amber-500/20 text-amber-400' : 'hover:bg-amber-100 text-amber-600'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-red-500/10 border border-red-500/30' : 'bg-red-50 border border-red-200'}`}>
-              <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-              <div className="flex-1">
-                <p className={`font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>Error</p>
-                <p className={`text-sm ${isDark ? 'text-red-400/80' : 'text-red-600'}`}>Failed to process your request. Please try again.</p>
-              </div>
-              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-100 text-red-600'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className={`flex items-start gap-3 rounded-xl p-4 ${isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
-              <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-              <div className="flex-1">
-                <p className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>Info</p>
-                <p className={`text-sm ${isDark ? 'text-blue-400/80' : 'text-blue-600'}`}>Market will close in 30 minutes for maintenance.</p>
-              </div>
-              <button className={`p-1 rounded-lg transition-colors ${isDark ? 'hover:bg-blue-500/20 text-blue-400' : 'hover:bg-blue-100 text-blue-600'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </Card>
-        </section>
-
-        {/* Select / Dropdown */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Select / Dropdown
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-4">
-            <div>
-              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
-                Default Select
-              </label>
-              <div className="relative">
-                <select
-                  className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}
-                >
-                  <option>Select an option...</option>
-                  <option>Option 1</option>
-                  <option>Option 2</option>
-                  <option>Option 3</option>
-                </select>
-                <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
-              </div>
-            </div>
-            <div>
-              <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>
-                Certificate Select
-              </label>
-              <div className="relative">
-                <select
-                  className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}
-                >
-                  <option>Select certificate type...</option>
-                  <option>EUA - EU Allowance</option>
-                  <option>CEA - China Allowance</option>
-                </select>
-                <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
-              </div>
-            </div>
-          </Card>
-        </section>
-
-        {/* Cards */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Cards
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 mt-6">
             <Card className="p-6">
               <div className="flex items-start gap-4">
                 <div className={`rounded-xl p-3 ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
                   <Activity className={`h-6 w-6 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
                 </div>
                 <div className="flex-1">
-                  <h4 className={`text-lg font-bold ${textPrimary}`}>Card Title</h4>
-                  <p className={`mt-1 text-sm ${textSecondary}`}>
-                    Default card with icon and actions.
-                  </p>
+                  <h4 className={`text-lg font-bold ${textPrimary}`}>Standard Card</h4>
+                  <p className={`mt-1 text-sm ${textSecondary}`}>Default card with icon and content.</p>
                   <div className="mt-4 flex gap-2">
-                    <Button variant="primary" size="sm">
-                      Action
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Cancel
-                    </Button>
+                    <Button variant="primary" size="sm">Action</Button>
+                    <Button variant="outline" size="sm">Cancel</Button>
                   </div>
                 </div>
               </div>
@@ -714,59 +483,28 @@ export function ThemePage() {
                   <BarChart3 className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                 </div>
                 <div className="flex-1">
-                  <h4 className={`text-lg font-bold ${textPrimary}`}>
-                    Glass Card
-                  </h4>
-                  <p className={`mt-1 text-sm ${textSecondary}`}>
-                    Frosted glass with backdrop blur.
-                  </p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-6 md:col-span-2">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className={`text-sm font-medium ${textSecondary}`}>
-                    Total Revenue
-                  </p>
-                  <p className={`mt-2 font-mono text-3xl font-bold ${textPrimary}`}>
-                    €12,543
-                  </p>
-                  <div className="mt-2 flex items-center gap-1 text-sm font-semibold text-emerald-500">
-                    <TrendingUp className="h-4 w-4" />
-                    +12.5%
-                  </div>
-                </div>
-                <div className={`rounded-xl p-3 ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-                  <Euro className={`h-6 w-6 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                  <h4 className={`text-lg font-bold ${textPrimary}`}>Glass Card</h4>
+                  <p className={`mt-1 text-sm ${textSecondary}`}>With backdrop blur effect.</p>
                 </div>
               </div>
             </Card>
           </div>
         </section>
 
-        {/* Table */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Data Table
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* TABLES SECTION */}
+        <section
+          id="tables"
+          ref={(el) => { sectionRefs.current['tables'] = el; }}
+        >
+          <SectionHeader title="Tables" />
           <div className={`overflow-hidden rounded-2xl border ${isDark ? 'border-navy-700 bg-navy-800' : 'border-navy-200 bg-white'}`}>
             <table className="w-full">
               <thead className={isDark ? 'border-navy-700 bg-navy-900/50' : 'border-navy-200 bg-navy-50'}>
                 <tr>
-                  <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>
-                    Certificate
-                  </th>
-                  <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>
-                    Price
-                  </th>
-                  <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>
-                    Change
-                  </th>
-                  <th className={`px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>
-                    Status
-                  </th>
+                  <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>Certificate</th>
+                  <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>Price</th>
+                  <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>Change</th>
+                  <th className={`px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>Status</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDark ? 'divide-navy-700' : 'divide-navy-200'}`}>
@@ -782,18 +520,14 @@ export function ThemePage() {
                       </div>
                     </div>
                   </td>
-                  <td className={`px-6 py-4 text-right font-mono text-sm font-semibold ${textPrimary}`}>
-                    €99.50
-                  </td>
+                  <td className={`px-6 py-4 text-right font-mono text-sm font-semibold ${textPrimary}`}>€99.50</td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-semibold text-emerald-500">
-                      <TrendingUp className="inline h-4 w-4 mr-1" /> +2.5%
+                    <span className="text-sm font-semibold text-emerald-500 flex items-center justify-end gap-1">
+                      <TrendingUp className="h-4 w-4" /> +2.5%
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                      <Check className="h-3 w-3" /> Active
-                    </span>
+                    <Badge variant="success">Active</Badge>
                   </td>
                 </tr>
                 <tr className={isDark ? 'hover:bg-navy-700/50' : 'hover:bg-navy-50'}>
@@ -808,18 +542,14 @@ export function ThemePage() {
                       </div>
                     </div>
                   </td>
-                  <td className={`px-6 py-4 text-right font-mono text-sm font-semibold ${textPrimary}`}>
-                    €47.25
-                  </td>
+                  <td className={`px-6 py-4 text-right font-mono text-sm font-semibold ${textPrimary}`}>€47.25</td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-semibold text-red-500">
-                      <TrendingDown className="inline h-4 w-4 mr-1" /> -1.2%
+                    <span className="text-sm font-semibold text-red-500 flex items-center justify-end gap-1">
+                      <TrendingDown className="h-4 w-4" /> -1.2%
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                      <AlertTriangle className="h-3 w-3" /> Pending
-                    </span>
+                    <Badge variant="warning">Pending</Badge>
                   </td>
                 </tr>
               </tbody>
@@ -827,254 +557,129 @@ export function ThemePage() {
           </div>
         </section>
 
-        {/* Trading UI */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Trading UI
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* FEEDBACK SECTION */}
+        <section
+          id="feedback"
+          ref={(el) => { sectionRefs.current['feedback'] = el; }}
+        >
+          <SectionHeader title="Alerts & Modals" />
           <Card className="p-6 space-y-4">
-            <div className={`rounded-lg p-3 ${isDark ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-50'}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                  €99.50
-                </span>
-                <span className={`font-mono text-sm ${textSecondary}`}>1,234</span>
-                <span className={`text-xs ${textMuted}`}>5 orders</span>
-              </div>
-            </div>
-            <div className={`border-t border-b py-3 ${isDark ? 'border-navy-700' : 'border-navy-200'}`}>
-              <div className="flex items-center justify-center gap-2">
-                <span className={`text-xs font-medium ${textSecondary}`}>Spread:</span>
-                <span className={`font-mono text-sm font-bold ${textPrimary}`}>€0.10</span>
-              </div>
-            </div>
-            <div className={`rounded-lg p-3 ${isDark ? 'hover:bg-red-500/10' : 'hover:bg-red-50'}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-semibold ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                  €99.55
-                </span>
-                <span className={`font-mono text-sm ${textSecondary}`}>3,421</span>
-                <span className={`text-xs ${textMuted}`}>6 orders</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className={`rounded-xl p-4 ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'}`}>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className={`h-5 w-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                  <span className={`text-sm font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                    Positive
-                  </span>
-                </div>
-                <p className={`mt-2 font-mono text-2xl font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                  +€2.50
-                </p>
-                <p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-600/70'}`}>
-                  +2.57% today
-                </p>
-              </div>
-              <div className={`rounded-xl p-4 ${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className={`h-5 w-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-                  <span className={`text-sm font-medium ${isDark ? 'text-red-400' : 'text-red-700'}`}>
-                    Negative
-                  </span>
-                </div>
-                <p className={`mt-2 font-mono text-2xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                  -€1.25
-                </p>
-                <p className={`text-xs ${isDark ? 'text-red-400/70' : 'text-red-600/70'}`}>
-                  -1.28% today
-                </p>
-              </div>
+            <Alert type="success" title="Success" message="Your order has been placed successfully." />
+            <Alert type="warning" title="Warning" message="Your session will expire in 5 minutes." />
+            <Alert type="error" title="Error" message="Failed to process your request. Please try again." />
+            <Alert type="info" title="Info" message="Market will close in 30 minutes for maintenance." />
+
+            <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Confirmation Modal</p>
+              <Button variant="primary" onClick={() => setShowModal(true)}>
+                Open Modal
+              </Button>
             </div>
           </Card>
+
+          <ConfirmationModal
+            isOpen={showModal}
+            onClose={() => setShowModal(false)}
+            onConfirm={() => setShowModal(false)}
+            title="Confirm Action"
+            message="Are you sure you want to proceed? This action cannot be undone."
+            confirmText="Confirm"
+            cancelText="Cancel"
+            variant="danger"
+            details={[
+              { label: 'Order ID', value: 'ORD-12345' },
+              { label: 'Amount', value: '€1,234.56' },
+            ]}
+          />
         </section>
 
-        {/* Icons */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Icons (Lucide)
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6">
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-              {[
-                { Icon: User, name: 'User' },
-                { Icon: Settings, name: 'Settings' },
-                { Icon: Bell, name: 'Bell' },
-                { Icon: Search, name: 'Search' },
-                { Icon: Download, name: 'Download' },
-                { Icon: Upload, name: 'Upload' },
-                { Icon: RefreshCw, name: 'Refresh' },
-                { Icon: TrendingUp, name: 'Up' },
-                { Icon: TrendingDown, name: 'Down' },
-                { Icon: BarChart3, name: 'Chart' },
-                { Icon: Activity, name: 'Activity' },
-                { Icon: Check, name: 'Check' },
-                { Icon: Leaf, name: 'Leaf' },
-                { Icon: Wind, name: 'Wind' },
-                { Icon: Euro, name: 'Euro' },
-                { Icon: Sun, name: 'Sun' },
-              ].map(({ Icon, name }) => (
-                <div
-                  key={name}
-                  className={`flex flex-col items-center gap-2 rounded-xl p-4 transition-colors ${isDark ? 'hover:bg-navy-700' : 'hover:bg-navy-50'}`}
-                >
-                  <Icon className={`h-6 w-6 ${isDark ? 'text-navy-300' : 'text-navy-700'}`} />
-                  <span className={`text-xs ${textSecondary}`}>{name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-
-        {/* Dividers */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Dividers
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
+        {/* LOADING SECTION */}
+        <section
+          id="loading"
+          ref={(el) => { sectionRefs.current['loading'] = el; }}
+        >
+          <SectionHeader title="Loading States" />
           <Card className="p-6 space-y-6">
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Horizontal Divider</p>
-              <div className={`h-px w-full ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Divider with Text</p>
-              <div className="flex items-center gap-4">
-                <div className={`h-px flex-1 ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
-                <span className={`text-sm ${textMuted}`}>OR</span>
-                <div className={`h-px flex-1 ${isDark ? 'bg-navy-700' : 'bg-navy-200'}`} />
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Progress Bars</p>
+              <div className="space-y-4">
+                <ProgressBar value={65} showLabel label="Default" />
+                <ProgressBar value={100} variant="success" showLabel label="Success" />
+                <ProgressBar value={75} variant="warning" showLabel label="Warning" />
+                <ProgressBar value={30} variant="danger" showLabel label="Danger" />
               </div>
             </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Gradient Divider</p>
-              <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-amber-500 rounded-full" />
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Vertical Divider (inline)</p>
-              <div className="flex items-center gap-4">
-                <span className={textSecondary}>Item 1</span>
-                <div className={`w-px h-6 ${isDark ? 'bg-navy-600' : 'bg-navy-300'}`} />
-                <span className={textSecondary}>Item 2</span>
-                <div className={`w-px h-6 ${isDark ? 'bg-navy-600' : 'bg-navy-300'}`} />
-                <span className={textSecondary}>Item 3</span>
-              </div>
-            </div>
-          </Card>
-        </section>
-
-        {/* Loading States */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Loading States
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <Card className="p-6 space-y-6">
             <div>
               <p className={`text-sm font-medium ${textSecondary} mb-3`}>Spinners</p>
               <div className="flex items-center gap-6">
                 <div className="flex flex-col items-center gap-2">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
-                  <span className={`text-xs ${textMuted}`}>Border Spin</span>
+                  <span className={`text-xs ${textMuted}`}>Border</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-                  <span className={`text-xs ${textMuted}`}>Icon Spin</span>
+                  <span className={`text-xs ${textMuted}`}>Icon</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <svg className="animate-spin h-8 w-8 text-amber-500" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span className={`text-xs ${textMuted}`}>SVG Spinner</span>
+                  <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                  <span className={`text-xs ${textMuted}`}>Loader</span>
                 </div>
               </div>
             </div>
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Dots</p>
-              <div className="flex items-center gap-1">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Button Loading States</p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="primary" size="md" disabled>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Processing...
-                </Button>
-                <Button variant="secondary" size="md" disabled>
-                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
-                  Loading...
-                </Button>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Skeletons</p>
+              <div className="space-y-4">
+                <Skeleton variant="text" />
+                <div className="flex items-center gap-4">
+                  <Skeleton variant="avatar" />
+                  <Skeleton variant="text" width="60%" />
+                </div>
+                <Skeleton variant="card" />
               </div>
             </div>
           </Card>
         </section>
+      </div>
+    </div>
+  );
+}
 
-        {/* Animations */}
-        <section>
-          <h2 className={`text-2xl font-bold ${textPrimary} mb-2`}>
-            Animations
-          </h2>
-          <div className="h-1 w-20 rounded-full bg-emerald-500 mb-6" />
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h3 className={`mb-4 text-sm font-semibold ${textPrimary}`}>
-                Fade In
-              </h3>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
-                className={`rounded-xl p-6 ${isDark ? 'bg-navy-700' : 'bg-navy-100'}`}
-              >
-                <p className={`text-sm ${textSecondary}`}>
-                  Fading in and out
-                </p>
-              </motion.div>
-            </Card>
-            <Card className="p-6">
-              <h3 className={`mb-4 text-sm font-semibold ${textPrimary}`}>
-                Slide Up
-              </h3>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
-                className={`rounded-xl p-6 ${isDark ? 'bg-navy-700' : 'bg-navy-100'}`}
-              >
-                <p className={`text-sm ${textSecondary}`}>
-                  Sliding up from bottom
-                </p>
-              </motion.div>
-            </Card>
-            <Card className="p-6">
-              <h3 className={`mb-4 text-sm font-semibold ${textPrimary}`}>
-                Pulse (CSS)
-              </h3>
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 animate-pulse rounded-full bg-emerald-500" />
-                <div className="h-12 w-12 animate-pulse rounded-full bg-blue-500 animate-delay-150" />
-                <div className="h-12 w-12 animate-pulse rounded-full bg-amber-500 animate-delay-300" />
-              </div>
-            </Card>
-            <Card className="p-6">
-              <h3 className={`mb-4 text-sm font-semibold ${textPrimary}`}>
-                Spin (Loading)
-              </h3>
-              <RefreshCw className={`h-8 w-8 animate-spin ${isDark ? 'text-emerald-400' : 'text-emerald-500'}`} />
-            </Card>
-          </div>
-        </section>
-        </div>
-    </>
+// Section Header Component
+function SectionHeader({ title }: { title: string }) {
+  const { theme } = useUIStore();
+  const isDark = theme === 'dark';
+  return (
+    <div className="mb-6">
+      <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-navy-900'}`}>{title}</h2>
+      <div className="h-1 w-16 rounded-full bg-emerald-500 mt-2" />
+    </div>
+  );
+}
+
+// Alert Component
+function Alert({ type, title, message }: { type: 'success' | 'warning' | 'error' | 'info'; title: string; message: string }) {
+  const { theme } = useUIStore();
+  const isDark = theme === 'dark';
+
+  const styles = {
+    success: { bg: isDark ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200', text: isDark ? 'text-emerald-400' : 'text-emerald-700', Icon: Check },
+    warning: { bg: isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200', text: isDark ? 'text-amber-400' : 'text-amber-700', Icon: AlertTriangle },
+    error: { bg: isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200', text: isDark ? 'text-red-400' : 'text-red-700', Icon: AlertCircle },
+    info: { bg: isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200', text: isDark ? 'text-blue-400' : 'text-blue-700', Icon: Info },
+  };
+
+  const { bg, text, Icon } = styles[type];
+
+  return (
+    <div className={`flex items-start gap-3 rounded-xl p-4 border ${bg}`}>
+      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${text}`} />
+      <div className="flex-1">
+        <p className={`font-semibold ${text}`}>{title}</p>
+        <p className={`text-sm ${text} opacity-80`}>{message}</p>
+      </div>
+      <button className={`p-1 rounded-lg transition-colors hover:bg-black/10 ${text}`}>
+        <X className="w-4 h-4" />
+      </button>
+    </div>
   );
 }

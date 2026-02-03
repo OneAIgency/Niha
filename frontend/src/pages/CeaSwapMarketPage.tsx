@@ -268,10 +268,10 @@ export function CeaSwapMarketPage() {
     <div className="min-h-screen bg-navy-900">
       {/* Subheader */}
       <Subheader
-        icon={<ArrowRightLeft className="w-5 h-5 text-violet-500" />}
+        icon={<ArrowRightLeft className="w-5 h-5 text-emerald-500" />}
         title="Swap"
         description="Exchange CEA for EU Allowances"
-        iconBg="bg-violet-500/20"
+        iconBg="bg-emerald-500/20"
       >
         <div>
           <span className="text-navy-600 dark:text-navy-400 mr-2">CEA/EUA Ratio</span>
@@ -308,7 +308,7 @@ export function CeaSwapMarketPage() {
       <div className="page-container py-6">
         {isLoading && !swapRate ? (
           <div className="flex items-center justify-center h-96">
-            <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
         ) : swapError && !swapRate ? (
           <div className="flex flex-col items-center justify-center h-96 text-center">
@@ -316,7 +316,7 @@ export function CeaSwapMarketPage() {
             <p className="text-red-400 mb-4">{swapError}</p>
             <button
               onClick={fetchData}
-              className="px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-400 transition-colors"
+              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-400 transition-colors"
             >
               Retry
             </button>
@@ -346,12 +346,12 @@ export function CeaSwapMarketPage() {
                     animate={{ x: [0, 10, 0] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                   >
-                    <ArrowRight className="w-12 h-12 text-violet-500" />
+                    <ArrowRight className="w-12 h-12 text-emerald-500" />
                   </motion.div>
                   <button
                     onClick={() => setShowPreviewDialog(true)}
                     disabled={ceaBalance <= 0 || isPlacingSwap || orderbook.length === 0}
-                    className="mt-3 px-8 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:from-navy-600 disabled:to-navy-600 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 transition-all duration-200"
+                    className="mt-3 px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 disabled:from-navy-600 disabled:to-navy-600 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all duration-200"
                   >
                     SWAP
                   </button>
@@ -525,7 +525,7 @@ export function CeaSwapMarketPage() {
                     <div className="text-amber-400 font-bold font-mono">{formatNumber(ceaBalance, 0)}</div>
                     <div className="text-xs text-navy-500 dark:text-navy-500">CEA</div>
                   </div>
-                  <ArrowRight className="w-8 h-8 text-violet-500" />
+                  <ArrowRight className="w-8 h-8 text-emerald-500" />
                   <div className="text-center">
                     <div className="text-3xl mb-1">🇪🇺</div>
                     <div className="text-blue-400 font-bold font-mono">{formatNumber(netEua, 0)}</div>
@@ -548,7 +548,7 @@ export function CeaSwapMarketPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">Platform fee</span>
-                  <span className="text-violet-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
+                  <span className="text-emerald-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
                 </div>
                 <div className="border-t border-navy-200 dark:border-navy-700 pt-2">
                   <div className="flex justify-between">
@@ -562,12 +562,12 @@ export function CeaSwapMarketPage() {
                 </div>
               </div>
 
-              <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-4 mb-6">
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-6">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-violet-200">
+                  <AlertTriangle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-emerald-200">
                     <p className="font-medium mb-1">Important:</p>
-                    <ul className="space-y-1 text-violet-200/80">
+                    <ul className="space-y-1 text-emerald-200/80">
                       <li>• CEA transferred immediately to counterparty</li>
                       <li>• EUA delivery: 10-14 business days</li>
                       <li>• EUA delivered to your EU ETS registry account</li>
@@ -591,7 +591,7 @@ export function CeaSwapMarketPage() {
                 </button>
                 <button
                   onClick={handleContinueToFinal}
-                  className="flex-1 py-3 rounded-lg bg-violet-500 text-white font-semibold hover:bg-violet-400 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
                 >
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
@@ -633,7 +633,7 @@ export function CeaSwapMarketPage() {
                     <div className="text-amber-400 font-bold font-mono text-xl">{formatNumber(ceaBalance, 0)}</div>
                     <div className="text-navy-500 dark:text-navy-500 text-sm">CEA (China ETS)</div>
                   </div>
-                  <div className="text-violet-500">
+                  <div className="text-emerald-500">
                     <ArrowRight className="w-10 h-10" />
                   </div>
                   <div className="text-center">
@@ -650,7 +650,7 @@ export function CeaSwapMarketPage() {
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-navy-200 dark:border-navy-600 bg-navy-100 dark:bg-navy-800 text-violet-500 focus:ring-violet-500"
+                  className="mt-1 w-4 h-4 rounded border-navy-200 dark:border-navy-600 bg-navy-100 dark:bg-navy-800 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-navy-600 dark:text-navy-400">
                   I understand that my full CEA balance will be transferred, EUA delivery takes 10-14 business days,
@@ -761,7 +761,7 @@ export function CeaSwapMarketPage() {
                 </button>
                 <button
                   onClick={() => window.location.href = '/dashboard'}
-                  className="flex-1 py-3 rounded-lg bg-violet-500 text-white font-semibold hover:bg-violet-400 transition-colors"
+                  className="flex-1 py-3 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-400 transition-colors"
                 >
                   Go to Dashboard
                 </button>

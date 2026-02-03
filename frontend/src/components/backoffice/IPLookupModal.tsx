@@ -42,7 +42,7 @@ export const IPLookupModal: FC<IPLookupModalProps> = memo(({
       >
         <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
           <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-teal-500" />
+            <MapPin className="w-5 h-5 text-emerald-500" />
             IP Address Lookup
           </h3>
           <button
@@ -55,7 +55,7 @@ export const IPLookupModal: FC<IPLookupModalProps> = memo(({
         <div className="p-4">
           {ipLookupLoading ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-teal-500" />
+              <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
               <span className="ml-2 text-navy-600 dark:text-navy-300">Looking up IP...</span>
             </div>
           ) : ipLookupData ? (

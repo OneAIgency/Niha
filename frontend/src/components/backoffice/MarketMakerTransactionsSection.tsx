@@ -384,7 +384,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
                   placeholder="0"
                   min="0"
                   step="1"
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   autoFocus
                 />
               </div>
@@ -399,7 +399,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add transaction notes..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
               </div>
 

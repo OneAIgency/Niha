@@ -197,8 +197,8 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <Bot className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
                 Create Market Maker
@@ -224,7 +224,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., MM-Alpha"
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 autoFocus
               />
             </div>
@@ -239,7 +239,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="market-maker@marketmaker.niha.internal"
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                 Auto-generated from name. You can edit if needed.
@@ -256,7 +256,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the market maker strategy..."
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
               />
             </div>
 
@@ -281,7 +281,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   setCeaBalance('');
                   setEuaBalance('');
                 }}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="CEA_CASH">CEA Cash (Trade CEA with EUR)</option>
                 <option value="SWAP">Swap (Exchange CEA↔EUA)</option>
@@ -303,7 +303,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   setCeaBalance('');
                   setEuaBalance('');
                 }}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {market === 'CEA_CASH' ? (
                   <>

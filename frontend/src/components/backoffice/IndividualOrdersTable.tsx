@@ -153,7 +153,7 @@ export function IndividualOrdersTable({
     if (order.orderType === 'market_maker' && order.marketMakerName) {
       return {
         name: order.marketMakerName,
-        icon: <Landmark className="w-3 h-3 inline mr-1 text-purple-500" />,
+        icon: <Landmark className="w-3 h-3 inline mr-1 text-navy-500" />,
         title: `Market Maker: ${order.marketMakerName}`,
       };
     } else if (order.entityName) {
@@ -354,7 +354,7 @@ export function IndividualOrdersTable({
             <Building2 className="w-3 h-3 inline text-blue-500" />
             <span className="ml-0.5">{orders.filter(o => o.orderType === 'entity').length}</span>
             {' '}
-            <Landmark className="w-3 h-3 inline text-purple-500" />
+            <Landmark className="w-3 h-3 inline text-navy-500" />
             <span className="ml-0.5">{orders.filter(o => o.orderType === 'market_maker').length}</span>
           </span>
           <span className="flex items-center gap-1">

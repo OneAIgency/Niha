@@ -156,7 +156,7 @@ export function FailedActionsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+      <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/20 dark:to-amber-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">

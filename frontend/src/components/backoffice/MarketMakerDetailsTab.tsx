@@ -125,7 +125,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
 
@@ -138,7 +138,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
         />
       </div>
 
@@ -168,8 +168,8 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
 
       {/* Ticket ID Display */}
       {ticketId && (
-        <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <Ticket className="w-4 h-4" />
             <span className="text-sm font-medium">Ticket ID:</span>
             <code className="text-xs bg-white dark:bg-navy-900 px-2 py-1 rounded font-mono">

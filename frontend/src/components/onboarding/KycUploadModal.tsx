@@ -96,9 +96,9 @@ const categories = [
     id: 'representative',
     name: 'Representative Documents',
     icon: User,
-    bgClass: 'bg-violet-500/10',
-    borderClass: 'border-violet-500',
-    iconClass: 'text-violet-500',
+    bgClass: 'bg-navy-500/10',
+    borderClass: 'border-navy-500',
+    iconClass: 'text-navy-500',
   },
   {
     id: 'optional',
@@ -266,11 +266,11 @@ export default function KycUploadModal({
                   <span className="text-navy-400">
                     {uploadedRequiredCount} of {requiredDocs.length} required documents
                   </span>
-                  <span className="text-teal-300">{progress}%</span>
+                  <span className="text-emerald-300">{progress}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-navy-600">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-teal-500 to-teal-300"
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.5 }}
@@ -338,7 +338,7 @@ export default function KycUploadModal({
               <div className="flex-1 p-6 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
                   </div>
                 ) : activeCategoryData && (
                   <>
@@ -389,7 +389,7 @@ export default function KycUploadModal({
                 disabled={!canSubmit || submitting}
                 className={`px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2 ${
                   canSubmit && !submitting
-                    ? 'bg-gradient-to-br from-teal-500 to-blue-600 cursor-pointer opacity-100'
+                    ? 'bg-gradient-to-br from-emerald-500 to-blue-600 cursor-pointer opacity-100'
                     : 'bg-navy-600 cursor-not-allowed opacity-50'
                 }`}
               >

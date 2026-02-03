@@ -982,8 +982,8 @@ export function CreateLiquidityPage() {
           {/* Create Liquidity Section */}
           <div className="content_wrapper_last p-5">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <h3 className="text-sm font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">

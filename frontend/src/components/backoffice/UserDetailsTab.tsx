@@ -85,7 +85,7 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
           {/* User Info */}
           <Card>
             <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-purple-500" />
+              <Activity className="w-5 h-5 text-navy-500" />
               User Details
             </h2>
             <div className="flex items-center gap-4 p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">

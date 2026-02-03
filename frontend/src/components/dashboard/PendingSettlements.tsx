@@ -55,9 +55,9 @@ export function PendingSettlements() {
       case 'TRANSFER_INITIATED':
         return <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
       case 'IN_TRANSIT':
-        return <Truck className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+        return <Truck className="w-4 h-4 text-navy-600 dark:text-navy-400" />;
       case 'AT_CUSTODY':
-        return <Package className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />;
+        return <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
       default:
         return <Clock className="w-4 h-4 text-navy-600 dark:text-navy-400" />;
     }
@@ -74,9 +74,9 @@ export function PendingSettlements() {
       case 'TRANSFER_INITIATED':
         return 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30';
       case 'IN_TRANSIT':
-        return 'text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30';
+        return 'text-navy-700 dark:text-navy-400 bg-navy-100 dark:bg-navy-500/20 border-navy-300 dark:border-navy-500/30';
       case 'AT_CUSTODY':
-        return 'text-cyan-700 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-500/20 border-cyan-300 dark:border-cyan-500/30';
+        return 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30';
       default:
         return 'text-navy-700 dark:text-navy-400 bg-navy-100 dark:bg-navy-500/20 border-navy-300 dark:border-navy-500/30';
     }

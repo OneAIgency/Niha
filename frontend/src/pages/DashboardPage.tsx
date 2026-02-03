@@ -121,11 +121,11 @@ const transactionColumns: Column<Transaction>[] = [
     width: '100px',
     render: (value) => {
       const colors: Record<string, string> = {
-        SWAP: 'text-violet-400 bg-violet-500/20',
+        SWAP: 'text-navy-400 bg-navy-500/20',
         BUY: 'text-emerald-400 bg-emerald-500/20',
         SELL: 'text-red-400 bg-red-500/20',
         DEPOSIT: 'text-blue-400 bg-blue-500/20',
-        WITHDRAW: 'text-orange-400 bg-orange-500/20',
+        WITHDRAW: 'text-amber-400 bg-amber-500/20',
         SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
       };
       const typeKey = typeof value === 'string' ? value : '';
@@ -802,7 +802,7 @@ export function DashboardPage() {
                   </div>
                   {portfolio.ceaLocked > 0 && (
                     <div className="flex items-center gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded flex items-center gap-1">
+                      <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 rounded flex items-center gap-1">
                         <ArrowRightLeft className="w-3 h-3" />
                         {formatNumber(portfolio.ceaLocked)} in swap
                       </span>
@@ -1015,7 +1015,7 @@ export function DashboardPage() {
                 <Activity className="w-5 h-5 text-navy-400" />
                 <h2 className="font-semibold text-white">Active Orders</h2>
                 {activeOrders.length > 0 && (
-                  <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs rounded-full">
+                  <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 text-xs rounded-full">
                     {activeOrders.length}
                   </span>
                 )}
@@ -1185,10 +1185,10 @@ export function DashboardPage() {
               emptyMessage="No orders found. Place your first order in CEA Cash."
               className="border-none rounded-none"
               getRowClassName={(row: Transaction) => {
-                // Style swap transactions with violet accent to distinguish from regular BUY/SELL orders
+                // Style swap transactions with navy accent to distinguish from regular BUY/SELL orders
                 // Matches the SWAP badge color scheme used elsewhere in the application
                 if (row.type === 'SWAP') {
-                  return 'bg-violet-500/5 border-l-4 border-l-violet-500/50 hover:bg-violet-500/10';
+                  return 'bg-navy-500/5 border-l-4 border-l-navy-500/50 hover:bg-navy-500/10';
                 }
                 return '';
               }}

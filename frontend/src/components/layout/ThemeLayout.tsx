@@ -21,7 +21,6 @@ export function ThemeLayout() {
   return (
     <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
       <Subheader
-        sticky
         icon={<Palette className="w-5 h-5 text-amber-500" />}
         title="Theme"
         description="Design system showcase"

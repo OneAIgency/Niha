@@ -58,7 +58,7 @@ export function LiquidityPreviewModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-navy-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-lg flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -82,7 +82,7 @@ export function LiquidityPreviewModal({
         <div className="p-4 overflow-y-auto max-h-[calc(85vh-140px)]">
           {!preview ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+              <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
               <span className="ml-2 text-sm text-navy-400">Loading preview...</span>
             </div>
           ) : (
@@ -259,7 +259,7 @@ export function LiquidityPreviewModal({
             whileTap={{ scale: 0.98 }}
             onClick={handleConfirm}
             disabled={!preview?.can_create || isSubmitting || isCreating}
-            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSubmitting || isCreating ? (
               <>

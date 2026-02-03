@@ -398,7 +398,7 @@ Special shadows for interactive elements and brand colors.
 
 ### Page Section Headers (Subheader & SubSubHeader)
 
-**Single source of truth:** bar styling and sticky behavior are defined in `frontend/src/styles/design-tokens.css`; components live in `frontend/src/components/common/` (`Subheader.tsx`, `SubSubHeader.tsx`, `SubheaderNavButton.tsx`). Use these everywhere for a unified page-section header theme.
+**Single source of truth:** bar styling and fixed positioning are defined in `frontend/src/styles/design-tokens.css`; components live in `frontend/src/components/common/` (`Subheader.tsx`, `SubSubHeader.tsx`, `SubheaderNavButton.tsx`). Use these everywhere for a unified page-section header theme. The subheader bar is **fixed** below the main header app-wide.
 
 #### Purpose
 
@@ -413,31 +413,31 @@ Special shadows for interactive elements and brand colors.
 |---------------|--------|
 | `--color-subheader-bg`, `--color-subheader-border`, `--subheader-padding-x`, `--subheader-padding-y` | Subheader bar background, border, padding |
 | `--color-subsubheader-bg`, `--color-subsubheader-border`, `--subsubheader-padding-x`, `--subsubheader-padding-y`, `--subsubheader-min-height` | SubSubHeader bar |
-| `.subheader-bar` | Applied by `Subheader` component – do not override in pages |
+| `.subheader-bar` | Applied by `Subheader` component – fixed below main header; do not override in pages |
+| `.subheader-bar-spacer` | Spacer div rendered by `Subheader` so content starts below the fixed bar |
 | `.subsubheader-bar` | Applied by `SubSubHeader` component |
-| `.page-section-header-sticky` | Sticky wrapper: `position: sticky; top: 0; z-index: var(--z-elevated)` – use when headers must stay fixed on scroll |
+| `.page-section-header-sticky` | Optional sticky wrapper for Subheader + SubSubHeader (e.g. BackofficeLayout) |
 
 **Nav buttons (inside Subheader / SubSubHeader):** see [Subheader nav buttons](#subheader-nav-buttons-subpage-navigation) and [SubSubHeader nav buttons](#subsubheader-nav-buttons-child-level-under-subheader) below.
 
-#### Sticky behavior
+#### Fixed subheader bar
 
-- **Scrollable pages:** Use `sticky` on `Subheader` (`<Subheader sticky ...>`) **or** wrap Subheader + SubSubHeader in a div with class `page-section-header-sticky` so both bars stay fixed together (e.g. BackofficeLayout).
-- **Single Subheader:** Set `sticky` on the component (ThemeLayout, Dashboard, etc.).
-- **Subheader + SubSubHeader:** Prefer one wrapper with `page-section-header-sticky` around both (BackofficeLayout).
+- The subheader bar (`.subheader-bar`) is **fixed** below the main header on all pages: `position: fixed; top: 4rem` (mobile) / `top: 5rem` (desktop); `Subheader` renders a spacer (`.subheader-bar-spacer`) so content is not hidden under the bar.
+- **Subheader + SubSubHeader:** BackofficeLayout wraps both in `page-section-header-sticky` so the sub-subheader can stay with the subheader when needed.
 
 #### Usage across the app
 
-| Location | Subheader | SubSubHeader | Sticky |
-|----------|-----------|--------------|--------|
-| BackofficeLayout | Yes (Backoffice title + nav) | Yes (when `subSubHeaderLeft` / `subSubHeader` passed) | Wrapper `page-section-header-sticky` |
-| ThemeLayout | Yes (Theme + Sample/Containers) | No | `Subheader sticky` |
-| DashboardPage, CashMarketPage, CeaSwapMarketPage, FundingPage, ProfilePage, SettingsPage | Yes | No | Optional per page |
-| BackofficeOnboardingPage, MarketOrdersPage, etc. | Via BackofficeLayout | Via BackofficeLayout props | Via layout |
+| Location | Subheader | SubSubHeader |
+|----------|-----------|--------------|
+| BackofficeLayout | Yes (Backoffice title + nav) | Yes (when `subSubHeaderLeft` / `subSubHeader` passed) |
+| ThemeLayout | Yes (Theme + Sample/Containers) | No |
+| DashboardPage, CashMarketPage, CeaSwapMarketPage, FundingPage, ProfilePage, SettingsPage | Yes | No |
+| BackofficeOnboardingPage, MarketOrdersPage, etc. | Via BackofficeLayout | Via BackofficeLayout props |
 
 #### Example
 
 ```tsx
-// Layout with Subheader + optional SubSubHeader (both sticky)
+// Layout with Subheader + optional SubSubHeader (BackofficeLayout)
 <div className="page-section-header-sticky">
   <Subheader icon={...} title="Backoffice" description={...}>
     <nav>...</nav>
@@ -445,8 +445,8 @@ Special shadows for interactive elements and brand colors.
   {showSubSub && <SubSubHeader left={...}>{actions}</SubSubHeader>}
 </div>
 
-// Single Subheader, sticky
-<Subheader sticky icon={...} title="Theme" description="Design system showcase" />
+// Single Subheader (fixed bar is applied automatically)
+<Subheader icon={...} title="Theme" description="Design system showcase" />
 ```
 
 To change the look app-wide, edit the CSS variables and classes in `design-tokens.css`; do not hard-code bar colors or padding in pages.

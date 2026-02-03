@@ -66,9 +66,9 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
       case 'TRANSFER_INITIATED':
         return 'text-blue-400 bg-blue-500/20';
       case 'IN_TRANSIT':
-        return 'text-purple-400 bg-purple-500/20';
+        return 'text-navy-400 bg-navy-500/20';
       case 'AT_CUSTODY':
-        return 'text-cyan-400 bg-cyan-500/20';
+        return 'text-blue-400 bg-blue-500/20';
       default:
         return 'text-navy-600 dark:text-navy-400 bg-navy-500/20';
     }

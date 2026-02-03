@@ -63,7 +63,7 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'details'
-                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                     : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
                 )}
               >
@@ -74,7 +74,7 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'transactions'
-                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                     : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
                 )}
               >
@@ -85,7 +85,7 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'autotrade'
-                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                     : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
                 )}
               >

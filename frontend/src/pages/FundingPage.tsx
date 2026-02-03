@@ -234,7 +234,7 @@ export function FundingPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
   }
@@ -244,10 +244,10 @@ export function FundingPage() {
       {/* Sticky header area following theme pattern */}
       <div className="page-section-header-sticky">
         <Subheader
-          icon={<Banknote className="w-5 h-5 text-teal-400" />}
+          icon={<Banknote className="w-5 h-5 text-emerald-400" />}
           title="Fund Your Account"
           description="Wire transfer funds to start trading on the Carbon Market"
-          iconBg="bg-teal-500/20"
+          iconBg="bg-emerald-500/20"
         />
 
         <SubSubHeader
@@ -294,7 +294,7 @@ export function FundingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Card className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border-emerald-500/30">
+                <Card className="bg-gradient-to-r from-emerald-900/30 to-emerald-900/30 border-emerald-500/30">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-emerald-400">Current Balance</p>
@@ -364,7 +364,7 @@ export function FundingPage() {
                           {deposit.ticketId && (
                             <div className="p-4 bg-navy-800/50 rounded-lg col-span-2">
                               <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Ticket ID</p>
-                              <p className="text-teal-400 font-mono text-lg">{deposit.ticketId}</p>
+                              <p className="text-emerald-400 font-mono text-lg">{deposit.ticketId}</p>
                             </div>
                           )}
                         </div>
@@ -508,7 +508,7 @@ export function FundingPage() {
               >
                 <Card>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-                    <CreditCard className="w-5 h-5 text-teal-400" />
+                    <CreditCard className="w-5 h-5 text-emerald-400" />
                     Report Wire Transfer
                   </h2>
 
@@ -523,7 +523,7 @@ export function FundingPage() {
                         onChange={handleAmountChange}
                         placeholder="Enter amount (e.g., 999,000)"
                         inputMode="decimal"
-                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         required
                       />
                     </div>
@@ -535,7 +535,7 @@ export function FundingPage() {
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       >
                         {CURRENCIES.map((c) => (
                           <option key={c} value={c}>{c}</option>
@@ -553,7 +553,7 @@ export function FundingPage() {
                         onChange={(e) => setWireReference(e.target.value)}
                         placeholder="Bank wire reference number"
                         maxLength={100}
-                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
 
@@ -595,7 +595,7 @@ export function FundingPage() {
               >
                 <Card>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-                    <Clock className="w-5 h-5 text-purple-400" />
+                    <Clock className="w-5 h-5 text-navy-400" />
                     Deposit History
                   </h2>
 
@@ -634,7 +634,7 @@ export function FundingPage() {
                                       : 'Amount pending'}
                                 </p>
                                 {deposit.ticketId && (
-                                  <p className="text-sm text-teal-400 font-mono">
+                                  <p className="text-sm text-emerald-400 font-mono">
                                     Ticket: {deposit.ticketId}
                                   </p>
                                 )}

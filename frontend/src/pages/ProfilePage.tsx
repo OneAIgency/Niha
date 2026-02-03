@@ -682,7 +682,7 @@ export function ProfilePage() {
                         <span className="text-blue-500 font-medium">
                           {formatNumberWithSeparators(balances.cea, 'en-US', 0)} CEA
                         </span>
-                        <span className="text-purple-500 font-medium">
+                        <span className="text-navy-500 font-medium">
                           {formatNumberWithSeparators(balances.eua, 'en-US', 0)} EUA
                         </span>
                       </div>
@@ -712,7 +712,7 @@ export function ProfilePage() {
           >
             <Card>
               <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-500" />
+                <Shield className="w-5 h-5 text-navy-500" />
                 Security
               </h2>
 

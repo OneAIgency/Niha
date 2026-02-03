@@ -114,7 +114,7 @@ export function LoggingOverview() {
             <span className="text-sm font-medium text-navy-600 dark:text-navy-400">
               Success Rate
             </span>
-            <TrendingUp className="w-5 h-5 text-purple-500" />
+            <TrendingUp className="w-5 h-5 text-navy-500" />
           </div>
           <div className="text-2xl font-bold text-navy-900 dark:text-white">
             {successRate}%
@@ -146,7 +146,7 @@ export function LoggingOverview() {
                     </div>
                     <div className="h-2 bg-navy-100 dark:bg-navy-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-blue-500 to-navy-500 rounded-full transition-all duration-300"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

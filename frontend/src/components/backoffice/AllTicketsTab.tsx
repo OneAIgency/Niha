@@ -159,7 +159,7 @@ export function AllTicketsTab() {
       width: '100px',
       render: (value) =>
         value ? (
-          <code className="text-xs font-mono text-purple-600 dark:text-purple-400">
+          <code className="text-xs font-mono text-navy-600 dark:text-navy-400">
             {String(value).substring(0, 8)}...
           </code>
         ) : (

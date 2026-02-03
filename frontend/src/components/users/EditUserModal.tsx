@@ -68,7 +68,7 @@ export function EditUserModal({
             <div className={cn(
               'w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl',
               user.role === 'ADMIN'
-                ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                ? 'bg-gradient-to-br from-navy-500 to-navy-600'
                 : user.role === 'MM'
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600'
                   : 'bg-gradient-to-br from-amber-500 to-amber-600'

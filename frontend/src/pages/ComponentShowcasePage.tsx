@@ -429,8 +429,8 @@ export function ComponentShowcasePage() {
                     trend={{ value: -1.2, direction: 'down' }}
                   />
                   <StatCard
-                    icon={<Clock className="w-6 h-6 text-purple-500" />}
-                    iconColor="purple"
+                    icon={<Clock className="w-6 h-6 text-navy-500" />}
+                    iconColor="navy"
                     title="Pending"
                     value="3"
                     subtitle="orders"

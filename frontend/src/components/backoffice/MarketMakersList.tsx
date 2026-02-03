@@ -88,7 +88,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
         // Compute market from mmType
         const market = MARKET_MAKER_TYPES[row.mmType].market;
         const marketInfo = MARKETS[market];
-        const color = market === 'CEA_CASH' ? 'purple' : 'blue';
+        const color = market === 'CEA_CASH' ? 'emerald' : 'blue';
         return (
           <Badge variant={color}>
             {marketInfo.name}
@@ -289,23 +289,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             return ceaCashMMs.length > 0 ? (
               <Card className="overflow-hidden">
                 {/* Header with gradient accent */}
-                <div className="px-5 py-4 border-b border-purple-200 dark:border-purple-800/50 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent">
+                <div className="px-5 py-4 border-b border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.CEA_CASH.name}</span>
-                          <Badge variant="purple" className="text-xs">{ceaCashMMs.length} MMs</Badge>
+                          <Badge variant="emerald" className="text-xs">{ceaCashMMs.length} MMs</Badge>
                         </div>
                         <div className="text-xs text-navy-500 dark:text-navy-400">Available Liquidity</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
-                      <div className="text-2xl font-bold font-mono text-purple-600 dark:text-purple-400">
+                      <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(totalEUR + ceaValueEur, 'EUR')}
                       </div>
                     </div>

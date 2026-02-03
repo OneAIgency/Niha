@@ -5,7 +5,7 @@ import { Skeleton } from './Skeleton';
 
 interface StatCardProps {
   icon?: ReactNode;
-  iconColor?: 'emerald' | 'blue' | 'amber' | 'purple' | 'red';
+  iconColor?: 'emerald' | 'blue' | 'amber' | 'navy' | 'red';
   title: string;
   value: string | number;
   valueColor?: 'default' | 'amber' | 'blue' | 'emerald' | 'red';
@@ -24,7 +24,7 @@ const iconColorStyles = {
   emerald: 'stat-card-icon-emerald',
   blue: 'stat-card-icon-blue',
   amber: 'stat-card-icon-amber',
-  purple: 'stat-card-icon-purple',
+  navy: 'stat-card-icon-navy',
   red: 'stat-card-icon-red',
 };
 

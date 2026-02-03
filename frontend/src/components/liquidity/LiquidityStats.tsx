@@ -293,27 +293,27 @@ function SwapMarketStatsContent({
       {/* Ratios */}
       <div className="grid grid-cols-2 gap-3">
         {/* Best Ratio in Market */}
-        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-          <span className="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wide block mb-1">
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wide block mb-1">
             Best Market Ratio
           </span>
-          <p className="text-lg font-bold text-purple-900 dark:text-purple-100">
+          <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
             {formatRatio(stats?.bestRatio || 0)}
           </p>
-          <p className="text-xs text-purple-600 dark:text-purple-400">
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">
             EUA → CEA
           </p>
         </div>
 
         {/* Scrapped Ratio */}
-        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-          <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300 uppercase tracking-wide block mb-1">
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          <span className="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide block mb-1">
             Scrapped Ratio
           </span>
-          <p className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
+          <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
             {formatRatio(stats?.scrappedRatio || 0)}
           </p>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400">
+          <p className="text-xs text-blue-600 dark:text-blue-400">
             From live prices
           </p>
         </div>

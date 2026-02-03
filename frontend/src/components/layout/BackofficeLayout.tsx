@@ -83,8 +83,8 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
   },
   '/backoffice/fee-settings': {
     icon: Percent,
-    iconBg: 'bg-purple-500/20',
-    iconColor: 'text-purple-500',
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
     description: 'Configure trading fees per market and per client',
   },
   '/backoffice/logging': {
