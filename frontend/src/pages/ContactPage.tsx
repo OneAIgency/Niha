@@ -7,8 +7,8 @@ import { isValidEmail, isCorporateEmail, sanitizeFormData } from '../utils';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
-    entity_name: '',
-    contact_email: '',
+    entityName: '',
+    contactEmail: '',
     position: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -18,16 +18,16 @@ export function ContactPage() {
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.entity_name.trim()) {
-      newErrors.entity_name = 'Entity name is required';
+    if (!formData.entityName.trim()) {
+      newErrors.entityName = 'Entity name is required';
     }
 
-    if (!formData.contact_email.trim()) {
-      newErrors.contact_email = 'Email is required';
-    } else if (!isValidEmail(formData.contact_email)) {
-      newErrors.contact_email = 'Please enter a valid email';
-    } else if (!isCorporateEmail(formData.contact_email)) {
-      newErrors.contact_email = 'Please use a corporate email address';
+    if (!formData.contactEmail.trim()) {
+      newErrors.contactEmail = 'Email is required';
+    } else if (!isValidEmail(formData.contactEmail)) {
+      newErrors.contactEmail = 'Please enter a valid email';
+    } else if (!isCorporateEmail(formData.contactEmail)) {
+      newErrors.contactEmail = 'Please use a corporate email address';
     }
 
     setErrors(newErrors);
@@ -72,7 +72,7 @@ export function ContactPage() {
               your request and contact you within 24-48 hours.
             </p>
             <p className="text-sm text-navy-500">
-              Check your email ({formData.contact_email}) for a confirmation
+              Check your email ({formData.contactEmail}) for a confirmation
               message.
             </p>
           </Card>
@@ -157,11 +157,11 @@ export function ContactPage() {
                   label="Entity Name"
                   placeholder="Your company or organization name"
                   icon={<Building2 className="w-5 h-5" />}
-                  value={formData.entity_name}
+                  value={formData.entityName}
                   onChange={(e) =>
-                    setFormData({ ...formData, entity_name: e.target.value })
+                    setFormData({ ...formData, entityName: e.target.value })
                   }
-                  error={errors.entity_name}
+                  error={errors.entityName}
                 />
 
                 <Input
@@ -169,11 +169,11 @@ export function ContactPage() {
                   type="email"
                   placeholder="you@company.com"
                   icon={<Mail className="w-5 h-5" />}
-                  value={formData.contact_email}
+                  value={formData.contactEmail}
                   onChange={(e) =>
-                    setFormData({ ...formData, contact_email: e.target.value })
+                    setFormData({ ...formData, contactEmail: e.target.value })
                   }
-                  error={errors.contact_email}
+                  error={errors.contactEmail}
                 />
 
                 <Input

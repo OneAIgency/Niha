@@ -49,28 +49,29 @@ const sections: { key: SectionKey; label: string; icon: typeof Banknote }[] = [
 ];
 
 interface FundingInstructions {
-  bank_name: string;
-  account_name: string;
-  account_number?: string;
+  bankName: string;
+  bankAddress?: string;
+  accountName: string;
+  accountNumber?: string;
   iban?: string;
-  swift_code?: string;
-  swift_bic?: string;
-  routing_number?: string;
+  swiftCode?: string;
+  swiftBic?: string;
+  routingNumber?: string;
   currency?: string;
-  reference_format?: string;
-  reference_instructions?: string;
-  supported_currencies?: string[];
-  processing_time?: string;
+  referenceFormat?: string;
+  referenceInstructions?: string;
+  supportedCurrencies?: string[];
+  processingTime?: string;
   notes?: string;
 }
 
 interface EntityBalance {
-  entity_id: string;
-  entity_name: string;
-  balance_amount: number;
-  balance_currency?: string | null;
-  total_deposited: number;
-  deposit_count: number;
+  entityId: string;
+  entityName: string;
+  balanceAmount: number;
+  balanceCurrency?: string | null;
+  totalDeposited: number;
+  depositCount: number;
 }
 
 const CURRENCIES = ['EUR', 'USD', 'CNY', 'HKD'];
@@ -287,7 +288,7 @@ export function FundingPage() {
         {activeSection === 'funding' && (
           <div className="page-container py-8 space-y-6">
             {/* Current Balance (if any) */}
-            {balance && balance.balance_amount > 0 && (
+            {balance && balance.balanceAmount > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -298,7 +299,7 @@ export function FundingPage() {
                     <div>
                       <p className="text-sm text-emerald-400">Current Balance</p>
                       <p className="text-3xl font-bold text-white">
-                        {formatCurrency(balance.balance_amount)} {balance.balance_currency}
+                        {formatCurrency(balance.balanceAmount)} {balance.balanceCurrency}
                       </p>
                     </div>
                     <CheckCircle className="w-12 h-12 text-emerald-400" />
@@ -332,12 +333,12 @@ export function FundingPage() {
                         <div className="text-center mb-6">
                           <p className="text-sm text-blue-400 uppercase tracking-wider mb-2">Transfer Amount</p>
                           <p className="text-4xl font-bold text-white">
-                            {(deposit.reportedAmount ?? deposit.reported_amount)
-                              ? `${formatCurrency(deposit.reportedAmount ?? deposit.reported_amount ?? 0)}`
+                            {deposit.reportedAmount
+                              ? `${formatCurrency(deposit.reportedAmount)}`
                               : 'Amount pending'}
                           </p>
                           <p className="text-xl text-blue-400 font-medium">
-                            {deposit.reportedCurrency ?? deposit.reported_currency ?? 'EUR'}
+                            {deposit.reportedCurrency ?? 'EUR'}
                           </p>
                         </div>
 
@@ -354,16 +355,16 @@ export function FundingPage() {
                         <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="p-4 bg-navy-800/50 rounded-lg">
                             <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Reference</p>
-                            <p className="text-white font-mono text-lg">{deposit.bankReference ?? deposit.bank_reference ?? 'N/A'}</p>
+                            <p className="text-white font-mono text-lg">{deposit.bankReference ?? 'N/A'}</p>
                           </div>
                           <div className="p-4 bg-navy-800/50 rounded-lg">
                             <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Reported</p>
-                            <p className="text-white text-lg">{(deposit.reportedAt ?? deposit.reported_at) ? formatRelativeTime(deposit.reportedAt ?? deposit.reported_at ?? '') : 'N/A'}</p>
+                            <p className="text-white text-lg">{deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : 'N/A'}</p>
                           </div>
-                          {(deposit.ticketId ?? deposit.ticket_id) && (
+                          {deposit.ticketId && (
                             <div className="p-4 bg-navy-800/50 rounded-lg col-span-2">
                               <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Ticket ID</p>
-                              <p className="text-teal-400 font-mono text-lg">{deposit.ticketId ?? deposit.ticket_id}</p>
+                              <p className="text-teal-400 font-mono text-lg">{deposit.ticketId}</p>
                             </div>
                           )}
                         </div>
@@ -417,13 +418,36 @@ export function FundingPage() {
                     <div className="space-y-4">
                       <div className="p-3 bg-navy-800/50 rounded-lg">
                         <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Bank Name</p>
-                        <p className="text-white font-medium">{instructions.bank_name}</p>
+                        <p className="text-white font-medium">{instructions.bankName}</p>
                       </div>
 
                       <div className="p-3 bg-navy-800/50 rounded-lg">
                         <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Account Name</p>
-                        <p className="text-white font-medium">{instructions.account_name}</p>
+                        <p className="text-white font-medium">{instructions.accountName}</p>
                       </div>
+
+                      {instructions.accountNumber && (
+                        <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Account Number</p>
+                            <p className="text-white font-mono">{instructions.accountNumber}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(instructions.accountNumber!, 'account')}
+                          >
+                            {copied === 'account' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      )}
+
+                      {instructions.bankAddress && (
+                        <div className="p-3 bg-navy-800/50 rounded-lg">
+                          <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Bank Address</p>
+                          <p className="text-white font-medium">{instructions.bankAddress}</p>
+                        </div>
+                      )}
 
                       {instructions.iban && (
                         <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
@@ -441,16 +465,16 @@ export function FundingPage() {
                         </div>
                       )}
 
-                      {(instructions.swift_bic || instructions.swift_code) && (
+                      {(instructions.swiftBic || instructions.swiftCode) && (
                         <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
                           <div>
                             <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">SWIFT/BIC</p>
-                            <p className="text-white font-mono">{instructions.swift_bic || instructions.swift_code}</p>
+                            <p className="text-white font-mono">{instructions.swiftBic || instructions.swiftCode}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard((instructions.swift_bic || instructions.swift_code)!, 'swift')}
+                            onClick={() => copyToClipboard((instructions.swiftBic || instructions.swiftCode)!, 'swift')}
                           >
                             {copied === 'swift' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                           </Button>
@@ -462,14 +486,14 @@ export function FundingPage() {
                           <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-amber-200 text-sm font-medium">Important</p>
-                            <p className="text-amber-200/80 text-sm">{instructions.reference_instructions}</p>
+                            <p className="text-amber-200/80 text-sm">{instructions.referenceInstructions}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 text-sm text-navy-400">
                         <Clock className="w-4 h-4" />
-                        <span>Processing: {instructions.processing_time}</span>
+                        <span>Processing: {instructions.processingTime}</span>
                       </div>
                     </div>
                   )}
@@ -605,17 +629,17 @@ export function FundingPage() {
                                 <p className="text-white font-medium">
                                   {['confirmed', 'on_hold', 'cleared'].includes(deposit.status.toLowerCase()) && deposit.amount
                                     ? `${formatCurrency(deposit.amount)} ${deposit.currency}`
-                                    : (deposit.reportedAmount ?? deposit.reported_amount)
-                                      ? `${formatCurrency(deposit.reportedAmount ?? deposit.reported_amount ?? 0)} ${deposit.reportedCurrency ?? deposit.reported_currency}`
+                                    : deposit.reportedAmount
+                                      ? `${formatCurrency(deposit.reportedAmount)} ${deposit.reportedCurrency}`
                                       : 'Amount pending'}
                                 </p>
-                                {(deposit.ticketId ?? deposit.ticket_id) && (
+                                {deposit.ticketId && (
                                   <p className="text-sm text-teal-400 font-mono">
-                                    Ticket: {deposit.ticketId ?? deposit.ticket_id}
+                                    Ticket: {deposit.ticketId}
                                   </p>
                                 )}
                                 <p className="text-sm text-navy-400">
-                                  Ref: {deposit.bankReference ?? deposit.bank_reference ?? 'N/A'}
+                                  Ref: {deposit.bankReference ?? 'N/A'}
                                 </p>
                               </div>
                             </div>
@@ -634,10 +658,10 @@ export function FundingPage() {
 
                           <div className="flex items-center justify-between text-sm text-navy-400 mt-2">
                             <span>
-                              Reported: {(deposit.reportedAt ?? deposit.reported_at) ? formatRelativeTime(deposit.reportedAt ?? deposit.reported_at ?? '') : 'N/A'}
+                              Reported: {deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : 'N/A'}
                             </span>
-                            {(deposit.confirmedAt ?? deposit.confirmed_at) && (
-                              <span>Confirmed: {formatRelativeTime(deposit.confirmedAt ?? deposit.confirmed_at ?? '')}</span>
+                            {deposit.confirmedAt && (
+                              <span>Confirmed: {formatRelativeTime(deposit.confirmedAt)}</span>
                             )}
                           </div>
                           {deposit.notes && (

@@ -109,19 +109,19 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
 
     try {
       const request: WithdrawalRequest = {
-        asset_type: assetType,
+        assetType: assetType,
         amount: parseFloat(amount),
-        client_notes: clientNotes || undefined,
+        clientNotes: clientNotes || undefined,
       };
 
       if (assetType === 'EUR') {
-        request.destination_bank = destinationBank || undefined;
-        request.destination_iban = destinationIban;
-        request.destination_swift = destinationSwift || undefined;
-        request.destination_account_holder = destinationAccountHolder || undefined;
+        request.destinationBank = destinationBank || undefined;
+        request.destinationIban = destinationIban;
+        request.destinationSwift = destinationSwift || undefined;
+        request.destinationAccountHolder = destinationAccountHolder || undefined;
       } else {
-        request.destination_registry = destinationRegistry;
-        request.destination_account_id = destinationAccountId;
+        request.destinationRegistry = destinationRegistry;
+        request.destinationAccountId = destinationAccountId;
       }
 
       const result = await withdrawalApi.requestWithdrawal(request);

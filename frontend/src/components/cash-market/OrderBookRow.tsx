@@ -10,7 +10,7 @@ interface OrderBookRowProps {
 
 export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBookRowProps) {
   const isBid = side === 'bid';
-  const depthPercentage = maxQuantity > 0 ? (level.cumulative_quantity / maxQuantity) * 100 : 0;
+  const depthPercentage = maxQuantity > 0 ? (level.cumulativeQuantity / maxQuantity) * 100 : 0;
 
   // BID (buy) = red, ASK (sell) = green - standard trading convention
   const colorClasses = {
@@ -54,7 +54,7 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
         {isBid ? (
           <>
             <div className="text-right font-mono text-navy-600 dark:text-navy-400 hidden md:block">
-              {formatQuantity(level.cumulative_quantity)}
+              {formatQuantity(level.cumulativeQuantity)}
             </div>
             <div className="text-right font-mono text-navy-900 dark:text-white">
               {formatQuantity(level.quantity)}
@@ -63,13 +63,13 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
               {level.price.toFixed(2)}
             </div>
             <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
-              {level.order_count}
+              {level.orderCount}
             </div>
           </>
         ) : (
           <>
             <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
-              {level.order_count}
+              {level.orderCount}
             </div>
             <div className={`text-left font-mono font-semibold ${colorClasses.price}`}>
               {level.price.toFixed(2)}
@@ -78,7 +78,7 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
               {formatQuantity(level.quantity)}
             </div>
             <div className="text-left font-mono text-navy-600 dark:text-navy-400 hidden md:block">
-              {formatQuantity(level.cumulative_quantity)}
+              {formatQuantity(level.cumulativeQuantity)}
             </div>
           </>
         )}

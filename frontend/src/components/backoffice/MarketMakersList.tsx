@@ -39,16 +39,16 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
           try {
             const data = await getMarketMakerBalances(mm.id);
             balances[mm.id] = {
-              eur: { available: data.eur_available, locked: data.eur_locked, total: data.eur_balance },
-              cea: { available: data.cea_available, locked: data.cea_locked, total: data.cea_balance },
-              eua: { available: data.eua_available, locked: data.eua_locked, total: data.eua_balance },
+              eur: { available: data.eurAvailable, locked: data.eurLocked, total: data.eurBalance },
+              cea: { available: data.ceaAvailable, locked: data.ceaLocked, total: data.ceaBalance },
+              eua: { available: data.euaAvailable, locked: data.euaLocked, total: data.euaBalance },
             };
           } catch (err) {
             // Fallback to total balances if fetch fails
             balances[mm.id] = {
-              eur: { available: mm.eur_balance, locked: 0, total: mm.eur_balance },
-              cea: { available: mm.cea_balance, locked: 0, total: mm.cea_balance },
-              eua: { available: mm.eua_balance, locked: 0, total: mm.eua_balance },
+              eur: { available: mm.eurBalance, locked: 0, total: mm.eurBalance },
+              cea: { available: mm.ceaBalance, locked: 0, total: mm.ceaBalance },
+              eua: { available: mm.euaBalance, locked: 0, total: mm.euaBalance },
             };
           }
         })
@@ -85,8 +85,8 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       width: '15%',
       align: 'center',
       render: (_, row) => {
-        // Compute market from mm_type
-        const market = MARKET_MAKER_TYPES[row.mm_type].market;
+        // Compute market from mmType
+        const market = MARKET_MAKER_TYPES[row.mmType].market;
         const marketInfo = MARKETS[market];
         const color = market === 'CEA_CASH' ? 'purple' : 'blue';
         return (
@@ -97,12 +97,12 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       },
     },
     {
-      key: 'mm_type',
+      key: 'mmType',
       header: 'Role',
       width: '15%',
       align: 'center',
       render: (_, row) => {
-        const info = MARKET_MAKER_TYPES[row.mm_type];
+        const info = MARKET_MAKER_TYPES[row.mmType];
         return (
           <Badge variant={info.color as 'default' | 'success' | 'warning' | 'danger' | 'info'}>
             {info.name}
@@ -120,7 +120,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
         const ceaBal = getBalance(row.id, 'cea');
         const euaBal = getBalance(row.id, 'eua');
 
-        if (row.mm_type === 'CEA_BUYER') {
+        if (row.mmType === 'CEA_BUYER') {
           return (
             <div className="text-right">
               {/* Available - Highlighted */}
@@ -139,7 +139,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               )}
             </div>
           );
-        } else if (row.mm_type === 'CEA_SELLER') {
+        } else if (row.mmType === 'CEA_SELLER') {
           const ceaAvailableValue = ceaBal.available * (prices?.cea?.price || 0);
           const ceaSold = ceaBal.total - ceaBal.available;
           const ceaSoldValue = ceaSold * (prices?.cea?.price || 0);
@@ -192,7 +192,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       },
     },
     {
-      key: 'is_active',
+      key: 'isActive',
       header: 'Status',
       width: '10%',
       align: 'center',
@@ -213,7 +213,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       ),
     },
     {
-      key: 'total_orders',
+      key: 'totalOrders',
       header: 'Orders',
       width: '8%',
       align: 'center',
@@ -265,9 +265,9 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
         <div className="mt-4 space-y-3">
           {/* CEA Cash Market Summary */}
           {(() => {
-            const ceaCashMMs = marketMakers.filter(mm => MARKET_MAKER_TYPES[mm.mm_type].market === 'CEA_CASH');
-            const cashBuyers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_BUYER');
-            const ceaSellers = ceaCashMMs.filter(mm => mm.mm_type === 'CEA_SELLER');
+            const ceaCashMMs = marketMakers.filter(mm => MARKET_MAKER_TYPES[mm.mmType].market === 'CEA_CASH');
+            const cashBuyers = ceaCashMMs.filter(mm => mm.mmType === 'CEA_BUYER');
+            const ceaSellers = ceaCashMMs.filter(mm => mm.mmType === 'CEA_SELLER');
 
             // Compute values using actual balances from detailedBalances state
             let totalEUR = 0;
@@ -348,9 +348,9 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
 
           {/* Swap Market Summary */}
           {(() => {
-            const swapMMs = marketMakers.filter(mm => mm.mm_type === 'EUA_OFFER');
-            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mm_type === 'EUA_OFFER') || 0;
-            const totalEUAAvailable = getTotalAvailable('eua', mm => mm.mm_type === 'EUA_OFFER') || 0;
+            const swapMMs = marketMakers.filter(mm => mm.mmType === 'EUA_OFFER');
+            const totalCEAAvailable = getTotalAvailable('cea', mm => mm.mmType === 'EUA_OFFER') || 0;
+            const totalEUAAvailable = getTotalAvailable('eua', mm => mm.mmType === 'EUA_OFFER') || 0;
             const ceaPriceSwap = prices?.cea?.price || 0;
             const euaPriceSwap = prices?.eua?.price || 0;
             const ceaValue = totalCEAAvailable * ceaPriceSwap;
@@ -435,7 +435,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
 
                       let value = Number(sum) || 0;
                       // Add EUR for CEA_BUYER
-                      if (mm.mm_type === 'CEA_BUYER') {
+                      if (mm.mmType === 'CEA_BUYER') {
                         value += eurBal;
                       }
                       // Add CEA/EUA value for all types

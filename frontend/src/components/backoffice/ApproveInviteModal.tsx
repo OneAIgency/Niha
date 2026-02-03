@@ -14,10 +14,10 @@ interface ApproveInviteModalProps {
 type CreateMode = 'invitation' | 'manual';
 
 function initialFromRequest(r: ContactRequestResponse) {
-  const name = (r.contact_name ?? '').trim();
+  const name = (r.contactName ?? '').trim();
   const parts = name ? name.split(/\s+/) : [];
   return {
-    email: r.contact_email ?? '',
+    email: r.contactEmail ?? '',
     firstName: parts[0] ?? '',
     lastName: parts.slice(1).join(' ') ?? '',
     position: r.position ?? '',
@@ -185,7 +185,7 @@ export function ApproveInviteModal({
             <div className="p-3 bg-navy-50 dark:bg-navy-900/50 rounded-lg">
               <p className="text-sm text-navy-500 dark:text-navy-400">Creating user for:</p>
               <p className="font-semibold text-navy-900 dark:text-white">
-                {contactRequest.entity_name ?? '—'}
+                {contactRequest.entityName ?? '—'}
               </p>
             </div>
 

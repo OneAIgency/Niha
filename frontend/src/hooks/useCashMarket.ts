@@ -60,9 +60,9 @@ export function useCashMarket(
       setRecentTrades(tradesData);
       setMyOrders(ordersData);
       setBalances({
-        eur: balancesData.eur_balance,
-        cea: balancesData.cea_balance,
-        eua: balancesData.eua_balance,
+        eur: balancesData.eurBalance,
+        cea: balancesData.ceaBalance,
+        eua: balancesData.euaBalance,
       });
       setError(null);
     } catch (err) {

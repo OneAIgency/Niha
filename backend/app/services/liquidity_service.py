@@ -5,7 +5,7 @@ import uuid
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
@@ -101,6 +101,9 @@ class LiquidityService:
         Returns market makers of type CEA_SELLER that have available
         certificate balance for the specified type. Used for placing ASK orders.
 
+        Uses bulk queries to calculate total and locked balances for all MMs
+        in just 3 queries (MMs + totals + locked) instead of 1 + N*5.
+
         Args:
             db: Database session
             certificate_type: Type of certificate (CEA or EUA)
@@ -108,18 +111,9 @@ class LiquidityService:
         Returns:
             List of dictionaries with 'mm' (MarketMakerClient) and 'available'
             (Decimal balance) keys, sorted by available balance descending
-
-        Note:
-            This method has a known N+1 query issue. It fetches all asset holder
-            MMs in one query, then separately queries balances for each MM.
-            Future optimization: Refactor balance calculation to use joins.
         """
-        # NOTE: This method has a known N+1 query issue. It fetches all asset holder MMs
-        # in one query, then separately queries balances for each MM. This results in
-        # 1 + (N x 5) queries where N is the number of asset holders.
-        # Future: Refactor balance calculation to use joins for bulk retrieval.
-
-        result = await db.execute(
+        # Query 1: Get all active CEA_SELLER market makers
+        mm_result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
                     MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
@@ -127,20 +121,57 @@ class LiquidityService:
                 )
             )
         )
-        mms = result.scalars().all()
+        mms = mm_result.scalars().all()
 
-        # Get balances for each MM
-        mm_data = []
-        for mm in mms:
-            balances = await MarketMakerService.get_balances(db, mm.id)
-            balance_data = balances.get(certificate_type.value)
-            if not balance_data:
-                logger.warning(
-                    f"No balance data for {certificate_type.value} on MM {mm.id}"
+        if not mms:
+            return []
+
+        mm_ids = [mm.id for mm in mms]
+        mm_map = {mm.id: mm for mm in mms}
+
+        # Query 2: Get total balances from transactions (bulk)
+        totals_result = await db.execute(
+            select(
+                AssetTransaction.market_maker_id,
+                func.coalesce(func.sum(AssetTransaction.amount), 0).label("total"),
+            )
+            .where(
+                and_(
+                    AssetTransaction.market_maker_id.in_(mm_ids),
+                    AssetTransaction.certificate_type == certificate_type,
                 )
-                continue
+            )
+            .group_by(AssetTransaction.market_maker_id)
+        )
+        totals = {row[0]: Decimal(str(row[1])) for row in totals_result.fetchall()}
 
-            available = balance_data.get("available", Decimal("0"))
+        # Query 3: Get locked amounts from active SELL orders (bulk)
+        locked_result = await db.execute(
+            select(
+                Order.market_maker_id,
+                func.coalesce(
+                    func.sum(Order.quantity - Order.filled_quantity), 0
+                ).label("locked"),
+            )
+            .where(
+                and_(
+                    Order.market_maker_id.in_(mm_ids),
+                    Order.certificate_type == certificate_type,
+                    Order.side == OrderSide.SELL,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+            .group_by(Order.market_maker_id)
+        )
+        locked = {row[0]: Decimal(str(row[1])) for row in locked_result.fetchall()}
+
+        # Calculate available balances
+        mm_data = []
+        for mm_id, mm in mm_map.items():
+            total = totals.get(mm_id, Decimal("0"))
+            mm_locked = locked.get(mm_id, Decimal("0"))
+            available = total - mm_locked
+
             if available > 0:
                 mm_data.append({"mm": mm, "available": available})
 

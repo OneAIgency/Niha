@@ -485,10 +485,11 @@ async def get_funding_instructions(current_user: User = Depends(get_current_user
     Get wire transfer instructions for funding.
     """
     return {
-        "bank_name": "Nihao Group International Bank",
-        "account_name": "Nihao Carbon Trading Ltd",
-        "iban": "LU12 3456 7890 1234 5678",
-        "swift_bic": "NIHALU2X",
+        "bank_name": "HSBC Hong Kong",
+        "bank_address": "1 Queen's Road Central, Hong Kong",
+        "account_name": "Italy Nihao Group Limited",
+        "account_number": "053532610838",
+        "swift_bic": "HSBCHKHHHKH",
         "reference_instructions": (
             "Please include your entity name and the reference number "
             "provided after reporting your deposit."

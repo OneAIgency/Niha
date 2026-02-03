@@ -6,8 +6,8 @@ interface OrderBookData {
   bids: OrderBookLevel[];
   asks: OrderBookLevel[];
   spread: number | null;
-  best_bid: number | null;
-  best_ask: number | null;
+  bestBid: number | null;
+  bestAsk: number | null;
 }
 
 interface ProfessionalOrderBookProps {
@@ -19,8 +19,8 @@ interface ProfessionalOrderBookProps {
 
 export function ProfessionalOrderBook({ orderBook, onPriceClick, showFullBook = false }: ProfessionalOrderBookProps) {
   const maxQuantity = useMemo(() => {
-    const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulative_quantity)) : 0;
-    const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulative_quantity)) : 0;
+    const bidMax = orderBook.bids.length > 0 ? Math.max(...orderBook.bids.map((b) => b.cumulativeQuantity)) : 0;
+    const askMax = orderBook.asks.length > 0 ? Math.max(...orderBook.asks.map((a) => a.cumulativeQuantity)) : 0;
     return Math.max(bidMax, askMax);
   }, [orderBook]);
 

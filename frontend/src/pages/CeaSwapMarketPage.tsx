@@ -25,10 +25,10 @@ interface SwapRate {
 }
 
 interface UserBalances {
-  entity_id: string | null;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  entityId: string | null;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface OrderbookLevel {
@@ -127,13 +127,13 @@ export function CeaSwapMarketPage() {
 
   // Calculate swap when balance is loaded
   useEffect(() => {
-    if (userBalances?.cea_balance && userBalances.cea_balance > 0) {
-      calculateSwap(userBalances.cea_balance);
+    if (userBalances?.ceaBalance && userBalances.ceaBalance > 0) {
+      calculateSwap(userBalances.ceaBalance);
     }
-  }, [userBalances?.cea_balance, calculateSwap]);
+  }, [userBalances?.ceaBalance, calculateSwap]);
 
   // Derived values
-  const ceaBalance = userBalances?.cea_balance ?? 0;
+  const ceaBalance = userBalances?.ceaBalance ?? 0;
 
   // Get ratio from swapRate or fallback to best orderbook ratio
   const bestOrderbookRatio = orderbook.length > 0 ? orderbook[0].ratio : 0;
@@ -191,7 +191,7 @@ export function CeaSwapMarketPage() {
     : (swapCalculation?.output.quantity ?? (ceaBalance * ceaToEuaRate));
   const platformFeeEua = estimatedEuaGross * platformFeePct / 100;
   const netEua = estimatedEuaGross - platformFeeEua;
-  const euaValueEur = swapCalculation?.output.value_eur ?? (netEua * (swapRate?.euaPriceEur || 80));
+  const euaValueEur = swapCalculation?.output.valueEur ?? (netEua * (swapRate?.euaPriceEur || 80));
 
   // Format helpers
   const formatNumber = (num: number | undefined | null, decimals = 2) => {

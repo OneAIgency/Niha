@@ -8,21 +8,21 @@ import type { CertificateType } from '../../types';
 // Generic order interface that works with both MarketMakerOrder and AllOrder
 interface EditableOrder {
   id: string;
-  entity_id?: string;
-  entity_name?: string;
-  market_maker_id?: string;
-  market_maker_name?: string;
-  certificate_type: CertificateType;
+  entityId?: string;
+  entityName?: string;
+  marketMakerId?: string;
+  marketMakerName?: string;
+  certificateType: CertificateType;
   side: 'BUY' | 'SELL';
   price: number;
   quantity: number;
-  filled_quantity: number;
-  remaining_quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
   status: string;
-  created_at: string;
-  updated_at?: string;
-  ticket_id?: string;
-  order_type?: 'entity' | 'market_maker';
+  createdAt: string;
+  updatedAt?: string;
+  ticketId?: string;
+  orderType?: 'entity' | 'market_maker';
 }
 
 interface EditOrderModalProps {
@@ -68,7 +68,7 @@ export function EditOrderModal({
   useEffect(() => {
     if (order) {
       setPrice(order.price?.toString() ?? '');
-      setQuantity(order.remaining_quantity?.toString() ?? '');
+      setQuantity(order.remainingQuantity?.toString() ?? '');
       setError(null);
       setSuccess(null);
       setConfirmCancel(false);
@@ -139,8 +139,8 @@ export function EditOrderModal({
       return 'Quantity must be greater than 0';
     }
 
-    if (order && order.remaining_quantity != null && quantityNum > order.remaining_quantity) {
-      return `Quantity cannot exceed remaining quantity (${formatQuantity(order.remaining_quantity)})`;
+    if (order && order.remainingQuantity != null && quantityNum > order.remainingQuantity) {
+      return `Quantity cannot exceed remaining quantity (${formatQuantity(order.remainingQuantity)})`;
     }
 
     return null;
@@ -167,7 +167,7 @@ export function EditOrderModal({
     if (priceNum !== order.price) {
       update.price = priceNum;
     }
-    if (order.remaining_quantity != null && quantityNum !== order.remaining_quantity) {
+    if (order.remainingQuantity != null && quantityNum !== order.remainingQuantity) {
       update.quantity = quantityNum;
     }
 
@@ -227,8 +227,8 @@ export function EditOrderModal({
   const sideLabel = order.side === 'BUY' ? 'BID' : 'ASK';
 
   // Get display name for order owner (market maker or entity)
-  const ownerName = order.market_maker_name || order.entity_name || 'Unknown';
-  const ownerType = order.order_type === 'market_maker' || order.market_maker_id ? 'Market Maker' : 'Entity';
+  const ownerName = order.marketMakerName || order.entityName || 'Unknown';
+  const ownerType = order.orderType === 'market_maker' || order.marketMakerId ? 'Market Maker' : 'Entity';
 
   return (
     <AnimatePresence>
@@ -259,7 +259,7 @@ export function EditOrderModal({
                       Edit {sideLabel} Order
                     </h2>
                     <p className="text-sm text-navy-600 dark:text-navy-400">
-                      {order.certificate_type} • {ownerType}: {ownerName}
+                      {order.certificateType} • {ownerType}: {ownerName}
                     </p>
                   </div>
                 </div>
@@ -299,7 +299,7 @@ export function EditOrderModal({
                   <div>
                     <span className="text-navy-500 dark:text-navy-400">Filled Qty</span>
                     <p className="font-mono text-navy-900 dark:text-white">
-                      {formatQuantity(order.filled_quantity ?? 0)}
+                      {formatQuantity(order.filledQuantity ?? 0)}
                     </p>
                   </div>
                 </div>
@@ -338,7 +338,7 @@ export function EditOrderModal({
                     htmlFor="edit-quantity-input"
                     className="block text-sm font-semibold text-navy-700 dark:text-navy-300 mb-2"
                   >
-                    Remaining Quantity ({order.certificate_type})
+                    Remaining Quantity ({order.certificateType})
                   </label>
                   <input
                     id="edit-quantity-input"
@@ -348,13 +348,13 @@ export function EditOrderModal({
                     placeholder="0"
                     step="1"
                     min="1"
-                    max={order.remaining_quantity ?? undefined}
+                    max={order.remainingQuantity ?? undefined}
                     className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                     required
                     disabled={loading || cancelling}
                   />
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                    Max: {formatQuantity(order.remaining_quantity ?? 0)} (remaining)
+                    Max: {formatQuantity(order.remainingQuantity ?? 0)} (remaining)
                   </p>
                 </div>
 
@@ -370,7 +370,7 @@ export function EditOrderModal({
                       </span>
                     </div>
                     <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {formatQuantity(parseFloat(quantity) || 0)} {order.certificate_type} × {formatCurrency(parseFloat(price) || 0)}
+                      {formatQuantity(parseFloat(quantity) || 0)} {order.certificateType} × {formatCurrency(parseFloat(price) || 0)}
                     </p>
                   </div>
                 )}

@@ -27,17 +27,17 @@ import type { User, UserRole, AdminUserFull, Deposit, EntityBalance } from '../t
 
 // Simple interface for entity assets display (subset of full EntityAssets)
 interface EntityAssetsDisplay {
-  entity_id: string;
-  entity_name: string;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  entityId: string;
+  entityName: string;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface UserWithEntity extends User {
-  entity_name?: string;
-  is_active?: boolean;
-  created_at?: string;
+  entityName?: string;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export function UsersPage() {
@@ -47,14 +47,14 @@ export function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all' | 'DISABLED'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithEntity | null>(null);
-  const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 0 });
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
   const [savingUser, setSavingUser] = useState(false);
 
   // Create user form state
   const [newUser, setNewUser] = useState({
     email: '',
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     position: '',
     password: '',
     role: 'NDA' as UserRole,
@@ -63,11 +63,11 @@ export function UsersPage() {
 
   // Edit user form state
   const [editForm, setEditForm] = useState({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     position: '',
     role: 'NDA' as UserRole,
-    is_active: true,
+    isActive: true,
   });
 
   // User Detail Modal state
@@ -122,7 +122,7 @@ export function UsersPage() {
       setPagination({
         page: response.pagination.page,
         total: response.pagination.total,
-        total_pages: response.pagination.total_pages,
+        totalPages: response.pagination.totalPages,
       });
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -149,22 +149,22 @@ export function UsersPage() {
   }, [searchQuery]);
 
   const handleCreateUser = async () => {
-    if (!newUser.email || !newUser.first_name || !newUser.last_name) return;
+    if (!newUser.email || !newUser.firstName || !newUser.lastName) return;
     if (!useInvitation && !newUser.password) return;
 
     setSavingUser(true);
     try {
       const userData: {
         email: string;
-        first_name: string;
-        last_name: string;
+        firstName: string;
+        lastName: string;
         role: UserRole;
         password?: string;
         position?: string;
       } = {
         email: newUser.email,
-        first_name: newUser.first_name,
-        last_name: newUser.last_name,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         role: newUser.role,
       };
 
@@ -178,7 +178,7 @@ export function UsersPage() {
       const created = await adminApi.createUser(userData);
       setUsers([created, ...users]);
       setShowCreateModal(false);
-      setNewUser({ email: '', first_name: '', last_name: '', position: '', password: '', role: 'NDA' });
+      setNewUser({ email: '', firstName: '', lastName: '', position: '', password: '', role: 'NDA' });
       setUseInvitation(false);
     } catch (error) {
       console.error('Failed to create user:', error);
@@ -193,10 +193,10 @@ export function UsersPage() {
     setSavingUser(true);
     try {
       const payload: import('../types').AdminUserUpdate = {
-        first_name: editForm.first_name,
-        last_name: editForm.last_name,
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
         position: editForm.position,
-        is_active: editForm.is_active,
+        isActive: editForm.isActive,
       };
       // MM users: admin can change role; backend allows role update when current or new role is MM
       if (editingUser.role === 'MM' || editForm.role === 'MM') {
@@ -262,11 +262,11 @@ export function UsersPage() {
   const openEditModal = (user: UserWithEntity) => {
     setEditingUser(user);
     setEditForm({
-      first_name: user.first_name || '',
-      last_name: user.last_name || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
       position: user.position || '',
       role: user.role,
-      is_active: user.is_active !== false,
+      isActive: user.isActive !== false,
     });
   };
 
@@ -289,8 +289,8 @@ export function UsersPage() {
     setResettingPassword(true);
     try {
       await adminApi.resetUserPassword(detailUser.id, {
-        new_password: newPassword,
-        force_change: forceChange,
+        newPassword: newPassword,
+        forceChange: forceChange,
       });
       setShowPasswordReset(false);
       setNewPassword('');
@@ -326,11 +326,11 @@ export function UsersPage() {
 
       setEntityBalance(balance);
       setEntityAssets({
-        entity_id: assetsResponse.entity_id || entityId,
-        entity_name: assetsResponse.entity_name || 'Unknown Entity',
-        eur_balance: assetsResponse.eur_balance ?? 0,
-        cea_balance: assetsResponse.cea_balance ?? 0,
-        eua_balance: assetsResponse.eua_balance ?? 0,
+        entityId: assetsResponse.entityId || entityId,
+        entityName: assetsResponse.entityName || 'Unknown Entity',
+        eurBalance: assetsResponse.eurBalance ?? 0,
+        ceaBalance: assetsResponse.ceaBalance ?? 0,
+        euaBalance: assetsResponse.euaBalance ?? 0,
       });
       setDeposits(Array.isArray(depositList) ? depositList : []);
     } catch (error: unknown) {
@@ -496,12 +496,12 @@ export function UsersPage() {
                               : 'bg-gradient-to-br from-amber-500 to-amber-600'
                         )}
                       >
-                        {getInitials(user.first_name, user.last_name, user.email)}
+                        {getInitials(user.firstName, user.lastName, user.email)}
                       </div>
                       <div>
                         <p className="font-medium text-navy-900 dark:text-white">
-                          {user.first_name && user.last_name
-                            ? `${user.first_name} ${user.last_name}`
+                          {user.firstName && user.lastName
+                            ? `${user.firstName} ${user.lastName}`
                             : 'Name not set'}
                         </p>
                         <p className="text-sm text-navy-500 dark:text-navy-400">{user.email}</p>
@@ -512,13 +512,13 @@ export function UsersPage() {
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-navy-400" />
                       <span className="text-sm text-navy-600 dark:text-navy-300">
-                        {user.entity_name || 'No entity'}
+                        {user.entityName || 'No entity'}
                       </span>
                     </div>
                   </td>
                   <td className="py-4 px-4">
                     <div className="relative">
-                      {user.is_active === false ? (
+                      {user.isActive === false ? (
                         <Badge variant={getRoleBadgeVariant('DISABLED')}>
                           DISABLED
                         </Badge>
@@ -530,16 +530,16 @@ export function UsersPage() {
                     </div>
                   </td>
                   <td className="py-4 px-4">
-                    <Badge variant={user.is_active !== false ? 'success' : 'danger'}>
-                      {user.is_active !== false ? 'Active' : 'DISABLED'}
+                    <Badge variant={user.isActive !== false ? 'success' : 'danger'}>
+                      {user.isActive !== false ? 'Active' : 'DISABLED'}
                     </Badge>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-navy-400" />
                       <span className="text-sm text-navy-600 dark:text-navy-300">
-                        {user.last_login
-                            ? formatRelativeTime(user.last_login)
+                        {user.lastLogin
+                            ? formatRelativeTime(user.lastLogin)
                             : 'Never'}
                       </span>
                     </div>
@@ -562,15 +562,15 @@ export function UsersPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      {user.entity_id ? (
+                      {user.entityId ? (
                         <>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setAddAssetUser({
                               id: user.id,
-                              entityId: user.entity_id!,
-                              entityName: user.entity_name || 'Unknown Entity'
+                              entityId: user.entityId!,
+                              entityName: user.entityName || 'Unknown Entity'
                             })}
                             className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                             title="Add Asset"
@@ -580,7 +580,7 @@ export function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSyncBalance(user.entity_id!)}
+                            onClick={() => handleSyncBalance(user.entityId!)}
                             className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                             title="Sync Balance (fix legacy deposits)"
                           >
@@ -598,7 +598,7 @@ export function UsersPage() {
                           <Building2 className="w-4 h-4" />
                         </Button>
                       )}
-                      {user.is_active !== false && (
+                      {user.isActive !== false && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -625,7 +625,7 @@ export function UsersPage() {
         )}
 
         {/* Pagination */}
-        {pagination.total_pages > 1 && (
+        {pagination.totalPages > 1 && (
           <div className="flex justify-center gap-2 mt-6 pt-6 border-t border-navy-100 dark:border-navy-700">
             <Button
               variant="ghost"
@@ -636,13 +636,13 @@ export function UsersPage() {
               Previous
             </Button>
             <span className="px-4 py-2 text-sm text-navy-600 dark:text-navy-300">
-              Page {pagination.page} of {pagination.total_pages}
+              Page {pagination.page} of {pagination.totalPages}
             </span>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-              disabled={pagination.page === pagination.total_pages}
+              disabled={pagination.page === pagination.totalPages}
             >
               Next
             </Button>
@@ -715,9 +715,9 @@ export function UsersPage() {
         requireConfirmation={deactivateUser?.email?.split('@')[0]}
         details={deactivateUser ? [
           { label: 'Email', value: deactivateUser.email },
-          { label: 'Name', value: `${deactivateUser.first_name || ''} ${deactivateUser.last_name || ''}`.trim() || 'N/A' },
+          { label: 'Name', value: `${deactivateUser.firstName || ''} ${deactivateUser.lastName || ''}`.trim() || 'N/A' },
           { label: 'Role', value: deactivateUser.role },
-          { label: 'Company', value: deactivateUser.entity_name || 'N/A' },
+          { label: 'Company', value: deactivateUser.entityName || 'N/A' },
         ] : []}
         loading={deactivating}
       />
@@ -728,7 +728,7 @@ export function UsersPage() {
           isOpen={!!addAssetUser}
           onClose={() => setAddAssetUser(null)}
           onSuccess={() => {
-            if (detailUser?.entity_id === addAssetUser.entityId) {
+            if (detailUser?.entityId === addAssetUser.entityId) {
               loadDeposits(addAssetUser.entityId);
             }
             loadUsers();
@@ -744,8 +744,8 @@ export function UsersPage() {
           isOpen={!!editingAsset}
           onClose={() => setEditingAsset(null)}
           onSuccess={() => {
-            if (detailUser?.entity_id) {
-              loadDeposits(detailUser.entity_id);
+            if (detailUser?.entityId) {
+              loadDeposits(detailUser.entityId);
             }
           }}
           entityId={editingAsset.entityId}

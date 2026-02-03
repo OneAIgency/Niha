@@ -25,8 +25,8 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
     const priceRange = maxPrice - minPrice;
 
     // Find max cumulative quantity for Y-axis scaling
-    const maxBidQty = Math.max(...bidLevels.map(b => b.cumulative_quantity));
-    const maxAskQty = Math.max(...askLevels.map(a => a.cumulative_quantity));
+    const maxBidQty = Math.max(...bidLevels.map(b => b.cumulativeQuantity));
+    const maxAskQty = Math.max(...askLevels.map(a => a.cumulativeQuantity));
     const maxQty = Math.max(maxBidQty, maxAskQty);
 
     // Build bid path (left side, descending prices)
@@ -34,7 +34,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
       .sort((a, b) => b.price - a.price) // Sort descending
       .map(level => ({
         x: ((level.price - minPrice) / priceRange) * 100,
-        y: 100 - ((level.cumulative_quantity / maxQty) * 100),
+        y: 100 - ((level.cumulativeQuantity / maxQty) * 100),
       }));
 
     // Build ask path (right side, ascending prices)
@@ -42,7 +42,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
       .sort((a, b) => a.price - b.price) // Sort ascending
       .map(level => ({
         x: ((level.price - minPrice) / priceRange) * 100,
-        y: 100 - ((level.cumulative_quantity / maxQty) * 100),
+        y: 100 - ((level.cumulativeQuantity / maxQty) * 100),
       }));
 
     // Build SVG path for bids (filled area)

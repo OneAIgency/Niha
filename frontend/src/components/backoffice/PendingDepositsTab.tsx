@@ -88,8 +88,8 @@ export function PendingDepositsTab({
   const handleOpenConfirmDeposit = (deposit: PendingDeposit) => {
     setConfirmDepositModal(deposit);
     // Pre-fill with reported values if available
-    setConfirmAmount(deposit.reported_amount?.toString() || '');
-    setConfirmCurrency(deposit.reported_currency || 'EUR');
+    setConfirmAmount(deposit.reportedAmount?.toString() || '');
+    setConfirmCurrency(deposit.reportedCurrency || 'EUR');
     setConfirmNotes('');
     setValidationError(null);
   };
@@ -135,13 +135,8 @@ export function PendingDepositsTab({
 
             <div className="space-y-4">
               {onHoldDeposits.map((deposit) => {
-                // Handle both snake_case and camelCase from API response
-                const depositAny = deposit as unknown as {
-                  confirmedAt?: string;
-                  holdExpiresAt?: string;
-                };
-                const confirmedAtValue = deposit.confirmed_at ?? depositAny.confirmedAt;
-                const holdExpiresAtValue = deposit.hold_expires_at ?? depositAny.holdExpiresAt;
+                const confirmedAtValue = deposit.confirmedAt;
+                const holdExpiresAtValue = deposit.holdExpiresAt;
 
                 const daysPassed = confirmedAtValue
                   ? Math.floor((Date.now() - new Date(confirmedAtValue).getTime()) / (1000 * 60 * 60 * 24))
@@ -165,9 +160,9 @@ export function PendingDepositsTab({
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-navy-900 dark:text-white">
-                            {deposit.entity_name ?? (deposit as unknown as { entityName?: string }).entityName}
+                            {deposit.entityName}
                           </h3>
-                          <ClientStatusBadge role={deposit.user_role ?? (deposit as unknown as { userRole?: string }).userRole} />
+                          <ClientStatusBadge role={deposit.userRole} />
                           {expired && (
                             <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs rounded-full">
                               Ready to Clear
@@ -183,7 +178,7 @@ export function PendingDepositsTab({
                           </div>
                           <div>
                             <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.user_email ?? (deposit as unknown as { userEmail?: string }).userEmail}</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.userEmail}</span>
                           </div>
                           <div>
                             <span className="text-navy-500 dark:text-navy-400">Confirmed:</span>
@@ -271,35 +266,35 @@ export function PendingDepositsTab({
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-navy-900 dark:text-white">
-                          {deposit.entity_name}
+                          {deposit.entityName}
                         </h3>
-                        <ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
+                        <ClientStatusBadge role={deposit.userRole} />
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-navy-500 dark:text-navy-400">User:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.user_email}</span>
+                          <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.userEmail}</span>
                         </div>
                         <div>
                           <span className="text-navy-500 dark:text-navy-400">Reported Amount:</span>
                           <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
-                            {deposit.reported_amount ? formatCurrency(deposit.reported_amount) : 'N/A'} {deposit.reported_currency || ''}
+                            {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency || ''}
                           </span>
                         </div>
-                        {deposit.wire_reference && (
+                        {deposit.wireReference && (
                           <div>
                             <span className="text-navy-500 dark:text-navy-400">Wire Ref:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.wire_reference}</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.wireReference}</span>
                           </div>
                         )}
                         <div>
                           <span className="text-navy-500 dark:text-navy-400">Bank Ref:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.bank_reference}</span>
+                          <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.bankReference}</span>
                         </div>
                       </div>
                       <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
                         <Clock className="w-3 h-3 inline mr-1" />
-                        Reported {deposit.reported_at ? formatRelativeTime(deposit.reported_at) : formatRelativeTime(deposit.created_at)}
+                        Reported {deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : formatRelativeTime(deposit.createdAt)}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -366,19 +361,19 @@ export function PendingDepositsTab({
               {/* Entity/User Info */}
               <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
                 <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
-                <p className="font-semibold text-navy-900 dark:text-white">{confirmDepositModal.entity_name}</p>
-                <p className="text-xs text-navy-400 mt-1">{confirmDepositModal.user_email}</p>
+                <p className="font-semibold text-navy-900 dark:text-white">{confirmDepositModal.entityName}</p>
+                <p className="text-xs text-navy-400 mt-1">{confirmDepositModal.userEmail}</p>
               </div>
 
               {/* Reported Amount (for reference) */}
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <p className="text-sm text-amber-700 dark:text-amber-400">Reported by User</p>
                 <p className="font-semibold text-amber-900 dark:text-amber-200">
-                  {confirmDepositModal.reported_amount ? formatCurrency(confirmDepositModal.reported_amount) : 'N/A'} {confirmDepositModal.reported_currency || ''}
+                  {confirmDepositModal.reportedAmount ? formatCurrency(confirmDepositModal.reportedAmount) : 'N/A'} {confirmDepositModal.reportedCurrency || ''}
                 </p>
-                {confirmDepositModal.wire_reference && (
+                {confirmDepositModal.wireReference && (
                   <p className="text-xs text-amber-600 dark:text-amber-500 mt-1 font-mono">
-                    Wire Ref: {confirmDepositModal.wire_reference}
+                    Wire Ref: {confirmDepositModal.wireReference}
                   </p>
                 )}
               </div>
@@ -530,8 +525,8 @@ export function PendingDepositsTab({
               {/* Entity/User Info */}
               <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
                 <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
-                <p className="font-semibold text-navy-900 dark:text-white">{clearDepositModal.entity_name}</p>
-                <p className="text-xs text-navy-400 mt-1">{clearDepositModal.user_email}</p>
+                <p className="font-semibold text-navy-900 dark:text-white">{clearDepositModal.entityName}</p>
+                <p className="text-xs text-navy-400 mt-1">{clearDepositModal.userEmail}</p>
               </div>
 
               {/* Amount */}
@@ -543,14 +538,14 @@ export function PendingDepositsTab({
               </div>
 
               {/* Force clear warning */}
-              {forceClear && !isHoldExpired(clearDepositModal.hold_expires_at) && (
+              {forceClear && !isHoldExpired(clearDepositModal.holdExpiresAt) && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     Hold period has not expired yet
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                    {getHoldTimeRemaining(clearDepositModal.hold_expires_at)}
+                    {getHoldTimeRemaining(clearDepositModal.holdExpiresAt)}
                   </p>
                 </div>
               )}

@@ -12,24 +12,24 @@ interface MarketMakerTransactionsTabProps {
 }
 
 interface Balance {
-  cea_balance: number;
-  eua_balance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface Transaction {
   id: string;
-  certificate_type: 'CEA' | 'EUA';
-  transaction_type: 'deposit' | 'withdrawal';
+  certificateType: 'CEA' | 'EUA';
+  transactionType: 'deposit' | 'withdrawal';
   amount: number;
-  balance_after: number;
+  balanceAfter: number;
   notes?: string;
-  created_at: string;
-  created_by_email?: string;
+  createdAt: string;
+  createdByEmail?: string;
   [key: string]: unknown;
 }
 
 export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransactionsTabProps) {
-  const [balances, setBalances] = useState<Balance>({ cea_balance: 0, eua_balance: 0 });
+  const [balances, setBalances] = useState<Balance>({ ceaBalance: 0, euaBalance: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,19 +49,19 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
         getMarketMakerTransactions(marketMakerId),
       ]);
       setBalances(balancesData);
-      // Map API response to local Transaction type, filtering out any without certificate_type
+      // Map API response to local Transaction type, filtering out any without certificateType
       const mappedTransactions: Transaction[] = transactionsData
-        .filter((t): t is typeof t & { certificate_type: 'CEA' | 'EUA' } =>
-          t.certificate_type === 'CEA' || t.certificate_type === 'EUA'
+        .filter((t): t is typeof t & { certificateType: 'CEA' | 'EUA' } =>
+          t.certificateType === 'CEA' || t.certificateType === 'EUA'
         )
         .map(t => ({
           id: t.id,
-          certificate_type: t.certificate_type,
-          transaction_type: t.transaction_type as 'deposit' | 'withdrawal',
+          certificateType: t.certificateType,
+          transactionType: t.transactionType as 'deposit' | 'withdrawal',
           amount: t.amount,
-          balance_after: t.balance_after,
+          balanceAfter: t.balanceAfter,
           notes: t.notes,
-          created_at: t.created_at,
+          createdAt: t.createdAt,
         }));
       setTransactions(mappedTransactions);
     } catch (err: unknown) {
@@ -79,7 +79,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
 
   const transactionColumns: Column<Transaction>[] = [
     {
-      key: 'created_at',
+      key: 'createdAt',
       header: 'Date',
       width: '15%',
       render: (value) => (
@@ -89,7 +89,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       ),
     },
     {
-      key: 'certificate_type',
+      key: 'certificateType',
       header: 'Certificate',
       width: '12%',
       align: 'center',
@@ -110,7 +110,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       ),
     },
     {
-      key: 'transaction_type',
+      key: 'transactionType',
       header: 'Type',
       width: '12%',
       align: 'center',
@@ -139,16 +139,16 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
         <span
           className={cn(
             'font-mono font-semibold',
-            row.transaction_type === 'deposit' ? 'text-emerald-600' : 'text-red-600'
+            row.transactionType === 'deposit' ? 'text-emerald-600' : 'text-red-600'
           )}
         >
-          {row.transaction_type === 'deposit' ? '+' : '-'}
+          {row.transactionType === 'deposit' ? '+' : '-'}
           {formatQuantity(Number(value))}
         </span>
       ),
     },
     {
-      key: 'balance_after',
+      key: 'balanceAfter',
       header: 'Balance After',
       width: '15%',
       align: 'right',

@@ -141,14 +141,8 @@ export default function KycUploadModal({
     try {
       const status = await onboardingApi.getStatus();
       const docs = status.documents || [];
-      // API response is camelCase (documentType, fileName); normalize so matching works
-      setUploadedDocs(
-        docs.map((doc: KYCDocument & { documentType?: string; fileName?: string }) => ({
-          ...doc,
-          document_type: doc.document_type ?? doc.documentType ?? '',
-          file_name: doc.file_name ?? doc.fileName ?? '',
-        }))
-      );
+      // API response uses camelCase (documentType, fileName)
+      setUploadedDocs(docs);
     } catch (err) {
       console.error('Failed to load documents:', err);
       setError('Failed to load documents');
@@ -157,8 +151,7 @@ export default function KycUploadModal({
     }
   };
 
-  const getDocType = (d: KYCDocument & { documentType?: string }) =>
-    d.document_type ?? d.documentType ?? '';
+  const getDocType = (d: KYCDocument) => d.documentType;
 
   // Calculate progress
   const requiredDocs = documentDefinitions.filter(d => d.required);
@@ -491,7 +484,7 @@ function DocumentUploadCard({
             </div>
             <div className="text-sm mt-1 text-navy-400">{docDef.description}</div>
             {uploadedDoc && (
-              <div className="text-xs mt-2 text-navy-300">{uploadedDoc.file_name} - {uploadedDoc.status}</div>
+              <div className="text-xs mt-2 text-navy-300">{uploadedDoc.fileName} - {uploadedDoc.status}</div>
             )}
           </div>
         </div>

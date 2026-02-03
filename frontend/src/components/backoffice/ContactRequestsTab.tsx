@@ -118,7 +118,7 @@ export function ContactRequestsTab({
                         Entity:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary" className="font-medium">
-                        {request.entity_name ?? '—'}
+                        {request.entityName ?? '—'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -126,7 +126,7 @@ export function ContactRequestsTab({
                         Name:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary">
-                        {request.contact_name || '—'}
+                        {request.contactName || '—'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -134,14 +134,14 @@ export function ContactRequestsTab({
                         Submitted:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary">
-                        {request.created_at ? formatDate(request.created_at) : '—'}
+                        {request.createdAt ? formatDate(request.createdAt) : '—'}
                       </Typography>
                     </span>
                     <Badge
-                      variant={clientStatusVariant(request.user_role)}
+                      variant={clientStatusVariant(request.userRole)}
                       className="shrink-0 text-xs"
                     >
-                      {request.user_role ?? '—'}
+                      {request.userRole ?? '—'}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -149,18 +149,18 @@ export function ContactRequestsTab({
                       type="button"
                       onClick={() => setViewModalRequest(request)}
                       className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
-                      aria-label={`View details for ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
+                      aria-label={`View details for ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {(request.user_role === 'NDA' || request.user_role === 'new') && (
+                    {(request.userRole === 'NDA' || request.userRole === 'new') && (
                       <>
                         <Button
                           variant="primary"
                           size="sm"
                           onClick={() => handleApproveClick(request)}
                           loading={actionLoading === `approve-${request.id}`}
-                          aria-label={`Approve and create user for ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
+                          aria-label={`Approve and create user for ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                         >
                           Approve & Create User
                         </Button>
@@ -170,7 +170,7 @@ export function ContactRequestsTab({
                           className="text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
                           onClick={() => onReject(request.id)}
                           loading={actionLoading === `reject-${request.id}`}
-                          aria-label={`Reject request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
+                          aria-label={`Reject request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                         >
                           Reject
                         </Button>
@@ -181,7 +181,7 @@ export function ContactRequestsTab({
                       onClick={() => handleDeleteClick(request)}
                       disabled={!!actionLoading}
                       className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
-                      aria-label={`Delete request from ${request.entity_name ?? request.contact_email ?? request.id ?? 'contact request'}`}
+                      aria-label={`Delete request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -203,15 +203,15 @@ export function ContactRequestsTab({
         <ApproveInviteModal
           contactRequest={{
             id: approveModalRequest.id,
-            entity_name: approveModalRequest.entity_name,
-            contact_email: approveModalRequest.contact_email,
-            contact_name: approveModalRequest.contact_name,
+            entityName: approveModalRequest.entityName,
+            contactEmail: approveModalRequest.contactEmail,
+            contactName: approveModalRequest.contactName,
             position: approveModalRequest.position,
-            nda_file_name: approveModalRequest.nda_file_name,
-            submitter_ip: approveModalRequest.submitter_ip,
-            user_role: approveModalRequest.user_role,
+            ndaFileName: approveModalRequest.ndaFileName,
+            submitterIp: approveModalRequest.submitterIp,
+            userRole: approveModalRequest.userRole,
             notes: approveModalRequest.notes,
-            created_at: approveModalRequest.created_at,
+            createdAt: approveModalRequest.createdAt,
           }}
           isOpen={!!approveModalRequest}
           onClose={() => setApproveModalRequest(null)}
@@ -239,12 +239,12 @@ export function ContactRequestsTab({
         confirmText="Delete Request"
         cancelText="Cancel"
         variant="danger"
-        requireConfirmation={deleteConfirmRequest?.entity_name}
+        requireConfirmation={deleteConfirmRequest?.entityName}
         details={deleteConfirmRequest ? [
-          { label: 'Company', value: deleteConfirmRequest.entity_name },
-          { label: 'Contact', value: deleteConfirmRequest.contact_email },
-          { label: 'Status', value: deleteConfirmRequest.user_role },
-          { label: 'Submitted', value: formatRelativeTime(deleteConfirmRequest.created_at) },
+          { label: 'Company', value: deleteConfirmRequest.entityName },
+          { label: 'Contact', value: deleteConfirmRequest.contactEmail },
+          { label: 'Status', value: deleteConfirmRequest.userRole },
+          { label: 'Submitted', value: formatRelativeTime(deleteConfirmRequest.createdAt) },
         ] : []}
         loading={actionLoading === `delete-${deleteConfirmRequest?.id}`}
       />

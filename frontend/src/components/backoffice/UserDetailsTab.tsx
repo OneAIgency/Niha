@@ -7,32 +7,32 @@ import { formatRelativeTime, formatCurrency, formatQuantity } from '../../utils'
 
 interface UserSession {
   id: string;
-  ip_address: string;
-  user_agent?: string;
-  started_at: string;
-  ended_at?: string;
-  is_active: boolean;
+  ipAddress: string;
+  userAgent?: string;
+  startedAt: string;
+  endedAt?: string;
+  isActive: boolean;
 }
 
 interface UserTrade {
   id: string;
-  trade_type: string;
-  certificate_type: string;
+  tradeType: string;
+  certificateType: string;
   quantity: number;
-  total_value: number;
+  totalValue: number;
   status: string;
-  is_buyer: boolean;
-  created_at: string;
+  isBuyer: boolean;
+  createdAt: string;
 }
 
 interface SelectedUserDetails {
   user: {
     id: string;
     email: string;
-    first_name?: string;
-    last_name?: string;
+    firstName?: string;
+    lastName?: string;
     role: string;
-    entity_name?: string;
+    entityName?: string;
   };
   sessions: UserSession[];
   trades: UserTrade[];
@@ -90,16 +90,16 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
             </h2>
             <div className="flex items-center gap-4 p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-navy-500 to-navy-600 flex items-center justify-center text-white font-bold text-xl">
-                {(selectedUser.user.first_name?.[0] || selectedUser.user.email[0]).toUpperCase()}
-                {(selectedUser.user.last_name?.[0] || selectedUser.user.email[1]).toUpperCase()}
+                {(selectedUser.user.firstName?.[0] || selectedUser.user.email[0]).toUpperCase()}
+                {(selectedUser.user.lastName?.[0] || selectedUser.user.email[1]).toUpperCase()}
               </div>
               <div>
                 <p className="font-semibold text-navy-900 dark:text-white text-lg">
-                  {selectedUser.user.first_name} {selectedUser.user.last_name}
+                  {selectedUser.user.firstName} {selectedUser.user.lastName}
                 </p>
                 <p className="text-navy-500 dark:text-navy-400">{selectedUser.user.email}</p>
-                {selectedUser.user.entity_name && (
-                  <p className="text-sm text-navy-400">{selectedUser.user.entity_name}</p>
+                {selectedUser.user.entityName && (
+                  <p className="text-sm text-navy-400">{selectedUser.user.entityName}</p>
                 )}
               </div>
               <Badge variant="success" className="ml-auto">
@@ -126,14 +126,14 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
                         <MapPin className="w-4 h-4 text-navy-500" />
                       </div>
                       <div>
-                        <p className="font-mono text-sm text-navy-900 dark:text-white">{session.ip_address}</p>
-                        {session.is_active && (
+                        <p className="font-mono text-sm text-navy-900 dark:text-white">{session.ipAddress}</p>
+                        {session.isActive && (
                           <span className="text-xs text-navy-600 dark:text-navy-400">Active</span>
                         )}
                       </div>
                     </div>
                     <span className="text-xs text-navy-400">
-                      {formatRelativeTime(session.started_at)}
+                      {formatRelativeTime(session.startedAt)}
                     </span>
                   </div>
                 ))}
@@ -157,20 +157,20 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
                     className="flex items-center justify-between p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <Badge variant={trade.trade_type === 'buy' ? 'success' : trade.trade_type === 'swap' ? 'info' : 'warning'}>
-                        {trade.trade_type.toUpperCase()}
+                      <Badge variant={trade.tradeType === 'buy' ? 'success' : trade.tradeType === 'swap' ? 'info' : 'warning'}>
+                        {trade.tradeType.toUpperCase()}
                       </Badge>
                       <div>
                         <p className="font-medium text-navy-900 dark:text-white">
-                          {formatQuantity(trade.quantity)} {trade.certificate_type}
+                          {formatQuantity(trade.quantity)} {trade.certificateType}
                         </p>
                         <p className="text-xs text-navy-500 dark:text-navy-400">
-                          {formatRelativeTime(trade.created_at)}
+                          {formatRelativeTime(trade.createdAt)}
                         </p>
                       </div>
                     </div>
                     <span className="font-mono text-navy-600 dark:text-navy-400">
-                      {formatCurrency(trade.total_value, 'USD')}
+                      {formatCurrency(trade.totalValue, 'USD')}
                     </span>
                   </div>
                 ))}

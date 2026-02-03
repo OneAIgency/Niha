@@ -106,7 +106,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const isSeller = marketMaker.mm_type === 'CEA_SELLER' || marketMaker.mm_type === 'EUA_OFFER';
+  const isSeller = marketMaker.mmType === 'CEA_SELLER' || marketMaker.mmType === 'EUA_OFFER';
 
   // Load rules from API
   const loadRules = useCallback(async () => {

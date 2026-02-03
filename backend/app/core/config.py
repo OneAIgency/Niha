@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours for development/testing
     MAGIC_LINK_EXPIRE_MINUTES: int = 15
 
+    # Cookie Settings for httpOnly authentication
+    AUTH_COOKIE_NAME: str = "access_token"
+    AUTH_COOKIE_SECURE: bool = False  # Set to True in production with HTTPS
+    AUTH_COOKIE_SAMESITE: str = "lax"  # "strict", "lax", or "none"
+    AUTH_COOKIE_PATH: str = "/"
+    AUTH_COOKIE_DOMAIN: str = ""  # Empty = current domain only
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://platonos.mooo.com,https://platonos.mooo.com,http://192.168.10.42:5173,http://192.168.10.42:8000"
 

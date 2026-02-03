@@ -104,10 +104,10 @@ export function AMLDepositsTab() {
       setActionLoading(`confirm-${confirmModal.id}`);
       setError(null);
       const request: ConfirmDepositRequest = {
-        actual_amount: amount,
-        actual_currency: confirmCurrency as 'EUR' | 'USD' | 'CNY' | 'HKD',
-        wire_reference: wireReference || undefined,
-        admin_notes: adminNotes || undefined,
+        actualAmount: amount,
+        actualCurrency: confirmCurrency as 'EUR' | 'USD' | 'CNY' | 'HKD',
+        wireReference: wireReference || undefined,
+        adminNotes: adminNotes || undefined,
       };
       await backofficeApi.confirmDepositAML(confirmModal.id, request);
       setConfirmModal(null);
@@ -128,8 +128,8 @@ export function AMLDepositsTab() {
       setActionLoading(`clear-${clearModal.id}`);
       setError(null);
       const request: ClearDepositRequest = {
-        admin_notes: adminNotes || undefined,
-        force_clear: forceClear,
+        adminNotes: adminNotes || undefined,
+        forceClear: forceClear,
       };
       await backofficeApi.clearDeposit(clearModal.id, request);
       setClearModal(null);
@@ -151,7 +151,7 @@ export function AMLDepositsTab() {
       setError(null);
       const request: RejectDepositRequest = {
         reason: rejectReason,
-        admin_notes: adminNotes || undefined,
+        adminNotes: adminNotes || undefined,
       };
       await backofficeApi.rejectDepositAML(rejectModal.id, request);
       setRejectModal(null);
@@ -220,7 +220,7 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500 dark:text-navy-400">Pending</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.pending_count}</p>
+                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.pendingCount}</p>
               </div>
             </div>
           </Card>
@@ -232,8 +232,8 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500 dark:text-navy-400">On Hold</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.on_hold_count}</p>
-                <p className="text-xs text-navy-400">{formatCurrency(stats.on_hold_total)} EUR</p>
+                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.onHoldCount}</p>
+                <p className="text-xs text-navy-400">{formatCurrency(stats.onHoldTotal)} EUR</p>
               </div>
             </div>
           </Card>
@@ -245,8 +245,8 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500 dark:text-navy-400">Cleared</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.cleared_count}</p>
-                <p className="text-xs text-navy-400">{formatCurrency(stats.cleared_total)} EUR</p>
+                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.clearedCount}</p>
+                <p className="text-xs text-navy-400">{formatCurrency(stats.clearedTotal)} EUR</p>
               </div>
             </div>
           </Card>
@@ -258,7 +258,7 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500 dark:text-navy-400">Expired Holds</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.expired_holds_count}</p>
+                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.expiredHoldsCount}</p>
               </div>
             </div>
           </Card>
@@ -296,7 +296,7 @@ export function AMLDepositsTab() {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
-          {stats && stats.expired_holds_count > 0 && (
+          {stats && stats.expiredHoldsCount > 0 && (
             <Button
               variant="primary"
               size="sm"
@@ -304,7 +304,7 @@ export function AMLDepositsTab() {
               loading={actionLoading === 'process-expired'}
             >
               <Timer className="w-4 h-4" />
-              Process Expired Holds ({stats.expired_holds_count})
+              Process Expired Holds ({stats.expiredHoldsCount})
             </Button>
           )}
         </div>
@@ -339,37 +339,37 @@ export function AMLDepositsTab() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h4 className="font-semibold text-navy-900 dark:text-white">
-                          {deposit.entity_name || 'Unknown Entity'}
+                          {deposit.entityName || 'Unknown Entity'}
                         </h4>
-                        <ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
+                        <ClientStatusBadge role={deposit.userRole} />
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                         <div>
                           <span className="text-navy-500">Reported:</span>
                           <span className="ml-2 font-medium text-navy-900 dark:text-white">
-                            {deposit.reported_amount ? formatCurrency(deposit.reported_amount) : 'N/A'} {deposit.reported_currency}
+                            {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency}
                           </span>
                         </div>
                         <div>
                           <span className="text-navy-500">User:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.user_email}</span>
+                          <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.userEmail}</span>
                         </div>
-                        {deposit.source_bank && (
+                        {deposit.sourceBank && (
                           <div>
                             <span className="text-navy-500">Bank:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.source_bank}</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.sourceBank}</span>
                           </div>
                         )}
-                        {deposit.source_iban && (
+                        {deposit.sourceIban && (
                           <div>
                             <span className="text-navy-500">IBAN:</span>
-                            <span className="ml-2 font-mono text-xs text-navy-700 dark:text-navy-300">{deposit.source_iban}</span>
+                            <span className="ml-2 font-mono text-xs text-navy-700 dark:text-navy-300">{deposit.sourceIban}</span>
                           </div>
                         )}
                       </div>
                       <p className="text-xs text-navy-400 mt-2">
                         <Clock className="w-3 h-3 inline mr-1" />
-                        Reported {formatRelativeTime(deposit.reported_at || deposit.created_at)}
+                        Reported {formatRelativeTime(deposit.reportedAt || deposit.createdAt)}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -397,8 +397,8 @@ export function AMLDepositsTab() {
                         size="sm"
                         onClick={() => {
                           setConfirmModal(deposit);
-                          setConfirmAmount(deposit.reported_amount?.toString() || '');
-                          setConfirmCurrency(deposit.reported_currency || 'EUR');
+                          setConfirmAmount(deposit.reportedAmount?.toString() || '');
+                          setConfirmCurrency(deposit.reportedCurrency || 'EUR');
                           resetForm();
                         }}
                       >
@@ -427,11 +427,11 @@ export function AMLDepositsTab() {
           ) : (
             <div className="space-y-4">
               {onHoldDeposits.map((deposit) => {
-                const daysPassed = deposit.confirmed_at
-                  ? Math.floor((Date.now() - new Date(deposit.confirmed_at).getTime()) / (1000 * 60 * 60 * 24))
+                const daysPassed = deposit.confirmedAt
+                  ? Math.floor((Date.now() - new Date(deposit.confirmedAt).getTime()) / (1000 * 60 * 60 * 24))
                   : 0;
-                const confirmedDate = deposit.confirmed_at
-                  ? new Date(deposit.confirmed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                const confirmedDate = deposit.confirmedAt
+                  ? new Date(deposit.confirmedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                   : 'N/A';
 
                 return (
@@ -443,7 +443,7 @@ export function AMLDepositsTab() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium text-sm text-navy-900 dark:text-white truncate">
-                            {deposit.entity_name || 'Unknown Entity'}
+                            {deposit.entityName || 'Unknown Entity'}
                           </h4>
                           <span className="text-xs text-navy-500 dark:text-navy-400 whitespace-nowrap">
                             RECEIVED AT {confirmedDate}
@@ -478,7 +478,7 @@ export function AMLDepositsTab() {
                           size="sm"
                           onClick={() => {
                             setClearModal(deposit);
-                            setForceClear(!isHoldExpired(deposit.hold_expires_at));
+                            setForceClear(!isHoldExpired(deposit.holdExpiresAt));
                             resetForm();
                           }}
                         >
@@ -506,13 +506,13 @@ export function AMLDepositsTab() {
           <div className="space-y-4">
             <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{confirmModal.entity_name}</p>
+              <p className="font-semibold text-navy-900 dark:text-white">{confirmModal.entityName}</p>
             </div>
 
             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
               <p className="text-sm text-amber-700 dark:text-amber-400">Reported by Client</p>
               <p className="font-semibold text-amber-900 dark:text-amber-200">
-                {confirmModal.reported_amount ? formatCurrency(confirmModal.reported_amount) : 'N/A'} {confirmModal.reported_currency}
+                {confirmModal.reportedAmount ? formatCurrency(confirmModal.reportedAmount) : 'N/A'} {confirmModal.reportedCurrency}
               </p>
             </div>
 
@@ -613,20 +613,20 @@ export function AMLDepositsTab() {
           <div className="space-y-4">
             <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{clearModal.entity_name}</p>
+              <p className="font-semibold text-navy-900 dark:text-white">{clearModal.entityName}</p>
               <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                 {clearModal.amount ? formatCurrency(clearModal.amount) : 'N/A'} {clearModal.currency}
               </p>
             </div>
 
-            {!isHoldExpired(clearModal.hold_expires_at) && (
+            {!isHoldExpired(clearModal.holdExpiresAt) && (
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Hold period has not expired yet
                 </p>
                 <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                  Expires: {getHoldTimeRemaining(clearModal.hold_expires_at)}
+                  Expires: {getHoldTimeRemaining(clearModal.holdExpiresAt)}
                 </p>
                 <label className="flex items-center gap-2 mt-2">
                   <input
@@ -675,7 +675,7 @@ export function AMLDepositsTab() {
                 className="flex-1"
                 onClick={handleClearDeposit}
                 loading={actionLoading === `clear-${clearModal.id}`}
-                disabled={!isHoldExpired(clearModal.hold_expires_at) && !forceClear}
+                disabled={!isHoldExpired(clearModal.holdExpiresAt) && !forceClear}
               >
                 <CheckCircle className="w-4 h-4" />
                 Clear Deposit
@@ -697,11 +697,11 @@ export function AMLDepositsTab() {
           <div className="space-y-4">
             <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{rejectModal.entity_name}</p>
+              <p className="font-semibold text-navy-900 dark:text-white">{rejectModal.entityName}</p>
               <p className="text-lg font-bold text-navy-600 dark:text-navy-400 mt-1">
-                {(rejectModal.amount || rejectModal.reported_amount) ?
-                  formatCurrency(rejectModal.amount || rejectModal.reported_amount!) : 'N/A'
-                } {rejectModal.currency || rejectModal.reported_currency}
+                {(rejectModal.amount || rejectModal.reportedAmount) ?
+                  formatCurrency(rejectModal.amount || rejectModal.reportedAmount!) : 'N/A'
+                } {rejectModal.currency || rejectModal.reportedCurrency}
               </p>
             </div>
 
@@ -774,11 +774,11 @@ export function AMLDepositsTab() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-navy-500">Entity</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.entity_name}</p>
+                <p className="font-medium text-navy-900 dark:text-white">{detailModal.entityName}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">User</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.user_email}</p>
+                <p className="font-medium text-navy-900 dark:text-white">{detailModal.userEmail}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Status</p>
@@ -792,7 +792,7 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500">AML Status</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.aml_status}</p>
+                <p className="font-medium text-navy-900 dark:text-white">{detailModal.amlStatus}</p>
               </div>
             </div>
 
@@ -802,7 +802,7 @@ export function AMLDepositsTab() {
               <div>
                 <p className="text-sm text-navy-500">Reported Amount</p>
                 <p className="font-medium text-navy-900 dark:text-white">
-                  {detailModal.reported_amount ? formatCurrency(detailModal.reported_amount) : 'N/A'} {detailModal.reported_currency}
+                  {detailModal.reportedAmount ? formatCurrency(detailModal.reportedAmount) : 'N/A'} {detailModal.reportedCurrency}
                 </p>
               </div>
               <div>
@@ -813,36 +813,36 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500">Source Bank</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.source_bank || 'N/A'}</p>
+                <p className="font-medium text-navy-900 dark:text-white">{detailModal.sourceBank || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Source IBAN</p>
-                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.source_iban || 'N/A'}</p>
+                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.sourceIban || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Wire Reference</p>
-                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.wire_reference || 'N/A'}</p>
+                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.wireReference || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Hold Type</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.hold_type || 'N/A'}</p>
+                <p className="font-medium text-navy-900 dark:text-white">{detailModal.holdType || 'N/A'}</p>
               </div>
             </div>
 
-            {detailModal.admin_notes && (
+            {detailModal.adminNotes && (
               <>
                 <hr className="border-navy-200 dark:border-navy-700" />
                 <div>
                   <p className="text-sm text-navy-500">Admin Notes</p>
-                  <p className="text-sm text-navy-700 dark:text-navy-300 whitespace-pre-wrap">{detailModal.admin_notes}</p>
+                  <p className="text-sm text-navy-700 dark:text-navy-300 whitespace-pre-wrap">{detailModal.adminNotes}</p>
                 </div>
               </>
             )}
 
-            {detailModal.rejection_reason && (
+            {detailModal.rejectionReason && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <p className="text-sm text-red-700 dark:text-red-400">
-                  Rejection Reason: {detailModal.rejection_reason}
+                  Rejection Reason: {detailModal.rejectionReason}
                 </p>
               </div>
             )}

@@ -15,9 +15,9 @@ interface AddAssetModalProps {
 }
 
 interface EntityAssets {
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 const formatEUR = (v: number) => `€${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -93,14 +93,14 @@ export function AddAssetModal({
     try {
       const data = await backofficeApi.getEntityAssets(entityId);
       setAssets({
-        eur_balance: data.eur_balance,
-        cea_balance: data.cea_balance,
-        eua_balance: data.eua_balance,
+        eurBalance: data.eurBalance,
+        ceaBalance: data.ceaBalance,
+        euaBalance: data.euaBalance,
       });
     } catch (err) {
       console.error('Failed to fetch assets:', err);
       // If new entity, show zeros
-      setAssets({ eur_balance: 0, cea_balance: 0, eua_balance: 0 });
+      setAssets({ eurBalance: 0, ceaBalance: 0, euaBalance: 0 });
     } finally {
       setLoadingAssets(false);
     }
@@ -136,9 +136,9 @@ export function AddAssetModal({
   const getCurrentBalance = (): number => {
     if (!assets) return 0;
     switch (selectedAsset) {
-      case 'EUR': return assets.eur_balance;
-      case 'CEA': return assets.cea_balance;
-      case 'EUA': return assets.eua_balance;
+      case 'EUR': return assets.eurBalance;
+      case 'CEA': return assets.ceaBalance;
+      case 'EUA': return assets.euaBalance;
     }
   };
 

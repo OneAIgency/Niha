@@ -59,8 +59,8 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
       setError('Please enter a valid quantity');
       return;
     }
-    if (newQuantity < order.filled_quantity) {
-      setError(`Quantity cannot be less than filled amount (${order.filled_quantity})`);
+    if (newQuantity < order.filledQuantity) {
+      setError(`Quantity cannot be less than filled amount (${order.filledQuantity})`);
       return;
     }
 
@@ -107,7 +107,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
               <h2 className="text-lg font-bold text-navy-900 dark:text-white">
                 Edit {order.side} Order
               </h2>
-              <p className="text-sm text-navy-500">{order.certificate_type}</p>
+              <p className="text-sm text-navy-500">{order.certificateType}</p>
             </div>
           </div>
           <button
@@ -125,7 +125,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
             <div className="flex justify-between text-sm">
               <span className="text-navy-600 dark:text-navy-300">Quantity:</span>
               <span className="font-mono font-medium text-navy-900 dark:text-white">
-                {order.quantity.toLocaleString()} ({order.filled_quantity.toLocaleString()} filled)
+                {order.quantity.toLocaleString()} ({order.filledQuantity.toLocaleString()} filled)
               </span>
             </div>
             <div className="flex justify-between text-sm mt-1">
@@ -154,14 +154,14 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
           {/* Quantity Input */}
           <div>
             <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-              New Quantity * <span className="text-navy-400">(min: {order.filled_quantity})</span>
+              New Quantity * <span className="text-navy-400">(min: {order.filledQuantity})</span>
             </label>
             <input
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               step="1"
-              min={order.filled_quantity || 1}
+              min={order.filledQuantity || 1}
               className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -352,9 +352,9 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                         {order.side}
                       </span>
                       <span className="text-navy-900 dark:text-white font-medium">
-                        {order.certificate_type}
+                        {order.certificateType}
                       </span>
-                      {order.certificate_type === 'CEA' ? (
+                      {order.certificateType === 'CEA' ? (
                         <Leaf className="w-4 h-4 text-amber-500" />
                       ) : (
                         <Wind className="w-4 h-4 text-blue-500" />
@@ -362,7 +362,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400 mt-1">
                       <Clock className="w-3 h-3" />
-                      {formatRelativeTime(order.created_at)}
+                      {formatRelativeTime(order.createdAt)}
                     </div>
                   </div>
                 </div>
@@ -388,16 +388,16 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                 <div>
                   <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Filled</div>
                   <div className="font-mono font-semibold text-navy-900 dark:text-white">
-                    {order.filled_quantity.toLocaleString()}
+                    {order.filledQuantity.toLocaleString()}
                     <span className="text-navy-400 text-xs ml-1">
-                      ({((order.filled_quantity / order.quantity) * 100).toFixed(0)}%)
+                      ({((order.filledQuantity / order.quantity) * 100).toFixed(0)}%)
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              {order.filled_quantity > 0 && order.status !== 'CANCELLED' && (
+              {order.filledQuantity > 0 && order.status !== 'CANCELLED' && (
                 <div className="mb-3">
                   <div className="h-1.5 bg-navy-200 dark:bg-navy-600 rounded-full overflow-hidden">
                     <div
@@ -405,7 +405,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                         'h-full rounded-full transition-all',
                         order.status === 'FILLED' ? 'bg-emerald-500' : 'bg-blue-500'
                       )}
-                      style={{ width: `${(order.filled_quantity / order.quantity) * 100}%` }}
+                      style={{ width: `${(order.filledQuantity / order.quantity) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -464,10 +464,10 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
         cancelText="Keep Order"
         variant="danger"
         details={cancelOrder ? [
-          { label: 'Type', value: `${cancelOrder.side} ${cancelOrder.certificate_type}` },
+          { label: 'Type', value: `${cancelOrder.side} ${cancelOrder.certificateType}` },
           { label: 'Price', value: `€${cancelOrder.price.toFixed(2)}` },
           { label: 'Quantity', value: cancelOrder.quantity.toLocaleString() },
-          { label: 'Filled', value: cancelOrder.filled_quantity.toLocaleString() },
+          { label: 'Filled', value: cancelOrder.filledQuantity.toLocaleString() },
         ] : []}
         loading={cancelling}
       />

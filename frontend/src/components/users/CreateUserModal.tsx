@@ -8,8 +8,8 @@ interface CreateUserModalProps {
   onClose: () => void;
   newUser: {
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     position: string;
     password: string;
     role: UserRole;
@@ -62,14 +62,14 @@ export function CreateUserModal({
             <Input
               label="First Name"
               placeholder="John"
-              value={newUser.first_name}
-              onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+              value={newUser.firstName}
+              onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
             />
             <Input
               label="Last Name"
               placeholder="Smith"
-              value={newUser.last_name}
-              onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+              value={newUser.lastName}
+              onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
             />
           </div>
           <Input
@@ -143,7 +143,7 @@ export function CreateUserModal({
             variant="primary"
             onClick={onSubmit}
             loading={saving}
-            disabled={!newUser.email || !newUser.first_name || !newUser.last_name || (!useInvitation && newUser.password.length < 8)}
+            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || (!useInvitation && newUser.password.length < 8)}
           >
             {useInvitation ? (
               <>

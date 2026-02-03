@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core.config import settings
 from ...core.database import get_db
 from ...core.security import (
     RedisManager,
@@ -26,6 +27,29 @@ from ...schemas.schemas import (
 )
 from ...services.email_service import email_service
 from ...services.ticket_service import TicketService
+
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    """Set httpOnly authentication cookie with secure settings."""
+    response.set_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        path=settings.AUTH_COOKIE_PATH,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        domain=settings.AUTH_COOKIE_DOMAIN or None,
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    """Clear the authentication cookie."""
+    response.delete_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        path=settings.AUTH_COOKIE_PATH,
+        domain=settings.AUTH_COOKIE_DOMAIN or None,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +127,12 @@ async def request_magic_link(
 async def verify_magic_link(
     verify_request: MagicLinkVerify,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Verify magic link token and return JWT access token.
+    Sets httpOnly cookie with access token for security.
     """
     # Extract client info for logging
     ip_address = request.client.host if request.client else None
@@ -190,6 +216,9 @@ async def verify_magic_link(
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
+    # Set httpOnly cookie for secure token storage
+    set_auth_cookie(response, access_token)
+
     return TokenResponse(
         access_token=access_token, user=UserResponse.model_validate(user)
     )
@@ -199,10 +228,12 @@ async def verify_magic_link(
 async def password_login(
     login_request: PasswordLoginRequest,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Login with email and password.
+    Sets httpOnly cookie with access token for security.
     Rate limited to prevent brute force attacks.
     """
     # Check rate limit
@@ -285,6 +316,9 @@ async def password_login(
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
+    # Set httpOnly cookie for secure token storage
+    set_auth_cookie(response, access_token)
+
     return TokenResponse(
         access_token=access_token, user=UserResponse.model_validate(user)
     )
@@ -293,30 +327,36 @@ async def password_login(
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Logout user by blacklisting their JWT token.
+    Logout user by blacklisting their JWT token and clearing the auth cookie.
     The token will remain blacklisted until its original expiration time.
     """
-    # Get the Authorization header
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        return MessageResponse(message="Successfully logged out", success=True)
+    # Try to get token from cookie first, then fall back to Authorization header
+    token = request.cookies.get(settings.AUTH_COOKIE_NAME)
 
-    token = auth_header.replace("Bearer ", "")
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.replace("Bearer ", "")
 
-    # Decode token to get expiration time
-    payload = verify_token(token)
-    if payload and "exp" in payload:
-        # Calculate remaining time until token expiration
-        exp_timestamp = payload["exp"]
-        now_timestamp = datetime.now(timezone.utc).timestamp()
-        remaining_seconds = max(int(exp_timestamp - now_timestamp), 0)
+    # Always clear the auth cookie
+    clear_auth_cookie(response)
 
-        # Blacklist the token until it expires
-        if remaining_seconds > 0:
-            await RedisManager.blacklist_token(token, remaining_seconds)
+    # Blacklist the token if we found one
+    if token:
+        payload = verify_token(token)
+        if payload and "exp" in payload:
+            # Calculate remaining time until token expiration
+            exp_timestamp = payload["exp"]
+            now_timestamp = datetime.now(timezone.utc).timestamp()
+            remaining_seconds = max(int(exp_timestamp - now_timestamp), 0)
+
+            # Blacklist the token until it expires
+            if remaining_seconds > 0:
+                await RedisManager.blacklist_token(token, remaining_seconds)
 
     return MessageResponse(message="Successfully logged out", success=True)
 
@@ -347,11 +387,13 @@ async def validate_invitation_token(token: str, db: AsyncSession = Depends(get_d
 
 @router.post("/setup-password", response_model=TokenResponse)
 async def setup_password_from_invitation(
-    request: SetupPasswordRequest,  # noqa: B008
+    setup_request: SetupPasswordRequest,  # noqa: B008
+    response: Response,
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Set password from invitation link.
+    Sets httpOnly cookie with access token for security.
     Password requirements:
     - Minimum 8 characters
     - At least 1 uppercase letter
@@ -359,9 +401,9 @@ async def setup_password_from_invitation(
     """
     import re
 
-    token = request.token
-    password = request.password
-    confirm_password = request.confirm_password
+    token = setup_request.token
+    password = setup_request.password
+    confirm_password = setup_request.confirm_password
 
     # Validate passwords match
     if password != confirm_password:
@@ -408,6 +450,9 @@ async def setup_password_from_invitation(
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+
+    # Set httpOnly cookie for secure token storage
+    set_auth_cookie(response, access_token)
 
     return TokenResponse(
         access_token=access_token, user=UserResponse.model_validate(user)

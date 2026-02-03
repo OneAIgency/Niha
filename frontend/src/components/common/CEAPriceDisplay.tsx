@@ -71,8 +71,8 @@ export function CEAPriceDisplay({
     );
   }
 
-  // Use price_eur if available, otherwise use price (which should already be in EUR)
-  const ceaPrice = prices.cea.price_eur ?? prices.cea.price;
+  // Use priceEur if available, otherwise use price (which should already be in EUR)
+  const ceaPrice = prices.cea.priceEur ?? prices.cea.price;
 
   return (
     <div className={cn('flex items-center gap-2', className)}>

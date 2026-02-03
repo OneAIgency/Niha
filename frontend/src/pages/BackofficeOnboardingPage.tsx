@@ -84,19 +84,19 @@ export function BackofficeOnboardingPage() {
 
   const allMapped: ContactRequest[] = realtimeContactRequests.map(r => ({
     id: r.id,
-    entity_name: r.entity_name,
-    contact_email: r.contact_email,
-    contact_name: r.contact_name,
+    entityName: r.entityName,
+    contactEmail: r.contactEmail,
+    contactName: r.contactName,
     position: r.position || '',
-    nda_file_name: r.nda_file_name,
-    submitter_ip: r.submitter_ip,
-    user_role: ('user_role' in r ? r.user_role : (r as { status?: string }).status) ?? 'new',
+    ndaFileName: r.ndaFileName,
+    submitterIp: r.submitterIp,
+    userRole: ('userRole' in r ? r.userRole : (r as { status?: string }).status) ?? 'new',
     notes: r.notes,
-    created_at: r.created_at,
+    createdAt: r.createdAt,
   }));
   // Only show pending requests (NDA, new); KYC and REJECTED disappear immediately after approval
   const contactRequests: ContactRequest[] = allMapped.filter(r =>
-    isPendingContactRequest(r.user_role)
+    isPendingContactRequest(r.userRole)
   );
   const contactRequestsCount = contactRequests.length;
 
@@ -125,11 +125,11 @@ export function BackofficeOnboardingPage() {
         setKycUsers(users.map((u: PendingUserResponse & { firstName?: string; lastName?: string; entityName?: string; documentsCount?: number; createdAt?: string }): KYCUser => ({
           id: u.id,
           email: u.email,
-          first_name: u.first_name ?? u.firstName ?? '',
-          last_name: u.last_name ?? u.lastName ?? '',
-          entity_name: u.entity_name ?? u.entityName ?? '',
-          documents_count: u.documents_count ?? u.documentsCount ?? 0,
-          created_at: u.created_at ?? u.createdAt ?? new Date().toISOString(),
+          firstName: u.firstName ?? '',
+          lastName: u.lastName ?? '',
+          entityName: u.entityName ?? '',
+          documentsCount: u.documentsCount ?? 0,
+          createdAt: u.createdAt ?? new Date().toISOString(),
         })));
         // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -137,28 +137,28 @@ export function BackofficeOnboardingPage() {
           ...d,
           id: d.id,
           status: d.status,
-          created_at: d.created_at ?? d.createdAt,
-          user_id: d.user_id ?? d.userId,
-          document_type: d.document_type ?? d.documentType,
-          file_name: d.file_name ?? d.fileName,
+          createdAt: d.createdAt,
+          userId: d.userId,
+          documentType: d.documentType,
+          fileName: d.fileName,
         })));
       } else if (activeSubpage === 'deposits') {
         const pendingRes = await backofficeApi.getPendingDeposits();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setPendingDeposits(pendingRes.map((d: any): PendingDeposit => ({
           id: d.id,
-          entity_id: d.entity_id ?? d.entityId ?? '',
-          entity_name: d.entity_name ?? d.entityName ?? '',
-          user_email: d.user_email ?? d.userEmail ?? '',
-          user_role: d.user_role ?? d.userRole,
-          reported_amount: d.reported_amount ?? d.reportedAmount ?? null,
-          reported_currency: d.reported_currency ?? d.reportedCurrency ?? null,
-          wire_reference: d.wire_reference ?? d.wireReference ?? null,
-          bank_reference: d.bank_reference ?? d.bankReference ?? null,
+          entityId: d.entityId ?? '',
+          entityName: d.entityName ?? '',
+          userEmail: d.userEmail ?? '',
+          userRole: d.userRole,
+          reportedAmount: d.reportedAmount ?? null,
+          reportedCurrency: d.reportedCurrency ?? null,
+          wireReference: d.wireReference ?? null,
+          bankReference: d.bankReference ?? null,
           status: d.status,
-          reported_at: d.reported_at ?? d.reportedAt ?? null,
+          reportedAt: d.reportedAt ?? null,
           notes: d.notes ?? null,
-          created_at: d.created_at ?? d.createdAt ?? '',
+          createdAt: d.createdAt ?? '',
         })));
       } else if (activeSubpage === 'aml') {
         const onHoldRes = await backofficeApi.getOnHoldDeposits({ include_expired: true });
@@ -192,8 +192,8 @@ export function BackofficeOnboardingPage() {
     setActionLoading(`open-${requestId}`);
     try {
       const request = contactRequests.find(r => r.id === requestId);
-      if (request?.nda_file_name) {
-        await adminApi.openNDAInBrowser(requestId, request.nda_file_name);
+      if (request?.ndaFileName) {
+        await adminApi.openNDAInBrowser(requestId, request.ndaFileName);
       }
     } catch (err) {
       logger.error('Failed to open NDA', err);
@@ -229,7 +229,7 @@ export function BackofficeOnboardingPage() {
   const handleRejectRequest = async (requestId: string) => {
     setActionLoading(`reject-${requestId}`);
     try {
-      await adminApi.updateContactRequest(requestId, { user_role: 'REJECTED' });
+      await adminApi.updateContactRequest(requestId, { userRole: 'REJECTED' });
     } catch (err) {
       logger.error('Failed to reject request', err);
     } finally {
@@ -283,7 +283,7 @@ export function BackofficeOnboardingPage() {
   const handleClearAML = async (depositId: string) => {
     setActionLoading(`aml-clear-${depositId}`);
     try {
-      await backofficeApi.clearDeposit(depositId, { force_clear: true, admin_notes: 'AML cleared by admin' });
+      await backofficeApi.clearDeposit(depositId, { forceClear: true, adminNotes: 'AML cleared by admin' });
       setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
     } catch (err) {
       logger.error('Failed to clear AML deposit', err);
@@ -325,9 +325,9 @@ export function BackofficeOnboardingPage() {
   const handleOpenDocumentViewer = (doc: KYCDocument) => {
     setShowDocumentViewer({
       id: doc.id,
-      fileName: doc.file_name,
-      type: doc.document_type,
-      mimeType: doc.mime_type,
+      fileName: doc.fileName,
+      type: doc.documentType,
+      mimeType: doc.mimeType,
     });
     loadDocumentContent(doc.id);
   };
@@ -388,7 +388,7 @@ export function BackofficeOnboardingPage() {
   };
 
   const getUserDocuments = (userId: string) =>
-    kycDocuments.filter(d => d.user_id === userId);
+    kycDocuments.filter(d => d.userId === userId);
 
   const subSubHeaderLeft = (
     <nav className="flex items-center gap-2" aria-label="Onboarding subpages">
@@ -544,10 +544,10 @@ export function BackofficeOnboardingPage() {
           ) : (
             <div className="space-y-4">
               {amlDeposits.map((deposit) => {
-                const holdExpiresAt = deposit.hold_expires_at ?? (deposit as unknown as { holdExpiresAt?: string }).holdExpiresAt;
+                const holdExpiresAt = deposit.holdExpiresAt;
                 const isExpired = holdExpiresAt ? new Date(holdExpiresAt) <= new Date() : false;
-                const entityName = deposit.entity_name ?? (deposit as unknown as { entityName?: string }).entityName ?? 'Unknown';
-                const userEmail = deposit.user_email ?? (deposit as unknown as { userEmail?: string }).userEmail ?? '';
+                const entityName = deposit.entityName ?? 'Unknown';
+                const userEmail = deposit.userEmail ?? '';
                 const amount = deposit.amount ? Number(deposit.amount) : 0;
                 const currency = deposit.currency || 'EUR';
 

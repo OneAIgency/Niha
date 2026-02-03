@@ -5,9 +5,11 @@ import { TOKEN_KEY } from '../constants/auth';
 import { logger } from '../utils/logger';
 
 // Auth Store
+// Note: Token is now stored in httpOnly cookie (set by backend on login)
+// We only store user info in Zustand for UI display purposes
 interface AuthState {
   user: User | null;
-  token: string | null;
+  token: string | null;  // Kept for backwards compatibility, but not used for auth
   isAuthenticated: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
@@ -17,12 +19,13 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
   persist(
     (set) => ({
       user: null,
-      token: null,
+      token: null,  // Kept for backwards compatibility during transition
       isAuthenticated: false,
       _hasHydrated: false,
       setAuth: (user, token) => {
-        // Store token separately in sessionStorage for API interceptor
-        // (Zustand persist will also save it, but API reads from TOKEN_KEY directly)
+        // Token is now in httpOnly cookie, but we keep a copy for backwards compatibility
+        // during the transition period (some code may still check token)
+        // Note: Real auth is via httpOnly cookie - this is just for UI state
         try {
           sessionStorage.setItem(TOKEN_KEY, token);
         } catch (error) {
@@ -30,9 +33,11 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
         }
 
         set({ user, token, isAuthenticated: true });
+        logger.debug('[AuthStore] Auth state set (cookie-based auth enabled)');
       },
       logout: () => {
         logger.debug('[AuthStore] logout called');
+        // Clear sessionStorage token (httpOnly cookie is cleared by logout API endpoint)
         try {
           sessionStorage.removeItem(TOKEN_KEY);
           logger.debug('[AuthStore] Token removed from sessionStorage');
@@ -45,19 +50,18 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
     }),
     {
       name: 'auth-storage',
-      // Use sessionStorage instead of localStorage for security
-      // This ensures token and auth state are stored in the same place
+      // Use sessionStorage to persist user info for UI display
       storage: createJSONStorage(() => sessionStorage),
-      // Only persist essential state to prevent unnecessary re-renders
+      // Only persist essential state (user info for UI, not for auth)
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
+        token: state.token,  // Kept for backwards compatibility
         isAuthenticated: state.isAuthenticated,
       }),
       // Control rehydration to prevent navigation loops
       onRehydrateStorage: () => {
         logger.debug('[AuthStore] Starting rehydration...');
-        
+
         // Clean up old localStorage data if exists (migration from old storage)
         try {
           if (localStorage.getItem('auth-storage')) {
@@ -66,10 +70,10 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
         } catch (e) {
           // Ignore errors
         }
-        
+
         return (state) => {
-          // CRITICAL: Restore token to sessionStorage for API interceptor
-          // Zustand persist restores the state, but API reads token from TOKEN_KEY directly
+          // Restore token to sessionStorage for backwards compatibility
+          // Note: Real auth happens via httpOnly cookie
           if (state?.token) {
             try {
               sessionStorage.setItem(TOKEN_KEY, state.token);
@@ -77,7 +81,7 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
               logger.error('[AuthStore] Failed to restore token:', error);
             }
           }
-          
+
           // Mark as hydrated after a microtask to ensure state is fully updated
           setTimeout(() => {
             useAuthStore.setState({ _hasHydrated: true });
@@ -208,18 +212,18 @@ export const useUIStore = create<UIState>((set, get) => {
   };
 });
 
-// KYC Document type for backoffice
+// KYC Document type for backoffice (camelCase to match API response transformation)
 export interface KYCDocumentBackoffice {
   id: string;
-  user_id: string;
-  user_email?: string;
-  document_type: string;
-  file_name: string;
-  mime_type?: string;
+  userId: string;
+  userEmail?: string;
+  documentType: string;
+  fileName: string;
+  mimeType?: string;
   status: string;
   notes?: string;
-  created_at: string;
-  reviewed_at?: string;
+  createdAt: string;
+  reviewedAt?: string;
 }
 
 // Backoffice Realtime Store

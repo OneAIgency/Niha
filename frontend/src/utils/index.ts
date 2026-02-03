@@ -178,10 +178,14 @@ export { logger } from './logger';
 // Export sanitization utilities
 export {
   sanitizeString,
+  sanitizeHtml,
   sanitizeEmail,
   sanitizeNumber,
   sanitizeObject,
   sanitizeFormData,
+  isValidCssVariableName,
+  isValidCssValue,
+  sanitizeCssVariables,
 } from './sanitize';
 
 // Export data transformation utilities

@@ -3,14 +3,14 @@ export type CertificateType = 'EUA' | 'CEA';
 
 export interface Certificate {
   id: string;
-  anonymous_code: string;
-  certificate_type: CertificateType;
+  anonymousCode: string;
+  certificateType: CertificateType;
   quantity: number;
-  unit_price: number;
-  total_value: number;
-  vintage_year?: number;
+  unitPrice: number;
+  totalValue: number;
+  vintageYear?: number;
   status: 'available' | 'reserved' | 'sold';
-  created_at: string;
+  createdAt: string;
   jurisdiction?: string;
   views?: number;
   inquiries?: number;
@@ -20,24 +20,24 @@ export interface Certificate {
 export interface PriceData {
   price: number;
   currency: string;
-  price_usd: number;
-  price_eur?: number;  // EUR equivalent (for CEA)
-  change_24h: number;
+  priceUsd: number;
+  priceEur?: number;  // EUR equivalent (for CEA)
+  change24h: number;
 }
 
 export interface Prices {
   eua: PriceData;
   cea: PriceData;
-  swap_rate: number;
-  updated_at: string;
+  swapRate: number;
+  updatedAt: string;
 }
 
 // Price History Types
 export interface PriceHistoryPoint {
   timestamp: string;
   price: number;
-  price_eur?: number;
-  change_24h: number;
+  priceEur?: number;
+  change24h: number;
 }
 
 export interface PriceHistory {
@@ -48,31 +48,31 @@ export interface PriceHistory {
 // Swap Types
 export interface SwapRequest {
   id: string;
-  anonymous_code: string;
-  from_type: CertificateType;
-  to_type: CertificateType;
+  anonymousCode: string;
+  fromType: CertificateType;
+  toType: CertificateType;
   quantity: number;
-  desired_rate: number;
-  equivalent_quantity: number;
+  desiredRate: number;
+  equivalentQuantity: number;
   status: 'open' | 'matched' | 'completed' | 'cancelled';
-  created_at: string;
-  expires_at?: string;
+  createdAt: string;
+  expiresAt?: string;
 }
 
 export interface SwapCalculation {
   input: {
     type: CertificateType;
     quantity: number;
-    value_eur: number;
+    valueEur: number;
   };
   output: {
     type: CertificateType;
     quantity: number;
-    value_eur: number;
+    valueEur: number;
   };
   rate: number;
-  fee_pct: number;
-  fee_eur: number;
+  feePct: number;
+  feeEur: number;
 }
 
 // User Types
@@ -95,25 +95,25 @@ export type UserRole =
 export interface User {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
   position?: string;
   phone?: string;
   role: UserRole;
-  entity_id?: string;
-  must_change_password?: boolean;
-  last_login?: string;
+  entityId?: string;
+  mustChangePassword?: boolean;
+  lastLogin?: string;
 }
 
 // Activity Log
 export interface ActivityLog {
   id: string;
-  user_id: string;
+  userId: string;
   action: string;
   details: Record<string, unknown>;
-  ip_address: string;
-  user_agent?: string;
-  created_at: string;
+  ipAddress: string;
+  userAgent?: string;
+  createdAt: string;
 }
 
 // KYC Document
@@ -129,17 +129,17 @@ export type KYCDocumentType =
 
 export interface KYCDocument {
   id: string;
-  user_id: string;
-  entity_id?: string;
-  document_type: KYCDocumentType;
-  file_name: string;
+  userId: string;
+  entityId?: string;
+  documentType: KYCDocumentType;
+  fileName: string;
   /** Server path; not returned by API in responses for security */
-  file_path?: string;
+  filePath?: string;
   status: 'pending' | 'approved' | 'rejected';
-  reviewed_at?: string;
-  reviewed_by?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
   notes?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 // Scraping Source
@@ -149,20 +149,18 @@ export interface ScrapingSource {
   id: string;
   name: string;
   url: string;
-  certificate_type: CertificateType;
-  scrape_library?: ScrapeLibrary;
-  is_active: boolean;
-  scrape_interval_minutes: number;
-  last_scrape_at?: string;
-  last_scrape_status?: 'success' | 'failed' | 'timeout';
-  /** Set by API response (camelCase); use with last_scrape_status for display. */
+  certificateType: CertificateType;
+  scrapeLibrary?: ScrapeLibrary;
+  isActive: boolean;
+  scrapeIntervalMinutes: number;
+  lastScrapeAt?: string;
   lastScrapeStatus?: 'success' | 'failed' | 'timeout';
-  last_price?: number;
+  lastPrice?: number;
   lastPriceEur?: number;  // EUR-converted price (for CEA)
   lastExchangeRate?: number;  // EUR/CNY rate used for conversion
   config?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Exchange Rate Source
@@ -190,98 +188,98 @@ export type MailProvider = 'resend' | 'smtp';
 export interface MailSettings {
   id: string | null;
   provider: MailProvider;
-  use_env_credentials: boolean;
-  from_email: string;
-  resend_api_key: string | null;
-  smtp_host: string | null;
-  smtp_port: number | null;
-  smtp_use_tls: boolean;
-  smtp_username: string | null;
-  smtp_password: string | null;
-  invitation_subject: string | null;
-  invitation_body_html: string | null;
-  invitation_link_base_url: string | null;
-  invitation_token_expiry_days: number;
-  verification_method: string | null;
-  auth_method: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  useEnvCredentials: boolean;
+  fromEmail: string;
+  resendApiKey: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUseTls: boolean;
+  smtpUsername: string | null;
+  smtpPassword: string | null;
+  invitationSubject: string | null;
+  invitationBodyHtml: string | null;
+  invitationLinkBaseUrl: string | null;
+  invitationTokenExpiryDays: number;
+  verificationMethod: string | null;
+  authMethod: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface MailSettingsUpdate {
   provider?: MailProvider;
-  use_env_credentials?: boolean;
-  from_email?: string;
-  resend_api_key?: string;
-  smtp_host?: string;
-  smtp_port?: number;
-  smtp_use_tls?: boolean;
-  smtp_username?: string;
-  smtp_password?: string;
-  invitation_subject?: string;
-  invitation_body_html?: string;
-  invitation_link_base_url?: string;
-  invitation_token_expiry_days?: number;
-  verification_method?: string;
-  auth_method?: string;
+  useEnvCredentials?: boolean;
+  fromEmail?: string;
+  resendApiKey?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUseTls?: boolean;
+  smtpUsername?: string;
+  smtpPassword?: string;
+  invitationSubject?: string;
+  invitationBodyHtml?: string;
+  invitationLinkBaseUrl?: string;
+  invitationTokenExpiryDays?: number;
+  verificationMethod?: string;
+  authMethod?: string;
 }
 
 // User Session
 export interface UserSession {
   id: string;
-  user_id: string;
-  ip_address: string;
-  user_agent?: string;
-  started_at: string;
-  ended_at?: string;
-  duration_seconds?: number;
-  is_active?: boolean;
+  userId: string;
+  ipAddress: string;
+  userAgent?: string;
+  startedAt: string;
+  endedAt?: string;
+  durationSeconds?: number;
+  isActive?: boolean;
 }
 
 export interface Entity {
   id: string;
   name: string;
-  legal_name?: string;
+  legalName?: string;
   jurisdiction: 'EU' | 'CN' | 'HK' | 'OTHER';
   verified: boolean;
-  kyc_status: 'pending' | 'approved' | 'rejected';
+  kycStatus: 'pending' | 'approved' | 'rejected';
 }
 
 // Contact Request
 export interface ContactRequest {
-  entity_name: string;
-  contact_email: string;
-  contact_name?: string;
+  entityName: string;
+  contactEmail: string;
+  contactName?: string;
   position?: string;
 }
 
 // NDA Request (for file upload)
 export interface NDARequest {
-  entity_name: string;
-  contact_email: string;
-  contact_name: string;
+  entityName: string;
+  contactEmail: string;
+  contactName: string;
   position: string;
-  nda_file: File;
+  ndaFile: File;
 }
 
-// Contact Request Response (from admin API). Client state: ONLY user_role (NDA, KYC, REJECTED).
+// Contact Request Response (from admin API). Client state: ONLY userRole (NDA, KYC, REJECTED).
 export interface ContactRequestResponse {
   id: string;
-  entity_name: string;
-  contact_email: string;
-  contact_name?: string;
+  entityName: string;
+  contactEmail: string;
+  contactName?: string;
   position?: string;
-  nda_file_name?: string;
-  submitter_ip?: string;
+  ndaFileName?: string;
+  submitterIp?: string;
   /** Sole source for request state; values NDA, KYC, REJECTED. */
-  user_role: string;
+  userRole: string;
   notes?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 // Contact Request update payload (admin API)
 export interface ContactRequestUpdate {
-  user_role?: string;
+  userRole?: string;
   notes?: string;
 }
 
@@ -289,7 +287,7 @@ export interface ContactRequestUpdate {
 export interface IPLookupResult {
   ip: string;
   country: string;
-  country_code: string;
+  countryCode: string;
   region: string;
   city: string;
   zip: string;
@@ -303,17 +301,17 @@ export interface IPLookupResult {
 
 // Market Stats
 export interface MarketStats {
-  cea_listings: number;
-  eua_listings: number;
-  active_swaps: number;
-  total_cea_volume: number;
-  total_eua_volume: number;
-  total_market_value_usd: number;
-  avg_cea_price: number;
-  avg_eua_price: number;
-  jurisdictions_served: string[];
-  trades_24h: number;
-  volume_24h_usd: number;
+  ceaListings: number;
+  euaListings: number;
+  activeSwaps: number;
+  totalCeaVolume: number;
+  totalEuaVolume: number;
+  totalMarketValueUsd: number;
+  avgCeaPrice: number;
+  avgEuaPrice: number;
+  jurisdictionsServed: string[];
+  trades24h: number;
+  volume24hUsd: number;
 }
 
 // API Response Types
@@ -321,9 +319,9 @@ export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
     page: number;
-    per_page: number;
+    perPage: number;
     total: number;
-    total_pages: number;
+    totalPages: number;
   };
 }
 
@@ -335,22 +333,22 @@ export interface MessageResponse {
 // Trade Types
 export interface Trade {
   id: string;
-  trade_type: 'buy' | 'sell' | 'swap';
-  certificate_type: CertificateType;
+  tradeType: 'buy' | 'sell' | 'swap';
+  certificateType: CertificateType;
   quantity: number;
-  price_per_unit: number;
-  total_value: number;
+  pricePerUnit: number;
+  totalValue: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  created_at: string;
+  createdAt: string;
 }
 
 // Portfolio Summary
 export interface PortfolioSummary {
-  total_eua: number;
-  total_cea: number;
-  total_value_usd: number;
-  pending_swaps: number;
-  completed_trades: number;
+  totalEua: number;
+  totalCea: number;
+  totalValueUsd: number;
+  pendingSwaps: number;
+  completedTrades: number;
 }
 
 // Cash Market Types
@@ -359,47 +357,47 @@ export type OrderStatus = 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
 
 export interface Order {
   id: string;
-  entity_id: string;
-  certificate_type: CertificateType;
+  entityId: string;
+  certificateType: CertificateType;
   side: OrderSide;
   price: number;
   quantity: number;
-  filled_quantity: number;
-  remaining_quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
   status: OrderStatus;
   market?: MarketType;  // Which market this order is on (CEA_CASH or SWAP)
-  created_at: string;
-  updated_at?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface OrderBookLevel {
   price: number;
   quantity: number;
-  order_count: number;
-  cumulative_quantity: number;
+  orderCount: number;
+  cumulativeQuantity: number;
 }
 
 export interface OrderBook {
-  certificate_type: CertificateType;
+  certificateType: CertificateType;
   bids: OrderBookLevel[];
   asks: OrderBookLevel[];
   spread: number | null;
-  best_bid: number | null;
-  best_ask: number | null;
-  last_price: number | null;
-  volume_24h: number;
-  change_24h: number;
-  high_24h: number | null;
-  low_24h: number | null;
+  bestBid: number | null;
+  bestAsk: number | null;
+  lastPrice: number | null;
+  volume24h: number;
+  change24h: number;
+  high24h: number | null;
+  low24h: number | null;
 }
 
 export interface MarketDepthPoint {
   price: number;
-  cumulative_quantity: number;
+  cumulativeQuantity: number;
 }
 
 export interface MarketDepth {
-  certificate_type: CertificateType;
+  certificateType: CertificateType;
   bids: MarketDepthPoint[];
   asks: MarketDepthPoint[];
 }
@@ -414,14 +412,14 @@ export interface CashMarketTrade {
 }
 
 export interface CashMarketStats {
-  certificate_type: CertificateType;
-  last_price: number;
-  change_24h: number;
-  high_24h: number;
-  low_24h: number;
-  volume_24h: number;
-  total_bids: number;
-  total_asks: number;
+  certificateType: CertificateType;
+  lastPrice: number;
+  change24h: number;
+  high24h: number;
+  low24h: number;
+  volume24h: number;
+  totalBids: number;
+  totalAsks: number;
 }
 
 // Authentication History Types
@@ -429,43 +427,43 @@ export type AuthMethod = 'password' | 'magic_link';
 
 export interface AuthenticationAttempt {
   id: string;
-  user_id?: string;
+  userId?: string;
   email: string;
   success: boolean;
   method: AuthMethod;
-  ip_address?: string;
-  user_agent?: string;
-  failure_reason?: string;
-  created_at: string;
+  ipAddress?: string;
+  userAgent?: string;
+  failureReason?: string;
+  createdAt: string;
 }
 
 // Admin User Management Types
 export interface AdminUserFull extends User {
-  entity_name?: string;
-  password_set: boolean;
-  login_count: number;
-  last_login_ip?: string;
-  failed_login_count_24h: number;
+  entityName?: string;
+  passwordSet: boolean;
+  loginCount: number;
+  lastLoginIp?: string;
+  failedLoginCount24h: number;
   sessions: UserSession[];
-  auth_history: AuthenticationAttempt[];
-  is_active: boolean;
-  created_at?: string;
+  authHistory: AuthenticationAttempt[];
+  isActive: boolean;
+  createdAt?: string;
 }
 
 export interface AdminUserUpdate {
   email?: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
   position?: string;
   phone?: string;
   role?: UserRole;
-  is_active?: boolean;
-  entity_id?: string;
+  isActive?: boolean;
+  entityId?: string;
 }
 
 export interface AdminPasswordReset {
-  new_password: string;
-  force_change?: boolean;
+  newPassword: string;
+  forceChange?: boolean;
 }
 
 // Deposit Types
@@ -484,84 +482,56 @@ export type RejectionReason =
 
 export interface Deposit {
   id: string;
-  entity_id: string;
-  entityId?: string;  // camelCase variant
-  entity_name?: string;
-  entityName?: string;  // camelCase variant
-  user_id?: string;
-  userId?: string;  // camelCase variant
-  user_email?: string;
-  userEmail?: string;  // camelCase variant
+  entityId: string;
+  entityName?: string;
+  userId?: string;
+  userEmail?: string;
 
-  // Reported by client (snake_case from backend, camelCase from interceptor)
-  reported_amount?: number;
-  reportedAmount?: number;  // camelCase variant
-  reported_currency?: Currency;
-  reportedCurrency?: Currency;  // camelCase variant
-  source_bank?: string;
-  sourceBank?: string;  // camelCase variant
-  source_iban?: string;
-  sourceIban?: string;  // camelCase variant
-  source_swift?: string;
-  sourceSwift?: string;  // camelCase variant
-  client_notes?: string;
-  clientNotes?: string;  // camelCase variant
+  // Reported by client
+  reportedAmount?: number;
+  reportedCurrency?: Currency;
+  sourceBank?: string;
+  sourceIban?: string;
+  sourceSwift?: string;
+  clientNotes?: string;
 
   // Confirmed by admin
   amount?: number;
   currency?: Currency;
-  wire_reference?: string;
-  wireReference?: string;  // camelCase variant
-  bank_reference?: string;
-  bankReference?: string;  // camelCase variant
+  wireReference?: string;
+  bankReference?: string;
 
   // Status
   status: DepositStatus;
-  /** Reporting user's role (client status); FUNDING when announced. API returns snake_case; interceptor may camelCase. */
-  user_role?: string;
-  userRole?: string;  // camelCase variant
-  aml_status?: AMLStatus;
-  amlStatus?: AMLStatus;  // camelCase variant
-  hold_type?: HoldType;
-  holdType?: HoldType;  // camelCase variant
-  hold_days_required?: number;
-  holdDaysRequired?: number;  // camelCase variant
-  hold_expires_at?: string;
-  holdExpiresAt?: string;  // camelCase variant
+  /** Reporting user's role (client status); FUNDING when announced. */
+  userRole?: string;
+  amlStatus?: AMLStatus;
+  holdType?: HoldType;
+  holdDaysRequired?: number;
+  holdExpiresAt?: string;
 
-  // Timestamps (snake_case from backend, camelCase from interceptor)
-  reported_at?: string;
-  reportedAt?: string;  // camelCase variant
-  confirmed_at?: string;
-  confirmedAt?: string;  // camelCase variant
-  cleared_at?: string;
-  clearedAt?: string;  // camelCase variant
-  rejected_at?: string;
-  rejectedAt?: string;  // camelCase variant
+  // Timestamps
+  reportedAt?: string;
+  confirmedAt?: string;
+  clearedAt?: string;
+  rejectedAt?: string;
 
   // Audit trail
-  confirmed_by?: string;
-  confirmedBy?: string;  // camelCase variant
-  cleared_by?: string;
-  clearedBy?: string;  // camelCase variant
-  rejected_by?: string;
-  rejectedBy?: string;  // camelCase variant
-  rejection_reason?: string;
-  rejectionReason?: string;  // camelCase variant
-  admin_notes?: string;
-  adminNotes?: string;  // camelCase variant
+  confirmedBy?: string;
+  clearedBy?: string;
+  rejectedBy?: string;
+  rejectionReason?: string;
+  adminNotes?: string;
   notes?: string;
-  ticket_id?: string;
-  ticketId?: string;  // camelCase variant
-  created_at: string;
-  createdAt?: string;  // camelCase variant
+  ticketId?: string;
+  createdAt: string;
 }
 
 export interface DepositCreate {
-  entity_id: string;
+  entityId: string;
   amount: number;
   currency: Currency;
-  wire_reference?: string;
+  wireReference?: string;
   notes?: string;
 }
 
@@ -569,69 +539,69 @@ export interface DepositCreate {
 export interface AnnounceDepositRequest {
   amount: number;
   currency: Currency;
-  source_bank?: string;
-  source_iban?: string;
-  source_swift?: string;
-  client_notes?: string;
+  sourceBank?: string;
+  sourceIban?: string;
+  sourceSwift?: string;
+  clientNotes?: string;
 }
 
 export interface ConfirmDepositRequest {
-  actual_amount: number;
-  actual_currency: Currency;
-  wire_reference?: string;
-  bank_reference?: string;
-  admin_notes?: string;
+  actualAmount: number;
+  actualCurrency: Currency;
+  wireReference?: string;
+  bankReference?: string;
+  adminNotes?: string;
 }
 
 export interface ClearDepositRequest {
-  admin_notes?: string;
-  force_clear?: boolean;
+  adminNotes?: string;
+  forceClear?: boolean;
 }
 
 export interface RejectDepositRequest {
   reason: RejectionReason;
-  admin_notes?: string;
+  adminNotes?: string;
 }
 
 export interface WireInstructions {
-  bank_name: string;
+  bankName: string;
   iban: string;
-  swift_bic: string;
+  swiftBic: string;
   beneficiary: string;
-  reference_format: string;
-  important_notes: string[];
+  referenceFormat: string;
+  importantNotes: string[];
 }
 
 export interface DepositListResponse {
   deposits: Deposit[];
   total: number;
-  has_more: boolean;
+  hasMore: boolean;
 }
 
 export interface DepositStats {
-  pending_count: number;
-  on_hold_count: number;
-  on_hold_total: number;
-  cleared_count: number;
-  cleared_total: number;
-  rejected_count: number;
-  expired_holds_count: number;
+  pendingCount: number;
+  onHoldCount: number;
+  onHoldTotal: number;
+  clearedCount: number;
+  clearedTotal: number;
+  rejectedCount: number;
+  expiredHoldsCount: number;
 }
 
 export interface HoldCalculation {
-  hold_type: HoldType;
-  hold_days: number;
-  estimated_release_date: string;
+  holdType: HoldType;
+  holdDays: number;
+  estimatedReleaseDate: string;
   reason: string;
 }
 
 export interface EntityBalance {
-  entity_id: string;
-  entity_name: string;
-  balance_amount: number;
-  balance_currency?: Currency;
-  total_deposited: number;
-  deposit_count: number;
+  entityId: string;
+  entityName: string;
+  balanceAmount: number;
+  balanceCurrency?: Currency;
+  totalDeposited: number;
+  depositCount: number;
 }
 
 /**
@@ -652,34 +622,35 @@ export type AssetType = 'EUR' | 'CEA' | 'EUA';
 export type TransactionType = 'deposit' | 'withdrawal' | 'trade_buy' | 'trade_sell' | 'adjustment';
 
 export interface EntityHolding {
-  entity_id: string;
-  asset_type: AssetType;
+  entityId: string;
+  assetType: AssetType;
   quantity: number;
-  updated_at: string;
+  updatedAt: string;
 }
 
 export interface AssetTransaction {
   id: string;
-  entity_id: string;
-  asset_type: AssetType;
-  transaction_type: TransactionType;
+  entityId: string;
+  assetType: AssetType;
+  transactionType: TransactionType;
   amount: number;
-  balance_before: number;
-  balance_after: number;
+  balanceBefore: number;
+  balanceAfter: number;
   reference?: string;
   notes?: string;
-  created_by: string;
-  created_at: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 // Market Maker Transaction (extends AssetTransaction with MM-specific fields)
 export interface MarketMakerTransaction extends AssetTransaction {
-  market_maker_id: string;
-  market_maker_name?: string;
-  certificate_type?: CertificateType;
+  marketMakerId: string;
+  marketMakerName?: string;
+  certificateType?: CertificateType;
 }
 
 // Market Maker Query Parameters
+// Note: Uses snake_case because these are sent directly to the backend API
 export interface MarketMakerQueryParams {
   mm_type?: MarketMakerType;
   market?: MarketType;
@@ -689,16 +660,16 @@ export interface MarketMakerQueryParams {
 }
 
 export interface EntityAssets {
-  entity_id: string;
-  entity_name: string;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
-  recent_transactions: AssetTransaction[];
+  entityId: string;
+  entityName: string;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
+  recentTransactions: AssetTransaction[];
 }
 
 export interface AddAssetRequest {
-  asset_type: AssetType;
+  assetType: AssetType;
   amount: number;
   reference?: string;
   notes?: string;
@@ -740,15 +711,15 @@ export interface MarketMaker {
   name: string;
   email?: string;  // Optional email field for MM contact
   description?: string;
-  mm_type: MarketMakerType;
-  market: MarketType;  // NEW: Which market this MM operates in
-  is_active: boolean;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
-  total_orders: number;
-  created_at: string;
-  ticket_id?: string;
+  mmType: MarketMakerType;
+  market: MarketType;  // Which market this MM operates in
+  isActive: boolean;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
+  totalOrders: number;
+  createdAt: string;
+  ticketId?: string;
   [key: string]: unknown;  // Index signature for DataTable compatibility
 }
 
@@ -834,77 +805,77 @@ export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTE
 
 export interface Withdrawal {
   id: string;
-  entity_id: string;
-  entity_name?: string;
-  user_id?: string;
-  user_email?: string;
+  entityId: string;
+  entityName?: string;
+  userId?: string;
+  userEmail?: string;
 
   // Asset details
-  asset_type: AssetType;
+  assetType: AssetType;
   amount: number;
 
   // Status
   status: WithdrawalStatus;
 
   // Destination (EUR)
-  destination_bank?: string;
-  destination_iban?: string;
-  destination_swift?: string;
-  destination_account_holder?: string;
+  destinationBank?: string;
+  destinationIban?: string;
+  destinationSwift?: string;
+  destinationAccountHolder?: string;
 
   // Destination (CEA/EUA)
-  destination_registry?: string;
-  destination_account_id?: string;
+  destinationRegistry?: string;
+  destinationAccountId?: string;
 
   // References
-  wire_reference?: string;
-  internal_reference?: string;
+  wireReference?: string;
+  internalReference?: string;
 
   // Notes
-  client_notes?: string;
-  admin_notes?: string;
-  rejection_reason?: string;
+  clientNotes?: string;
+  adminNotes?: string;
+  rejectionReason?: string;
 
   // Timestamps
-  requested_at?: string;
-  processed_at?: string;
-  completed_at?: string;
-  rejected_at?: string;
+  requestedAt?: string;
+  processedAt?: string;
+  completedAt?: string;
+  rejectedAt?: string;
 
   // Audit
-  processed_by?: string;
-  completed_by?: string;
-  rejected_by?: string;
+  processedBy?: string;
+  completedBy?: string;
+  rejectedBy?: string;
 
-  created_at: string;
+  createdAt: string;
 }
 
 export interface WithdrawalRequest {
-  asset_type: AssetType;
+  assetType: AssetType;
   amount: number;
   // EUR
-  destination_bank?: string;
-  destination_iban?: string;
-  destination_swift?: string;
-  destination_account_holder?: string;
+  destinationBank?: string;
+  destinationIban?: string;
+  destinationSwift?: string;
+  destinationAccountHolder?: string;
   // CEA/EUA
-  destination_registry?: string;
-  destination_account_id?: string;
-  client_notes?: string;
+  destinationRegistry?: string;
+  destinationAccountId?: string;
+  clientNotes?: string;
 }
 
 export interface ApproveWithdrawalRequest {
-  admin_notes?: string;
+  adminNotes?: string;
 }
 
 export interface CompleteWithdrawalRequest {
-  wire_reference?: string;
-  admin_notes?: string;
+  wireReference?: string;
+  adminNotes?: string;
 }
 
 export interface RejectWithdrawalRequest {
-  rejection_reason: string;
-  admin_notes?: string;
+  rejectionReason: string;
+  adminNotes?: string;
 }
 
 export interface WithdrawalStats {
@@ -939,46 +910,46 @@ export type MarketTypeEnum = 'CEA_CASH' | 'SWAP';
 export interface TradingFeeConfig {
   id: string;
   market: MarketTypeEnum;
-  bid_fee_rate: number;
-  ask_fee_rate: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  bidFeeRate: number;
+  askFeeRate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TradingFeeConfigUpdate {
-  bid_fee_rate: number;
-  ask_fee_rate: number;
+  bidFeeRate: number;
+  askFeeRate: number;
 }
 
 export interface EntityFeeOverride {
   id: string;
-  entity_id: string;
-  entity_name: string;
+  entityId: string;
+  entityName: string;
   market: MarketTypeEnum;
-  bid_fee_rate: number | null;
-  ask_fee_rate: number | null;
-  is_active: boolean;
-  created_at: string;
+  bidFeeRate: number | null;
+  askFeeRate: number | null;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface EntityFeeOverrideCreate {
   market: MarketTypeEnum;
-  bid_fee_rate: number | null;
-  ask_fee_rate: number | null;
+  bidFeeRate: number | null;
+  askFeeRate: number | null;
 }
 
 export interface AllFeesResponse {
-  market_fees: TradingFeeConfig[];
-  entity_overrides: EntityFeeOverride[];
+  marketFees: TradingFeeConfig[];
+  entityOverrides: EntityFeeOverride[];
 }
 
 export interface EffectiveFeeResponse {
   market: MarketTypeEnum;
   side: string;
-  fee_rate: number;
-  is_override: boolean;
-  entity_id?: string;
+  feeRate: number;
+  isOverride: boolean;
+  entityId?: string;
 }
 
 // =============================================================================
@@ -987,18 +958,19 @@ export interface EffectiveFeeResponse {
 
 export interface MarketMakerOrder {
   id: string;
-  market_maker_id: string;
-  market_maker_name: string;
-  certificate_type: CertificateType;
+  marketMakerId: string;
+  marketMakerName: string;
+  certificateType: CertificateType;
   side: 'BUY' | 'SELL';
   price: number;
   quantity: number;
-  filled_quantity: number;
-  remaining_quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
   status: OrderStatus;
-  created_at: string;
-  updated_at?: string;
-  ticket_id?: string;
+  createdAt: string;
+  updatedAt?: string;
+  ticketId?: string;
+  [key: string]: unknown;  // Index signature for DataTable compatibility
 }
 
 export interface MarketMakerOrderUpdate {
@@ -1065,14 +1037,14 @@ export interface AutoTradeMarketSettings {
 
 export interface AutoTradeMarketSettingsUpdate {
   enabled?: boolean;
-  target_liquidity?: number | null;  // snake_case for backend
-  price_deviation_pct?: number;
-  avg_order_count?: number;
-  min_order_volume_eur?: number;
-  volume_variety?: number;
-  interval_seconds?: number;
-  max_liquidity_threshold?: number | null;
-  internal_trade_interval?: number | null;
-  internal_trade_volume_min?: number | null;
-  internal_trade_volume_max?: number | null;
+  targetLiquidity?: number | null;
+  priceDeviationPct?: number;
+  avgOrderCount?: number;
+  minOrderVolumeEur?: number;
+  volumeVariety?: number;
+  intervalSeconds?: number;
+  maxLiquidityThreshold?: number | null;
+  internalTradeInterval?: number | null;
+  internalTradeVolumeMin?: number | null;
+  internalTradeVolumeMax?: number | null;
 }

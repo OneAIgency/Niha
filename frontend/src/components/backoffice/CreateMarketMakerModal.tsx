@@ -82,7 +82,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
 
     if (certificateType === 'CEA') {
       // Use backend-provided EUR price for CEA
-      const ceaPriceEur = prices.cea?.price_eur || 0;
+      const ceaPriceEur = prices.cea?.priceEur || 0;
       if (ceaPriceEur === 0) return null;
       return amount * ceaPriceEur;
     } else {

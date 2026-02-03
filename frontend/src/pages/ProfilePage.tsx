@@ -38,17 +38,17 @@ export function ProfilePage() {
 
   // Editable form state
   const [formData, setFormData] = useState({
-    first_name: user?.first_name || '',
-    last_name: user?.last_name || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     phone: user?.phone || '',
     position: user?.position || '',
   });
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -80,8 +80,8 @@ export function ProfilePage() {
         // Load fresh profile data from API
         const profile = await usersApi.getProfile();
         setFormData({
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
           phone: profile.phone || '',
           position: profile.position || '',
         });
@@ -107,8 +107,8 @@ export function ProfilePage() {
   useEffect(() => {
     if (user) {
       setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         phone: user.phone || '',
         position: user.position || '',
       });
@@ -135,8 +135,8 @@ export function ProfilePage() {
     setSuccessMessage(null);
     try {
       const updatedUser = await usersApi.updateProfile({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         phone: formData.phone,
         position: formData.position,
       });
@@ -188,14 +188,14 @@ export function ProfilePage() {
     setSuccessMessage(null);
 
     // Validate password strength (frontend validation)
-    const errors = validatePassword(passwordForm.new_password);
+    const errors = validatePassword(passwordForm.newPassword);
     if (errors.length > 0) {
       setPasswordErrors(errors);
       return;
     }
 
     // Check password confirmation match
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordErrors(['Passwords do not match']);
       return;
     }
@@ -203,13 +203,13 @@ export function ProfilePage() {
     setIsSaving(true);
     try {
       await usersApi.changePassword(
-        passwordForm.current_password,
-        passwordForm.new_password
+        passwordForm.currentPassword,
+        passwordForm.newPassword
       );
       setSuccessMessage('Password changed successfully');
       setShowPasswordForm(false);
       // Clear form on success
-      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPasswordErrors([]);
       // Auto-dismiss success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -254,10 +254,10 @@ export function ProfilePage() {
 
   // Load balances on mount for admin
   useEffect(() => {
-    if (isAdmin && user?.entity_id) {
+    if (isAdmin && user?.entityId) {
       loadBalances();
     }
-  }, [isAdmin, user?.entity_id]);
+  }, [isAdmin, user?.entityId]);
 
   /**
    * Change admin role for testing
@@ -308,8 +308,8 @@ export function ProfilePage() {
   };
 
   const getInitials = () => {
-    if (user?.first_name && user?.last_name) {
-      return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
     return user?.email?.substring(0, 2).toUpperCase() || '??';
   };
@@ -424,8 +424,8 @@ export function ProfilePage() {
                         onClick={() => {
                           setIsEditing(false);
                           setFormData({
-                            first_name: user?.first_name || '',
-                            last_name: user?.last_name || '',
+                            firstName: user?.firstName || '',
+                            lastName: user?.lastName || '',
                             phone: user?.phone || '',
                             position: user?.position || '',
                           });
@@ -463,14 +463,14 @@ export function ProfilePage() {
                     <>
                       <Input
                         label="First Name"
-                        value={formData.first_name}
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                         placeholder="Enter first name"
                       />
                       <Input
                         label="Last Name"
-                        value={formData.last_name}
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                         placeholder="Enter last name"
                       />
                       <Input
@@ -495,8 +495,8 @@ export function ProfilePage() {
                           Full Name
                         </label>
                         <p className="text-navy-900 dark:text-white font-medium">
-                          {user?.first_name && user?.last_name
-                            ? `${user.first_name} ${user.last_name}`
+                          {user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
                             : 'Not set'}
                         </p>
                       </div>
@@ -559,7 +559,7 @@ export function ProfilePage() {
                       Legal Name
                     </label>
                     <p className="text-navy-900 dark:text-white font-medium">
-                      {entity.legal_name || entity.name}
+                      {entity.legalName || entity.name}
                     </p>
                   </div>
                   <div>
@@ -575,8 +575,8 @@ export function ProfilePage() {
                     <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
                       KYC Status
                     </label>
-                    <Badge variant={getKycBadgeVariant(entity.kyc_status || 'pending')}>
-                      {(entity.kyc_status || 'pending').toUpperCase()}
+                    <Badge variant={getKycBadgeVariant(entity.kycStatus || 'pending')}>
+                      {(entity.kycStatus || 'pending').toUpperCase()}
                     </Badge>
                   </div>
                 </div>
@@ -726,8 +726,8 @@ export function ProfilePage() {
                     <div>
                       <p className="font-medium text-navy-900 dark:text-white">Last Login</p>
                       <p className="text-sm text-navy-500 dark:text-navy-400">
-                        {user?.last_login
-                          ? formatRelativeTime(user.last_login)
+                        {user?.lastLogin
+                          ? formatRelativeTime(user.lastLogin)
                           : 'First session'}
                       </p>
                     </div>
@@ -776,9 +776,9 @@ export function ProfilePage() {
                         <Input
                           label="Current Password"
                           type={showPasswords.current ? 'text' : 'password'}
-                          value={passwordForm.current_password}
+                          value={passwordForm.currentPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, current_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
                           }
                           placeholder="Enter current password"
                         />
@@ -802,9 +802,9 @@ export function ProfilePage() {
                         <Input
                           label="New Password"
                           type={showPasswords.new ? 'text' : 'password'}
-                          value={passwordForm.new_password}
+                          value={passwordForm.newPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, new_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, newPassword: e.target.value })
                           }
                           placeholder="Enter new password"
                         />
@@ -828,9 +828,9 @@ export function ProfilePage() {
                         <Input
                           label="Confirm New Password"
                           type={showPasswords.confirm ? 'text' : 'password'}
-                          value={passwordForm.confirm_password}
+                          value={passwordForm.confirmPassword}
                           onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, confirm_password: e.target.value })
+                            setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
                           }
                           placeholder="Confirm new password"
                         />

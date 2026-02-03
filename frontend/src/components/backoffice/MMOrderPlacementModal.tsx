@@ -9,11 +9,11 @@ interface MarketMaker {
   id: string;
   name: string;
   email?: string;
-  is_active: boolean;
-  mm_type: 'CEA_SELLER' | 'CEA_BUYER' | 'EUA_OFFER';
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  isActive: boolean;
+  mmType: 'CEA_SELLER' | 'CEA_BUYER' | 'EUA_OFFER';
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface MMOrderPlacementModalProps {
@@ -41,7 +41,7 @@ export function MMOrderPlacementModal({
 }: MMOrderPlacementModalProps) {
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
-  const [balances, setBalances] = useState<{ cea_balance: number; eua_balance: number; eur_balance: number } | null>(null);
+  const [balances, setBalances] = useState<{ ceaBalance: number; euaBalance: number; eurBalance: number } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,20 +91,20 @@ export function MMOrderPlacementModal({
           // CEA Cash market
           if (side === 'ASK') {
             // Selling CEA - need CEA_SELLER with CEA balance
-            return mm.mm_type === 'CEA_SELLER' && mm.cea_balance > 0;
+            return mm.mmType === 'CEA_SELLER' && mm.ceaBalance > 0;
           } else {
             // Buying CEA - need CEA_BUYER with EUR balance
-            return mm.mm_type === 'CEA_BUYER' && mm.eur_balance > 0;
+            return mm.mmType === 'CEA_BUYER' && mm.eurBalance > 0;
           }
         } else {
           // Swap market (EUA)
           // Only EUA_OFFER can trade EUA
           if (side === 'ASK') {
             // Selling EUA - need EUA_OFFER with EUA balance
-            return mm.mm_type === 'EUA_OFFER' && mm.eua_balance > 0;
+            return mm.mmType === 'EUA_OFFER' && mm.euaBalance > 0;
           } else {
             // Buying EUA - need EUA_OFFER with CEA to exchange
-            return mm.mm_type === 'EUA_OFFER' && mm.cea_balance > 0;
+            return mm.mmType === 'EUA_OFFER' && mm.ceaBalance > 0;
           }
         }
       });
@@ -154,7 +154,7 @@ export function MMOrderPlacementModal({
 
     // Balance validation for ASK orders (selling certificates)
     if (side === 'ASK' && balances) {
-      const availableBalance = certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance;
+      const availableBalance = certificateType === 'CEA' ? balances.ceaBalance : balances.euaBalance;
       if (quantityNum > availableBalance) {
         setError(`Insufficient ${certificateType} balance. Available: ${formatQuantity(availableBalance)}`);
         return;
@@ -164,8 +164,8 @@ export function MMOrderPlacementModal({
     // Balance validation for BID orders (buying - need EUR)
     if (side === 'BID' && balances) {
       const totalCost = priceNum * quantityNum;
-      if (totalCost > balances.eur_balance) {
-        setError(`Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_balance)}`);
+      if (totalCost > balances.eurBalance) {
+        setError(`Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eurBalance)}`);
         return;
       }
     }
@@ -267,7 +267,7 @@ export function MMOrderPlacementModal({
                   <option value="">Select Market Maker</option>
                   {marketMakers.map((mm) => (
                     <option key={mm.id} value={mm.id}>
-                      {mm.name} {!mm.is_active && '(Inactive)'}
+                      {mm.name} {!mm.isActive && '(Inactive)'}
                     </option>
                   ))}
                 </select>
@@ -290,13 +290,13 @@ export function MMOrderPlacementModal({
                       <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
                         <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">CEA</div>
                         <div className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                          {formatQuantity(balances.cea_balance)}
+                          {formatQuantity(balances.ceaBalance)}
                         </div>
                       </div>
                       <div className="p-3 bg-white dark:bg-navy-800 rounded-lg">
                         <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">EUA</div>
                         <div className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                          {formatQuantity(balances.eua_balance)}
+                          {formatQuantity(balances.euaBalance)}
                         </div>
                       </div>
                     </div>
@@ -344,7 +344,7 @@ export function MMOrderPlacementModal({
                 />
                 {side === 'ASK' && balances && (
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                    Available: {formatQuantity(certificateType === 'CEA' ? balances.cea_balance : balances.eua_balance)} {certificateType}
+                    Available: {formatQuantity(certificateType === 'CEA' ? balances.ceaBalance : balances.euaBalance)} {certificateType}
                   </p>
                 )}
               </div>

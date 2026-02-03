@@ -4,7 +4,7 @@ from typing import Optional
 
 import bcrypt
 import redis.asyncio as redis
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -225,12 +225,14 @@ class RedisManager:
             return True, max_requests
 
 
-# Dependency to get current user from JWT token
+# Dependency to get current user from JWT token (cookie or Authorization header)
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),  # noqa: B008
 ):
     """
     Extract and validate JWT token to get current user.
+    Checks httpOnly cookie first, then falls back to Authorization header.
     Returns user data from token payload.
     Checks token blacklist for logged-out tokens.
     """
@@ -243,11 +245,16 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Check if credentials are provided
-    if credentials is None:
-        raise credentials_exception
+    # Try to get token from httpOnly cookie first
+    token = request.cookies.get(settings.AUTH_COOKIE_NAME)
 
-    token = credentials.credentials
+    # Fall back to Authorization header if no cookie
+    if not token and credentials is not None:
+        token = credentials.credentials
+
+    # No token found in either location
+    if not token:
+        raise credentials_exception
 
     # Check if token is blacklisted (logged out)
     if await RedisManager.is_token_blacklisted(token):

@@ -48,8 +48,8 @@ export function LiquidityStats({ marketType }: LiquidityStatsProps) {
       setCashStats({
         totalBidEur,
         totalAskEur,
-        bestBid: orderBook.best_bid || 0,
-        bestAsk: orderBook.best_ask || 0,
+        bestBid: orderBook.bestBid || 0,
+        bestAsk: orderBook.bestAsk || 0,
         spread: orderBook.spread || 0,
       });
     } catch (error) {
@@ -75,17 +75,17 @@ export function LiquidityStats({ marketType }: LiquidityStatsProps) {
 
       swaps.forEach(swap => {
         // Convert swap quantity to EUR based on certificate type
-        if (swap.from_type === 'EUA') {
+        if (swap.fromType === 'EUA') {
           totalSwapValueEur += swap.quantity * (prices.eua?.price || 75);
           // Track best ratio (EUA to CEA)
-          if (swap.desired_rate && swap.desired_rate > bestRatio) {
-            bestRatio = swap.desired_rate;
+          if (swap.desiredRate && swap.desiredRate > bestRatio) {
+            bestRatio = swap.desiredRate;
           }
         } else {
           totalSwapValueEur += swap.quantity * (prices.cea?.price || 13);
           // Track best ratio (inverse for CEA to EUA)
-          if (swap.desired_rate && (1 / swap.desired_rate) > bestRatio) {
-            bestRatio = 1 / swap.desired_rate;
+          if (swap.desiredRate && (1 / swap.desiredRate) > bestRatio) {
+            bestRatio = 1 / swap.desiredRate;
           }
         }
       });

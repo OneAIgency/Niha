@@ -14,56 +14,56 @@ interface MarketMakerDetailsTabProps {
 export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMakerDetailsTabProps) {
   const [name, setName] = useState(marketMaker.name);
   const [description, setDescription] = useState(marketMaker.description || '');
-  const [isActive, setIsActive] = useState(marketMaker.is_active);
+  const [isActive, setIsActive] = useState(marketMaker.isActive);
   const [balances, setBalances] = useState<{
     EUR?: { available: number; locked: number; total: number };
     CEA: { available: number; locked: number; total: number };
     EUA: { available: number; locked: number; total: number };
   }>({
-    EUR: marketMaker.eur_balance ? { available: marketMaker.eur_balance, locked: 0, total: marketMaker.eur_balance } : undefined,
-    CEA: { available: marketMaker.cea_balance, locked: 0, total: marketMaker.cea_balance },
-    EUA: { available: marketMaker.eua_balance, locked: 0, total: marketMaker.eua_balance },
+    EUR: marketMaker.eurBalance ? { available: marketMaker.eurBalance, locked: 0, total: marketMaker.eurBalance } : undefined,
+    CEA: { available: marketMaker.ceaBalance, locked: 0, total: marketMaker.ceaBalance },
+    EUA: { available: marketMaker.euaBalance, locked: 0, total: marketMaker.euaBalance },
   });
   const [loading, setLoading] = useState(false);
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [ticketId, setTicketId] = useState(marketMaker.ticket_id);
+  const [ticketId, setTicketId] = useState(marketMaker.ticketId);
 
   // Fetch latest balances on mount and when props change
   useEffect(() => {
     fetchBalances();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marketMaker.id, marketMaker.eur_balance, marketMaker.cea_balance, marketMaker.eua_balance]);
+  }, [marketMaker.id, marketMaker.eurBalance, marketMaker.ceaBalance, marketMaker.euaBalance]);
 
   const fetchBalances = async () => {
     setLoadingBalances(true);
     try {
       const data = await getMarketMakerBalances(marketMaker.id);
       setBalances({
-        EUR: data.eur_balance > 0 ? {
-          available: data.eur_available,
-          locked: data.eur_locked,
-          total: data.eur_balance,
+        EUR: data.eurBalance > 0 ? {
+          available: data.eurAvailable,
+          locked: data.eurLocked,
+          total: data.eurBalance,
         } : undefined,
         CEA: {
-          available: data.cea_available,
-          locked: data.cea_locked,
-          total: data.cea_balance,
+          available: data.ceaAvailable,
+          locked: data.ceaLocked,
+          total: data.ceaBalance,
         },
         EUA: {
-          available: data.eua_available,
-          locked: data.eua_locked,
-          total: data.eua_balance,
+          available: data.euaAvailable,
+          locked: data.euaLocked,
+          total: data.euaBalance,
         },
       });
     } catch (err) {
       console.error('Failed to fetch balances:', err);
       // Use existing balances as fallback
       setBalances({
-        EUR: marketMaker.eur_balance ? { available: marketMaker.eur_balance, locked: 0, total: marketMaker.eur_balance } : undefined,
-        CEA: { available: marketMaker.cea_balance, locked: 0, total: marketMaker.cea_balance },
-        EUA: { available: marketMaker.eua_balance, locked: 0, total: marketMaker.eua_balance },
+        EUR: marketMaker.eurBalance ? { available: marketMaker.eurBalance, locked: 0, total: marketMaker.eurBalance } : undefined,
+        CEA: { available: marketMaker.ceaBalance, locked: 0, total: marketMaker.ceaBalance },
+        EUA: { available: marketMaker.euaBalance, locked: 0, total: marketMaker.euaBalance },
       });
     } finally {
       setLoadingBalances(false);
@@ -88,9 +88,9 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
         is_active: isActive,
       });
 
-      // Update ticket_id if returned
-      if (response.ticket_id) {
-        setTicketId(response.ticket_id);
+      // Update ticketId if returned
+      if (response.ticketId) {
+        setTicketId(response.ticketId);
       }
 
       setSuccess(true);

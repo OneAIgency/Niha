@@ -16,11 +16,11 @@ interface MarketMaker {
   id: string;
   name: string;
   email?: string;
-  is_active: boolean;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
-  mm_type?: string;
+  isActive: boolean;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
+  mmType?: string;
 }
 
 /**
@@ -111,12 +111,12 @@ export function PlaceOrder({
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [selectedMM, setSelectedMM] = useState<string>('');
   const [balances, setBalances] = useState<{
-    cea_balance: number;
-    eua_balance: number;
-    eur_balance: number;
-    cea_available: number;
-    eua_available: number;
-    eur_available: number;
+    ceaBalance: number;
+    euaBalance: number;
+    eurBalance: number;
+    ceaAvailable: number;
+    euaAvailable: number;
+    eurAvailable: number;
   } | null>(null);
   const [price, setPrice] = useState(prefilledPrice?.toString() || '');
   const [quantity, setQuantity] = useState(prefilledQuantity?.toString() || '');
@@ -153,12 +153,12 @@ export function PlaceOrder({
           if (side === 'ASK') {
             // Selling CEA - need CEA_SELLER with CEA balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'CEA_SELLER' && mm.cea_balance > 0
+              mm.mmType === 'CEA_SELLER' && mm.ceaBalance > 0
             );
           } else {
             // Buying CEA - need CEA_BUYER with EUR balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'CEA_BUYER' && mm.eur_balance > 0
+              mm.mmType === 'CEA_BUYER' && mm.eurBalance > 0
             );
           }
         } else {
@@ -167,12 +167,12 @@ export function PlaceOrder({
           if (side === 'ASK') {
             // Selling EUA - need EUA_OFFER with EUA balance
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'EUA_OFFER' && mm.eua_balance > 0
+              mm.mmType === 'EUA_OFFER' && mm.euaBalance > 0
             );
           } else {
             // Buying EUA - need EUA_OFFER with CEA to exchange
             filteredMMs = data.filter((mm: MarketMaker) =>
-              mm.mm_type === 'EUA_OFFER' && mm.cea_balance > 0
+              mm.mmType === 'EUA_OFFER' && mm.ceaBalance > 0
             );
           }
         }
@@ -244,9 +244,9 @@ export function PlaceOrder({
         // Determine market type based on certificate type
         const market = certificateType === 'CEA' ? 'CEA_CASH' : 'SWAP';
         const response = await feesApi.getEffectiveFee(market, side);
-        // Ensure fee_rate is a valid number, otherwise use default
-        const rate = typeof response.fee_rate === 'number' && !isNaN(response.fee_rate)
-          ? response.fee_rate
+        // Ensure feeRate is a valid number, otherwise use default
+        const rate = typeof response.feeRate === 'number' && !isNaN(response.feeRate)
+          ? response.feeRate
           : DEFAULT_FEE_RATE;
         setFeeRate(rate);
       } catch (err) {
@@ -285,7 +285,7 @@ export function PlaceOrder({
     // Balance validation for ASK orders (selling certificates)
     // Use available balance (total - locked by pending orders)
     if (side === 'ASK' && balances) {
-      const availableBalance = certificateType === 'CEA' ? balances.cea_available : balances.eua_available;
+      const availableBalance = certificateType === 'CEA' ? balances.ceaAvailable : balances.euaAvailable;
       if (quantityNum > availableBalance) {
         return `Insufficient ${certificateType} balance. Available: ${formatQuantity(availableBalance)}`;
       }
@@ -295,8 +295,8 @@ export function PlaceOrder({
     // Use available EUR (total - locked by pending BID orders)
     if (side === 'BID' && balances) {
       const totalCost = priceNum * quantityNum;
-      if (totalCost > balances.eur_available) {
-        return `Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eur_available)}`;
+      if (totalCost > balances.eurAvailable) {
+        return `Insufficient EUR balance. Need: ${formatCurrency(totalCost)}, Available: ${formatCurrency(balances.eurAvailable)}`;
       }
     }
 
@@ -357,8 +357,8 @@ export function PlaceOrder({
   // Use available balance (not total) for display
   const availableBalance = balances
     ? certificateType === 'CEA'
-      ? balances.cea_available
-      : balances.eua_available
+      ? balances.ceaAvailable
+      : balances.euaAvailable
     : 0;
 
   /**
@@ -434,33 +434,33 @@ export function PlaceOrder({
               <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
                 <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">EUR (Available)</div>
                 <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 truncate">
-                  {formatCurrency(balances.eur_available)}
+                  {formatCurrency(balances.eurAvailable)}
                 </div>
-                {balances.eur_balance !== balances.eur_available && (
+                {balances.eurBalance !== balances.eurAvailable && (
                   <div className="text-[9px] text-navy-400 mt-0.5 truncate">
-                    Total: {formatCurrency(balances.eur_balance)}
+                    Total: {formatCurrency(balances.eurBalance)}
                   </div>
                 )}
               </div>
               <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
                 <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">CEA (Available)</div>
                 <div className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400 truncate">
-                  {formatQuantity(balances.cea_available)}
+                  {formatQuantity(balances.ceaAvailable)}
                 </div>
-                {balances.cea_balance !== balances.cea_available && (
+                {balances.ceaBalance !== balances.ceaAvailable && (
                   <div className="text-[9px] text-navy-400 mt-0.5 truncate">
-                    Total: {formatQuantity(balances.cea_balance)}
+                    Total: {formatQuantity(balances.ceaBalance)}
                   </div>
                 )}
               </div>
               <div className="p-2 bg-white dark:bg-navy-800 rounded-lg min-w-0 overflow-hidden">
                 <div className="text-[10px] text-navy-500 dark:text-navy-400 mb-1 truncate">EUA (Available)</div>
                 <div className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 truncate">
-                  {formatQuantity(balances.eua_available)}
+                  {formatQuantity(balances.euaAvailable)}
                 </div>
-                {balances.eua_balance !== balances.eua_available && (
+                {balances.euaBalance !== balances.euaAvailable && (
                   <div className="text-[9px] text-navy-400 mt-0.5 truncate">
-                    Total: {formatQuantity(balances.eua_balance)}
+                    Total: {formatQuantity(balances.euaBalance)}
                   </div>
                 )}
               </div>
@@ -503,12 +503,12 @@ export function PlaceOrder({
               Available EUR Balance
             </span>
             <span className={`${compact ? 'text-base' : 'text-lg'} font-bold font-mono text-emerald-900 dark:text-emerald-100`}>
-              {formatCurrency(balances.eur_available)}
+              {formatCurrency(balances.eurAvailable)}
             </span>
           </div>
-          {balances.eur_balance !== balances.eur_available && (
+          {balances.eurBalance !== balances.eurAvailable && (
             <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-              {formatCurrency(balances.eur_balance - balances.eur_available)} locked in pending orders
+              {formatCurrency(balances.eurBalance - balances.eurAvailable)} locked in pending orders
             </div>
           )}
         </motion.div>
@@ -562,7 +562,7 @@ export function PlaceOrder({
         />
         {side === 'ASK' && balances && (
           <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-            Available: {formatQuantity(certificateType === 'CEA' ? balances.cea_available : balances.eua_available)} {certificateType}
+            Available: {formatQuantity(certificateType === 'CEA' ? balances.ceaAvailable : balances.euaAvailable)} {certificateType}
           </p>
         )}
       </div>

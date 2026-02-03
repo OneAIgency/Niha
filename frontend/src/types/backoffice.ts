@@ -8,20 +8,20 @@ import type { CertificateType } from './index';
 /**
  * Contact Request interface.
  * Used across BackofficeOnboardingPage and ContactRequestsTab.
- * Client/request state: use ONLY user_role (NDA, KYC, REJECTED). Do not use request_type.
+ * Client/request state: use ONLY userRole (NDA, KYC, REJECTED). Do not use request_type.
  */
 export interface ContactRequest {
   id: string;
-  entity_name: string;
-  contact_email: string;
-  contact_name?: string;
+  entityName: string;
+  contactEmail: string;
+  contactName?: string;
   position: string;
-  nda_file_name?: string;
-  submitter_ip?: string;
+  ndaFileName?: string;
+  submitterIp?: string;
   /** Sole source for request state; values NDA, KYC, REJECTED (aligned with UserRole). */
-  user_role: string;
+  userRole: string;
   notes?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 /**
@@ -31,11 +31,11 @@ export interface ContactRequest {
 export interface PendingUserResponse {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
-  entity_name?: string;
-  documents_count?: number;
-  created_at?: string;
+  firstName?: string;
+  lastName?: string;
+  entityName?: string;
+  documentsCount?: number;
+  createdAt?: string;
 }
 
 /**
@@ -45,18 +45,18 @@ export interface PendingUserResponse {
  */
 export interface PendingDepositResponse {
   id: string;
-  entity_id: string;
-  entity_name?: string;
-  user_email?: string;
-  user_role?: string;  // Reporting user's role (client status); FUNDING when announced
-  reported_amount?: number | null;
-  reported_currency?: string | null;
-  wire_reference?: string | null;
-  bank_reference?: string | null;
+  entityId: string;
+  entityName?: string;
+  userEmail?: string;
+  userRole?: string;  // Reporting user's role (client status); FUNDING when announced
+  reportedAmount?: number | null;
+  reportedCurrency?: string | null;
+  wireReference?: string | null;
+  bankReference?: string | null;
   status: string;
-  reported_at?: string | null;
+  reportedAt?: string | null;
   notes?: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 /**
@@ -65,18 +65,18 @@ export interface PendingDepositResponse {
  */
 export interface UserTradeResponse {
   id: string;
-  trade_type?: string;
+  tradeType?: string;
   type?: string;
-  certificate_type?: CertificateType;
+  certificateType?: CertificateType;
   certificate?: CertificateType;
   quantity?: number;
-  total_value?: number;
+  totalValue?: number;
   value?: number;
-  price_per_unit?: number;
+  pricePerUnit?: number;
   status?: string;
-  is_buyer?: boolean;
+  isBuyer?: boolean;
   side?: 'buy' | 'sell';
-  created_at?: string;
+  createdAt?: string;
   timestamp?: string;
 }
 
@@ -87,11 +87,11 @@ export interface UserTradeResponse {
 export interface KYCUser {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
-  entity_name?: string;
-  documents_count: number;
-  created_at: string;
+  firstName?: string;
+  lastName?: string;
+  entityName?: string;
+  documentsCount: number;
+  createdAt: string;
 }
 
 /**
@@ -100,37 +100,36 @@ export interface KYCUser {
  */
 export interface KYCDocument {
   id: string;
-  user_id: string;
-  user_email?: string;
-  user_name?: string;
-  document_type: string;
-  file_name: string;
-  mime_type?: string;
+  userId: string;
+  userEmail?: string;
+  userName?: string;
+  documentType: string;
+  fileName: string;
+  mimeType?: string;
   status: string;
   notes?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 /**
  * Pending Deposit interface
  * Internal format used in PendingDepositsTab
- * Client state: use ONLY user_role (or userRole from API); single source of truth.
+ * Client state: use ONLY userRole; single source of truth.
  */
 export interface PendingDeposit {
   id: string;
-  entity_id: string;
-  entity_name: string;
-  user_email: string;
-  user_role?: string;  // Reporting user's role (client status); FUNDING when announced
-  userRole?: string;   // camelCase from API; use user_role ?? userRole for display
-  reported_amount: number | null;
-  reported_currency: string | null;
-  wire_reference: string | null;
-  bank_reference: string | null;
+  entityId: string;
+  entityName: string;
+  userEmail: string;
+  userRole?: string;  // Reporting user's role (client status); FUNDING when announced
+  reportedAmount: number | null;
+  reportedCurrency: string | null;
+  wireReference: string | null;
+  bankReference: string | null;
   status: string;
-  reported_at: string | null;
+  reportedAt: string | null;
   notes: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 /**
@@ -139,13 +138,13 @@ export interface PendingDeposit {
  */
 export interface UserTrade {
   id: string;
-  trade_type: string;
-  certificate_type: string;
+  tradeType: string;
+  certificateType: string;
   quantity: number;
-  total_value: number;
+  totalValue: number;
   status: string;
-  is_buyer: boolean;
-  created_at: string;
+  isBuyer: boolean;
+  createdAt: string;
 }
 
 /**

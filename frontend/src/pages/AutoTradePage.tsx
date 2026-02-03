@@ -415,33 +415,33 @@ function MarketCard({ settings, onSave, onToggle, isSaving }: MarketCardProps) {
 
     const target = parseFloat(targetLiquidity);
     if (!isNaN(target) && target !== settings.targetLiquidity) {
-      updates.target_liquidity = target;
+      updates.targetLiquidity = target;
     }
 
     const interval = parseInt(intervalSeconds, 10);
     if (!isNaN(interval) && interval >= 5 && interval !== settings.intervalSeconds) {
-      updates.interval_seconds = interval;
+      updates.intervalSeconds = interval;
     }
 
     const threshold = maxThreshold ? parseFloat(maxThreshold) : null;
     if (threshold !== settings.maxLiquidityThreshold) {
-      updates.max_liquidity_threshold = threshold;
+      updates.maxLiquidityThreshold = threshold;
     }
 
     if (isCashMarket) {
       const intInterval = internalInterval ? parseInt(internalInterval, 10) : null;
       if (intInterval !== settings.internalTradeInterval) {
-        updates.internal_trade_interval = intInterval;
+        updates.internalTradeInterval = intInterval;
       }
 
       const volMin = internalVolumeMin ? parseFloat(internalVolumeMin) : null;
       if (volMin !== settings.internalTradeVolumeMin) {
-        updates.internal_trade_volume_min = volMin;
+        updates.internalTradeVolumeMin = volMin;
       }
 
       const volMax = internalVolumeMax ? parseFloat(internalVolumeMax) : null;
       if (volMax !== settings.internalTradeVolumeMax) {
-        updates.internal_trade_volume_max = volMax;
+        updates.internalTradeVolumeMax = volMax;
       }
     }
 

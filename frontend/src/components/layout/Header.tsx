@@ -11,8 +11,8 @@ import type { User as UserType } from '../../types';
 // Helper to get user initials
 const getInitials = (user: UserType | null): string => {
   if (!user) return '??';
-  if (user.first_name && user.last_name) {
-    return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+  if (user.firstName && user.lastName) {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   }
   return user.email.substring(0, 2).toUpperCase();
 };
@@ -185,15 +185,15 @@ export function Header() {
                           'text-sm font-semibold truncate',
                           isDark ? 'text-white' : 'text-navy-900'
                         )}>
-                          {user?.first_name && user?.last_name
-                            ? `${user.first_name} ${user.last_name}`
+                          {user?.firstName && user?.lastName
+                            ? `${user.firstName} ${user.lastName}`
                             : user?.email}
                         </p>
                         <p className={cn(
                           'text-xs truncate',
                           isDark ? 'text-navy-400' : 'text-navy-500'
                         )}>
-                          {user?.first_name && user?.last_name
+                          {user?.firstName && user?.lastName
                             ? user?.email
                             : user?.role || 'User'}
                         </p>

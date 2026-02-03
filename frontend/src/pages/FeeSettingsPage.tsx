@@ -48,8 +48,8 @@ export function FeeSettingsPage() {
         adminApi.getEntities(),
       ]);
 
-      setMarketFees(feesRes.market_fees || []);
-      setEntityOverrides(feesRes.entity_overrides || []);
+      setMarketFees(feesRes.marketFees || []);
+      setEntityOverrides(feesRes.entityOverrides || []);
       setEntities(entitiesRes || []);
     } catch (err) {
       console.error('Error fetching fee data:', err);
@@ -70,8 +70,8 @@ export function FeeSettingsPage() {
 
   const handleEditMarketFee = (fee: TradingFeeConfig) => {
     setEditingMarket(fee.market);
-    setEditBidRate((fee.bid_fee_rate * 100).toFixed(2));
-    setEditAskRate((fee.ask_fee_rate * 100).toFixed(2));
+    setEditBidRate((fee.bidFeeRate * 100).toFixed(2));
+    setEditAskRate((fee.askFeeRate * 100).toFixed(2));
   };
 
   const handleSaveMarketFee = async (market: MarketTypeEnum) => {
@@ -86,8 +86,8 @@ export function FeeSettingsPage() {
       }
 
       await feesApi.updateMarketFees(market, {
-        bid_fee_rate: bidRate,
-        ask_fee_rate: askRate,
+        bidFeeRate: bidRate,
+        askFeeRate: askRate,
       });
 
       setEditingMarket(null);
@@ -104,10 +104,10 @@ export function FeeSettingsPage() {
   const handleOpenOverrideModal = (override?: EntityFeeOverride) => {
     if (override) {
       setEditingOverride(override);
-      setOverrideEntityId(override.entity_id);
+      setOverrideEntityId(override.entityId);
       setOverrideMarket(override.market);
-      setOverrideBidRate(override.bid_fee_rate !== null ? (override.bid_fee_rate * 100).toFixed(2) : '');
-      setOverrideAskRate(override.ask_fee_rate !== null ? (override.ask_fee_rate * 100).toFixed(2) : '');
+      setOverrideBidRate(override.bidFeeRate !== null ? (override.bidFeeRate * 100).toFixed(2) : '');
+      setOverrideAskRate(override.askFeeRate !== null ? (override.askFeeRate * 100).toFixed(2) : '');
     } else {
       setEditingOverride(null);
       setOverrideEntityId('');
@@ -138,8 +138,8 @@ export function FeeSettingsPage() {
 
       await feesApi.upsertEntityOverride(overrideEntityId, {
         market: overrideMarket,
-        bid_fee_rate: bidRate,
-        ask_fee_rate: askRate,
+        bidFeeRate: bidRate,
+        askFeeRate: askRate,
       });
 
       setShowOverrideModal(false);
@@ -319,13 +319,13 @@ export function FeeSettingsPage() {
                       <div>
                         <span className="block text-xs text-navy-500 dark:text-navy-400">Buyer Fee</span>
                         <span className="text-lg font-semibold text-red-600 dark:text-red-400">
-                          {fee ? formatFeeRate(fee.bid_fee_rate) : '-'}
+                          {fee ? formatFeeRate(fee.bidFeeRate) : '-'}
                         </span>
                       </div>
                       <div>
                         <span className="block text-xs text-navy-500 dark:text-navy-400">Seller Fee</span>
                         <span className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-                          {fee ? formatFeeRate(fee.ask_fee_rate) : '-'}
+                          {fee ? formatFeeRate(fee.askFeeRate) : '-'}
                         </span>
                       </div>
                     </div>
@@ -390,21 +390,21 @@ export function FeeSettingsPage() {
                 </tr>
               ) : (
                 entityOverrides.map((override) => (
-                  <tr key={`${override.entity_id}-${override.market}`} className="hover:bg-navy-50 dark:hover:bg-navy-700/30">
+                  <tr key={`${override.entityId}-${override.market}`} className="hover:bg-navy-50 dark:hover:bg-navy-700/30">
                     <td className="px-4 py-3 text-sm text-navy-900 dark:text-white font-medium">
-                      {override.entity_name}
+                      {override.entityName}
                     </td>
                     <td className="px-4 py-3 text-sm text-navy-600 dark:text-navy-400">
                       {MARKET_NAMES[override.market]}
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
-                      <span className={override.bid_fee_rate !== null ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-navy-400'}>
-                        {formatFeeRate(override.bid_fee_rate)}
+                      <span className={override.bidFeeRate !== null ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-navy-400'}>
+                        {formatFeeRate(override.bidFeeRate)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
-                      <span className={override.ask_fee_rate !== null ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-navy-400'}>
-                        {formatFeeRate(override.ask_fee_rate)}
+                      <span className={override.askFeeRate !== null ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-navy-400'}>
+                        {formatFeeRate(override.askFeeRate)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
@@ -417,12 +417,12 @@ export function FeeSettingsPage() {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteOverride(override.entity_id, override.market)}
-                          disabled={isSaving === `delete-${override.entity_id}-${override.market}`}
+                          onClick={() => handleDeleteOverride(override.entityId, override.market)}
+                          disabled={isSaving === `delete-${override.entityId}-${override.market}`}
                           className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
                           title="Delete"
                         >
-                          {isSaving === `delete-${override.entity_id}-${override.market}` ? (
+                          {isSaving === `delete-${override.entityId}-${override.market}` ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
                           ) : (
                             <Trash2 className="w-4 h-4" />

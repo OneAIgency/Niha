@@ -21,8 +21,8 @@ interface CashMarketStats {
 }
 
 interface MarketMakerWithAvailable extends MarketMaker {
-  eur_available: number;
-  cea_available: number;
+  eurAvailable: number;
+  ceaAvailable: number;
 }
 
 interface GeneratedOrder {
@@ -41,7 +41,7 @@ interface LiquidityPreview {
 }
 
 interface SwapMarketMaker extends MarketMaker {
-  eua_available: number;
+  euaAvailable: number;
 }
 
 interface GeneratedSwapOffer {
@@ -147,8 +147,8 @@ export function CreateLiquidityPage() {
       // Example: scrapped = 9.56 → bid = 9.40 (floor), ask = 9.70 (ceil)
       const fallbackBid = Math.floor((ceaPrice - 0.1) * 10) / 10;
       const fallbackAsk = Math.ceil((ceaPrice + 0.1) * 10) / 10;
-      const bestBid = orderBook.best_bid || fallbackBid;
-      const bestAsk = orderBook.best_ask || fallbackAsk;
+      const bestBid = orderBook.bestBid || fallbackBid;
+      const bestAsk = orderBook.bestAsk || fallbackAsk;
 
       setCashStats({
         totalBidEur,
@@ -177,13 +177,13 @@ export function CreateLiquidityPage() {
           const balances = await getMarketMakerBalances(mm.id);
           const mmWithBalances = {
             ...mm,
-            eur_available: Number(balances.eur_available) || 0,
-            cea_available: Number(balances.cea_available) || 0,
+            eurAvailable: Number(balances.eurAvailable) || 0,
+            ceaAvailable: Number(balances.ceaAvailable) || 0,
           };
 
-          if (mm.mm_type === 'CEA_BUYER') {
+          if (mm.mmType === 'CEA_BUYER') {
             buyersWithBalances.push(mmWithBalances);
-          } else if (mm.mm_type === 'CEA_SELLER') {
+          } else if (mm.mmType === 'CEA_SELLER') {
             sellersWithBalances.push(mmWithBalances);
           }
         } catch (err) {
@@ -225,14 +225,14 @@ export function CreateLiquidityPage() {
 
       // Fetch balances for EUA_OFFER market makers
       const euaOffers: SwapMarketMaker[] = [];
-      const euaOfferMMs = mms.filter(mm => mm.mm_type === 'EUA_OFFER');
+      const euaOfferMMs = mms.filter(mm => mm.mmType === 'EUA_OFFER');
 
       for (const mm of euaOfferMMs) {
         try {
           const balances = await getMarketMakerBalances(mm.id);
           euaOffers.push({
             ...mm,
-            eua_available: Number(balances.eua_available) || 0,
+            euaAvailable: Number(balances.euaAvailable) || 0,
           });
         } catch (err) {
           console.error(`Failed to fetch balances for MM ${mm.id}:`, err);
@@ -287,8 +287,8 @@ export function CreateLiquidityPage() {
   const additionalAskNeeded = Math.max(0, targetAskEur - currentAskEur);
 
   // Calculate available balances
-  const totalEurAvailable = ceaBuyers.reduce((sum, mm) => sum + mm.eur_available, 0);
-  const totalCeaAvailable = ceaSellers.reduce((sum, mm) => sum + mm.cea_available, 0);
+  const totalEurAvailable = ceaBuyers.reduce((sum, mm) => sum + mm.eurAvailable, 0);
+  const totalCeaAvailable = ceaSellers.reduce((sum, mm) => sum + mm.ceaAvailable, 0);
 
   // Calculate worst bid/ask based on price percent
   const bidPercent = parseFloat(bidPricePercent) || 0;
@@ -407,7 +407,7 @@ export function CreateLiquidityPage() {
         mmIndex++;
 
         // Check available balance
-        const available = side === 'BID' ? mm.eur_available : mm.cea_available * price;
+        const available = side === 'BID' ? mm.eurAvailable : mm.ceaAvailable * price;
         if (available < effectiveMin) continue;
 
         // Calculate target for this order
@@ -551,8 +551,8 @@ export function CreateLiquidityPage() {
           quantity: order.quantity,
         });
 
-        // Extract ticket_id from response if available
-        const ticketId = (response?.data as { ticket_id?: string })?.ticket_id || `ORD-${Date.now()}-${orderNum}`;
+        // Extract ticketId from response if available
+        const ticketId = (response?.data as { ticketId?: string })?.ticketId || `ORD-${Date.now()}-${orderNum}`;
 
         const logEntry = `✓ #${orderNum} | ${order.market_maker_name} | ${order.side} | ${order.quantity.toFixed(2)} CEA @ €${order.price.toFixed(2)} | Ticket: ${ticketId}`;
         logs.push(logEntry);
@@ -638,7 +638,7 @@ export function CreateLiquidityPage() {
       mmIndex++;
 
       // Check MM's available EUA balance
-      const mmEuaValueInEur = mm.eua_available * euaPrice;
+      const mmEuaValueInEur = mm.euaAvailable * euaPrice;
       if (mmEuaValueInEur < minOrder) continue;
 
       // Calculate offer size with variation
@@ -686,7 +686,7 @@ export function CreateLiquidityPage() {
         return;
       }
 
-      const totalEuaAvailable = swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0);
+      const totalEuaAvailable = swapMMs.reduce((sum, mm) => sum + mm.euaAvailable, 0);
       const totalEuaValueInEur = totalEuaAvailable * euaPrice;
 
       if (targetEur > totalEuaValueInEur) {
@@ -1355,10 +1355,10 @@ export function CreateLiquidityPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400">
-                          {swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} EUA
+                          {swapMMs.reduce((sum, mm) => sum + mm.euaAvailable, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} EUA
                         </p>
                         <p className="text-xs text-navy-400">
-                          ≈ {formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                          ≈ {formatEur(swapMMs.reduce((sum, mm) => sum + mm.euaAvailable, 0) * euaPrice)}
                         </p>
                       </div>
                     </div>
@@ -1392,7 +1392,7 @@ export function CreateLiquidityPage() {
                       <NumberInput
                         value={swapTargetEur}
                         onChange={setSwapTargetEur}
-                        placeholder={formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                        placeholder={formatEur(swapMMs.reduce((sum, mm) => sum + mm.euaAvailable, 0) * euaPrice)}
                         suffix="EUR"
                         decimals={0}
                       />
@@ -1482,7 +1482,7 @@ export function CreateLiquidityPage() {
                       <p className="text-xs text-navy-500 dark:text-navy-400">
                         Available:{' '}
                         <span className="font-medium text-blue-600">
-                          {formatEur(swapMMs.reduce((sum, mm) => sum + mm.eua_available, 0) * euaPrice)}
+                          {formatEur(swapMMs.reduce((sum, mm) => sum + mm.euaAvailable, 0) * euaPrice)}
                         </span>
                         <span className="text-navy-400 dark:text-navy-500"> ({swapMMs.length} providers)</span>
                       </p>

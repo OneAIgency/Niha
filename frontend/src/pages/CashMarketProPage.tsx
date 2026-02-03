@@ -72,8 +72,8 @@ function ProfessionalOrderBook({
 
   // Calculate max cumulative quantity for depth visualization
   const maxCumulativeQty = useMemo(() => {
-    const bidMax = bids.length > 0 ? Math.max(...bids.map(b => b.cumulative_quantity)) : 0;
-    const askMax = asks.length > 0 ? Math.max(...asks.map(a => a.cumulative_quantity)) : 0;
+    const bidMax = bids.length > 0 ? Math.max(...bids.map(b => b.cumulativeQuantity)) : 0;
+    const askMax = asks.length > 0 ? Math.max(...asks.map(a => a.cumulativeQuantity)) : 0;
     return Math.max(bidMax, askMax);
   }, [bids, asks]);
 
@@ -149,7 +149,7 @@ function ProfessionalOrderBook({
         {/* Bids */}
         <div className="flex-1 overflow-y-auto flex flex-col">
           {bidsWithCumulativeValue.map((bid, idx) => {
-            const depthPct = maxCumulativeQty > 0 ? (bid.cumulative_quantity / maxCumulativeQty) * 100 : 0;
+            const depthPct = maxCumulativeQty > 0 ? (bid.cumulativeQuantity / maxCumulativeQty) * 100 : 0;
             return (
               <div
                 key={`bid-${idx}`}
@@ -162,10 +162,10 @@ function ProfessionalOrderBook({
                   className="absolute right-0 top-0 bottom-0 bg-emerald-500/20 transition-all"
                   style={{ width: `${depthPct}%` }}
                 />
-                <span className="relative z-10 text-navy-500">{bid.order_count}</span>
+                <span className="relative z-10 text-navy-500">{bid.orderCount}</span>
                 <span className="relative z-10 text-right text-navy-400">{formatValue(bid.cumulativeValue)}</span>
                 <span className="relative z-10 text-right text-navy-300">{formatValue(bid.quantity * bid.price)}</span>
-                <span className="relative z-10 text-right text-navy-400">{formatQuantity(bid.cumulative_quantity)}</span>
+                <span className="relative z-10 text-right text-navy-400">{formatQuantity(bid.cumulativeQuantity)}</span>
                 <span className="relative z-10 text-right text-white font-medium">{formatQuantity(bid.quantity)}</span>
                 <span className="relative z-10 text-right font-semibold text-emerald-400 tracking-tight">{formatPrice(bid.price)}</span>
               </div>
@@ -179,7 +179,7 @@ function ProfessionalOrderBook({
         {/* Asks */}
         <div className="flex-1 overflow-y-auto flex flex-col">
           {asksWithCumulativeValue.map((ask, idx) => {
-            const depthPct = maxCumulativeQty > 0 ? (ask.cumulative_quantity / maxCumulativeQty) * 100 : 0;
+            const depthPct = maxCumulativeQty > 0 ? (ask.cumulativeQuantity / maxCumulativeQty) * 100 : 0;
             return (
               <div
                 key={`ask-${idx}`}
@@ -194,10 +194,10 @@ function ProfessionalOrderBook({
                 />
                 <span className="relative z-10 font-semibold text-red-400 tracking-tight">{formatPrice(ask.price)}</span>
                 <span className="relative z-10 text-white font-medium">{formatQuantity(ask.quantity)}</span>
-                <span className="relative z-10 text-navy-400">{formatQuantity(ask.cumulative_quantity)}</span>
+                <span className="relative z-10 text-navy-400">{formatQuantity(ask.cumulativeQuantity)}</span>
                 <span className="relative z-10 text-navy-300">{formatValue(ask.quantity * ask.price)}</span>
                 <span className="relative z-10 text-navy-400">{formatValue(ask.cumulativeValue)}</span>
-                <span className="relative z-10 text-right text-navy-500">{ask.order_count}</span>
+                <span className="relative z-10 text-right text-navy-500">{ask.orderCount}</span>
               </div>
             );
           })}
@@ -380,7 +380,7 @@ function MyOrdersPro({ orders, onCancelOrder }: MyOrdersProProps) {
               <span className="text-right text-white">€{order.price.toFixed(1)}</span>
               <span className="text-right text-white">{order.quantity}</span>
               <span className="text-right text-navy-400">
-                {order.filled_quantity}/{order.quantity}
+                {order.filledQuantity}/{order.quantity}
               </span>
               <span className="text-center">{getStatusBadge(order.status)}</span>
               <span className="text-center">
@@ -436,11 +436,15 @@ function MarketStatsBar({
     });
   };
 
-  const formatVolume = (vol: number) => {
+  const formatVolume = (vol: number | null | undefined) => {
+    if (vol === null || vol === undefined) return '-';
     if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
     if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
     return vol.toFixed(0);
   };
+
+  // Safe change24h with fallback
+  const safeChange24h = change24h ?? 0;
 
   return (
     <div className="bg-navy-900 border-b border-navy-800 px-3 py-1.5 flex items-center gap-3">
@@ -483,14 +487,14 @@ function MarketStatsBar({
         <div className="flex items-center gap-1">
           <span className="text-navy-500">24h</span>
           <span className={`flex items-center font-semibold ${
-            change24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+            safeChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
           }`}>
-            {change24h >= 0 ? (
+            {safeChange24h >= 0 ? (
               <TrendingUp className="w-3 h-3 mr-0.5" />
             ) : (
               <TrendingDown className="w-3 h-3 mr-0.5" />
             )}
-            {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}%
+            {safeChange24h >= 0 ? '+' : ''}{safeChange24h.toFixed(2)}%
           </span>
         </div>
 
@@ -650,29 +654,29 @@ export function CashMarketProPage() {
     );
   }
 
-  // Safe defaults
-  const safeOrderBook = orderBook || {
-    bids: [],
-    asks: [],
-    spread: null,
-    best_bid: null,
-    best_ask: null,
-    last_price: null,
-    volume_24h: 0,
-    change_24h: 0,
-    high_24h: null,
-    low_24h: null,
+  // Safe defaults - handle both null orderBook and undefined properties
+  const safeOrderBook = {
+    bids: orderBook?.bids ?? [],
+    asks: orderBook?.asks ?? [],
+    spread: orderBook?.spread ?? null,
+    bestBid: orderBook?.bestBid ?? null,
+    bestAsk: orderBook?.bestAsk ?? null,
+    lastPrice: orderBook?.lastPrice ?? null,
+    volume24h: orderBook?.volume24h ?? 0,
+    change24h: orderBook?.change24h ?? 0,
+    high24h: orderBook?.high24h ?? null,
+    low24h: orderBook?.low24h ?? null,
   };
 
   return (
     <div className="h-screen bg-navy-950 flex flex-col overflow-hidden trading-terminal">
       {/* Market Stats Bar */}
       <MarketStatsBar
-        lastPrice={safeOrderBook.last_price}
-        change24h={safeOrderBook.change_24h}
-        high24h={safeOrderBook.high_24h}
-        low24h={safeOrderBook.low_24h}
-        volume24h={safeOrderBook.volume_24h}
+        lastPrice={safeOrderBook.lastPrice}
+        change24h={safeOrderBook.change24h}
+        high24h={safeOrderBook.high24h}
+        low24h={safeOrderBook.low24h}
+        volume24h={safeOrderBook.volume24h}
         loading={loading}
         onRefresh={refresh}
         onBack={handleBack}
@@ -689,8 +693,8 @@ export function CashMarketProPage() {
                 bids={safeOrderBook.bids}
                 asks={safeOrderBook.asks}
                 spread={safeOrderBook.spread}
-                bestBid={safeOrderBook.best_bid}
-                bestAsk={safeOrderBook.best_ask}
+                bestBid={safeOrderBook.bestBid}
+                bestAsk={safeOrderBook.bestAsk}
               />
             </div>
           </div>
@@ -759,7 +763,7 @@ export function CashMarketProPage() {
                   <UserOrderEntryModal
                     certificateType="CEA"
                     availableBalance={availableEur}
-                    bestAskPrice={safeOrderBook.best_ask}
+                    bestAskPrice={safeOrderBook.bestAsk}
                     onOrderSubmit={handleMarketOrderSubmit}
                   />
                 </div>

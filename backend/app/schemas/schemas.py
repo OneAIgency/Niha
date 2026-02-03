@@ -1,10 +1,19 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from html import escape
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def sanitize_string(value: Optional[str]) -> Optional[str]:
+    """Strip and escape HTML from user input to prevent XSS"""
+    if value is None:
+        return None
+    # Strip whitespace and escape HTML entities
+    return escape(value.strip())
 
 
 # Enums
@@ -104,6 +113,12 @@ class ContactRequestCreate(BaseModel):
     contact_name: Optional[str] = Field(None, max_length=255)
     position: Optional[str] = Field(None, max_length=100)
 
+    @field_validator("entity_name", "contact_name", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class ContactRequestResponse(BaseModel):
     """Contact request; client/request state is ONLY user_role (NDA, KYC, REJECTED). Do not use request_type."""
@@ -159,12 +174,24 @@ class UserCreate(BaseModel):
     entity_id: Optional[UUID] = None
     position: Optional[str] = None
 
+    @field_validator("first_name", "last_name", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
     phone: Optional[str] = Field(None, max_length=50)
     position: Optional[str] = Field(None, max_length=100)
+
+    @field_validator("first_name", "last_name", "phone", "position", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class PasswordChange(BaseModel):
@@ -367,6 +394,12 @@ class ContactRequestUpdate(BaseModel):
 class EntityKYCUpdate(BaseModel):
     kyc_status: str
     notes: Optional[str] = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 # Generic Response
@@ -968,6 +1001,12 @@ class DepositAnnouncementRequest(BaseModel):
     )
     notes: Optional[str] = Field(None, description="Additional notes from client")
 
+    @field_validator("source_bank", "source_iban", "source_swift", "wire_reference", "notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class WireInstructions(BaseModel):
     """Bank wire instructions for deposit"""
@@ -1000,11 +1039,23 @@ class DepositConfirmRequest(BaseModel):
     )
     admin_notes: Optional[str] = Field(None, description="Admin notes")
 
+    @field_validator("admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class DepositApproveRequest(BaseModel):
     """Admin approves deposit after AML hold"""
 
     admin_notes: Optional[str] = Field(None, description="Approval notes")
+
+    @field_validator("admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class RejectionReason(str, Enum):
@@ -1025,6 +1076,12 @@ class DepositRejectRequest(BaseModel):
     reason: RejectionReason = Field(..., description="Rejection reason category")
     reason_details: str = Field(..., min_length=10, description="Detailed explanation")
     admin_notes: Optional[str] = Field(None, description="Internal admin notes")
+
+    @field_validator("reason_details", "admin_notes", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class DepositDetailResponse(BaseModel):
@@ -1219,11 +1276,23 @@ class MarketMakerCreate(BaseModel):
     initial_balances: Optional[Dict[str, Decimal]] = None  # {CEA: 10000, EUA: 5000}
     initial_eur_balance: Optional[Decimal] = None
 
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
+
 
 class MarketMakerUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize text fields to prevent XSS attacks"""
+        return sanitize_string(v)
 
 
 class MarketMakerBalance(BaseModel):

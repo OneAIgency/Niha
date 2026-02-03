@@ -127,12 +127,12 @@ export function useBackofficeRealtime() {
           if (documentId && userId) {
             const newDoc: KYCDocumentBackoffice = {
               id: documentId,
-              user_id: userId,
-              user_email: toStringOrUndefined(data.user_email) ?? toStringOrUndefined(data.userEmail) ?? '',
-              document_type: toStringOrUndefined(data.document_type) ?? toStringOrUndefined(data.documentType) ?? '',
-              file_name: toStringOrUndefined(data.file_name) ?? toStringOrUndefined(data.fileName) ?? '',
+              userId: userId,
+              userEmail: toStringOrUndefined(data.user_email) ?? toStringOrUndefined(data.userEmail) ?? '',
+              documentType: toStringOrUndefined(data.document_type) ?? toStringOrUndefined(data.documentType) ?? '',
+              fileName: toStringOrUndefined(data.file_name) ?? toStringOrUndefined(data.fileName) ?? '',
               status: toStringOrUndefined(data.status) ?? 'pending',
-              created_at: toStringOrUndefined(data.created_at) ?? toStringOrUndefined(data.createdAt) ?? new Date().toISOString(),
+              createdAt: toStringOrUndefined(data.created_at) ?? toStringOrUndefined(data.createdAt) ?? new Date().toISOString(),
             };
             addKYCDocument(newDoc);
           }
@@ -148,7 +148,7 @@ export function useBackofficeRealtime() {
               id: documentId,
               status: toStringOrUndefined(data.status),
               notes: toStringOrUndefined(data.notes),
-              reviewed_at: toStringOrUndefined(data.reviewed_at) ?? toStringOrUndefined(data.reviewedAt),
+              reviewedAt: toStringOrUndefined(data.reviewed_at) ?? toStringOrUndefined(data.reviewedAt),
             });
           }
         }

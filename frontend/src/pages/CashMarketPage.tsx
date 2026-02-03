@@ -20,9 +20,9 @@ export function CashMarketPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
   const [userBalances, setUserBalances] = useState<{
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
   } | null>(null);
 
   // Fetch all market data
@@ -148,7 +148,7 @@ export function CashMarketPage() {
           <div>
             <span className="text-navy-400 mr-1 text-[10px]">Last</span>
             <span className="font-bold font-mono text-white text-sm">
-              €{formatNumber(orderBook?.last_price)}
+              €{formatNumber(orderBook?.lastPrice)}
             </span>
           </div>
 
@@ -157,16 +157,16 @@ export function CashMarketPage() {
             <span className="text-navy-400 text-[10px]">24h</span>
             {orderBook && (
               <span className={`flex items-center font-semibold ${
-                orderBook.change_24h >= 0
+                orderBook.change24h >= 0
                   ? 'text-emerald-400'
                   : 'text-red-400'
               }`}>
-                {orderBook.change_24h >= 0 ? (
+                {orderBook.change24h >= 0 ? (
                   <TrendingUp className="w-3 h-3 mr-0.5" />
                 ) : (
                   <TrendingDown className="w-3 h-3 mr-0.5" />
                 )}
-                {orderBook.change_24h >= 0 ? '+' : ''}{orderBook.change_24h.toFixed(2)}%
+                {orderBook.change24h >= 0 ? '+' : ''}{orderBook.change24h.toFixed(2)}%
               </span>
             )}
           </div>
@@ -175,7 +175,7 @@ export function CashMarketPage() {
           <div>
             <span className="text-navy-400 mr-1 text-[10px]">Vol</span>
             <span className="font-semibold text-navy-300 font-mono">
-              {orderBook ? formatVolume(orderBook.volume_24h) : '-'}
+              {orderBook ? formatVolume(orderBook.volume24h) : '-'}
             </span>
           </div>
 
@@ -215,8 +215,8 @@ export function CashMarketPage() {
             <div className="p-6">
               <UserOrderEntryModal
                 certificateType={certificateType}
-                availableBalance={userBalances.eur_balance}
-                bestAskPrice={orderBook?.best_ask || null}
+                availableBalance={userBalances.eurBalance}
+                bestAskPrice={orderBook?.bestAsk || null}
                 onOrderSubmit={async (order) => {
                   await handleMarketOrderSubmit(order);
                   setIsOrderPanelOpen(false);
@@ -243,8 +243,8 @@ export function CashMarketPage() {
                     bids: orderBook.bids,
                     asks: orderBook.asks,
                     spread: orderBook.spread,
-                    best_bid: orderBook.best_bid,
-                    best_ask: orderBook.best_ask,
+                    bestBid: orderBook.bestBid,
+                    bestAsk: orderBook.bestAsk,
                   }}
                   showFullBook={true}
                 />

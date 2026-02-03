@@ -26,8 +26,8 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
 
     // Get max cumulative quantity
     const maxCumulative = Math.max(
-      sortedBids.length > 0 ? sortedBids[0].cumulative_quantity : 0,
-      sortedAsks.length > 0 ? sortedAsks[sortedAsks.length - 1].cumulative_quantity : 0
+      sortedBids.length > 0 ? sortedBids[0].cumulativeQuantity : 0,
+      sortedAsks.length > 0 ? sortedAsks[sortedAsks.length - 1].cumulativeQuantity : 0
     );
 
     const width = 400;
@@ -44,10 +44,10 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
       bidPathStr = `M ${scaleX(sortedBids[sortedBids.length - 1].price)} ${height - padding}`;
       for (let i = sortedBids.length - 1; i >= 0; i--) {
         const bid = sortedBids[i];
-        bidPathStr += ` L ${scaleX(bid.price)} ${scaleY(bid.cumulative_quantity)}`;
+        bidPathStr += ` L ${scaleX(bid.price)} ${scaleY(bid.cumulativeQuantity)}`;
         // Step to next price level
         if (i > 0) {
-          bidPathStr += ` L ${scaleX(sortedBids[i - 1].price)} ${scaleY(bid.cumulative_quantity)}`;
+          bidPathStr += ` L ${scaleX(sortedBids[i - 1].price)} ${scaleY(bid.cumulativeQuantity)}`;
         }
       }
       bidPathStr += ` L ${scaleX(sortedBids[0].price)} ${height - padding} Z`;
@@ -59,10 +59,10 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
       askPathStr = `M ${scaleX(sortedAsks[0].price)} ${height - padding}`;
       for (let i = 0; i < sortedAsks.length; i++) {
         const ask = sortedAsks[i];
-        askPathStr += ` L ${scaleX(ask.price)} ${scaleY(ask.cumulative_quantity)}`;
+        askPathStr += ` L ${scaleX(ask.price)} ${scaleY(ask.cumulativeQuantity)}`;
         // Step to next price level
         if (i < sortedAsks.length - 1) {
-          askPathStr += ` L ${scaleX(sortedAsks[i + 1].price)} ${scaleY(ask.cumulative_quantity)}`;
+          askPathStr += ` L ${scaleX(sortedAsks[i + 1].price)} ${scaleY(ask.cumulativeQuantity)}`;
         }
       }
       askPathStr += ` L ${scaleX(sortedAsks[sortedAsks.length - 1].price)} ${height - padding} Z`;

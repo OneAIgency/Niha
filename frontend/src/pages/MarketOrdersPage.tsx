@@ -13,21 +13,21 @@ import type { CertificateType } from '../types';
 // Extended order type that includes both entity and market maker orders
 interface AllOrder {
   id: string;
-  entity_id?: string;
-  entity_name?: string;
-  market_maker_id?: string;
-  market_maker_name?: string;
-  certificate_type: CertificateType;
+  entityId?: string;
+  entityName?: string;
+  marketMakerId?: string;
+  marketMakerName?: string;
+  certificateType: CertificateType;
   side: 'BUY' | 'SELL';
   price: number;
   quantity: number;
-  filled_quantity: number;
-  remaining_quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
   status: 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
-  created_at: string;
-  updated_at?: string;
-  ticket_id?: string;
-  order_type: 'entity' | 'market_maker';
+  createdAt: string;
+  updatedAt?: string;
+  ticketId?: string;
+  orderType: 'entity' | 'market_maker';
 }
 import { cn } from '../utils';
 
@@ -93,9 +93,9 @@ export function MarketOrdersPage() {
    */
   const handlePlaceAsk = () => {
     // Auto-fill with best ask price and quantity from orderbook
-    if (orderBookData?.best_ask) {
-      setAskPrefilledPrice(orderBookData.best_ask);
-      setAskPrefilledQuantity(orderBookData.ask_quantity_at_best);
+    if (orderBookData?.bestAsk) {
+      setAskPrefilledPrice(orderBookData.bestAsk);
+      setAskPrefilledQuantity(orderBookData.askQuantityAtBest);
     } else {
       setAskPrefilledPrice(undefined);
       setAskPrefilledQuantity(undefined);
@@ -108,9 +108,9 @@ export function MarketOrdersPage() {
    */
   const handlePlaceBid = () => {
     // Auto-fill with best bid price and quantity from orderbook
-    if (orderBookData?.best_bid) {
-      setBidPrefilledPrice(orderBookData.best_bid);
-      setBidPrefilledQuantity(orderBookData.bid_quantity_at_best);
+    if (orderBookData?.bestBid) {
+      setBidPrefilledPrice(orderBookData.bestBid);
+      setBidPrefilledQuantity(orderBookData.bidQuantityAtBest);
     } else {
       setBidPrefilledPrice(undefined);
       setBidPrefilledQuantity(undefined);

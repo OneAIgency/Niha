@@ -65,32 +65,32 @@ const safeParseDate = (dateStr: unknown): Date | null => {
 };
 
 interface EntityBalance {
-  entity_id: string;
-  entity_name: string;
-  balance_amount: number;
-  balance_currency?: string | null;
-  total_deposited: number;
-  deposit_count: number;
+  entityId: string;
+  entityName: string;
+  balanceAmount: number;
+  balanceCurrency?: string | null;
+  totalDeposited: number;
+  depositCount: number;
 }
 
 interface EntityAssets {
-  entity_id: string;
-  entity_name: string;
-  eur_balance: number;
-  cea_balance: number;
-  eua_balance: number;
+  entityId: string;
+  entityName: string;
+  eurBalance: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface Portfolio {
-  cash_available: number;
-  cash_locked: number;
-  cash_total: number;
-  cea_available: number;
-  cea_locked: number;
-  cea_total: number;
-  eua_available: number;
-  eua_pending: number;
-  eua_total: number;
+  cashAvailable: number;
+  cashLocked: number;
+  cashTotal: number;
+  ceaAvailable: number;
+  ceaLocked: number;
+  ceaTotal: number;
+  euaAvailable: number;
+  euaPending: number;
+  euaTotal: number;
 }
 
 // Transaction type for display
@@ -222,28 +222,28 @@ export function DashboardPage() {
   // Currently we just refresh on any balance update event
 
   // Derive portfolio from real data (prefer entityAssets over entityBalance for cash)
-  const eurBalance = entityAssets?.eur_balance ?? entityBalance?.balance_amount ?? 0;
+  const eurBalance = entityAssets?.eurBalance ?? entityBalance?.balanceAmount ?? 0;
   const portfolio: Portfolio = {
-    cash_available: eurBalance,
-    cash_locked: 0, // Would come from orders
-    cash_total: eurBalance,
-    cea_available: entityAssets?.cea_balance ?? 0,
-    cea_locked: 0,
-    cea_total: entityAssets?.cea_balance ?? 0,
-    eua_available: entityAssets?.eua_balance ?? 0,
-    eua_pending: 0,
-    eua_total: entityAssets?.eua_balance ?? 0,
+    cashAvailable: eurBalance,
+    cashLocked: 0, // Would come from orders
+    cashTotal: eurBalance,
+    ceaAvailable: entityAssets?.ceaBalance ?? 0,
+    ceaLocked: 0,
+    ceaTotal: entityAssets?.ceaBalance ?? 0,
+    euaAvailable: entityAssets?.euaBalance ?? 0,
+    euaPending: 0,
+    euaTotal: entityAssets?.euaBalance ?? 0,
   };
 
   // Calculate portfolio value
   const calculatePortfolioValue = useCallback(() => {
-    const cashValue = portfolio.cash_total;
+    const cashValue = portfolio.cashTotal;
     const ceaPrice = prices?.cea.price || 0;
     const euaPrice = prices?.eua.price || 0;
 
-    const ceaValueEur = portfolio.cea_total * ceaPrice;
-    const euaValueEur = portfolio.eua_total * euaPrice;
-    const pendingEuaValueEur = portfolio.eua_pending * euaPrice;
+    const ceaValueEur = portfolio.ceaTotal * ceaPrice;
+    const euaValueEur = portfolio.euaTotal * euaPrice;
+    const pendingEuaValueEur = portfolio.euaPending * euaPrice;
 
     return {
       total: cashValue + ceaValueEur + euaValueEur,
@@ -253,7 +253,7 @@ export function DashboardPage() {
       eua: euaValueEur,
       pending: pendingEuaValueEur,
     };
-  }, [portfolio.cash_total, portfolio.cea_total, portfolio.eua_total, portfolio.eua_pending, prices]);
+  }, [portfolio.cashTotal, portfolio.ceaTotal, portfolio.euaTotal, portfolio.euaPending, prices]);
 
   const portfolioValue = calculatePortfolioValue();
 
@@ -290,11 +290,11 @@ export function DashboardPage() {
         
         // Map to entityAssets format for compatibility
         setEntityAssets({
-          entity_id: balances.entity_id || '',
-          entity_name: '',
-          eur_balance: balances.eur_balance,
-          cea_balance: balances.cea_balance,
-          eua_balance: balances.eua_balance,
+          entityId: balances.entityId || '',
+          entityName: '',
+          eurBalance: balances.eurBalance,
+          ceaBalance: balances.ceaBalance,
+          euaBalance: balances.euaBalance,
         });
         
         // Also fetch entity balance for deposit count if needed
@@ -513,12 +513,12 @@ export function DashboardPage() {
    */
   const swapTransactions: Transaction[] = swaps.map(swap => {
     const fromQty = swap.quantity;
-    const toQty = swap.equivalent_quantity || (swap.quantity * (swap.desired_rate || 0));
-    const rate = swap.desired_rate || (toQty / fromQty);
+    const toQty = swap.equivalentQuantity || (swap.quantity * (swap.desiredRate || 0));
+    const rate = swap.desiredRate || (toQty / fromQty);
     const s = swap as unknown as Record<string, unknown>; // Axios transforms to camelCase
-    const createdDate = safeParseDate(s.createdAt ?? swap.created_at);
-    const fromType = (s.fromType as string) ?? swap.from_type ?? 'CEA';
-    const toType = (s.toType as string) ?? swap.to_type ?? 'EUA';
+    const createdDate = safeParseDate(s.createdAt ?? swap.createdAt);
+    const fromType = (s.fromType as string) ?? swap.fromType ?? 'CEA';
+    const toType = (s.toType as string) ?? swap.toType ?? 'EUA';
 
     return {
       id: swap.id,
@@ -528,7 +528,7 @@ export function DashboardPage() {
       details: `${formatNumber(fromQty)} ${fromType} → ${formatNumber(toQty)} ${toType} @ ${rate.toFixed(4)}`,
       amount: null, // Swaps don't have EUR amount
       status: swap.status === 'completed' || swap.status === 'matched' ? 'completed' : 'pending',
-      ref: swap.anonymous_code || swap.id.substring(0, 16),
+      ref: swap.anonymousCode || swap.id.substring(0, 16),
     };
   });
 
@@ -558,11 +558,11 @@ export function DashboardPage() {
       icon: Wallet,
       iconColor: 'text-emerald-400',
       iconBg: 'bg-emerald-500/20',
-      available: portfolio.cash_available,
-      locked: portfolio.cash_locked,
+      available: portfolio.cashAvailable,
+      locked: portfolio.cashLocked,
       pending: 0,
-      total: portfolio.cash_total,
-      value: portfolio.cash_total,
+      total: portfolio.cashTotal,
+      value: portfolio.cashTotal,
       price: null as number | null,
       change: null as number | null,
     },
@@ -573,13 +573,13 @@ export function DashboardPage() {
       icon: Leaf,
       iconColor: 'text-amber-400',
       iconBg: 'bg-amber-500/20',
-      available: portfolio.cea_available,
-      locked: portfolio.cea_locked,
+      available: portfolio.ceaAvailable,
+      locked: portfolio.ceaLocked,
       pending: 0,
-      total: portfolio.cea_total,
-      value: portfolio.cea_total * (prices?.cea.price || 0),
+      total: portfolio.ceaTotal,
+      value: portfolio.ceaTotal * (prices?.cea.price || 0),
       price: prices?.cea.price || 0,
-      change: prices?.cea.change_24h || 0,
+      change: prices?.cea.change24h || 0,
     },
     {
       id: 'eua',
@@ -588,13 +588,13 @@ export function DashboardPage() {
       icon: Wind,
       iconColor: 'text-blue-400',
       iconBg: 'bg-blue-500/20',
-      available: portfolio.eua_available,
+      available: portfolio.euaAvailable,
       locked: 0,
-      pending: portfolio.eua_pending,
-      total: portfolio.eua_total,
-      value: portfolio.eua_total * (prices?.eua.price || 0),
+      pending: portfolio.euaPending,
+      total: portfolio.euaTotal,
+      value: portfolio.euaTotal * (prices?.eua.price || 0),
       price: prices?.eua.price || 0,
-      change: prices?.eua.change_24h || 0,
+      change: prices?.eua.change24h || 0,
     },
   ];
 
@@ -686,7 +686,7 @@ export function DashboardPage() {
             className="content_wrapper"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">Cash ({entityBalance?.balance_currency || 'EUR'})</span>
+              <span className="text-sm text-navy-400">Cash ({entityBalance?.balanceCurrency || 'EUR'})</span>
               <div className="w-8 h-8 rounded-lg bg-navy-600 flex items-center justify-center">
                 <Wallet className="w-4 h-4 text-navy-300" />
               </div>
@@ -696,18 +696,18 @@ export function DashboardPage() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-white font-mono mb-2">
-                  {formatCurrency(portfolio.cash_available, 2)}
+                  {formatCurrency(portfolio.cashAvailable, 2)}
                 </div>
-                {portfolio.cash_locked > 0 && (
+                {portfolio.cashLocked > 0 && (
                   <div className="flex items-center gap-2 text-xs">
                     <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
-                      {formatCurrency(portfolio.cash_locked)} locked
+                      {formatCurrency(portfolio.cashLocked)} locked
                     </span>
                   </div>
                 )}
-                {entityBalance?.total_deposited && entityBalance.total_deposited > 0 && (
+                {entityBalance?.totalDeposited && entityBalance.totalDeposited > 0 && (
                   <div className="text-xs text-navy-500 mt-2">
-                    Total deposited: {formatCurrency(entityBalance.total_deposited, 2)}
+                    Total deposited: {formatCurrency(entityBalance.totalDeposited, 2)}
                   </div>
                 )}
               </>
@@ -797,14 +797,14 @@ export function DashboardPage() {
               ) : (
                 <>
                   <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
-                    {formatNumber(portfolio.cea_total)}
+                    {formatNumber(portfolio.ceaTotal)}
                     <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                   </div>
-                  {portfolio.cea_locked > 0 && (
+                  {portfolio.ceaLocked > 0 && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded flex items-center gap-1">
                         <ArrowRightLeft className="w-3 h-3" />
-                        {formatNumber(portfolio.cea_locked)} in swap
+                        {formatNumber(portfolio.ceaLocked)} in swap
                       </span>
                     </div>
                   )}
@@ -896,14 +896,14 @@ export function DashboardPage() {
               ) : (
                 <>
                   <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
-                    {formatNumber(portfolio.eua_total)}
+                    {formatNumber(portfolio.euaTotal)}
                     <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                   </div>
-                  {portfolio.eua_pending > 0 && (
+                  {portfolio.euaPending > 0 && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        +{formatNumber(portfolio.eua_pending)} pending
+                        +{formatNumber(portfolio.euaPending)} pending
                       </span>
                     </div>
                   )}

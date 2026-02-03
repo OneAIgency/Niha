@@ -168,25 +168,25 @@ export function ContactRequestViewModal({
 
         <div className="p-4 overflow-y-auto space-y-4">
           <DataRow label="ID" value={showingRequest.id} showEmpty />
-          <DataRow label="Entity" value={showingRequest.entity_name} showEmpty />
-          <DataRow label="Name" value={showingRequest.contact_name} showEmpty />
-          <DataRow label="Email" value={showingRequest.contact_email} showEmpty />
+          <DataRow label="Entity" value={showingRequest.entityName} showEmpty />
+          <DataRow label="Name" value={showingRequest.contactName} showEmpty />
+          <DataRow label="Email" value={showingRequest.contactEmail} showEmpty />
           <DataRow label="Position" value={showingRequest.position} showEmpty />
-          <DataRow label="User role" value={showingRequest.user_role} showEmpty />
-          <DataRow label="NDA file name" value={showingRequest.nda_file_name} />
+          <DataRow label="User role" value={showingRequest.userRole} showEmpty />
+          <DataRow label="NDA file name" value={showingRequest.ndaFileName} />
           <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60">
             <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
               Submitter IP:
             </Typography>
             <Typography as="span" variant="bodySmall" color="primary" className="shrink-0">
-              {showingRequest.submitter_ip ?? '—'}
+              {showingRequest.submitterIp ?? '—'}
             </Typography>
-            {onIpLookup && showingRequest.submitter_ip && (
+            {onIpLookup && showingRequest.submitterIp && (
               <button
                 type="button"
-                onClick={() => onIpLookup(showingRequest.submitter_ip!)}
+                onClick={() => onIpLookup(showingRequest.submitterIp!)}
                 className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 rounded"
-                aria-label={`Lookup IP ${showingRequest.submitter_ip}`}
+                aria-label={`Lookup IP ${showingRequest.submitterIp}`}
               >
                 Lookup
               </button>
@@ -195,11 +195,11 @@ export function ContactRequestViewModal({
           <DataRow label="Notes" value={showingRequest.notes} showEmpty />
           <DataRow
             label="Submitted"
-            value={showingRequest.created_at ? formatDate(showingRequest.created_at) : undefined}
+            value={showingRequest.createdAt ? formatDate(showingRequest.createdAt) : undefined}
             showEmpty
           />
 
-          {showingRequest.nda_file_name && (
+          {showingRequest.ndaFileName && (
             <div className="pt-2 border-t border-navy-200/60 dark:border-navy-600/60">
               <Typography as="p" variant="sectionLabel" color="muted" className="mb-2">
                 Link to attached PDF for verification
@@ -209,11 +209,11 @@ export function ContactRequestViewModal({
                 onClick={handleOpenNDA}
                 disabled={openNDALoading}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900/50 text-navy-700 dark:text-navy-200 hover:bg-navy-100 dark:hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label={`Open NDA ${showingRequest.nda_file_name}`}
+                aria-label={`Open NDA ${showingRequest.ndaFileName}`}
               >
                 <FileText className="w-4 h-4 shrink-0" />
                 <ExternalLink className="w-4 h-4 shrink-0" />
-                {openNDALoading ? 'Opening…' : `Open ${showingRequest.nda_file_name}`}
+                {openNDALoading ? 'Opening…' : `Open ${showingRequest.ndaFileName}`}
               </button>
             </div>
           )}

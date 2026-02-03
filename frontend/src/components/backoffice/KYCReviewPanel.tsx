@@ -19,17 +19,7 @@ import {
   REQUIRED_DOCUMENT_COUNT,
 } from '../../constants/kycDocuments';
 import type { KYCDocumentType } from '../../types';
-
-interface KYCDocument {
-  id: string;
-  user_id: string;
-  document_type: string;
-  file_name: string;
-  mime_type?: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-}
+import type { KYCDocument } from '../../types/backoffice';
 
 interface KYCReviewPanelProps {
   userId: string;
@@ -64,7 +54,7 @@ export function KYCReviewPanel({
 
   // Get document by type
   const getDocumentByType = (type: KYCDocumentType): KYCDocument | undefined => {
-    return documents.find(d => d.document_type === type);
+    return documents.find(d => d.documentType === type);
   };
 
   // Calculate progress
@@ -226,7 +216,7 @@ export function KYCReviewPanel({
                   {uploadedDoc ? (
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-navy-600 dark:text-navy-300 truncate max-w-[200px]">
-                        {uploadedDoc.file_name}
+                        {uploadedDoc.fileName}
                       </span>
                       <Badge
                         variant={isApproved ? 'success' : isRejected ? 'danger' : 'warning'}

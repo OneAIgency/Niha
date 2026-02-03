@@ -85,16 +85,16 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
       setExistingMMs(mms);
 
       // Find existing MMs by type and update state
-      const buyer = mms.find(mm => mm.mm_type === 'CEA_BUYER');
-      const seller = mms.find(mm => mm.mm_type === 'CEA_SELLER');
-      const swap = mms.find(mm => mm.mm_type === 'EUA_OFFER');
+      const buyer = mms.find(mm => mm.mmType === 'CEA_BUYER');
+      const seller = mms.find(mm => mm.mmType === 'CEA_SELLER');
+      const swap = mms.find(mm => mm.mmType === 'EUA_OFFER');
 
       if (buyer) {
         setCeaBuyer(prev => ({
           ...prev,
           mmId: buyer.id,
           mmName: buyer.name,
-          currentBalance: buyer.eur_balance || 0,
+          currentBalance: buyer.eurBalance || 0,
         }));
       }
       if (seller) {
@@ -102,7 +102,7 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
           ...prev,
           mmId: seller.id,
           mmName: seller.name,
-          currentBalance: seller.cea_balance || 0,
+          currentBalance: seller.ceaBalance || 0,
         }));
       }
       if (swap) {
@@ -110,7 +110,7 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
           ...prev,
           mmId: swap.id,
           mmName: swap.name,
-          currentBalance: swap.eua_balance || 0,
+          currentBalance: swap.euaBalance || 0,
         }));
       }
     } catch (err) {

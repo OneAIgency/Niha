@@ -7,21 +7,21 @@ import type { CertificateType } from '../../types';
 // Extended order type that includes both entity and market maker orders
 interface AllOrder {
   id: string;
-  entity_id?: string;
-  entity_name?: string;
-  market_maker_id?: string;
-  market_maker_name?: string;
-  certificate_type: CertificateType;
+  entityId?: string;
+  entityName?: string;
+  marketMakerId?: string;
+  marketMakerName?: string;
+  certificateType: CertificateType;
   side: 'BUY' | 'SELL';
   price: number;
   quantity: number;
-  filled_quantity: number;
-  remaining_quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
   status: 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED';
-  created_at: string;
-  updated_at?: string;
-  ticket_id?: string;
-  order_type: 'entity' | 'market_maker';
+  createdAt: string;
+  updatedAt?: string;
+  ticketId?: string;
+  orderType: 'entity' | 'market_maker';
 }
 
 interface IndividualOrdersTableProps {
@@ -74,39 +74,39 @@ export function IndividualOrdersTable({
       const ordersData = response.data;
       const transformedOrders: AllOrder[] = ordersData.map((order: {
         id: string;
-        entity_id?: string;
-        entity_name?: string;
-        market_maker_id?: string;
-        market_maker_name?: string;
-        certificate_type: string;
+        entityId?: string;
+        entityName?: string;
+        marketMakerId?: string;
+        marketMakerName?: string;
+        certificateType: string;
         side: string;
         price: number;
         quantity: number;
-        filled_quantity: number;
-        remaining_quantity: number;
+        filledQuantity: number;
+        remainingQuantity: number;
         status: string;
-        created_at: string;
-        updated_at?: string;
-        ticket_id?: string;
-        order_type: string;
+        createdAt: string;
+        updatedAt?: string;
+        ticketId?: string;
+        orderType: string;
       }) => ({
         id: order.id,
-        entity_id: order.entity_id,
-        entity_name: order.entity_name,
-        market_maker_id: order.market_maker_id,
-        market_maker_name: order.market_maker_name,
-        certificate_type: order.certificate_type as CertificateType,
+        entityId: order.entityId,
+        entityName: order.entityName,
+        marketMakerId: order.marketMakerId,
+        marketMakerName: order.marketMakerName,
+        certificateType: order.certificateType as CertificateType,
         // Normalize side: backend may return BID/ASK or BUY/SELL
         side: (order.side === 'BID' ? 'BUY' : order.side === 'ASK' ? 'SELL' : order.side) as 'BUY' | 'SELL',
         price: order.price,
         quantity: order.quantity,
-        filled_quantity: order.filled_quantity,
-        remaining_quantity: order.remaining_quantity,
+        filledQuantity: order.filledQuantity,
+        remainingQuantity: order.remainingQuantity,
         status: order.status as 'OPEN' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELLED',
-        created_at: order.created_at,
-        updated_at: order.updated_at,
-        ticket_id: order.ticket_id,
-        order_type: order.order_type as 'entity' | 'market_maker',
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        ticketId: order.ticketId,
+        orderType: order.orderType as 'entity' | 'market_maker',
       }));
       setOrders(transformedOrders);
     } catch (error) {
@@ -150,17 +150,17 @@ export function IndividualOrdersTable({
 
   // Helper to get display name and icon for an order
   const getOrderOwnerDisplay = (order: AllOrder) => {
-    if (order.order_type === 'market_maker' && order.market_maker_name) {
+    if (order.orderType === 'market_maker' && order.marketMakerName) {
       return {
-        name: order.market_maker_name,
+        name: order.marketMakerName,
         icon: <Landmark className="w-3 h-3 inline mr-1 text-purple-500" />,
-        title: `Market Maker: ${order.market_maker_name}`,
+        title: `Market Maker: ${order.marketMakerName}`,
       };
-    } else if (order.entity_name) {
+    } else if (order.entityName) {
       return {
-        name: order.entity_name,
+        name: order.entityName,
         icon: <Building2 className="w-3 h-3 inline mr-1 text-blue-500" />,
-        title: `Entity: ${order.entity_name}`,
+        title: `Entity: ${order.entityName}`,
       };
     }
     return {
@@ -191,7 +191,7 @@ export function IndividualOrdersTable({
               <span className="truncate">{ownerDisplay.name}</span>
             </div>
             <div className="text-right text-navy-800 dark:text-navy-200 w-16">
-              {formatQuantity(order.remaining_quantity)}
+              {formatQuantity(order.remainingQuantity)}
             </div>
             <div className="text-right font-semibold text-emerald-600 dark:text-emerald-400 w-20">
               {formatCurrency(order.price ?? 0)}
@@ -229,7 +229,7 @@ export function IndividualOrdersTable({
               {formatCurrency(order.price ?? 0)}
             </div>
             <div className="text-left text-navy-800 dark:text-navy-200 w-16">
-              {formatQuantity(order.remaining_quantity)}
+              {formatQuantity(order.remainingQuantity)}
             </div>
             <div className="text-right text-navy-600 dark:text-navy-400 truncate flex items-center justify-end">
               <span className="truncate">{ownerDisplay.name}</span>
@@ -352,10 +352,10 @@ export function IndividualOrdersTable({
             <span className="font-semibold text-red-600 dark:text-red-400">{askOrders.length}</span> asks
             {' • '}
             <Building2 className="w-3 h-3 inline text-blue-500" />
-            <span className="ml-0.5">{orders.filter(o => o.order_type === 'entity').length}</span>
+            <span className="ml-0.5">{orders.filter(o => o.orderType === 'entity').length}</span>
             {' '}
             <Landmark className="w-3 h-3 inline text-purple-500" />
-            <span className="ml-0.5">{orders.filter(o => o.order_type === 'market_maker').length}</span>
+            <span className="ml-0.5">{orders.filter(o => o.orderType === 'market_maker').length}</span>
           </span>
           <span className="flex items-center gap-1">
             <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />

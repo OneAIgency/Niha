@@ -23,9 +23,7 @@ import type {
   UserSession,
   CertificateType,
   OrderSide,
-  OrderStatus,
   Order,
-  MarketType,
   OrderBook,
   MarketDepth,
   CashMarketTrade,
@@ -51,6 +49,7 @@ import type {
   MarketMakerType,
   MarketMakerQueryParams,
   MarketMakerTransaction,
+  MarketMakerOrder,
   SettlementBatch,
   Trade,
   TransactionType,
@@ -80,21 +79,21 @@ import type {
   LiquidityCreationResponse,
 } from '../types/liquidity';
 import { logger } from '../utils/logger';
-import { transformKeysToCamelCase } from '../utils/dataTransform';
+import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
 import { TOKEN_KEY } from '../constants/auth';
 import { useAuthStore } from '../stores/useStore';
 
 // Flag to prevent multiple redirects during auth failures
 let isRedirectingToLogin = false;
 
-// Secure token storage utility
-// Note: For production, tokens should be stored in httpOnly cookies (requires backend changes)
+// Token storage utilities
+// Note: Primary auth is via httpOnly cookies (set by backend on login)
+// sessionStorage is kept as fallback during transition period
 
 function getToken(): string | null {
   try {
-    // Use sessionStorage instead of localStorage for better security
-    // Still vulnerable to XSS, but better than localStorage
-    // TODO: Migrate to httpOnly cookies for production
+    // Check sessionStorage for backwards compatibility during transition
+    // New auth flow uses httpOnly cookies (sent automatically via withCredentials)
     return sessionStorage.getItem(TOKEN_KEY);
   } catch {
     return null;
@@ -103,6 +102,7 @@ function getToken(): string | null {
 
 function removeToken(): void {
   try {
+    // Clear sessionStorage token (httpOnly cookie cleared by logout endpoint)
     sessionStorage.removeItem(TOKEN_KEY);
   } catch (error) {
     logger.error('Failed to remove token', error);
@@ -148,18 +148,23 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Enable credentials to send/receive httpOnly cookies
+  withCredentials: true,
 });
 
-// Add auth token to requests and handle FormData
+// Add auth token to requests, handle FormData, and transform request data
 api.interceptors.request.use((config) => {
   const token = getToken();
-  
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   // Remove Content-Type for FormData to let browser set it with correct boundary
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
+  } else if (config.data && typeof config.data === 'object') {
+    // Transform request data from camelCase to snake_case (backend expects snake_case)
+    config.data = transformKeysToSnakeCase(config.data);
   }
   return config;
 });
@@ -295,8 +300,8 @@ export const authApi = {
   validateInvitation: async (token: string): Promise<{
     valid: boolean;
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
   }> => {
     const { data } = await api.get(`/auth/validate-invitation/${token}`);
     return data;
@@ -758,22 +763,7 @@ export const usersApi = {
 
   getFundingInstructions: async (): Promise<FundingInstructions> => {
     const { data } = await api.get('/users/me/funding-instructions');
-    // Normalize response (Axios transforms to camelCase, but types expect snake_case)
-    return {
-      bank_name: data.bankName ?? data.bank_name ?? '',
-      account_name: data.accountName ?? data.account_name ?? '',
-      account_number: data.accountNumber ?? data.account_number,
-      iban: data.iban,
-      swift_code: data.swiftCode ?? data.swift_code,
-      swift_bic: data.swiftBic ?? data.swift_bic,
-      routing_number: data.routingNumber ?? data.routing_number,
-      currency: data.currency,
-      reference_format: data.referenceFormat ?? data.reference_format,
-      reference_instructions: data.referenceInstructions ?? data.reference_instructions,
-      supported_currencies: data.supportedCurrencies ?? data.supported_currencies,
-      processing_time: data.processingTime ?? data.processing_time,
-      notes: data.notes,
-    };
+    return data;
   },
 };
 
@@ -901,12 +891,12 @@ export const adminApi = {
 
   createUser: async (userData: {
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     role: UserRole;
     password?: string;
     position?: string;
-    entity_id?: string;
+    entityId?: string;
   }): Promise<User> => {
     const { data } = await api.post('/admin/users', userData);
     return data;
@@ -984,29 +974,9 @@ export const adminApi = {
   },
 
   // Scraping Sources
-  // Note: Vite proxy converts snake_case to camelCase
-  // Our types also use snake_case for most fields, but some computed fields use camelCase
-  // We manually map the fields to ensure consistency with TypeScript types
   getScrapingSources: async (): Promise<ScrapingSource[]> => {
     const { data } = await api.get('/admin/scraping-sources');
-    // Map camelCase API response to our ScrapingSource type (mostly snake_case)
-    return (data as Record<string, unknown>[]).map(item => ({
-      id: item.id as string,
-      name: item.name as string,
-      url: item.url as string,
-      certificate_type: item.certificateType as ScrapingSource['certificate_type'],
-      scrape_library: item.scrapeLibrary as ScrapingSource['scrape_library'],
-      is_active: item.isActive as boolean,
-      scrape_interval_minutes: item.scrapeIntervalMinutes as number,
-      last_scrape_at: item.lastScrapeAt as string | undefined,
-      last_scrape_status: item.lastScrapeStatus as ScrapingSource['last_scrape_status'],
-      last_price: item.lastPrice as number | undefined,
-      lastPriceEur: item.lastPriceEur as number | undefined,
-      lastExchangeRate: item.lastExchangeRate as number | undefined,
-      config: item.config as Record<string, unknown> | undefined,
-      created_at: item.createdAt as string,
-      updated_at: item.updatedAt as string,
-    })) as ScrapingSource[];
+    return data;
   },
 
   updateScrapingSource: async (id: string, update: Partial<ScrapingSource>): Promise<ScrapingSource> => {
@@ -1408,23 +1378,23 @@ export const backofficeApi = {
   },
 
   getEntityAssets: async (entityId: string): Promise<{
-    entity_id: string;
-    entity_name: string;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
-    recent_transactions: Array<{
+    entityId: string;
+    entityName: string;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
+    recentTransactions: Array<{
       id: string;
-      entity_id: string;
-      asset_type: string;
-      transaction_type: string;
+      entityId: string;
+      assetType: string;
+      transactionType: string;
       amount: number;
-      balance_before: number;
-      balance_after: number;
+      balanceBefore: number;
+      balanceAfter: number;
       reference?: string;
       notes?: string;
-      created_by: string;
-      created_at: string;
+      createdBy: string;
+      createdAt: string;
     }>;
   }> => {
     const { data } = await api.get(`/backoffice/entities/${entityId}/assets`);
@@ -1570,21 +1540,7 @@ export const cashMarketApi = {
     certificate_type?: CertificateType;
   }): Promise<Order[]> => {
     const { data } = await api.get('/cash-market/orders/my', { params });
-    // Normalize response to match TypeScript types (Axios transforms to camelCase)
-    return (data || []).map((order: Record<string, unknown>) => ({
-      id: order.id as string,
-      entity_id: (order.entityId ?? order.entity_id) as string,
-      certificate_type: (order.certificateType ?? order.certificate_type) as CertificateType,
-      side: order.side as OrderSide,
-      price: order.price as number,
-      quantity: order.quantity as number,
-      filled_quantity: (order.filledQuantity ?? order.filled_quantity ?? 0) as number,
-      remaining_quantity: (order.remainingQuantity ?? order.remaining_quantity ?? 0) as number,
-      status: order.status as OrderStatus,
-      market: (order.market as MarketType) || undefined,
-      created_at: (order.createdAt ?? order.created_at) as string,
-      updated_at: (order.updatedAt ?? order.updated_at) as string | undefined,
-    }));
+    return data || [];
   },
 
   cancelOrder: async (orderId: string): Promise<MessageResponse> => {
@@ -1595,48 +1551,23 @@ export const cashMarketApi = {
   // NEW REAL TRADING ENDPOINTS
 
   getUserBalances: async (): Promise<{
-    entity_id: string | null;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
+    entityId: string | null;
+    eurBalance: number;
+    ceaBalance: number;
+    euaBalance: number;
   }> => {
     const { data } = await api.get('/cash-market/user/balances');
-    // Handle both snake_case (direct API) and camelCase (Vite proxy converted) responses
     return {
-      entity_id: data.entity_id ?? data.entityId ?? null,
-      eur_balance: data.eur_balance ?? data.eurBalance ?? 0,
-      cea_balance: data.cea_balance ?? data.ceaBalance ?? 0,
-      eua_balance: data.eua_balance ?? data.euaBalance ?? 0,
+      entityId: data.entityId ?? null,
+      eurBalance: data.eurBalance ?? 0,
+      ceaBalance: data.ceaBalance ?? 0,
+      euaBalance: data.euaBalance ?? 0,
     };
   },
 
   getRealOrderBook: async (certificateType: CertificateType): Promise<OrderBook> => {
     const { data } = await api.get(`/cash-market/real/orderbook/${certificateType}`);
-    // Transform camelCase response back to snake_case for frontend types
-    // Vite proxy auto-converts snake_case to camelCase
-    return {
-      certificate_type: data.certificateType || data.certificate_type,
-      bids: (data.bids || []).map((b: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
-        price: b.price,
-        quantity: b.quantity,
-        order_count: b.orderCount ?? b.order_count ?? 0,
-        cumulative_quantity: b.cumulativeQuantity ?? b.cumulative_quantity ?? 0,
-      })),
-      asks: (data.asks || []).map((a: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
-        price: a.price,
-        quantity: a.quantity,
-        order_count: a.orderCount ?? a.order_count ?? 0,
-        cumulative_quantity: a.cumulativeQuantity ?? a.cumulative_quantity ?? 0,
-      })),
-      spread: data.spread,
-      best_bid: data.bestBid ?? data.best_bid,
-      best_ask: data.bestAsk ?? data.best_ask,
-      last_price: data.lastPrice ?? data.last_price,
-      volume_24h: data.volume24h ?? data.volume_24h ?? 0,
-      change_24h: data.change24h ?? data.change_24h ?? 0,
-      high_24h: data.high24h ?? data.high_24h ?? null,
-      low_24h: data.low24h ?? data.low_24h ?? null,
-    };
+    return data;
   },
 
   previewOrder: async (request: {
@@ -1715,36 +1646,14 @@ export const cashMarketApi = {
 // Market Makers API
 export const getMarketMakers = async (params?: MarketMakerQueryParams): Promise<MarketMaker[]> => {
   const { data } = await api.get('/admin/market-makers', { params });
-
-  // Transform backend response to match frontend expectations
-  // Note: Vite proxy converts snake_case to camelCase automatically
-  return data.map((mm: {
-    id: string;
-    name: string;
-    description?: string;
-    mmType: MarketMakerType;
-    isActive: boolean;
-    eurBalance?: number | string;
-    ceaBalance?: number | string;
-    euaBalance?: number | string;
-    currentBalances?: { CEA?: { total: string | number }; EUA?: { total: string | number } };
-    totalOrders?: number;
-    createdAt: string;
-    ticketId?: string;
-  }): MarketMaker => ({
-    id: mm.id,
-    name: mm.name,
-    description: mm.description,
-    mm_type: mm.mmType || 'CEA_SELLER',
+  // Data is already transformed by axios interceptor to camelCase
+  // Handle legacy nested balances format if present
+  return data.map((mm: MarketMaker & { currentBalances?: { CEA?: { total: string | number }; EUA?: { total: string | number } } }) => ({
+    ...mm,
+    eurBalance: Number(mm.eurBalance) || 0,
+    ceaBalance: Number(mm.ceaBalance) || Number(mm.currentBalances?.CEA?.total) || 0,
+    euaBalance: Number(mm.euaBalance) || Number(mm.currentBalances?.EUA?.total) || 0,
     market: MARKET_MAKER_TYPES[mm.mmType as MarketMakerType]?.market || 'CEA_CASH',
-    is_active: mm.isActive,
-    eur_balance: Number(mm.eurBalance) || 0,
-    // Use flat fields if available (new backend), fallback to nested (legacy)
-    cea_balance: Number(mm.ceaBalance) || Number(mm.currentBalances?.CEA?.total) || 0,
-    eua_balance: Number(mm.euaBalance) || Number(mm.currentBalances?.EUA?.total) || 0,
-    total_orders: mm.totalOrders || 0,
-    created_at: mm.createdAt,
-    ticket_id: mm.ticketId,
   }));
 };
 
@@ -1865,27 +1774,12 @@ export const getMarketMakerTransactions = async (
   params?: MarketMakerTransactionQueryParams
 ): Promise<MarketMakerTransaction[]> => {
   const { data } = await api.get(`/admin/market-makers/${id}/transactions`, { params });
-
-  // Transform backend response to match frontend expectations
-  // Backend returns: transaction_type as "DEPOSIT", "WITHDRAWAL", "TRADE_DEBIT", etc. (uppercase)
-  // Frontend expects: lowercase with underscores (deposit, withdrawal, trade_debit, trade_credit, etc.)
-  return data.map((transaction: {
-    id: string;
-    entity_id: string;
-    asset_type: 'EUR' | 'CEA' | 'EUA';
-    transaction_type: string;
-    amount: number;
-    balance_before: number;
-    balance_after: number;
-    reference?: string;
-    notes?: string;
-    created_by: string;
-    created_at: string;
-  }): MarketMakerTransaction => ({
+  // Data transformed by axios interceptor; add marketMakerId and normalize transaction_type
+  return data.map((transaction: MarketMakerTransaction) => ({
     ...transaction,
-    market_maker_id: id,
-    transaction_type: (transaction.transaction_type?.toLowerCase() || 'deposit') as TransactionType,
-    amount: Math.abs(transaction.amount), // Store absolute value for display
+    marketMakerId: id,
+    transactionType: (transaction.transactionType?.toLowerCase() || 'deposit') as TransactionType,
+    amount: Math.abs(transaction.amount),
   }));
 };
 
@@ -1906,31 +1800,28 @@ export const createTransaction = async (id: string, data: {
 };
 
 export const getMarketMakerBalances = async (id: string): Promise<{
-  cea_balance: number;
-  eua_balance: number;
-  eur_balance: number;
-  cea_available: number;
-  eua_available: number;
-  eur_available: number;
-  cea_locked: number;
-  eua_locked: number;
-  eur_locked: number;
+  ceaBalance: number;
+  euaBalance: number;
+  eurBalance: number;
+  ceaAvailable: number;
+  euaAvailable: number;
+  eurAvailable: number;
+  ceaLocked: number;
+  euaLocked: number;
+  eurLocked: number;
 }> => {
   const { data } = await api.get(`/admin/market-makers/${id}/balances`);
-
-  // Transform nested backend structure to flat frontend structure
-  // Backend returns: {CEA: {available, locked, total}, EUA: {...}, EUR: {...}}
-  // Frontend expects: flat structure with total, available, and locked for each
+  // Backend returns nested structure: {CEA: {available, locked, total}, ...}
   return {
-    cea_balance: data.CEA?.total ?? 0,
-    eua_balance: data.EUA?.total ?? 0,
-    eur_balance: data.EUR?.total ?? 0,
-    cea_available: data.CEA?.available ?? 0,
-    eua_available: data.EUA?.available ?? 0,
-    eur_available: data.EUR?.available ?? 0,
-    cea_locked: data.CEA?.locked ?? 0,
-    eua_locked: data.EUA?.locked ?? 0,
-    eur_locked: data.EUR?.locked ?? 0,
+    ceaBalance: data.CEA?.total ?? 0,
+    euaBalance: data.EUA?.total ?? 0,
+    eurBalance: data.EUR?.total ?? 0,
+    ceaAvailable: data.CEA?.available ?? 0,
+    euaAvailable: data.EUA?.available ?? 0,
+    eurAvailable: data.EUR?.available ?? 0,
+    ceaLocked: data.CEA?.locked ?? 0,
+    euaLocked: data.EUA?.locked ?? 0,
+    eurLocked: data.EUR?.locked ?? 0,
   };
 };
 
@@ -2096,35 +1987,9 @@ export const getAutoTradeMonitor = async (): Promise<AutoTradeMonitorResponse> =
 };
 
 // Market Orders API (Admin)
-export const getAdminOrderBook = async (certificateType: string) => {
+export const getAdminOrderBook = async (certificateType: string): Promise<{ data: OrderBook }> => {
   const { data } = await api.get(`/admin/market-orders/orderbook/${certificateType}`);
-  // Transform camelCase response to snake_case for frontend types
-  // Vite proxy may auto-convert snake_case to camelCase
-  return {
-    data: {
-      certificate_type: data.certificateType || data.certificate_type,
-      bids: (data.bids || []).map((b: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
-        price: b.price,
-        quantity: b.quantity,
-        order_count: b.orderCount ?? b.order_count ?? 0,
-        cumulative_quantity: b.cumulativeQuantity ?? b.cumulative_quantity ?? 0,
-      })),
-      asks: (data.asks || []).map((a: { price: number; quantity: number; orderCount?: number; order_count?: number; cumulativeQuantity?: number; cumulative_quantity?: number }) => ({
-        price: a.price,
-        quantity: a.quantity,
-        order_count: a.orderCount ?? a.order_count ?? 0,
-        cumulative_quantity: a.cumulativeQuantity ?? a.cumulative_quantity ?? 0,
-      })),
-      spread: data.spread,
-      best_bid: data.bestBid ?? data.best_bid,
-      best_ask: data.bestAsk ?? data.best_ask,
-      last_price: data.lastPrice ?? data.last_price,
-      volume_24h: data.volume24h ?? data.volume_24h ?? 0,
-      change_24h: data.change24h ?? data.change_24h ?? 0,
-      high_24h: data.high24h ?? data.high_24h ?? null,
-      low_24h: data.low24h ?? data.low_24h ?? null,
-    },
-  };
+  return { data };
 };
 
 export const placeMarketMakerOrder = (data: {
@@ -2142,48 +2007,9 @@ export const getMarketMakerOrders = async (params?: {
   market_maker_id?: string;
   status?: string;
   certificate_type?: string;
-}) => {
+}): Promise<{ data: MarketMakerOrder[] }> => {
   const { data } = await api.get('/admin/market-orders', { params });
-  // Transform camelCase response to snake_case for frontend types
-  return {
-    data: (data || []).map((order: {
-      id: string;
-      marketMakerId?: string;
-      market_maker_id?: string;
-      marketMakerName?: string;
-      market_maker_name?: string;
-      certificateType?: string;
-      certificate_type?: string;
-      side: string;
-      price: number;
-      quantity: number;
-      filledQuantity?: number;
-      filled_quantity?: number;
-      remainingQuantity?: number;
-      remaining_quantity?: number;
-      status: string;
-      createdAt?: string;
-      created_at?: string;
-      updatedAt?: string;
-      updated_at?: string;
-      ticketId?: string;
-      ticket_id?: string;
-    }) => ({
-      id: order.id,
-      market_maker_id: order.marketMakerId ?? order.market_maker_id,
-      market_maker_name: order.marketMakerName ?? order.market_maker_name,
-      certificate_type: order.certificateType ?? order.certificate_type,
-      side: order.side,
-      price: order.price,
-      quantity: order.quantity,
-      filled_quantity: order.filledQuantity ?? order.filled_quantity ?? 0,
-      remaining_quantity: order.remainingQuantity ?? order.remaining_quantity ?? (order.quantity - (order.filledQuantity ?? order.filled_quantity ?? 0)),
-      status: order.status,
-      created_at: order.createdAt ?? order.created_at,
-      updated_at: order.updatedAt ?? order.updated_at,
-      ticket_id: order.ticketId ?? order.ticket_id,
-    })),
-  };
+  return { data: data || [] };
 };
 
 export const cancelMarketMakerOrder = (orderId: string) =>
@@ -2195,57 +2021,9 @@ export const getAllOrders = async (params?: {
   status?: string;
   page?: number;
   per_page?: number;
-}) => {
+}): Promise<{ data: Order[] }> => {
   const { data } = await api.get('/admin/market-orders/all', { params });
-  // Transform camelCase response to snake_case for frontend types
-  return {
-    data: (data || []).map((order: {
-      id: string;
-      entityId?: string;
-      entity_id?: string;
-      entityName?: string;
-      entity_name?: string;
-      marketMakerId?: string;
-      market_maker_id?: string;
-      marketMakerName?: string;
-      market_maker_name?: string;
-      certificateType?: string;
-      certificate_type?: string;
-      side: string;
-      price: number;
-      quantity: number;
-      filledQuantity?: number;
-      filled_quantity?: number;
-      remainingQuantity?: number;
-      remaining_quantity?: number;
-      status: string;
-      createdAt?: string;
-      created_at?: string;
-      updatedAt?: string;
-      updated_at?: string;
-      ticketId?: string;
-      ticket_id?: string;
-      orderType?: string;
-      order_type?: string;
-    }) => ({
-      id: order.id,
-      entity_id: order.entityId ?? order.entity_id,
-      entity_name: order.entityName ?? order.entity_name,
-      market_maker_id: order.marketMakerId ?? order.market_maker_id,
-      market_maker_name: order.marketMakerName ?? order.market_maker_name,
-      certificate_type: order.certificateType ?? order.certificate_type,
-      side: order.side,
-      price: order.price,
-      quantity: order.quantity,
-      filled_quantity: order.filledQuantity ?? order.filled_quantity ?? 0,
-      remaining_quantity: order.remainingQuantity ?? order.remaining_quantity ?? (order.quantity - (order.filledQuantity ?? order.filled_quantity ?? 0)),
-      status: order.status,
-      created_at: order.createdAt ?? order.created_at,
-      updated_at: order.updatedAt ?? order.updated_at,
-      ticket_id: order.ticketId ?? order.ticket_id,
-      order_type: order.orderType ?? order.order_type,
-    })),
-  };
+  return { data: data || [] };
 };
 
 // Logging/Audit API
@@ -2381,28 +2159,7 @@ export const withdrawalApi = {
 export const feesApi = {
   getAllFees: async (): Promise<AllFeesResponse> => {
     const { data } = await api.get('/admin/fees');
-    // Normalize camelCase (from Axios) to snake_case (expected by types)
-    const d = data as Record<string, unknown>;
-    const marketFees = ((d.marketFees ?? d.market_fees ?? []) as Record<string, unknown>[]).map((f) => ({
-      id: (f.id as string) ?? '',
-      market: (f.market as 'CEA_CASH' | 'SWAP') ?? 'CEA_CASH',
-      bid_fee_rate: (f.bidFeeRate ?? f.bid_fee_rate ?? 0) as number,
-      ask_fee_rate: (f.askFeeRate ?? f.ask_fee_rate ?? 0) as number,
-      is_active: (f.isActive ?? f.is_active ?? true) as boolean,
-      created_at: (f.createdAt ?? f.created_at ?? '') as string,
-      updated_at: (f.updatedAt ?? f.updated_at ?? '') as string,
-    }));
-    const entityOverrides = ((d.entityOverrides ?? d.entity_overrides ?? []) as Record<string, unknown>[]).map((o) => ({
-      id: (o.id as string) ?? '',
-      entity_id: (o.entityId ?? o.entity_id ?? '') as string,
-      entity_name: (o.entityName ?? o.entity_name ?? '') as string,
-      market: (o.market as 'CEA_CASH' | 'SWAP') ?? 'CEA_CASH',
-      bid_fee_rate: (o.bidFeeRate ?? o.bid_fee_rate ?? null) as number | null,
-      ask_fee_rate: (o.askFeeRate ?? o.ask_fee_rate ?? null) as number | null,
-      is_active: (o.isActive ?? o.is_active ?? true) as boolean,
-      created_at: (o.createdAt ?? o.created_at ?? '') as string,
-    }));
-    return { market_fees: marketFees, entity_overrides: entityOverrides };
+    return data;
   },
 
   updateMarketFees: async (

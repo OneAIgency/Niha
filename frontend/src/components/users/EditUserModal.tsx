@@ -7,23 +7,23 @@ import type { UserRole } from '../../types';
 interface UserWithEntity {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
   position?: string;
   role: UserRole;
-  is_active?: boolean;
-  entity_name?: string;
+  isActive?: boolean;
+  entityName?: string;
 }
 
 interface EditUserModalProps {
   user: UserWithEntity | null;
   onClose: () => void;
   editForm: {
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     position: string;
     role: UserRole;
-    is_active: boolean;
+    isActive: boolean;
   };
   setEditForm: (form: EditUserModalProps['editForm']) => void;
   onSubmit: () => void;
@@ -73,11 +73,11 @@ export function EditUserModal({
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600'
                   : 'bg-gradient-to-br from-amber-500 to-amber-600'
             )}>
-              {getInitials(user.first_name, user.last_name, user.email)}
+              {getInitials(user.firstName, user.lastName, user.email)}
             </div>
             <div>
               <p className="font-semibold text-navy-900 dark:text-white">
-                {user.first_name} {user.last_name}
+                {user.firstName} {user.lastName}
               </p>
               <p className="text-sm text-navy-500 dark:text-navy-400">{user.email}</p>
             </div>
@@ -85,13 +85,13 @@ export function EditUserModal({
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="First Name"
-              value={editForm.first_name}
-              onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+              value={editForm.firstName}
+              onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
             />
             <Input
               label="Last Name"
-              value={editForm.last_name}
-              onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+              value={editForm.lastName}
+              onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
             />
           </div>
           <Input

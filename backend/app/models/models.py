@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -200,8 +200,8 @@ class TradingFeeConfig(Base):
     bid_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for buyers (BID)
     ask_fee_rate = Column(Numeric(8, 6), nullable=False, default=0.005)  # Fee for sellers (ASK)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
 
@@ -219,7 +219,7 @@ class EntityFeeOverride(Base):
     bid_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
     ask_fee_rate = Column(Numeric(8, 6), nullable=True)  # NULL = use default
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Relationships
@@ -246,8 +246,8 @@ class Entity(Base):
     balance_amount = Column(Numeric(18, 2), default=0)
     balance_currency = Column(SQLEnum(Currency), nullable=True)
     total_deposited = Column(Numeric(18, 2), default=0)  # Lifetime total deposits
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     users = relationship("User", back_populates="entity", foreign_keys="User.entity_id")
     certificates = relationship("Certificate", back_populates="entity")
@@ -283,8 +283,8 @@ class User(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     creation_method = Column(String(20), nullable=True)  # 'manual' or 'invitation'
     last_login = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="users", foreign_keys=[entity_id])
     activity_logs = relationship("ActivityLog", back_populates="user")
@@ -325,9 +325,9 @@ class MarketMakerClient(Base):
     )  # e.g., "MM-001", "MM-002"
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
     )
     created_by = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
@@ -394,8 +394,8 @@ class ContactRequest(Base):
     user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class Certificate(Base):
@@ -409,8 +409,8 @@ class Certificate(Base):
     vintage_year = Column(Integer)
     status = Column(SQLEnum(CertificateStatus), default=CertificateStatus.AVAILABLE)
     anonymous_code = Column(String(20), unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="certificates")
 
@@ -428,7 +428,7 @@ class Trade(Base):
     price_per_unit = Column(Numeric(18, 4), nullable=False)
     total_value = Column(Numeric(18, 4), nullable=False)
     status = Column(SQLEnum(TradeStatus), default=TradeStatus.PENDING)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     completed_at = Column(DateTime)
 
     buyer = relationship(
@@ -453,8 +453,8 @@ class SwapRequest(Base):
         UUID(as_uuid=True), ForeignKey("swap_requests.id"), nullable=True
     )
     anonymous_code = Column(String(20), unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="swap_requests")
 
@@ -467,7 +467,7 @@ class PriceHistory(Base):
     price = Column(Numeric(18, 4), nullable=False)
     currency = Column(String(3), nullable=False)
     source = Column(String(100))
-    recorded_at = Column(DateTime, default=datetime.utcnow, index=True)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
 
 class ActivityLog(Base):
@@ -486,7 +486,7 @@ class ActivityLog(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
     session_id = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     user = relationship("User", back_populates="activity_logs")
 
@@ -512,8 +512,8 @@ class KYCDocument(Base):
     reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User", back_populates="kyc_documents", foreign_keys=[user_id])
     entity = relationship("Entity", back_populates="kyc_documents")
@@ -539,8 +539,8 @@ class ScrapingSource(Base):
     config = Column(
         JSON, nullable=True
     )  # Additional scraper configuration (CSS selectors, etc.)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class ExchangeRateSource(Base):
@@ -563,8 +563,8 @@ class ExchangeRateSource(Base):
     config = Column(
         JSON, nullable=True
     )  # Additional scraper configuration (CSS selectors, XPath, etc.)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class UserSession(Base):
@@ -579,7 +579,7 @@ class UserSession(Base):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(500), nullable=True)
     device_info = Column(JSON, nullable=True)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     ended_at = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True)
@@ -615,8 +615,8 @@ class Order(Base):
     quantity = Column(Numeric(18, 2), nullable=False)
     filled_quantity = Column(Numeric(18, 2), default=0)
     status = Column(SQLEnum(OrderStatus), default=OrderStatus.OPEN)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity")
     seller = relationship("Seller", back_populates="orders")
@@ -655,7 +655,7 @@ class CashMarketTrade(Base):
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     price = Column(Numeric(18, 4), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False)
-    executed_at = Column(DateTime, default=datetime.utcnow, index=True)
+    executed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     buy_order = relationship(
         "Order", foreign_keys=[buy_order_id], back_populates="buy_trades"
@@ -685,7 +685,7 @@ class AuthenticationAttempt(Base):
     failure_reason = Column(
         String(255), nullable=True
     )  # 'invalid_password', 'user_not_found', 'account_disabled', etc.
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     user = relationship("User", back_populates="auth_attempts")
 
@@ -707,8 +707,8 @@ class Seller(Base):
     total_transactions = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationship to orders
     orders = relationship("Order", back_populates="seller")
@@ -757,7 +757,7 @@ class Deposit(Base):
 
     # Timestamps
     reported_at = Column(
-        DateTime, default=datetime.utcnow
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )  # When user announced the wire
     confirmed_at = Column(DateTime, nullable=True)  # When backoffice confirmed receipt
 
@@ -781,8 +781,8 @@ class Deposit(Base):
     # Ticket tracking
     ticket_id = Column(String(50), nullable=True)  # Ticket ID for the deposit announcement
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     entity = relationship("Entity", back_populates="deposits")
@@ -828,8 +828,8 @@ class EntityHolding(Base):
     )
     asset_type = Column(SQLEnum(AssetType), nullable=False)
     quantity = Column(Numeric(18, 2), nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     entity = relationship("Entity", back_populates="holdings")
 
@@ -874,7 +874,7 @@ class AssetTransaction(Base):
     balance_after = Column(Numeric(18, 2), nullable=False)  # Running balance
     notes = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     # Relationships
     entity = relationship("Entity", foreign_keys=[entity_id])
@@ -891,7 +891,7 @@ class TicketLog(Base):
     ticket_id = Column(
         String(30), unique=True, nullable=False, index=True
     )  # TKT-2026-001234
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     user_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
     )
@@ -964,7 +964,7 @@ class LiquidityOperation(Base):
 
     # Metadata
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     notes = Column(Text, nullable=True)
 
     # Relationships
@@ -1064,9 +1064,9 @@ class SettlementBatch(Base):
     notes = Column(Text, nullable=True)
 
     # Audit timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
     )
 
     # Relationships
@@ -1102,7 +1102,7 @@ class SettlementStatusHistory(Base):
     updated_by = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )  # Admin who made the change
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     # Relationships
     settlement_batch = relationship("SettlementBatch", back_populates="status_history")
@@ -1153,7 +1153,7 @@ class Withdrawal(Base):
     admin_notes = Column(Text, nullable=True)
 
     # Timestamps
-    requested_at = Column(DateTime, default=datetime.utcnow)
+    requested_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     processed_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     rejected_at = Column(DateTime, nullable=True)
@@ -1164,8 +1164,8 @@ class Withdrawal(Base):
     rejected_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Standard audit columns
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     entity = relationship("Entity", foreign_keys=[entity_id])
@@ -1245,8 +1245,8 @@ class AutoTradeRule(Base):
     execution_count = Column(Integer, default=0, nullable=False)  # Total orders placed by this rule
 
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     # Relationships
     market_maker = relationship("MarketMakerClient", back_populates="auto_trade_rules")
@@ -1377,5 +1377,5 @@ class MailConfig(Base):
     verification_method = Column(String(50), nullable=True)
     # Placeholder for auth options
     auth_method = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

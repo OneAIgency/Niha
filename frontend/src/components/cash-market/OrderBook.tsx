@@ -21,8 +21,8 @@ export function OrderBook({
   maxRows = 10,
 }: OrderBookProps) {
   // Get max cumulative quantity for depth bar scaling
-  const maxBidCumulative = bids.length > 0 ? Math.max(...bids.map(b => b.cumulative_quantity)) : 1;
-  const maxAskCumulative = asks.length > 0 ? Math.max(...asks.map(a => a.cumulative_quantity)) : 1;
+  const maxBidCumulative = bids.length > 0 ? Math.max(...bids.map(b => b.cumulativeQuantity)) : 1;
+  const maxAskCumulative = asks.length > 0 ? Math.max(...asks.map(a => a.cumulativeQuantity)) : 1;
   const maxCumulative = Math.max(maxBidCumulative, maxAskCumulative);
 
   // Reverse asks so lowest price is at bottom (closest to spread)
@@ -60,7 +60,7 @@ export function OrderBook({
               {/* Depth bar */}
               <div
                 className="absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/20"
-                style={{ width: `${(ask.cumulative_quantity / maxCumulative) * 100}%` }}
+                style={{ width: `${(ask.cumulativeQuantity / maxCumulative) * 100}%` }}
               />
               <span className="relative text-red-600 dark:text-red-400 font-mono">
                 {formatNumber(ask.price)}
@@ -69,7 +69,7 @@ export function OrderBook({
                 {formatNumber(ask.quantity, 0)}
               </span>
               <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
-                {formatNumber(ask.cumulative_quantity, 0)}
+                {formatNumber(ask.cumulativeQuantity, 0)}
               </span>
             </motion.div>
           ))}
@@ -103,7 +103,7 @@ export function OrderBook({
               {/* Depth bar */}
               <div
                 className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/20"
-                style={{ width: `${(bid.cumulative_quantity / maxCumulative) * 100}%` }}
+                style={{ width: `${(bid.cumulativeQuantity / maxCumulative) * 100}%` }}
               />
               <span className="relative text-emerald-600 dark:text-emerald-400 font-mono">
                 {formatNumber(bid.price)}
@@ -112,7 +112,7 @@ export function OrderBook({
                 {formatNumber(bid.quantity, 0)}
               </span>
               <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
-                {formatNumber(bid.cumulative_quantity, 0)}
+                {formatNumber(bid.cumulativeQuantity, 0)}
               </span>
             </motion.div>
           ))}

@@ -2,9 +2,9 @@ import { Leaf, Wind, Euro, Lock } from 'lucide-react';
 import { formatQuantity, formatCurrency } from '../../utils';
 
 interface SimpleBalances {
-  eur_balance?: number;
-  cea_balance: number;
-  eua_balance: number;
+  eurBalance?: number;
+  ceaBalance: number;
+  euaBalance: number;
 }
 
 interface DetailedBalances {
@@ -36,9 +36,9 @@ function isDetailedBalances(balances: SimpleBalances | DetailedBalances): balanc
 }
 
 export function BalanceCards({ balances, loading = false, variant = 'simple' }: BalanceCardsProps) {
-  const eurBalance = isDetailedBalances(balances) ? balances.EUR?.total : balances.eur_balance;
-  const ceaBalance = isDetailedBalances(balances) ? balances.CEA.total : balances.cea_balance;
-  const euaBalance = isDetailedBalances(balances) ? balances.EUA.total : balances.eua_balance;
+  const eurBalance = isDetailedBalances(balances) ? balances.EUR?.total : balances.eurBalance;
+  const ceaBalance = isDetailedBalances(balances) ? balances.CEA.total : balances.ceaBalance;
+  const euaBalance = isDetailedBalances(balances) ? balances.EUA.total : balances.euaBalance;
 
   const showDetailed = variant === 'detailed' && isDetailedBalances(balances);
   const hasEurBalance = eurBalance !== undefined && eurBalance > 0;

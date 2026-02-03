@@ -39,16 +39,16 @@ const validateOrderBookLevel = (level: OrderBookLevel | null | undefined): boole
     level &&
     typeof level.price === 'number' &&
     typeof level.quantity === 'number' &&
-    typeof level.cumulative_quantity === 'number' &&
-    typeof level.order_count === 'number' &&
+    typeof level.cumulativeQuantity === 'number' &&
+    typeof level.orderCount === 'number' &&
     level.price > 0 &&
     level.quantity > 0 &&
-    level.cumulative_quantity >= 0 &&
-    level.order_count >= 0 &&
+    level.cumulativeQuantity >= 0 &&
+    level.orderCount >= 0 &&
     isFinite(level.price) &&
     isFinite(level.quantity) &&
-    isFinite(level.cumulative_quantity) &&
-    isFinite(level.order_count)
+    isFinite(level.cumulativeQuantity) &&
+    isFinite(level.orderCount)
   );
 };
 
@@ -127,8 +127,8 @@ export function TradingOrderBook({
 
   // Calculate max cumulative quantity for depth visualization
   const maxCumulativeQuantity = useMemo(() => {
-    const bidMax = safeBids.length > 0 ? Math.max(...safeBids.map((b) => b.cumulative_quantity)) : 0;
-    const askMax = safeAsks.length > 0 ? Math.max(...safeAsks.map((a) => a.cumulative_quantity)) : 0;
+    const bidMax = safeBids.length > 0 ? Math.max(...safeBids.map((b) => b.cumulativeQuantity)) : 0;
+    const askMax = safeAsks.length > 0 ? Math.max(...safeAsks.map((a) => a.cumulativeQuantity)) : 0;
     return Math.max(bidMax, askMax);
   }, [safeBids, safeAsks]);
 
@@ -289,7 +289,7 @@ export function TradingOrderBook({
             {displayAsks.map((level, idx) => {
               // Calculate depth percentage for visual bar
               const depthPercentage = maxCumulativeQuantity > 0
-                ? (level.cumulative_quantity / maxCumulativeQuantity) * 100
+                ? (level.cumulativeQuantity / maxCumulativeQuantity) * 100
                 : 0;
 
               return (
@@ -393,7 +393,7 @@ export function TradingOrderBook({
             {displayBids.map((level, idx) => {
               // Calculate depth percentage for visual bar
               const depthPercentage = maxCumulativeQuantity > 0
-                ? (level.cumulative_quantity / maxCumulativeQuantity) * 100
+                ? (level.cumulativeQuantity / maxCumulativeQuantity) * 100
                 : 0;
 
               return (

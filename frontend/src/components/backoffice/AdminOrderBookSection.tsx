@@ -5,10 +5,10 @@ import { getAdminOrderBook } from '../../services/api';
 import type { OrderBook as OrderBookType, CertificateType } from '../../types';
 
 export interface OrderBookData {
-  best_bid: number | null;
-  best_ask: number | null;
-  bid_quantity_at_best: number;  // Volume at best bid price
-  ask_quantity_at_best: number;  // Volume at best ask price
+  bestBid: number | null;
+  bestAsk: number | null;
+  bidQuantityAtBest: number;  // Volume at best bid price
+  askQuantityAtBest: number;  // Volume at best ask price
 }
 
 interface AdminOrderBookSectionProps {
@@ -37,10 +37,10 @@ export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBo
         const bidQuantityAtBest = data.bids.length > 0 ? data.bids[0].quantity : 0;
         const askQuantityAtBest = data.asks.length > 0 ? data.asks[0].quantity : 0;
         onOrderBookData({
-          best_bid: data.best_bid,
-          best_ask: data.best_ask,
-          bid_quantity_at_best: bidQuantityAtBest,
-          ask_quantity_at_best: askQuantityAtBest,
+          bestBid: data.bestBid,
+          bestAsk: data.bestAsk,
+          bidQuantityAtBest: bidQuantityAtBest,
+          askQuantityAtBest: askQuantityAtBest,
         });
       }
     } catch (error) {
@@ -84,8 +84,8 @@ export function AdminOrderBookSection({ certificateType, onPriceClick, onOrderBo
             bids: orderBook.bids,
             asks: orderBook.asks,
             spread: orderBook.spread,
-            best_bid: orderBook.best_bid,
-            best_ask: orderBook.best_ask,
+            bestBid: orderBook.bestBid,
+            bestAsk: orderBook.bestAsk,
           }}
           onPriceClick={onPriceClick != null ? handlePriceClick : undefined}
           showFullBook={showFullBook}

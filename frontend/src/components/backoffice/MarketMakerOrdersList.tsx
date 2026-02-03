@@ -14,7 +14,7 @@ import { Card } from '../common/Card';
 import { Button, Badge, ConfirmationModal } from '../common';
 import { DataTable, type Column } from '../common/DataTable';
 import { getMarketMakerOrders, cancelMarketMakerOrder, getMarketMakers } from '../../services/api';
-import type { Order, CertificateType } from '../../types';
+import type { MarketMakerOrder, CertificateType } from '../../types';
 import { formatRelativeTime, cn } from '../../utils';
 
 interface MarketMakerOrdersListProps {
@@ -26,13 +26,8 @@ interface MarketMaker {
   name: string;
 }
 
-interface OrderWithMM extends Order {
-  market_maker_name?: string;
-  [key: string]: unknown;
-}
-
 export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersListProps) {
-  const [orders, setOrders] = useState<OrderWithMM[]>([]);
+  const [orders, setOrders] = useState<MarketMakerOrder[]>([]);
   const [marketMakers, setMarketMakers] = useState<MarketMaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +35,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCertType, setSelectedCertType] = useState<string>(certificateType || '');
   const [showFilters, setShowFilters] = useState(false);
-  const [cancelOrder, setCancelOrder] = useState<OrderWithMM | null>(null);
+  const [cancelOrder, setCancelOrder] = useState<MarketMakerOrder | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
@@ -76,16 +71,8 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
 
       const { data } = await getMarketMakerOrders(params);
 
-      // Add market maker names to orders
-      const ordersWithMM = data.map((order: Order) => {
-        const mm = marketMakers.find(m => m.id === order.entity_id);
-        return {
-          ...order,
-          market_maker_name: mm?.name || 'Unknown',
-        };
-      });
-
-      setOrders(ordersWithMM);
+      // MarketMakerOrder already includes marketMakerName from the API
+      setOrders(data);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       console.error('Failed to load orders:', err);
@@ -126,16 +113,16 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
     }
   };
 
-  const columns: Column<OrderWithMM>[] = [
+  const columns: Column<MarketMakerOrder>[] = [
     {
-      key: 'market_maker_name',
+      key: 'marketMakerName',
       header: 'Market Maker',
       render: (value) => (
         <span className="font-medium text-navy-900 dark:text-white">{String(value || 'Unknown')}</span>
       ),
     },
     {
-      key: 'certificate_type',
+      key: 'certificateType',
       header: 'Certificate',
       render: (value) => (
         <div className="flex items-center gap-2">
@@ -187,7 +174,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       ),
     },
     {
-      key: 'filled_quantity',
+      key: 'filledQuantity',
       header: 'Filled',
       align: 'right',
       render: (value, row) => {
@@ -205,7 +192,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       },
     },
     {
-      key: 'remaining_quantity',
+      key: 'remainingQuantity',
       header: 'Remaining',
       align: 'right',
       render: (value) => (
@@ -220,12 +207,12 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
       render: (value) => getStatusBadge(String(value)),
     },
     {
-      key: 'created_at',
+      key: 'createdAt',
       header: 'Created',
       render: (value) => (
         <div className="flex items-center gap-1 text-navy-500 dark:text-navy-400 text-sm">
           <Clock className="w-3 h-3" />
-          {formatRelativeTime(typeof value === 'string' || value instanceof Date ? value : String(value))}
+          {formatRelativeTime(typeof value === 'string' ? value : String(value))}
         </div>
       ),
     },
@@ -390,11 +377,11 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
         details={
           cancelOrder
             ? [
-                { label: 'Market Maker', value: cancelOrder.market_maker_name || 'Unknown' },
-                { label: 'Type', value: `${cancelOrder.side} ${cancelOrder.certificate_type}` },
+                { label: 'Market Maker', value: cancelOrder.marketMakerName || 'Unknown' },
+                { label: 'Type', value: `${cancelOrder.side} ${cancelOrder.certificateType}` },
                 { label: 'Price', value: `€${cancelOrder.price.toFixed(2)}` },
                 { label: 'Quantity', value: cancelOrder.quantity.toLocaleString() },
-                { label: 'Filled', value: cancelOrder.filled_quantity.toLocaleString() },
+                { label: 'Filled', value: cancelOrder.filledQuantity.toLocaleString() },
               ]
             : []
         }
