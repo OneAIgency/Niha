@@ -14,16 +14,14 @@ import {
   RefreshCw,
   BarChart3,
   Activity,
-  X,
   ChevronDown,
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
   Menu,
-  Loader2,
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
-import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
+import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal, AlertBanner, Modal, LoadingState, FormSection, FormRow, FormActions, Input } from '../components/common';
 
 /**
  * Theme Sample Page - Design System Showcase
@@ -41,6 +39,8 @@ export function ThemePage() {
   const [activeCertToggle, setActiveCertToggle] = useState('eua');
   const [activeTradeToggle, setActiveTradeToggle] = useState('buy');
   const [showModal, setShowModal] = useState(false);
+  const [showBaseModal, setShowBaseModal] = useState(false);
+  const [dismissedAlert, setDismissedAlert] = useState<string | null>(null);
 
   const textPrimary = isDark ? 'text-white' : 'text-navy-900';
   const textSecondary = isDark ? 'text-navy-400' : 'text-navy-600';
@@ -906,6 +906,37 @@ export function ThemePage() {
           </Card>
         </section>
 
+        {/* FORM LAYOUT SECTION */}
+        <section
+          id="forms"
+        >
+          <SectionHeader title="Form Layout" />
+          <Card className="p-6 space-y-6">
+            <p className={`text-sm font-medium ${textSecondary} mb-3`}>FormSection, FormRow & FormActions Components</p>
+
+            <FormSection title="Personal Information" description="Enter your contact details" bordered>
+              <FormRow>
+                <Input label="First Name" placeholder="John" />
+                <Input label="Last Name" placeholder="Doe" />
+              </FormRow>
+              <Input label="Email Address" type="email" placeholder="john.doe@example.com" />
+            </FormSection>
+
+            <FormSection title="Security Settings">
+              <Input label="Current Password" type="password" placeholder="••••••••" />
+              <FormRow>
+                <Input label="New Password" type="password" placeholder="••••••••" />
+                <Input label="Confirm Password" type="password" placeholder="••••••••" />
+              </FormRow>
+            </FormSection>
+
+            <FormActions>
+              <Button variant="secondary">Cancel</Button>
+              <Button variant="primary">Save Changes</Button>
+            </FormActions>
+          </Card>
+        </section>
+
         {/* BADGES SECTION */}
         <section
           id="badges"
@@ -1148,20 +1179,61 @@ export function ThemePage() {
           id="feedback"
         >
           <SectionHeader title="Alerts & Modals" />
-          <Card className="p-6 space-y-4">
-            <Alert type="success" title="Success" message="Your order has been placed successfully." />
-            <Alert type="warning" title="Warning" message="Your session will expire in 5 minutes." />
-            <Alert type="error" title="Error" message="Failed to process your request. Please try again." />
-            <Alert type="info" title="Info" message="Market will close in 30 minutes for maintenance." />
 
-            <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Confirmation Modal</p>
-              <Button variant="primary" onClick={() => setShowModal(true)}>
-                Open Modal
+          {/* AlertBanner Component - Standardized */}
+          <Card className="p-6 space-y-4 mb-6">
+            <p className={`text-sm font-medium ${textSecondary} mb-3`}>AlertBanner Component (Standardized)</p>
+            <AlertBanner variant="success" title="Success" message="Your order has been placed successfully." />
+            <AlertBanner variant="warning" title="Warning" message="Your session will expire in 5 minutes." />
+            <AlertBanner variant="error" title="Error" message="Failed to process your request. Please try again." />
+            <AlertBanner variant="info" title="Info" message="Market will close in 30 minutes for maintenance." />
+
+            {dismissedAlert !== 'dismissible' && (
+              <AlertBanner
+                variant="success"
+                message="This alert can be dismissed. Click the X to hide it."
+                onDismiss={() => setDismissedAlert('dismissible')}
+              />
+            )}
+          </Card>
+
+          {/* Modal Components */}
+          <Card className="p-6 space-y-4">
+            <p className={`text-sm font-medium ${textSecondary} mb-3`}>Modal Components</p>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary" onClick={() => setShowBaseModal(true)}>
+                Base Modal
+              </Button>
+              <Button variant="secondary" onClick={() => setShowModal(true)}>
+                Confirmation Modal
               </Button>
             </div>
           </Card>
 
+          {/* Base Modal Example */}
+          <Modal isOpen={showBaseModal} onClose={() => setShowBaseModal(false)} size="md">
+            <Modal.Header onClose={() => setShowBaseModal(false)}>
+              <h2 className="text-lg font-semibold text-white">Base Modal Example</h2>
+            </Modal.Header>
+            <Modal.Body>
+              <p className="text-navy-300 mb-4">
+                This is the standardized Modal component with Header, Body, and Footer sections.
+              </p>
+              <FormSection title="Example Form" description="Demonstrating FormSection inside a modal">
+                <FormRow>
+                  <Input label="First Name" placeholder="Enter first name" />
+                  <Input label="Last Name" placeholder="Enter last name" />
+                </FormRow>
+                <Input label="Email" type="email" placeholder="Enter email address" />
+              </FormSection>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowBaseModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={() => setShowBaseModal(false)}>Save Changes</Button>
+            </Modal.Footer>
+          </Modal>
+
+          {/* Confirmation Modal */}
           <ConfirmationModal
             isOpen={showModal}
             onClose={() => setShowModal(false)}
@@ -1183,7 +1255,35 @@ export function ThemePage() {
           id="loading"
         >
           <SectionHeader title="Loading States" />
-          <Card className="p-6 space-y-6">
+
+          {/* LoadingState Component - Standardized */}
+          <Card className="p-6 space-y-6 mb-6">
+            <p className={`text-sm font-medium ${textSecondary} mb-3`}>LoadingState Component (Standardized)</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <p className={`text-xs ${textMuted} mb-3`}>Spinner (default)</p>
+                <LoadingState variant="spinner" size="lg" />
+              </div>
+              <div className="text-center">
+                <p className={`text-xs ${textMuted} mb-3`}>Spinner with text</p>
+                <LoadingState variant="spinner" text="Loading data..." />
+              </div>
+              <div className="text-center">
+                <p className={`text-xs ${textMuted} mb-3`}>Inline spinner</p>
+                <div className="flex items-center justify-center gap-2">
+                  <LoadingState variant="inline" size="sm" />
+                  <span className={textSecondary}>Processing...</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className={`text-xs ${textMuted} mb-3`}>Skeleton rows (for tables)</p>
+              <LoadingState variant="skeleton" skeletonRows={3} />
+            </div>
+          </Card>
+
+          {/* Progress Bars */}
+          <Card className="p-6 space-y-6 mb-6">
             <div>
               <p className={`text-sm font-medium ${textSecondary} mb-3`}>Progress Bars</p>
               <div className="space-y-4">
@@ -1193,25 +1293,12 @@ export function ThemePage() {
                 <ProgressBar value={30} variant="danger" showLabel label="Danger" />
               </div>
             </div>
+          </Card>
+
+          {/* Skeletons */}
+          <Card className="p-6 space-y-6">
             <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Spinners</p>
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
-                  <span className={`text-xs ${textMuted}`}>Border</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-                  <span className={`text-xs ${textMuted}`}>Icon</span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-                  <span className={`text-xs ${textMuted}`}>Loader</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Skeletons</p>
+              <p className={`text-sm font-medium ${textSecondary} mb-3`}>Skeleton Variants</p>
               <div className="space-y-4">
                 <Skeleton variant="text" />
                 <div className="flex items-center gap-4">
@@ -1236,34 +1323,6 @@ function SectionHeader({ title }: { title: string }) {
     <div className="mb-6">
       <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-navy-900'}`}>{title}</h2>
       <div className="h-1 w-16 rounded-full bg-emerald-500 mt-2" />
-    </div>
-  );
-}
-
-// Alert Component
-function Alert({ type, title, message }: { type: 'success' | 'warning' | 'error' | 'info'; title: string; message: string }) {
-  const { theme } = useUIStore();
-  const isDark = theme === 'dark';
-
-  const styles = {
-    success: { bg: isDark ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200', text: isDark ? 'text-emerald-400' : 'text-emerald-700', Icon: Check },
-    warning: { bg: isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200', text: isDark ? 'text-amber-400' : 'text-amber-700', Icon: AlertTriangle },
-    error: { bg: isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200', text: isDark ? 'text-red-400' : 'text-red-700', Icon: AlertCircle },
-    info: { bg: isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200', text: isDark ? 'text-blue-400' : 'text-blue-700', Icon: Info },
-  };
-
-  const { bg, text, Icon } = styles[type];
-
-  return (
-    <div className={`flex items-start gap-3 rounded-xl p-4 border ${bg}`}>
-      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${text}`} />
-      <div className="flex-1">
-        <p className={`font-semibold ${text}`}>{title}</p>
-        <p className={`text-sm ${text} opacity-80`}>{message}</p>
-      </div>
-      <button className={`p-1 rounded-lg transition-colors hover:bg-black/10 ${text}`}>
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }
