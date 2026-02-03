@@ -262,6 +262,156 @@ export function ThemePage() {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* SUBHEADER ANATOMY */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-blue-500 flex items-center justify-center text-xs font-bold">2</span>
+              Subheader
+            </h3>
+            <p className={`text-sm ${textSecondary} mb-4`}>
+              Fixed below header, z-40. Contains page icon, title, description, and optional right-side content (tabs, buttons, stats).
+            </p>
+
+            {/* Subheader Visual */}
+            <div className="rounded-xl border-2 border-blue-500/50 overflow-hidden bg-navy-800">
+              {/* Actual Subheader Mockup */}
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* Left side: Icon, Title, Description */}
+                    <div className="flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                        <BarChart3 className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <h1 className="text-lg font-semibold text-white">Page Title</h1>
+                        <p className="text-sm text-navy-400">Page description or breadcrumb</p>
+                      </div>
+                      <span className="ml-2 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity">Icon + Title</span>
+                    </div>
+
+                    {/* Right side: Page-specific content */}
+                    <div className="flex items-center gap-4">
+                      {/* Tabs Example */}
+                      <div className="flex items-center gap-1 p-1 rounded-lg bg-navy-900/50">
+                        <button className="px-3 py-1.5 text-sm font-medium rounded-md bg-navy-700 text-white">Tab 1</button>
+                        <button className="px-3 py-1.5 text-sm font-medium rounded-md text-navy-400 hover:bg-navy-700/50">Tab 2</button>
+                        <span className="text-[10px] bg-navy-600 text-navy-300 px-1.5 py-0.5 rounded font-medium ml-1">Tabs</span>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        <button className="p-2.5 rounded-lg bg-navy-700 hover:bg-navy-600 text-navy-400">
+                          <RefreshCw className="w-4 h-4" />
+                        </button>
+                        <button className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium flex items-center gap-2">
+                          <Download className="w-4 h-4" />
+                          Export
+                        </button>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-medium">Actions</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Border indicator */}
+              <div className="h-px bg-navy-700" />
+            </div>
+
+            {/* Subheader Specs */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Position</p>
+                <code className="text-sm text-blue-400">fixed top-16 md:top-20</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Z-Index</p>
+                <code className="text-sm text-blue-400">z-40 (--z-elevated)</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Class</p>
+                <code className="text-sm text-blue-400">.subheader-bar</code>
+              </div>
+              <div className="p-3 rounded-lg bg-navy-800/50 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-1">Background</p>
+                <code className="text-sm text-blue-400">bg-navy-800 border-b</code>
+              </div>
+            </div>
+
+            {/* Subheader Structure */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Side Components */}
+              <div className="p-4 rounded-lg bg-navy-800/30 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-3 uppercase tracking-wider">Left Side (Required)</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-amber-400" />
+                    </span>
+                    <div>
+                      <code className="text-sm text-white">icon</code>
+                      <p className="text-xs text-navy-500">ReactNode - page icon in colored container</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-navy-700 flex items-center justify-center text-white text-xs font-bold">T</span>
+                    <div>
+                      <code className="text-sm text-white">title</code>
+                      <p className="text-xs text-navy-500">string - main page title</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-navy-700 flex items-center justify-center text-navy-400 text-xs">desc</span>
+                    <div>
+                      <code className="text-sm text-white">description</code>
+                      <p className="text-xs text-navy-500">string - subtitle or breadcrumb</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side Components */}
+              <div className="p-4 rounded-lg bg-navy-800/30 border border-navy-700">
+                <p className="text-xs text-navy-400 mb-3 uppercase tracking-wider">Right Side (Optional children)</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                    <code>Tabs / ToggleGroup</code>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-navy-600/50 border border-navy-500/30 text-sm text-navy-300">
+                    <code>Stat displays</code>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                    <code>Action buttons</code>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-400">
+                    <code>Export / Refresh</code>
+                  </span>
+                </div>
+                <div className="mt-3 p-2 rounded bg-navy-900/50 border border-navy-700">
+                  <p className="text-xs text-navy-500 font-mono">
+                    &lt;Subheader icon=&#123;...&#125; title="..." description="..."&gt;<br />
+                    &nbsp;&nbsp;&#123;/* right side content */&#125;<br />
+                    &lt;/Subheader&gt;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Important Note */}
+            <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-blue-300 font-medium">Spacer Required</p>
+                <p className="text-xs text-blue-400/80 mt-1">
+                  The <code className="bg-blue-500/20 px-1 rounded">&lt;Subheader /&gt;</code> component automatically adds
+                  <code className="bg-blue-500/20 px-1 rounded">.subheader-bar-spacer</code> to push page content below the fixed bar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════ */}
           {/* FULL PAGE LAYOUT VISUAL */}
           {/* ═══════════════════════════════════════════════════════════════ */}
           <div className="mb-8">
