@@ -9,6 +9,26 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core - changes rarely
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Animation library - large, stable
+          'framer-vendor': ['framer-motion'],
+          // Icons - many small modules
+          'icons-vendor': ['lucide-react'],
+          // State management + HTTP client
+          'state-vendor': ['zustand', 'axios'],
+          // Utilities
+          'utils-vendor': ['clsx', 'tailwind-merge', 'dompurify'],
+        },
+      },
+    },
+    // Increase chunk size warning limit slightly (vendor chunks may exceed 500KB)
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     port: 5173,
     host: true,

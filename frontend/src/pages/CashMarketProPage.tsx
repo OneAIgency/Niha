@@ -476,12 +476,12 @@ export function CashMarketProPage() {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col trading-terminal">
         <Header />
-        <div className="flex-1 flex items-center justify-center pt-20">
+        <main className="flex-1 flex items-center justify-center pt-20">
           <div className="text-center">
             <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mx-auto mb-3" />
             <p className="text-[11px] text-navy-400">Loading market data...</p>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -491,18 +491,18 @@ export function CashMarketProPage() {
     return (
       <div className="min-h-screen bg-navy-950 flex flex-col trading-terminal">
         <Header />
-        <div className="flex-1 flex items-center justify-center pt-20">
+        <main className="flex-1 flex items-center justify-center pt-20">
           <div className="text-center">
             <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-3" />
-          <p className="text-[11px] text-red-400 mb-3">{error}</p>
-          <button
-            onClick={refresh}
-            className="px-3 py-1.5 text-[11px] bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-        </div>
+            <p className="text-[11px] text-red-400 mb-3">{error}</p>
+            <button
+              onClick={refresh}
+              className="px-3 py-1.5 text-[11px] bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -540,7 +540,7 @@ export function CashMarketProPage() {
       </div>
 
       {/* Trading theme: always full height; overlay opens on top */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden trading-terminal relative">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden trading-terminal relative">
         {/* Expanded outer wrapper as overlay — click outside to close */}
         <AnimatePresence>
           {isOuterExpanded && (
@@ -623,7 +623,7 @@ export function CashMarketProPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Place Order Modal */}
       <AnimatePresence>

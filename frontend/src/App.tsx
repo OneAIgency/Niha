@@ -40,44 +40,46 @@ class BackofficeErrorBoundary extends Component<
   }
 }
 
-// Code splitting: Lazy load pages for better performance
-const ContactPage = lazy(() => import('./pages').then(m => ({ default: m.ContactPage })));
-const LoginPage = lazy(() => import('./pages').then(m => ({ default: m.LoginPage })));
-const CashMarketProPage = lazy(() => import('./pages').then(m => ({ default: m.CashMarketProPage })));
-const CeaSwapMarketPage = lazy(() => import('./pages').then(m => ({ default: m.CeaSwapMarketPage })));
-const DashboardPage = lazy(() => import('./pages').then(m => ({ default: m.DashboardPage })));
-const ProfilePage = lazy(() => import('./pages').then(m => ({ default: m.ProfilePage })));
-const SettingsPage = lazy(() => import('./pages').then(m => ({ default: m.SettingsPage })));
-const UsersPage = lazy(() => import('./pages').then(m => ({ default: m.UsersPage })));
-const FundingPage = lazy(() => import('./pages').then(m => ({ default: m.FundingPage })));
-const SetupPasswordPage = lazy(() => import('./pages').then(m => ({ default: m.SetupPasswordPage })));
-const Onboarding1Page = lazy(() => import('./pages').then(m => ({ default: m.Onboarding1Page })));
-const LearnMorePage = lazy(() => import('./pages').then(m => ({ default: m.LearnMorePage })));
-const OnboardingIndexPage = lazy(() => import('./pages').then(m => ({ default: m.OnboardingIndexPage })));
-const MarketOverviewPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOverviewPage })));
-const AboutNihaoPage = lazy(() => import('./pages').then(m => ({ default: m.AboutNihaoPage })));
-const CeaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.CeaHoldersPage })));
-const EuaHoldersPage = lazy(() => import('./pages').then(m => ({ default: m.EuaHoldersPage })));
-const EuEntitiesPage = lazy(() => import('./pages').then(m => ({ default: m.EuEntitiesPage })));
-const StrategicAdvantagePage = lazy(() => import('./pages').then(m => ({ default: m.StrategicAdvantagePage })));
-const ComponentShowcasePage = lazy(() => import('./pages').then(m => ({ default: m.ComponentShowcasePage })));
-const DesignSystemPage = lazy(() => import('./pages').then(m => ({ default: m.DesignSystemPage })));
-const ThemeSectionPage = lazy(() => import('./pages').then(m => ({ default: m.ThemeSectionPage })));
-const MarketMakersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketMakersPage })));
-const MarketOrdersPage = lazy(() => import('./pages').then(m => ({ default: m.MarketOrdersPage })));
-const LoggingPage = lazy(() => import('./pages').then(m => ({ default: m.LoggingPage })));
-const CreateLiquidityPage = lazy(() => import('./pages').then(m => ({ default: m.CreateLiquidityPage })));
-const BackofficeOnboardingPage = lazy(() => import('./pages').then(m => ({ default: m.BackofficeOnboardingPage })));
-const FeeSettingsPage = lazy(() => import('./pages').then(m => ({ default: m.FeeSettingsPage })));
+// Code splitting: Lazy load pages with DIRECT imports (not barrel) for true code splitting
+const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
+const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const FundingPage = lazy(() => import('./pages/FundingPage').then(m => ({ default: m.FundingPage })));
+const SetupPasswordPage = lazy(() => import('./pages/SetupPasswordPage').then(m => ({ default: m.SetupPasswordPage })));
+const Onboarding1Page = lazy(() => import('./pages/Onboarding1Page'));
+const LearnMorePage = lazy(() => import('./pages/LearnMorePage').then(m => ({ default: m.LearnMorePage })));
+const OnboardingIndexPage = lazy(() => import('./pages/onboarding/OnboardingIndexPage'));
+const MarketOverviewPage = lazy(() => import('./pages/onboarding/MarketOverviewPage'));
+const AboutNihaoPage = lazy(() => import('./pages/onboarding/AboutNihaoPage'));
+const CeaHoldersPage = lazy(() => import('./pages/onboarding/CeaHoldersPage'));
+const EuaHoldersPage = lazy(() => import('./pages/onboarding/EuaHoldersPage'));
+const EuEntitiesPage = lazy(() => import('./pages/onboarding/EuEntitiesPage'));
+const StrategicAdvantagePage = lazy(() => import('./pages/onboarding/StrategicAdvantagePage'));
+const ComponentShowcasePage = lazy(() => import('./pages/ComponentShowcasePage').then(m => ({ default: m.ComponentShowcasePage })));
+const DesignSystemPage = lazy(() => import('./pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
+const ThemeSectionPage = lazy(() => import('./pages/ThemeSectionPage').then(m => ({ default: m.ThemeSectionPage })));
+const MarketMakersPage = lazy(() => import('./pages/MarketMakersPage').then(m => ({ default: m.MarketMakersPage })));
+const MarketOrdersPage = lazy(() => import('./pages/MarketOrdersPage').then(m => ({ default: m.MarketOrdersPage })));
+const LoggingPage = lazy(() => import('./pages/LoggingPage'));
+const CreateLiquidityPage = lazy(() => import('./pages/CreateLiquidityPage').then(m => ({ default: m.CreateLiquidityPage })));
+const BackofficeOnboardingPage = lazy(() => import('./pages/BackofficeOnboardingPage').then(m => ({ default: m.BackofficeOnboardingPage })));
+const FeeSettingsPage = lazy(() => import('./pages/FeeSettingsPage').then(m => ({ default: m.FeeSettingsPage })));
 const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
 
-// Loading fallback component
+// Loading fallback component with proper semantic structure for accessibility
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-navy-50 dark:bg-navy-950">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-      <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
-    </div>
+  <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+    <main className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+        <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
+      </div>
+    </main>
   </div>
 );
 

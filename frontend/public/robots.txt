@@ -1,0 +1,23 @@
+# Robots.txt for NIHA Carbon Trading Platform
+# https://nihaogroup.com
+
+User-agent: *
+Allow: /
+
+# Disallow admin and internal pages
+Disallow: /backoffice
+Disallow: /backoffice/*
+Disallow: /settings
+Disallow: /theme
+Disallow: /theme/*
+Disallow: /components
+Disallow: /design-system
+
+# Allow public pages
+Allow: /login
+Allow: /contact
+Allow: /onboarding
+Allow: /onboarding/*
+
+# Sitemap (when available)
+# Sitemap: https://nihaogroup.com/sitemap.xml

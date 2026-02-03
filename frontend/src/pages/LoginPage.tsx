@@ -226,7 +226,7 @@ export function LoginPage() {
 
   if (verifying) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -235,7 +235,7 @@ export function LoginPage() {
           <Loader2 className="w-8 h-8 animate-spin text-white/40 mx-auto" />
           <p className="text-white/30 mt-4 text-sm tracking-wide">Verifying...</p>
         </motion.div>
-      </div>
+      </main>
     );
   }
 
@@ -252,7 +252,7 @@ export function LoginPage() {
     };
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4 overflow-hidden">
+      <main className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4 overflow-hidden">
         {ndaAmbientActive ? <NDASuccessAmbient /> : <ParticleField />}
         <AnimatePresence mode="wait">
           {!ndaAmbientActive ? (
@@ -305,12 +305,12 @@ export function LoginPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div
+    <main
       ref={containerRef}
       className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4 overflow-hidden"
     >
@@ -564,6 +564,6 @@ export function LoginPage() {
           <p className="text-white/10 text-[10px] tracking-[0.3em]">EXCLUSIVE ACCESS</p>
         </motion.div>
       </motion.div>
-    </div>
+    </main>
   );
 }
