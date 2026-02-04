@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
+import { RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
   ProfessionalOrderBook,
   MyOrders,
@@ -128,11 +128,6 @@ export function CashMarketPage() {
     });
   };
 
-  const formatVolume = (vol: number) => {
-    if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
-    if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
-    return vol.toFixed(0);
-  };
 
   return (
     <div className="min-h-screen bg-navy-900 text-[11px]">
@@ -143,58 +138,47 @@ export function CashMarketPage() {
         description="Trade China Emission Allowances"
         iconBg="bg-amber-500/20"
       >
-        <div className="flex items-center gap-4 text-[11px]">
-          {/* Last Price */}
+        <div className="flex items-center gap-6">
+          {/* Best Bid */}
           <div>
-            <span className="text-navy-400 mr-1 text-[10px]">Last</span>
-            <span className="font-bold font-mono text-white text-sm">
-              €{formatNumber(orderBook?.lastPrice)}
+            <span className="text-navy-600 dark:text-navy-400 mr-2">Best Bid</span>
+            <span className="font-bold font-mono text-emerald-400 text-lg">
+              €{formatNumber(orderBook?.bestBid)}
             </span>
           </div>
 
-          {/* 24h Change */}
-          <div className="flex items-center gap-1">
-            <span className="text-navy-400 text-[10px]">24h</span>
-            {orderBook && (
-              <span className={`flex items-center font-semibold ${
-                orderBook.change24h >= 0
-                  ? 'text-emerald-400'
-                  : 'text-red-400'
-              }`}>
-                {orderBook.change24h >= 0 ? (
-                  <TrendingUp className="w-3 h-3 mr-0.5" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 mr-0.5" />
-                )}
-                {orderBook.change24h >= 0 ? '+' : ''}{orderBook.change24h.toFixed(2)}%
-              </span>
-            )}
-          </div>
-
-          {/* Volume */}
+          {/* Best Ask */}
           <div>
-            <span className="text-navy-400 mr-1 text-[10px]">Vol</span>
-            <span className="font-semibold text-navy-300 font-mono">
-              {orderBook ? formatVolume(orderBook.volume24h) : '-'}
+            <span className="text-navy-600 dark:text-navy-400 mr-2">Best Ask</span>
+            <span className="font-bold font-mono text-red-400 text-lg">
+              €{formatNumber(orderBook?.bestAsk)}
             </span>
           </div>
 
-          {/* Refresh indicator */}
+          {/* Spread */}
+          <div>
+            <span className="text-navy-600 dark:text-navy-400 mr-2">Spread</span>
+            <span className="font-semibold font-mono text-navy-300">
+              €{formatNumber(orderBook?.spread, 4)}
+            </span>
+          </div>
+
+          {/* Refresh button */}
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={fetchData}
-            className="p-1.5 rounded-lg hover:bg-navy-700 text-navy-400"
+            className="p-2 rounded-lg hover:bg-navy-700 text-navy-400"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </motion.button>
 
           {/* Place Order Button */}
           <button
             onClick={() => setIsOrderPanelOpen(!isOrderPanelOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-[11px] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors"
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
+            <ShoppingCart className="w-4 h-4" />
             Place Order
           </button>
         </div>
