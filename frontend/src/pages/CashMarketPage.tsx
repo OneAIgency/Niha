@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, BarChart3, ShoppingCart, X } from 'lucide-react';
 import {
-  ProfessionalOrderBook,
+  UnifiedOrderBook,
   MyOrders,
+  RecentTrades,
   UserOrderEntryModal,
 } from '../components/cash-market';
 import { cashMarketApi } from '../services/api';
@@ -130,7 +131,7 @@ export function CashMarketPage() {
 
 
   return (
-    <div className="min-h-screen bg-navy-900 text-[11px]">
+    <div className="min-h-screen bg-navy-900">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
@@ -212,35 +213,39 @@ export function CashMarketPage() {
       )}
 
       {/* Main Content */}
-      <div className="page-container py-4">
+      <div className="page-container py-6">
         {isLoading && !orderBook ? (
           <div className="flex items-center justify-center h-96">
             <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : (
-          <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 180px)' }}>
-            {/* Order Book with Market Depth Visualization - Same style as backoffice */}
+          <div className="space-y-6">
+            {/* Order Book - Full Width like Swap */}
             {orderBook && (
-              <div className="flex-1 min-h-0">
-                <ProfessionalOrderBook
-                  orderBook={{
-                    bids: orderBook.bids,
-                    asks: orderBook.asks,
-                    spread: orderBook.spread,
-                    bestBid: orderBook.bestBid,
-                    bestAsk: orderBook.bestAsk,
-                  }}
-                  showFullBook={true}
-                />
-              </div>
+              <UnifiedOrderBook
+                bids={orderBook.bids}
+                asks={orderBook.asks}
+                bestBid={orderBook.bestBid}
+                bestAsk={orderBook.bestAsk}
+                spread={orderBook.spread}
+                totalBidVolume={orderBook.bids.reduce((sum, b) => sum + b.price * b.quantity, 0)}
+                totalAskVolume={orderBook.asks.reduce((sum, a) => sum + a.price * a.quantity, 0)}
+              />
             )}
 
-            {/* My Orders - Full Width */}
-            <div className="w-full flex-shrink-0 h-[300px]">
-              <MyOrders
-                orders={myOrders}
-                onCancelOrder={handleCancelOrder}
-              />
+            {/* My Orders and Recent Trades */}
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 lg:col-span-8">
+                <MyOrders
+                  orders={myOrders}
+                  onCancelOrder={handleCancelOrder}
+                />
+              </div>
+
+              {/* Recent Trades panel */}
+              <div className="col-span-12 lg:col-span-4">
+                <RecentTrades orderBook={orderBook} />
+              </div>
             </div>
           </div>
         )}
