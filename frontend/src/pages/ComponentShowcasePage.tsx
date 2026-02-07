@@ -243,7 +243,7 @@ export function ComponentShowcasePage() {
                     </div>
                     <div>
                       <label className="form-label">Native Select</label>
-                      <select className="form-input-lg">
+                      <select className="w-full form-select">
                         <option>Select an option</option>
                         <option>Option 1</option>
                         <option>Option 2</option>

@@ -21,7 +21,7 @@ import {
   BarChart3,
   Sparkles,
 } from 'lucide-react';
-import { Button, LoadingState } from '../common';
+import { Button, LoadingState, NumberInput } from '../common';
 import {
   getAutoTradeRules,
   createAutoTradeRule,
@@ -476,7 +476,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                   <select
                     value={selectedRule.priceMode}
                     onChange={(e) => handleUpdateRule(selectedRule.id, { price_mode: e.target.value as AutoTradeRule['priceMode'] })}
-                    className="w-full px-2 py-1.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm text-navy-900 dark:text-white mb-2"
+                    className="w-full form-select text-sm mb-2"
                   >
                     <option value="spread_from_best">Spread from best</option>
                     <option value="random_spread">Random spread</option>
@@ -486,13 +486,11 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
                   {selectedRule.priceMode === 'spread_from_best' && (
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={selectedRule.spreadFromBest || 0.1}
-                        onChange={(e) => handleUpdateRule(selectedRule.id, { spread_from_best: parseFloat(e.target.value) || 0.1 })}
-                        step="0.1"
-                        min="0.1"
-                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                      <NumberInput
+                        value={selectedRule.spreadFromBest ?? 0.1}
+                        onChange={(v) => handleUpdateRule(selectedRule.id, { spread_from_best: parseFloat(v) || 0.1 })}
+                        decimals={1}
+                        className="text-sm"
                       />
                       <span className="text-xs text-navy-500">EUR</span>
                     </div>
@@ -501,24 +499,20 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                   {selectedRule.priceMode === 'random_spread' && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          value={selectedRule.spreadMin || 0.1}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { spread_min: parseFloat(e.target.value) || 0.1 })}
-                          step="0.1"
-                          min="0.1"
-                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.spreadMin ?? 0.1}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { spread_min: parseFloat(v) || 0.1 })}
+                          decimals={1}
                           placeholder="Min"
+                          className="text-sm"
                         />
                         <span className="text-xs text-navy-400">-</span>
-                        <input
-                          type="number"
-                          value={selectedRule.spreadMax || 0.5}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { spread_max: parseFloat(e.target.value) || 0.5 })}
-                          step="0.1"
-                          min="0.1"
-                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.spreadMax ?? 0.5}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { spread_max: parseFloat(v) || 0.5 })}
+                          decimals={1}
                           placeholder="Max"
+                          className="text-sm"
                         />
                       </div>
                       <p className="text-[10px] text-navy-400">EUR spread range</p>
@@ -527,13 +521,12 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
                   {selectedRule.priceMode === 'fixed' && (
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={selectedRule.fixedPrice || ''}
-                        onChange={(e) => handleUpdateRule(selectedRule.id, { fixed_price: parseFloat(e.target.value) || null })}
-                        step="0.01"
-                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                      <NumberInput
+                        value={selectedRule.fixedPrice ?? ''}
+                        onChange={(v) => handleUpdateRule(selectedRule.id, { fixed_price: v === '' ? null : parseFloat(v) })}
+                        decimals={2}
                         placeholder="9.50"
+                        className="text-sm"
                       />
                       <span className="text-xs text-navy-500">EUR</span>
                     </div>
@@ -549,7 +542,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                   <select
                     value={selectedRule.quantityMode}
                     onChange={(e) => handleUpdateRule(selectedRule.id, { quantity_mode: e.target.value as AutoTradeRule['quantityMode'] })}
-                    className="w-full px-2 py-1.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm text-navy-900 dark:text-white mb-2"
+                    className="w-full form-select text-sm mb-2"
                   >
                     <option value="fixed">Fixed</option>
                     <option value="random_range">Random range</option>
@@ -557,32 +550,32 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                   </select>
 
                   {selectedRule.quantityMode === 'fixed' && (
-                    <input
-                      type="number"
-                      value={selectedRule.fixedQuantity || ''}
-                      onChange={(e) => handleUpdateRule(selectedRule.id, { fixed_quantity: parseInt(e.target.value) || null })}
-                      className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                    <NumberInput
+                      value={selectedRule.fixedQuantity ?? ''}
+                      onChange={(v) => handleUpdateRule(selectedRule.id, { fixed_quantity: v === '' ? null : parseInt(v, 10) })}
+                      decimals={0}
                       placeholder="10000"
+                      className="text-sm"
                     />
                   )}
 
                   {selectedRule.quantityMode === 'random_range' && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          value={selectedRule.minQuantity || ''}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { min_quantity: parseInt(e.target.value) || null })}
-                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.minQuantity ?? ''}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { min_quantity: v === '' ? null : parseInt(v, 10) })}
+                          decimals={0}
                           placeholder="Min"
+                          className="text-sm"
                         />
                         <span className="text-xs text-navy-400">-</span>
-                        <input
-                          type="number"
-                          value={selectedRule.maxQuantity || ''}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_quantity: parseInt(e.target.value) || null })}
-                          className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.maxQuantity ?? ''}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { max_quantity: v === '' ? null : parseInt(v, 10) })}
+                          decimals={0}
                           placeholder="Max"
+                          className="text-sm"
                         />
                       </div>
                       <p className="text-[10px] text-navy-400">certificates per order</p>
@@ -591,15 +584,12 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
                   {selectedRule.quantityMode === 'percentage_of_balance' && (
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        value={selectedRule.percentageOfBalance || ''}
-                        onChange={(e) => handleUpdateRule(selectedRule.id, { percentage_of_balance: parseFloat(e.target.value) || null })}
-                        step="1"
-                        min="1"
-                        max="100"
-                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                      <NumberInput
+                        value={selectedRule.percentageOfBalance ?? ''}
+                        onChange={(v) => handleUpdateRule(selectedRule.id, { percentage_of_balance: v === '' ? null : parseFloat(v) })}
+                        decimals={0}
                         placeholder="5"
+                        className="text-sm"
                       />
                       <span className="text-xs text-navy-500">%</span>
                     </div>
@@ -652,20 +642,20 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
                   {selectedRule.intervalMode === 'random' && (
                     <div className="mt-2 flex items-center gap-1">
-                      <input
-                        type="number"
-                        value={selectedRule.intervalMinSeconds || 10}
-                        onChange={(e) => handleUpdateRule(selectedRule.id, { interval_min_seconds: parseInt(e.target.value) || 10 })}
-                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
-                        min="5"
+                      <NumberInput
+                        value={selectedRule.intervalMinSeconds ?? 10}
+                        onChange={(v) => handleUpdateRule(selectedRule.id, { interval_min_seconds: parseInt(v, 10) || 10 })}
+                        decimals={0}
+                        placeholder="5"
+                        className="text-sm"
                       />
                       <span className="text-xs text-navy-400">-</span>
-                      <input
-                        type="number"
-                        value={selectedRule.intervalMaxSeconds || 30}
-                        onChange={(e) => handleUpdateRule(selectedRule.id, { interval_max_seconds: parseInt(e.target.value) || 30 })}
-                        className="w-full px-2 py-1 rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
-                        min="5"
+                      <NumberInput
+                        value={selectedRule.intervalMaxSeconds ?? 30}
+                        onChange={(v) => handleUpdateRule(selectedRule.id, { interval_max_seconds: parseInt(v, 10) || 30 })}
+                        decimals={0}
+                        placeholder="30"
+                        className="text-sm"
                       />
                       <span className="text-xs text-navy-500">s</span>
                     </div>
@@ -696,37 +686,36 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                         <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
                           Min Balance Required
                         </label>
-                        <input
-                          type="number"
-                          value={selectedRule.minBalance || ''}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { min_balance: parseFloat(e.target.value) || null })}
-                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.minBalance ?? ''}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { min_balance: v === '' ? null : parseFloat(v) })}
+                          className="text-sm"
                           placeholder="No minimum"
+                          decimals={2}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
                           Max Active Orders
                         </label>
-                        <input
-                          type="number"
-                          value={selectedRule.maxActiveOrders || ''}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_active_orders: parseInt(e.target.value) || null })}
-                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.maxActiveOrders ?? ''}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { max_active_orders: v === '' ? null : parseInt(v, 10) })}
+                          className="text-sm"
                           placeholder="Unlimited"
+                          decimals={0}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
                           Max Price Deviation (%)
                         </label>
-                        <input
-                          type="number"
-                          value={selectedRule.maxPriceDeviation || ''}
-                          onChange={(e) => handleUpdateRule(selectedRule.id, { max_price_deviation: parseFloat(e.target.value) || null })}
-                          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-sm"
+                        <NumberInput
+                          value={selectedRule.maxPriceDeviation ?? ''}
+                          onChange={(v) => handleUpdateRule(selectedRule.id, { max_price_deviation: v === '' ? null : parseFloat(v) })}
+                          className="text-sm"
                           placeholder="No limit"
-                          step="0.1"
+                          decimals={1}
                         />
                         <p className="text-[10px] text-navy-400 mt-1">Skip if price deviates too much from market</p>
                       </div>

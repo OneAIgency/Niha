@@ -34,6 +34,7 @@ from ...models.models import (
     HoldType,
     KYCDocument,
     KYCStatus,
+    TicketStatus,
     Trade,
     TransactionType,
     User,
@@ -54,6 +55,7 @@ from ...schemas.schemas import (
 )
 from ...services.email_service import email_service
 from ...services.balance_utils import update_entity_balance
+from ...services.ticket_service import TicketService
 
 # Constants for deposit validation
 MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
@@ -1043,9 +1045,10 @@ async def add_asset_to_entity(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Add EUR, CEA, or EUA to an entity's account.
-    Creates audit trail and updates holdings.
-    Admin only.
+    Deposit or withdraw EUR, CEA, or EUA for an entity.
+    Request body: asset_type, amount (positive), operation ('deposit'|'withdraw', default 'deposit'), optional reference, notes.
+    Withdraw: validates sufficient balance; returns 400 'Insufficient balance' if amount would exceed holding.
+    Creates AssetTransaction (DEPOSIT or WITHDRAWAL) and updates EntityHolding.quantity. For EUR, also updates Entity.balance_amount and total_deposited (deposit only). Admin only.
     """
     # Validate entity exists
     entity_result = await db.execute(select(Entity).where(Entity.id == UUID(entity_id)))
@@ -1080,22 +1083,34 @@ async def add_asset_to_entity(
         db.add(holding)
         await db.flush()  # Get the holding ID
 
-    # Calculate new balance
     balance_before = Decimal(str(holding.quantity))
-    amount_to_add = Decimal(str(asset_request.amount))
-    balance_after = balance_before + amount_to_add
+    amount_abs = Decimal(str(asset_request.amount))
+    is_withdraw = asset_request.operation == "withdraw"
+
+    if is_withdraw:
+        amount_debit = -amount_abs
+        if balance_before + amount_debit < 0:
+            raise HTTPException(
+                status_code=400, detail="Insufficient balance"
+            )
+        balance_after = balance_before + amount_debit
+        transaction_type = TransactionType.WITHDRAWAL
+        amount_for_tx = amount_debit
+    else:
+        balance_after = balance_before + amount_abs
+        transaction_type = TransactionType.DEPOSIT
+        amount_for_tx = amount_abs
 
     # Update holding
     holding.quantity = balance_after
-    # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
     holding.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit transaction
     transaction = AssetTransaction(
         entity_id=UUID(entity_id),
         asset_type=model_asset_type,
-        transaction_type=TransactionType.DEPOSIT,
-        amount=amount_to_add,
+        transaction_type=transaction_type,
+        amount=amount_for_tx,
         balance_before=balance_before,
         balance_after=balance_after,
         reference=asset_request.reference,
@@ -1103,16 +1118,38 @@ async def add_asset_to_entity(
         created_by=admin_user.id,
     )
     db.add(transaction)
+    await db.flush()  # Get transaction.id for ticket
 
-    # If adding EUR, also update Entity.balance_amount for compatibility
+    action_type = (
+        "ENTITY_ASSET_WITHDRAWAL" if is_withdraw else "ENTITY_ASSET_DEPOSIT"
+    )
+    tags = ["entity_asset", "withdrawal" if is_withdraw else "deposit"]
+    await TicketService.create_ticket(
+        db=db,
+        action_type=action_type,
+        entity_type="AssetTransaction",
+        entity_id=transaction.id,
+        user_id=admin_user.id,
+        status=TicketStatus.SUCCESS,
+        after_state={
+            "asset_type": model_asset_type.value,
+            "amount": str(amount_for_tx),
+            "balance_before": str(balance_before),
+            "balance_after": str(balance_after),
+            "operation": "withdraw" if is_withdraw else "deposit",
+        },
+        tags=tags,
+    )
+
+    # If EUR, update Entity.balance_amount for compatibility
     if model_asset_type == AssetType.EUR:
         entity.balance_amount = balance_after
         entity.balance_currency = Currency.EUR
-        entity.total_deposited = (
-            entity.total_deposited or Decimal("0")
-        ) + amount_to_add
+        if not is_withdraw:
+            entity.total_deposited = (
+                entity.total_deposited or Decimal("0")
+            ) + amount_abs
 
-    # Role transitions defined later
     await db.commit()
 
     asset_label = {
@@ -1121,12 +1158,17 @@ async def add_asset_to_entity(
         AssetType.EUA: "EUA certificates",
     }[model_asset_type]
 
-    return MessageResponse(
-        message=(
+    if is_withdraw:
+        msg = (
+            f"Successfully withdrew {asset_request.amount:,.2f} {asset_label} "
+            f"from {entity.name}"
+        )
+    else:
+        msg = (
             f"Successfully added {asset_request.amount:,.2f} {asset_label} "
             f"to {entity.name}"
         )
-    )
+    return MessageResponse(message=msg)
 
 
 @router.get("/entities/{entity_id}/assets", response_model=EntityAssetsResponse)
@@ -1136,7 +1178,8 @@ async def get_entity_assets(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all asset balances for an entity (EUR, CEA, EUA).
+    Get all asset balances for an entity (EUR, CEA, EUA) plus recent_transactions
+    (last 50 add-asset operations). Used by User Detail Deposit & Withdrawal History.
     Admin only.
     """
     # Validate entity exists
@@ -1165,12 +1208,13 @@ async def get_entity_assets(
     if balances[AssetType.EUR] == 0 and entity.balance_amount:
         balances[AssetType.EUR] = entity.balance_amount
 
-    # Get recent transactions
+    # Get recent transactions (limit aligned with frontend unified history cap)
+    RECENT_ASSET_TRANSACTIONS_LIMIT = 50
     transactions_result = await db.execute(
         select(AssetTransaction)
         .where(AssetTransaction.entity_id == UUID(entity_id))
         .order_by(AssetTransaction.created_at.desc())
-        .limit(20)
+        .limit(RECENT_ASSET_TRANSACTIONS_LIMIT)
     )
     transactions = transactions_result.scalars().all()
 

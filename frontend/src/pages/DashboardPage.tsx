@@ -14,7 +14,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
-  Filter,
   Download,
   BarChart3,
   PieChart,
@@ -645,28 +644,28 @@ export function DashboardPage() {
         )}
 
         {/* Portfolio Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 min-w-0">
           {/* Total Portfolio Value */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5"
+            className="portfolio-value-card dashboard-summary-card col-span-1 md:col-span-2 lg:col-span-1 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 p-5 flex flex-col min-h-0"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-emerald-300/70">Total Portfolio Value</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/30 flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+              <span className="text-sm text-emerald-300/70 truncate">Total Portfolio Value</span>
+              <div className="w-8 h-8 shrink-0 rounded-lg bg-emerald-500/30 flex items-center justify-center">
                 <PieChart className="w-4 h-4 text-emerald-400" />
               </div>
             </div>
             {isLoading ? (
               <Skeleton variant="textLg" width="60%" />
             ) : (
-              <>
-                <div className="text-value-contained text-white mb-1">
+              <div className="flex flex-1 flex-col min-h-0 min-w-0">
+                <div className="value-text-fluid text-white flex-1 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                   {formatCurrency(portfolioValue.total, 2)}
                 </div>
                 {portfolioValue.pending > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-xs shrink-0">
                     <span className="text-emerald-400 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
                       +{formatCurrency(portfolioValue.pending)}
@@ -674,7 +673,7 @@ export function DashboardPage() {
                     <span className="text-navy-400">pending</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </motion.div>
 
@@ -683,34 +682,34 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="content_wrapper"
+            className="content_wrapper dashboard-summary-card flex flex-col min-h-0"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-navy-400">Cash ({entityBalance?.balanceCurrency || 'EUR'})</span>
-              <div className="w-8 h-8 rounded-lg bg-navy-600 flex items-center justify-center">
+            <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+              <span className="text-sm text-navy-400 truncate">Cash ({entityBalance?.balanceCurrency || 'EUR'})</span>
+              <div className="w-8 h-8 shrink-0 rounded-lg bg-navy-600 flex items-center justify-center">
                 <Wallet className="w-4 h-4 text-navy-300" />
               </div>
             </div>
             {loadingBalance ? (
               <Skeleton variant="textLg" width="50%" />
             ) : (
-              <>
-                <div className="text-2xl font-bold text-white font-mono mb-2">
+              <div className="flex flex-1 flex-col min-h-0 min-w-0">
+                <div className="value-text-fluid text-white flex-1 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                   {formatCurrency(portfolio.cashAvailable, 2)}
                 </div>
                 {portfolio.cashLocked > 0 && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                  <div className="flex items-center gap-2 text-xs shrink-0 min-w-0">
+                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded truncate">
                       {formatCurrency(portfolio.cashLocked)} locked
                     </span>
                   </div>
                 )}
                 {entityBalance?.totalDeposited && entityBalance.totalDeposited > 0 && (
-                  <div className="text-xs text-navy-500 mt-2">
+                  <div className="text-xs text-navy-500 mt-2 shrink-0 min-w-0 truncate">
                     Total deposited: {formatCurrency(entityBalance.totalDeposited, 2)}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </motion.div>
 
@@ -742,7 +741,7 @@ export function DashboardPage() {
                       ease: "easeInOut",
                     }
                   }}
-                  className="content_wrapper relative cursor-pointer border-2 border-amber-500/30 hover:border-amber-500 overflow-hidden"
+                  className="content_wrapper dashboard-summary-card relative cursor-pointer border-2 border-amber-500/30 hover:border-amber-500 flex flex-col min-h-0"
                   onClick={() => setSelectedSettlement(settlement)}
                 >
                   {/* Progress bar as card background */}
@@ -752,26 +751,26 @@ export function DashboardPage() {
                   />
 
                   {/* Card content with reduced opacity */}
-                  <div className="relative opacity-30">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm text-navy-400">CEA Holdings</span>
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <div className="relative opacity-30 flex flex-col min-h-0 min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+                      <span className="text-sm text-navy-400 truncate">CEA Holdings</span>
+                      <div className="w-8 h-8 shrink-0 rounded-lg bg-amber-500/20 flex items-center justify-center">
                         <Leaf className="w-4 h-4 text-amber-400" />
                       </div>
                     </div>
-                    <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                    <div className="value-text-fluid text-amber-400 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                       {formatNumber(settlement.quantity, 2)}
                       <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                     </div>
                   </div>
 
                   {/* SETTLING badge and click hint */}
-                  <div className="relative flex items-center justify-between mt-2">
-                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-semibold flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" />
+                  <div className="relative flex items-center justify-between gap-2 mt-2 shrink-0 min-w-0">
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-semibold flex items-center gap-1.5 min-w-0 truncate">
+                      <Clock className="w-3 h-3 shrink-0" />
                       SETTLING
                     </span>
-                    <span className="text-xs text-navy-400 hover:text-amber-400 transition-colors">
+                    <span className="text-xs text-navy-400 hover:text-amber-400 transition-colors shrink-0">
                       Click for details →
                     </span>
                   </div>
@@ -784,31 +783,31 @@ export function DashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="content_wrapper"
+              className="content_wrapper dashboard-summary-card flex flex-col min-h-0"
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-navy-400">CEA Holdings</span>
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+              <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+                <span className="text-sm text-navy-400 truncate">CEA Holdings</span>
+                <div className="w-8 h-8 shrink-0 rounded-lg bg-amber-500/20 flex items-center justify-center">
                   <Leaf className="w-4 h-4 text-amber-400" />
                 </div>
               </div>
               {isLoading ? (
                 <Skeleton variant="textLg" width="40%" />
               ) : (
-                <>
-                  <div className="text-2xl font-bold text-amber-400 font-mono mb-2">
+                <div className="flex flex-1 flex-col min-h-0 min-w-0">
+                  <div className="value-text-fluid text-amber-400 flex-1 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                     {formatNumber(portfolio.ceaTotal)}
                     <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                   </div>
                   {portfolio.ceaLocked > 0 && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 rounded flex items-center gap-1">
-                        <ArrowRightLeft className="w-3 h-3" />
+                    <div className="flex items-center gap-2 text-xs shrink-0 min-w-0">
+                      <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 rounded truncate flex items-center gap-1">
+                        <ArrowRightLeft className="w-3 h-3 shrink-0" />
                         {formatNumber(portfolio.ceaLocked)} in swap
                       </span>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </motion.div>
           )}
@@ -841,7 +840,7 @@ export function DashboardPage() {
                       ease: "easeInOut",
                     }
                   }}
-                  className="content_wrapper relative cursor-pointer border-2 border-blue-500/30 hover:border-blue-500 overflow-hidden"
+                  className="content_wrapper dashboard-summary-card relative cursor-pointer border-2 border-blue-500/30 hover:border-blue-500 flex flex-col min-h-0"
                   onClick={() => setSelectedSettlement(settlement)}
                 >
                   {/* Progress bar as card background */}
@@ -851,26 +850,26 @@ export function DashboardPage() {
                   />
 
                   {/* Card content with reduced opacity */}
-                  <div className="relative opacity-30">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm text-navy-400">EUA Holdings</span>
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <div className="relative opacity-30 flex flex-col min-h-0 min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+                      <span className="text-sm text-navy-400 truncate">EUA Holdings</span>
+                      <div className="w-8 h-8 shrink-0 rounded-lg bg-blue-500/20 flex items-center justify-center">
                         <Wind className="w-4 h-4 text-blue-400" />
                       </div>
                     </div>
-                    <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                    <div className="value-text-fluid text-blue-400 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                       {formatNumber(settlement.quantity, 2)}
                       <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                     </div>
                   </div>
 
                   {/* SETTLING badge and click hint */}
-                  <div className="relative flex items-center justify-between mt-2">
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" />
+                  <div className="relative flex items-center justify-between gap-2 mt-2 shrink-0 min-w-0">
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold flex items-center gap-1.5 min-w-0 truncate">
+                      <Clock className="w-3 h-3 shrink-0" />
                       SETTLING
                     </span>
-                    <span className="text-xs text-navy-400 hover:text-blue-400 transition-colors">
+                    <span className="text-xs text-navy-400 hover:text-blue-400 transition-colors shrink-0">
                       Click for details →
                     </span>
                   </div>
@@ -883,31 +882,31 @@ export function DashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="content_wrapper"
+              className="content_wrapper dashboard-summary-card flex flex-col min-h-0"
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-navy-400">EUA Holdings</span>
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <div className="flex items-center justify-between gap-2 mb-3 shrink-0 min-w-0">
+                <span className="text-sm text-navy-400 truncate">EUA Holdings</span>
+                <div className="w-8 h-8 shrink-0 rounded-lg bg-blue-500/20 flex items-center justify-center">
                   <Wind className="w-4 h-4 text-blue-400" />
                 </div>
               </div>
               {isLoading ? (
                 <Skeleton variant="textLg" width="40%" />
               ) : (
-                <>
-                  <div className="text-2xl font-bold text-blue-400 font-mono mb-2">
+                <div className="flex flex-1 flex-col min-h-0 min-w-0">
+                  <div className="value-text-fluid text-blue-400 flex-1 flex items-end min-h-0 min-w-0 overflow-hidden mb-1">
                     {formatNumber(portfolio.euaTotal)}
                     <span className="text-sm text-navy-500 ml-1">tCO₂</span>
                   </div>
                   {portfolio.euaPending > 0 && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                    <div className="flex items-center gap-2 text-xs shrink-0 min-w-0">
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded truncate flex items-center gap-1">
+                        <Clock className="w-3 h-3 shrink-0" />
                         +{formatNumber(portfolio.euaPending)} pending
                       </span>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </motion.div>
           )}
@@ -1156,12 +1155,6 @@ export function DashboardPage() {
                 variant="pills"
                 size="sm"
               />
-              <button className="p-2 rounded-lg hover:bg-navy-700 text-navy-400 transition-colors">
-                <Filter className="w-4 h-4" />
-              </button>
-              <button className="p-2 rounded-lg hover:bg-navy-700 text-navy-400 transition-colors">
-                <Download className="w-4 h-4" />
-              </button>
             </div>
           </div>
           {activeTab === 'settlements' ? (

@@ -121,6 +121,8 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     decimals = 2,
     locale = 'en-US',
     placeholder,
+    onBlur,
+    onFocus,
     ...props
   }, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -189,12 +191,12 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       // Re-format on blur to ensure consistent formatting
       const raw = typeof value === 'number' ? value.toString() : value;
       setDisplayValue(formatNumberWithSeparators(raw, locale, decimals));
-      props.onBlur?.(e);
-    }, [value, locale, decimals, props]);
+      onBlur?.(e);
+    }, [value, locale, decimals, onBlur]);
 
     const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-      props.onFocus?.(e);
-    }, [props]);
+      onFocus?.(e);
+    }, [onFocus]);
 
     return (
       <div className="w-full">
@@ -219,7 +221,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             onBlur={handleBlur}
             placeholder={placeholder}
             className={cn(
-              'w-full px-4 py-3 rounded-xl border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 font-mono',
+              'w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors duration-300',
               icon && 'pl-12',
               suffix && 'pr-16',
               error && 'border-red-500 focus:ring-red-500',

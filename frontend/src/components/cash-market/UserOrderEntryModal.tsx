@@ -238,7 +238,7 @@ export function UserOrderEntryModal({
               Limit Order
             </button>
           </div>
-          <p className="text-[10px] text-navy-500 dark:text-navy-400 mt-0.5">
+          <p className="text-xs text-navy-500 dark:text-navy-400 mt-0.5">
             {orderType === 'MARKET'
               ? 'Execute immediately at best available price'
               : 'Execute only at specified price or better'}
@@ -265,7 +265,7 @@ export function UserOrderEntryModal({
               <button
                 type="button"
                 onClick={handleMaxClick}
-                className="absolute right-12 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors z-10"
+                className="absolute right-12 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors z-10"
               >
                 MAX
               </button>
@@ -284,7 +284,7 @@ export function UserOrderEntryModal({
                 decimals={2}
               />
               {bestAskPrice && (
-                <p className="text-[10px] text-navy-500 dark:text-navy-400 mt-0.5">
+                <p className="text-xs text-navy-500 dark:text-navy-400 mt-0.5">
                   Best Ask: €{bestAskPrice.toFixed(2)}
                 </p>
               )}
@@ -304,7 +304,7 @@ export function UserOrderEntryModal({
               ) : (
                 <span className="text-navy-400">-</span>
               )}
-              <span className="text-[10px] text-navy-500 ml-1">{certificateType}</span>
+              <span className="text-xs text-navy-500 ml-1">{certificateType}</span>
             </div>
           </div>
         </div>
@@ -324,7 +324,7 @@ export function UserOrderEntryModal({
               <p className="text-xs font-medium text-red-900 dark:text-red-100">
                 Preview Error
               </p>
-              <p className="text-[10px] text-red-700 dark:text-red-300">
+              <p className="text-xs text-red-700 dark:text-red-300">
                 {previewError}
               </p>
             </div>
@@ -396,7 +396,7 @@ export function UserOrderEntryModal({
             {!preview.canExecute && (
               <div className="flex items-start gap-1.5 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-300 dark:border-red-700">
                 <AlertCircle className="w-3 h-3 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[10px] text-red-900 dark:text-red-100">
+                <p className="text-xs text-red-900 dark:text-red-100">
                   {preview.executionMessage}
                 </p>
               </div>
@@ -406,7 +406,7 @@ export function UserOrderEntryModal({
             {preview.canExecute && preview.willBePlacedInBook && (
               <div className="flex items-start gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-300 dark:border-blue-700">
                 <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-[10px]">
+                <div className="text-xs">
                   <p className="text-blue-900 dark:text-blue-100 font-medium">
                     {preview.executionMessage}
                   </p>
@@ -421,7 +421,7 @@ export function UserOrderEntryModal({
             {preview.canExecute && !preview.willBePlacedInBook && (
               <div className="flex items-start gap-1.5 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-300 dark:border-emerald-700">
                 <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[10px] text-emerald-900 dark:text-emerald-100">
+                <p className="text-xs text-emerald-900 dark:text-emerald-100">
                   {preview.executionMessage}
                 </p>
               </div>

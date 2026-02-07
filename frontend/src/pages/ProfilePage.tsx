@@ -602,7 +602,7 @@ export function ProfilePage() {
                     <select
                       value={selectedRole}
                       onChange={(e) => setSelectedRole(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      className="flex-1 form-select"
                     >
                       {ALL_ROLES.map((role) => (
                         <option key={role} value={role}>
@@ -635,7 +635,7 @@ export function ProfilePage() {
                     <select
                       value={creditAssetType}
                       onChange={(e) => setCreditAssetType(e.target.value as 'EUR' | 'CEA' | 'EUA')}
-                      className="w-32 px-3 py-2 bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 rounded-lg text-navy-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      className="w-32 form-select"
                     >
                       <option value="EUR">EUR</option>
                       <option value="CEA">CEA</option>

@@ -390,16 +390,18 @@ export function CeaSwapMarketPage() {
                   </div>
 
                   <div className="p-2">
-                    {/* Order Book Header */}
-                    <div className="grid grid-cols-8 gap-1 px-2 py-1 text-xs text-navy-500 border-b border-navy-700">
-                      <div>Ratio</div>
-                      <div className="text-right">EUA</div>
-                      <div className="text-right">Σ EUA</div>
-                      <div className="text-right">CEA</div>
-                      <div className="text-right">Σ CEA</div>
-                      <div className="text-right">Val €</div>
-                      <div className="text-right">Σ Val €</div>
-                      <div className="text-right">#</div>
+                    {/* Order Book Header — same structure as Cash (flex border-b border-navy-700) */}
+                    <div className="flex border-b border-navy-700">
+                      <div className="flex-1 grid grid-cols-8 gap-1 px-2 py-1 text-xs text-navy-500">
+                        <div>Ratio</div>
+                        <div className="text-right">EUA</div>
+                        <div className="text-right">Σ EUA</div>
+                        <div className="text-right">CEA</div>
+                        <div className="text-right">Σ CEA</div>
+                        <div className="text-right">Val €</div>
+                        <div className="text-right">Σ Val €</div>
+                        <div className="text-right">#</div>
+                      </div>
                     </div>
 
                     {/* Order Book Rows */}
@@ -441,12 +443,12 @@ export function CeaSwapMarketPage() {
                               <div
                                 key={index}
                                 className={`grid grid-cols-8 gap-1 px-2 py-1 text-xs hover:bg-navy-700/50 relative ${
-                                  isFilled ? 'bg-emerald-500/20' : ''
+                                  isFilled ? 'bg-red-500/10' : 'bg-red-500/5'
                                 }`}
                               >
-                                {/* Depth visualization background */}
+                                {/* Row background + darker liquidity bar (same theme as Cash Market ask) */}
                                 <div
-                                  className={`absolute inset-0 ${isFilled ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}
+                                  className="absolute inset-0 bg-red-500/15"
                                   style={{ width: `${depthPct}%` }}
                                 />
                                 <div className="relative text-blue-400 font-mono">

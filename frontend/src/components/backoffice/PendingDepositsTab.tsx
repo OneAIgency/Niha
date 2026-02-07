@@ -20,7 +20,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Banknote, Clock, CheckCircle, XCircle, DollarSign, X, AlertCircle, Shield, Timer } from 'lucide-react';
-import { Button, Card, ClientStatusBadge } from '../common';
+import { Button, Card, ClientStatusBadge, NumberInput } from '../common';
 import { formatCurrency, formatRelativeTime, cn } from '../../utils';
 import type { PendingDeposit } from '../../types/backoffice';
 import type { Deposit } from '../../types';
@@ -256,68 +256,56 @@ export function PendingDepositsTab({
               ))}
             </div>
           ) : pendingDeposits.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {pendingDeposits.map((deposit) => (
                 <div
                   key={deposit.id}
-                  className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
+                  className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-navy-900 dark:text-white">
-                          {deposit.entityName}
-                        </h3>
-                        <ClientStatusBadge role={deposit.userRole} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-navy-500 dark:text-navy-400">User:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.userEmail}</span>
-                        </div>
-                        <div>
-                          <span className="text-navy-500 dark:text-navy-400">Reported Amount:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
-                            {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency || ''}
-                          </span>
-                        </div>
-                        {deposit.wireReference && (
-                          <div>
-                            <span className="text-navy-500 dark:text-navy-400">Wire Ref:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.wireReference}</span>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-navy-500 dark:text-navy-400">Bank Ref:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-200 font-mono text-xs">{deposit.bankReference}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-navy-400 dark:text-navy-500 mt-2">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        Reported {deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : formatRelativeTime(deposit.createdAt)}
-                      </p>
+                  <div className="flex-1 min-w-0">
+                    {/* Primary: Entity + Amount highlighted */}
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
+                      <h3 className="font-semibold text-navy-900 dark:text-white">
+                        {deposit.entityName}
+                      </h3>
+                      <ClientStatusBadge role={deposit.userRole} />
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency || 'EUR'}
+                      </span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onReject(deposit.id)}
-                        loading={actionLoading === `reject-${deposit.id}`}
-                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleOpenConfirmDeposit(deposit)}
-                        loading={actionLoading === `confirm-${deposit.id}`}
-                      >
-                        <DollarSign className="w-4 h-4" />
-                        Confirm
-                      </Button>
+                    {/* Secondary: User, refs - compact */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-navy-500 dark:text-navy-400">
+                      <span className="truncate">{deposit.userEmail}</span>
+                      <span className="font-mono text-navy-600 dark:text-navy-300">{deposit.bankReference}</span>
+                      {deposit.wireReference && (
+                        <span className="font-mono text-navy-500 dark:text-navy-400">Wire: {deposit.wireReference}</span>
+                      )}
+                      <span className="flex items-center gap-1 text-navy-400 dark:text-navy-500">
+                        <Clock className="w-3 h-3 flex-shrink-0" />
+                        {deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : formatRelativeTime(deposit.createdAt)}
+                      </span>
                     </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onReject(deposit.id)}
+                      loading={actionLoading === `reject-${deposit.id}`}
+                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Reject
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleOpenConfirmDeposit(deposit)}
+                      loading={actionLoading === `confirm-${deposit.id}`}
+                    >
+                      <DollarSign className="w-4 h-4" />
+                      Confirm
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -398,23 +386,20 @@ export function PendingDepositsTab({
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
                   Actual Amount Received *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={confirmAmount}
-                  onChange={(e) => {
-                    setConfirmAmount(e.target.value);
+                  onChange={(v) => {
+                    setConfirmAmount(v);
                     setValidationError(null); // Clear error on change
                   }}
                   placeholder="Enter actual amount"
-                  min="0"
-                  step="0.01"
+                  decimals={2}
                   aria-invalid={validationError ? 'true' : 'false'}
                   aria-describedby={validationError ? 'amount-error' : undefined}
                   className={cn(
-                    "w-full px-4 py-2 rounded-lg border bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2",
                     validationError
                       ? "border-red-300 dark:border-red-700 focus:ring-red-500"
-                      : "border-navy-200 dark:border-navy-600 focus:ring-navy-500"
+                      : ""
                   )}
                   required
                 />
@@ -433,7 +418,7 @@ export function PendingDepositsTab({
                 <select
                   value={confirmCurrency}
                   onChange={(e) => setConfirmCurrency(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  className="w-full form-select"
                 >
                   <option value="EUR">EUR</option>
                   <option value="USD">USD</option>

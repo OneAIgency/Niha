@@ -23,7 +23,7 @@ import {
   RefreshCw,
   Eye,
 } from 'lucide-react';
-import { Button, Card, Badge, ClientStatusBadge, AlertBanner } from '../common';
+import { Button, Card, Badge, ClientStatusBadge, AlertBanner, NumberInput } from '../common';
 import { formatCurrency, formatRelativeTime } from '../../utils';
 import { backofficeApi } from '../../services/api';
 import type {
@@ -524,12 +524,11 @@ export function AMLDepositsTab() {
               <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
                 Actual Amount Received *
               </label>
-              <input
-                type="number"
+              <NumberInput
                 value={confirmAmount}
-                onChange={(e) => setConfirmAmount(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+                onChange={(v) => setConfirmAmount(v)}
                 placeholder="Enter amount"
+                decimals={2}
               />
             </div>
 
@@ -540,7 +539,7 @@ export function AMLDepositsTab() {
               <select
                 value={confirmCurrency}
                 onChange={(e) => setConfirmCurrency(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+                className="w-full form-select"
               >
                 <option value="EUR">EUR</option>
                 <option value="USD">USD</option>
@@ -712,7 +711,7 @@ export function AMLDepositsTab() {
               <select
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value as RejectionReason)}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+                className="w-full form-select"
               >
                 {REJECTION_REASONS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>

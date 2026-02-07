@@ -4,8 +4,9 @@
  * See src/theme/README.md for the full theme hub.
  */
 
-/** CSS variable names that can be overridden from Theme → Containers */
+/** CSS variable names that can be overridden from Theme UI */
 export const EDITABLE_TOKEN_KEYS = [
+  // Container tokens
   '--page-bg-bg',
   '--page-container-dark-bg',
   '--content-wrapper-bg',
@@ -15,6 +16,39 @@ export const EDITABLE_TOKEN_KEYS = [
   '--color-card-back-bg',
   '--color-card-back-border',
   '--radius-card-back',
+  // Input element tokens
+  '--input-bg',
+  '--input-border',
+  '--input-border-width',
+  '--input-text',
+  '--input-placeholder',
+  '--input-radius',
+  '--input-padding-x',
+  '--input-padding-y',
+  '--input-font-size',
+  '--input-focus-ring',
+  '--input-focus-ring-width',
+  '--input-label-size',
+  '--input-label-weight',
+  '--input-label-color',
+  '--input-error-border',
+  '--input-error-ring',
+  '--input-error-label-color',
+  '--input-error-text-color',
+  '--input-error-text-size',
+  '--select-bg',
+  '--select-border',
+  '--select-text',
+  '--select-radius',
+  '--select-padding-x',
+  '--select-padding-y',
+  '--select-padding-right',
+  '--select-font-size',
+  '--select-focus-ring',
+  '--select-icon-color',
+  '--input-search-icon-color',
+  '--input-search-icon-size',
+  '--input-search-padding-left',
 ] as const;
 
 export type EditableTokenKey = (typeof EDITABLE_TOKEN_KEYS)[number];
@@ -120,6 +154,162 @@ export const DESIGN_TOKEN_CATEGORIES: Record<string, TokenCategory> = {
     ],
   },
 };
+
+/**
+ * Input element detail configs for Theme → Inputs interactive editor.
+ * Each element has: label, description, CSS variable tokens, usage info.
+ */
+export interface InputElementUsage {
+  page: string;
+  path: string;
+  component?: string;
+}
+
+export interface InputElementConfig {
+  id: string;
+  label: string;
+  description: string;
+  tokens: TokenConfig[];
+  /** Pages where this element is currently used */
+  usedIn: InputElementUsage[];
+  /** Pages where this element could be used (suggestions) */
+  suggestedFor: InputElementUsage[];
+}
+
+export const INPUT_ELEMENT_CONFIGS: InputElementConfig[] = [
+  {
+    id: 'default-input',
+    label: 'Default Text Input',
+    description: 'Standard text input with rounded border, used for general form fields.',
+    tokens: [
+      { key: '--input-bg', label: 'Background', type: 'color' },
+      { key: '--input-border', label: 'Border Color', type: 'color' },
+      { key: '--input-border-width', label: 'Border Width', type: 'size' },
+      { key: '--input-text', label: 'Text Color', type: 'color' },
+      { key: '--input-placeholder', label: 'Placeholder Color', type: 'color' },
+      { key: '--input-radius', label: 'Border Radius', type: 'size' },
+      { key: '--input-padding-x', label: 'Horizontal Padding', type: 'size' },
+      { key: '--input-padding-y', label: 'Vertical Padding', type: 'size' },
+      { key: '--input-font-size', label: 'Font Size', type: 'size' },
+      { key: '--input-focus-ring', label: 'Focus Ring Color', type: 'color' },
+      { key: '--input-focus-ring-width', label: 'Focus Ring Width', type: 'size' },
+      { key: '--input-label-size', label: 'Label Font Size', type: 'size' },
+      { key: '--input-label-weight', label: 'Label Font Weight', type: 'size' },
+      { key: '--input-label-color', label: 'Label Color', type: 'color' },
+    ],
+    usedIn: [
+      { page: 'Settings', path: '/settings', component: 'SettingsPage' },
+      { page: 'Profile', path: '/profile', component: 'ProfilePage' },
+      { page: 'Funding', path: '/funding', component: 'FundingPage' },
+      { page: 'Create User (Modal)', path: '/backoffice/users', component: 'CreateUserModal' },
+      { page: 'Edit User (Modal)', path: '/backoffice/users', component: 'EditUserModal' },
+      { page: 'Create Market Maker (Modal)', path: '/backoffice/users', component: 'CreateMarketMakerModal' },
+      { page: 'Search Tickets', path: '/backoffice/tickets', component: 'SearchTicketsTab' },
+      { page: 'Place Order', path: '/backoffice/market', component: 'PlaceOrder' },
+    ],
+    suggestedFor: [
+      { page: 'Fee Settings', path: '/backoffice/fees', component: 'FeeSettingsPage' },
+      { page: 'Dashboard (search/filter)', path: '/dashboard', component: 'DashboardPage' },
+    ],
+  },
+  {
+    id: 'search-input',
+    label: 'Search Input (with Icon)',
+    description: 'Input with a left-aligned search icon, used for search/filter fields.',
+    tokens: [
+      { key: '--input-bg', label: 'Background', type: 'color' },
+      { key: '--input-border', label: 'Border Color', type: 'color' },
+      { key: '--input-border-width', label: 'Border Width', type: 'size' },
+      { key: '--input-text', label: 'Text Color', type: 'color' },
+      { key: '--input-placeholder', label: 'Placeholder Color', type: 'color' },
+      { key: '--input-radius', label: 'Border Radius', type: 'size' },
+      { key: '--input-padding-y', label: 'Vertical Padding', type: 'size' },
+      { key: '--input-font-size', label: 'Font Size', type: 'size' },
+      { key: '--input-focus-ring', label: 'Focus Ring Color', type: 'color' },
+      { key: '--input-focus-ring-width', label: 'Focus Ring Width', type: 'size' },
+      { key: '--input-search-icon-color', label: 'Icon Color', type: 'color' },
+      { key: '--input-search-icon-size', label: 'Icon Size', type: 'size' },
+      { key: '--input-search-padding-left', label: 'Left Padding (icon space)', type: 'size' },
+    ],
+    usedIn: [
+      { page: 'Search Tickets', path: '/backoffice/tickets', component: 'SearchTicketsTab' },
+      { page: 'Users Management', path: '/backoffice/users', component: 'UsersPage' },
+    ],
+    suggestedFor: [
+      { page: 'All Tickets', path: '/backoffice/tickets', component: 'AllTicketsTab' },
+      { page: 'Market Maker Orders', path: '/backoffice/market-makers', component: 'MarketMakerOrdersList' },
+      { page: 'Cash Market', path: '/cash-market', component: 'CashMarketProPage' },
+      { page: 'Swap Market', path: '/swap-market', component: 'CeaSwapMarketPage' },
+    ],
+  },
+  {
+    id: 'error-input',
+    label: 'Error State Input',
+    description: 'Input in error state with red border, focus ring, and error message below.',
+    tokens: [
+      { key: '--input-bg', label: 'Background', type: 'color' },
+      { key: '--input-error-border', label: 'Error Border Color', type: 'color' },
+      { key: '--input-border-width', label: 'Border Width', type: 'size' },
+      { key: '--input-text', label: 'Text Color', type: 'color' },
+      { key: '--input-radius', label: 'Border Radius', type: 'size' },
+      { key: '--input-padding-x', label: 'Horizontal Padding', type: 'size' },
+      { key: '--input-padding-y', label: 'Vertical Padding', type: 'size' },
+      { key: '--input-error-ring', label: 'Error Focus Ring', type: 'color' },
+      { key: '--input-error-label-color', label: 'Error Label Color', type: 'color' },
+      { key: '--input-error-text-color', label: 'Error Text Color', type: 'color' },
+      { key: '--input-error-text-size', label: 'Error Text Size', type: 'size' },
+    ],
+    usedIn: [
+      { page: 'Settings', path: '/settings', component: 'SettingsPage' },
+      { page: 'Profile', path: '/profile', component: 'ProfilePage' },
+      { page: 'Confirmation Modal', path: '(global)', component: 'ConfirmationModal' },
+      { page: 'Create User (Modal)', path: '/backoffice/users', component: 'CreateUserModal' },
+    ],
+    suggestedFor: [
+      { page: 'Place Order', path: '/backoffice/market', component: 'PlaceOrder' },
+      { page: 'Funding (deposit form)', path: '/funding', component: 'FundingPage' },
+      { page: 'MM Order Placement', path: '/backoffice/market-makers', component: 'MMOrderPlacementModal' },
+    ],
+  },
+  {
+    id: 'select-dropdown',
+    label: 'Select Dropdown',
+    description: 'Native select with custom styling and dropdown chevron icon.',
+    tokens: [
+      { key: '--select-bg', label: 'Background', type: 'color' },
+      { key: '--select-border', label: 'Border Color', type: 'color' },
+      { key: '--select-text', label: 'Text Color', type: 'color' },
+      { key: '--select-radius', label: 'Border Radius', type: 'size' },
+      { key: '--select-padding-x', label: 'Horizontal Padding', type: 'size' },
+      { key: '--select-padding-y', label: 'Vertical Padding', type: 'size' },
+      { key: '--select-padding-right', label: 'Right Padding (arrow space)', type: 'size' },
+      { key: '--select-font-size', label: 'Font Size', type: 'size' },
+      { key: '--select-focus-ring', label: 'Focus Ring Color', type: 'color' },
+      { key: '--select-icon-color', label: 'Chevron Icon Color', type: 'color' },
+    ],
+    usedIn: [
+      { page: 'Settings', path: '/settings', component: 'SettingsPage' },
+      { page: 'Profile', path: '/profile', component: 'ProfilePage' },
+      { page: 'Users Management', path: '/backoffice/users', component: 'UsersPage' },
+      { page: 'Fee Settings', path: '/backoffice/fees', component: 'FeeSettingsPage' },
+      { page: 'AML Deposits', path: '/backoffice/aml', component: 'AMLDepositsTab' },
+      { page: 'Pending Deposits', path: '/backoffice/deposits', component: 'PendingDepositsTab' },
+      { page: 'Market Maker Auto Trade', path: '/backoffice/market-makers', component: 'MarketMakerAutoTradeTab' },
+      { page: 'Market Maker Orders', path: '/backoffice/market-makers', component: 'MarketMakerOrdersList' },
+      { page: 'All Tickets', path: '/backoffice/tickets', component: 'AllTicketsTab' },
+      { page: 'Search Tickets', path: '/backoffice/tickets', component: 'SearchTicketsTab' },
+      { page: 'Create Market Maker', path: '/backoffice/users', component: 'CreateMarketMakerModal' },
+      { page: 'Funding', path: '/funding', component: 'FundingPage' },
+      { page: 'Place Order', path: '/backoffice/market', component: 'PlaceOrder' },
+      { page: 'MM Order Placement', path: '/backoffice/market-makers', component: 'MMOrderPlacementModal' },
+      { page: 'Place Market Order', path: '/backoffice/market', component: 'PlaceMarketOrderSection' },
+    ],
+    suggestedFor: [
+      { page: 'Dashboard (timeframe filter)', path: '/dashboard', component: 'DashboardPage' },
+      { page: 'Cash Market (order type)', path: '/cash-market', component: 'CashMarketProPage' },
+    ],
+  },
+];
 
 /** Element config for Theme Containers page: element id -> label + CSS params */
 export interface ThemeElementParam {

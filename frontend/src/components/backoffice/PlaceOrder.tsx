@@ -395,7 +395,7 @@ export function PlaceOrder({
             id="market-maker-select"
             value={selectedMM}
             onChange={(e) => setSelectedMM(e.target.value)}
-            className={`w-full ${compact ? 'px-4 py-2.5' : 'px-4 py-2.5'} rounded-lg border border-navy-200 dark:border-navy-600 ${compact ? 'bg-white dark:bg-navy-900' : 'bg-white dark:bg-navy-800'} text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+            className="w-full form-select"
             required
             disabled={loading}
             aria-required="true"

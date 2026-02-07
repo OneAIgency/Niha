@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, DollarSign, Leaf, Wind, Plus } from 'lucide-react';
-import { Button, AlertBanner } from '../common';
+import { X, DollarSign, Leaf, Wind, Plus, Minus } from 'lucide-react';
+import { Button, AlertBanner, NumberInput } from '../common';
 import { backofficeApi } from '../../services/api';
 import { cn } from '../../utils';
 import type { AssetType } from '../../types';
@@ -27,28 +27,28 @@ const ASSET_CONFIG = {
   EUR: {
     label: 'EUR Cash',
     icon: DollarSign,
-    color: 'emerald',
     bgClass: 'bg-emerald-100 dark:bg-emerald-900/30',
     textClass: 'text-emerald-600 dark:text-emerald-400',
     borderClass: 'border-emerald-500',
+    ringClass: 'focus:ring-emerald-500',
     format: formatEUR,
   },
   CEA: {
     label: 'CEA Certificates',
     icon: Leaf,
-    color: 'amber',
     bgClass: 'bg-amber-100 dark:bg-amber-900/30',
     textClass: 'text-amber-600 dark:text-amber-400',
     borderClass: 'border-amber-500',
+    ringClass: 'focus:ring-amber-500',
     format: formatQty,
   },
   EUA: {
     label: 'EUA Certificates',
     icon: Wind,
-    color: 'blue',
     bgClass: 'bg-blue-100 dark:bg-blue-900/30',
     textClass: 'text-blue-600 dark:text-blue-400',
     borderClass: 'border-blue-500',
+    ringClass: 'focus:ring-blue-500',
     format: formatQty,
   },
 } as const;
@@ -106,11 +106,18 @@ export function AddAssetModal({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (operation: 'deposit' | 'withdraw') => {
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       setError('Please enter a valid amount greater than 0');
       return;
+    }
+    if (operation === 'withdraw') {
+      const current = getCurrentBalance();
+      if (amountNum > current) {
+        setError('Insufficient balance');
+        return;
+      }
     }
 
     setLoading(true);
@@ -120,14 +127,20 @@ export function AddAssetModal({
       await backofficeApi.addAsset(entityId, {
         asset_type: selectedAsset,
         amount: amountNum,
+        operation,
         reference: reference || undefined,
         notes: notes || undefined,
       });
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || 'Failed to add asset');
+      const errResp = err as { response?: { data?: { detail?: string } } };
+      const detail = errResp.response?.data?.detail;
+      setError(
+        detail && String(detail).toLowerCase().includes('insufficient')
+          ? 'Insufficient balance'
+          : detail || (operation === 'withdraw' ? 'Failed to withdraw asset' : 'Failed to add asset')
+      );
     } finally {
       setLoading(false);
     }
@@ -142,11 +155,15 @@ export function AddAssetModal({
     }
   };
 
-  const getNewBalance = (): number => {
+  const getNewBalance = (operation: 'deposit' | 'withdraw'): number => {
     const current = getCurrentBalance();
     const amountNum = parseFloat(amount) || 0;
-    return current + amountNum;
+    return operation === 'withdraw' ? current - amountNum : current + amountNum;
   };
+
+  const amountNum = parseFloat(amount) || 0;
+  const isValidAmount = amountNum > 0;
+  const canWithdraw = isValidAmount && amountNum <= getCurrentBalance();
 
   const config = ASSET_CONFIG[selectedAsset];
 
@@ -235,20 +252,16 @@ export function AddAssetModal({
                 {/* Amount Input */}
                 <div>
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                    Amount to Add *
+                    Amount *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(v) => setAmount(v)}
                     placeholder={selectedAsset === 'EUR' ? '0.00' : '0'}
-                    step={selectedAsset === 'EUR' ? '0.01' : '1'}
-                    min="0"
+                    decimals={selectedAsset === 'EUR' ? 2 : 0}
                     className={cn(
-                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono text-lg',
-                      'placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
-                      amount && parseFloat(amount) > 0
-                        ? `${config.borderClass} focus:ring-${config.color}-500`
+                      isValidAmount
+                        ? `${config.borderClass} ${config.ringClass}`
                         : 'border-navy-200 dark:border-navy-700 focus:ring-navy-500'
                     )}
                     autoFocus
@@ -285,20 +298,36 @@ export function AddAssetModal({
                 </div>
 
                 {/* New Balance Preview */}
-                {amount && parseFloat(amount) > 0 && (
+                {isValidAmount && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-navy-50 dark:bg-navy-800/50 rounded-xl border border-navy-200 dark:border-navy-700"
+                    className="p-4 bg-navy-50 dark:bg-navy-800/50 rounded-xl border border-navy-200 dark:border-navy-700 space-y-2"
                   >
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-navy-500 dark:text-navy-400">
-                        New Balance
+                        After deposit
                       </span>
                       <span className={cn('text-lg font-bold font-mono', config.textClass)}>
-                        {config.format(getNewBalance())}
+                        {config.format(getNewBalance('deposit'))}
                       </span>
                     </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-navy-500 dark:text-navy-400">
+                        After withdraw
+                      </span>
+                      <span className={cn(
+                        'text-lg font-bold font-mono',
+                        getNewBalance('withdraw') < 0 ? 'text-red-600 dark:text-red-400' : config.textClass
+                      )}>
+                        {config.format(getNewBalance('withdraw'))}
+                      </span>
+                    </div>
+                    {getNewBalance('withdraw') < 0 && (
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        Insufficient balance to withdraw this amount
+                      </p>
+                    )}
                   </motion.div>
                 )}
 
@@ -320,13 +349,23 @@ export function AddAssetModal({
                 </Button>
                 <Button
                   variant="primary"
-                  onClick={handleSubmit}
+                  onClick={() => handleSubmit('deposit')}
                   loading={loading}
-                  disabled={!amount || parseFloat(amount) <= 0}
+                  disabled={!isValidAmount}
                   className="flex-1"
                 >
                   <Plus className="w-4 h-4" />
-                  Add {selectedAsset}
+                  Deposit
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleSubmit('withdraw')}
+                  loading={loading}
+                  disabled={!canWithdraw}
+                  className="flex-1 text-red-600 dark:text-red-400 hover:bg-red-500/10 border-red-200 dark:border-red-800"
+                >
+                  <Minus className="w-4 h-4" />
+                  Withdraw
                 </Button>
               </div>
             </div>

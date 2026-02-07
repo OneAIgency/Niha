@@ -984,7 +984,7 @@ export function ThemePage() {
               <div>
                 <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>Select</label>
                 <div className="relative">
-                  <select className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}>
+                  <select className="w-full form-select appearance-none">
                     <option>Select an option...</option>
                     <option>Option 1</option>
                     <option>Option 2</option>

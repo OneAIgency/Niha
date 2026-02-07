@@ -72,6 +72,7 @@ export function CreateLiquidityPage() {
   const [bidPricePercent, setBidPricePercent] = useState<string>('15');
   const [bidOrderCount, setBidOrderCount] = useState<string>('100');
   const [bidDiversity, setBidDiversity] = useState<string>('5');
+  const [bidMaxOrdersPerLevel, setBidMaxOrdersPerLevel] = useState<string>('5');
 
   const [askTargetEur, setAskTargetEur] = useState<string>('');
   const [askMinOrder, setAskMinOrder] = useState<string>('100000');
@@ -79,6 +80,7 @@ export function CreateLiquidityPage() {
   const [askPricePercent, setAskPricePercent] = useState<string>('15');
   const [askOrderCount, setAskOrderCount] = useState<string>('100');
   const [askDiversity, setAskDiversity] = useState<string>('5');
+  const [askMaxOrdersPerLevel, setAskMaxOrdersPerLevel] = useState<string>('5');
 
   const [ceaBuyers, setCeaBuyers] = useState<MarketMakerWithAvailable[]>([]);
   const [ceaSellers, setCeaSellers] = useState<MarketMakerWithAvailable[]>([]);
@@ -305,7 +307,8 @@ export function CreateLiquidityPage() {
     basePrice: number,
     marketMakers: MarketMakerWithAvailable[],
     targetOrderCount: number,
-    diversity: number // 1-10, how much order sizes can vary
+    diversity: number, // 1-10, how much order sizes can vary
+    maxOrdersPerLevel: number = 5
   ): GeneratedOrder[] => {
     if (totalEurNeeded <= 0 || marketMakers.length === 0 || targetOrderCount <= 0) return [];
 
@@ -346,25 +349,23 @@ export function CreateLiquidityPage() {
     // Diversity controls variation: 1 = 5% variation, 10 = 90% variation
     const variationPercent = 0.05 + (diversity - 1) * 0.094;
 
-    // Adjust min/max to allow reaching target order count
-    const effectiveMin = Math.min(minOrder, avgOrderSize * (1 - variationPercent));
-    const effectiveMax = Math.max(maxOrder, avgOrderSize * (1 + variationPercent));
+    // Clamp effective range to user bounds so at diversity 10 all orders stay between min and max
+    const effectiveMin = Math.max(minOrder, avgOrderSize * (1 - variationPercent));
+    const effectiveMax = Math.min(maxOrder, avgOrderSize * (1 + variationPercent));
 
     // Shuffle market makers to distribute randomly
     const shuffledMMs = [...marketMakers].sort(() => Math.random() - 0.5);
     let mmIndex = 0;
 
-    // Create diversified order distribution per price level (1-5 orders per level)
-    // First, assign random weights to each price level
-    const levelWeights = priceLevels.map(() => 1 + Math.floor(Math.random() * 5)); // 1-5 orders per level
+    // Create diversified order distribution per price level (1 to maxOrdersPerLevel per level)
+    const levelWeights = priceLevels.map(() => 1 + Math.floor(Math.random() * maxOrdersPerLevel));
     const totalWeightedOrders = levelWeights.reduce((sum, w) => sum + w, 0);
 
     // Scale weights to match target order count while keeping diversity
     const scaleFactor = targetOrderCount / totalWeightedOrders;
     const ordersPerLevel = levelWeights.map(w => {
       const scaled = Math.round(w * scaleFactor);
-      // Ensure at least 1 order per level, max 5 for natural look
-      return Math.max(1, Math.min(5, scaled));
+      return Math.max(1, Math.min(maxOrdersPerLevel, scaled));
     });
 
     // Adjust to hit exact target count (with iteration limits to prevent infinite loops)
@@ -374,9 +375,8 @@ export function CreateLiquidityPage() {
 
     while (currentTotal < targetOrderCount && iterations < maxIterations) {
       iterations++;
-      // Add orders to random levels (prefer levels with fewer orders)
       const idx = Math.floor(Math.random() * priceLevels.length);
-      if (ordersPerLevel[idx] < 8) { // Allow up to 8 for more flexibility
+      if (ordersPerLevel[idx] < maxOrdersPerLevel) {
         ordersPerLevel[idx]++;
         currentTotal++;
       }
@@ -413,13 +413,14 @@ export function CreateLiquidityPage() {
         // Calculate target for this order
         const targetForThis = eurForThisLevel / ordersAtThisLevel;
 
-        // Apply diversity-based variation around the target
-        const minForThis = Math.max(effectiveMin, targetForThis * (1 - variationPercent));
-        const maxForThis = Math.min(effectiveMax, remainingEur, available, targetForThis * (1 + variationPercent));
+        // Apply diversity-based variation around the target; never exceed user min/max
+        const minForThis = Math.max(effectiveMin, minOrder, targetForThis * (1 - variationPercent));
+        const maxForThis = Math.min(effectiveMax, maxOrder, remainingEur, available, targetForThis * (1 + variationPercent));
 
         if (maxForThis < minForThis) continue;
 
-        const orderEur = minForThis + Math.random() * (maxForThis - minForThis);
+        let orderEur = minForThis + Math.random() * (maxForThis - minForThis);
+        orderEur = Math.max(minOrder, Math.min(maxOrder, orderEur));
         const quantity = orderEur / price;
 
         orders.push({
@@ -472,7 +473,8 @@ export function CreateLiquidityPage() {
           cashStats?.bestBid || 13,
           ceaBuyers,
           parseInt(bidOrderCount.replace(/,/g, '')) || 100,
-          Math.min(10, Math.max(1, parseInt(bidDiversity) || 5))
+          Math.min(10, Math.max(1, parseInt(bidDiversity) || 5)),
+          parseInt(bidMaxOrdersPerLevel, 10) || 5
         );
 
         // Sort BID orders by price descending (highest price first)
@@ -507,7 +509,8 @@ export function CreateLiquidityPage() {
           cashStats?.bestAsk || 13,
           ceaSellers,
           parseInt(askOrderCount.replace(/,/g, '')) || 100,
-          Math.min(10, Math.max(1, parseInt(askDiversity) || 5))
+          Math.min(10, Math.max(1, parseInt(askDiversity) || 5)),
+          parseInt(askMaxOrdersPerLevel, 10) || 5
         );
 
         // Sort ASK orders by price ascending (lowest price first)
@@ -1076,6 +1079,19 @@ export function CreateLiquidityPage() {
                         decimals={0}
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                        Max orders per price level
+                      </label>
+                      <NumberInput
+                        value={bidMaxOrdersPerLevel}
+                        onChange={(v) => {
+                          const num = parseInt(v) || 1;
+                          setBidMaxOrdersPerLevel(String(Math.min(20, Math.max(1, num))));
+                        }}
+                        decimals={0}
+                      />
+                    </div>
                   </div>
 
                   {/* Worst Bid Display */}
@@ -1210,6 +1226,19 @@ export function CreateLiquidityPage() {
                         onChange={(v) => {
                           const num = parseInt(v) || 1;
                           setAskDiversity(String(Math.min(10, Math.max(1, num))));
+                        }}
+                        decimals={0}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-navy-500 dark:text-navy-400 mb-1">
+                        Max orders per price level
+                      </label>
+                      <NumberInput
+                        value={askMaxOrdersPerLevel}
+                        onChange={(v) => {
+                          const num = parseInt(v) || 1;
+                          setAskMaxOrdersPerLevel(String(Math.min(20, Math.max(1, num))));
                         }}
                         decimals={0}
                       />

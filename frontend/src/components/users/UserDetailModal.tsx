@@ -17,11 +17,12 @@ import {
   Building2,
   AlertTriangle,
   Pencil,
+  Minus,
 } from 'lucide-react';
 import { Button, Badge } from '../common';
 import { UserOrdersSection } from '../backoffice';
-import { cn, formatRelativeTime } from '../../utils';
-import type { UserRole, AdminUserFull, Deposit, EntityBalance } from '../../types';
+import { cn, formatRelativeTime, formatCurrency } from '../../utils';
+import type { UserRole, AdminUserFull, Deposit, EntityBalance, DepositHistoryItem } from '../../types';
 
 // Simple interface for entity assets display
 interface EntityAssetsDisplay {
@@ -52,6 +53,7 @@ interface UserDetailModalProps {
   entityBalance: EntityBalance | null;
   entityAssets: EntityAssetsDisplay | null;
   deposits: Deposit[];
+  depositAndWithdrawalHistory: DepositHistoryItem[];
 }
 
 function getInitials(firstName?: string, lastName?: string, email?: string) {
@@ -86,11 +88,6 @@ function getRoleBadgeVariant(role: UserRole) {
   }
 }
 
-function formatCurrency(amount: number, currency: string) {
-  const symbols: Record<string, string> = { EUR: '€', USD: '$', CNY: '¥', HKD: 'HK$' };
-  return `${symbols[currency] || currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 export function UserDetailModal({
   user,
   loading,
@@ -105,6 +102,7 @@ export function UserDetailModal({
   entityBalance,
   entityAssets,
   deposits,
+  depositAndWithdrawalHistory,
 }: UserDetailModalProps) {
   if (!user && !loading) return null;
 
@@ -206,6 +204,7 @@ export function UserDetailModal({
                   entityBalance={entityBalance}
                   entityAssets={entityAssets}
                   deposits={deposits}
+                  depositAndWithdrawalHistory={depositAndWithdrawalHistory}
                   onRetry={() => user.entityId && onLoadDeposits(user.entityId)}
                   onEditAsset={onEditAsset}
                 />
@@ -440,6 +439,7 @@ function DepositsTab({
   entityBalance,
   entityAssets,
   deposits,
+  depositAndWithdrawalHistory,
   onRetry,
   onEditAsset,
 }: {
@@ -449,6 +449,7 @@ function DepositsTab({
   entityBalance: EntityBalance | null;
   entityAssets: EntityAssetsDisplay | null;
   deposits: Deposit[];
+  depositAndWithdrawalHistory: DepositHistoryItem[];
   onRetry: () => void;
   onEditAsset: (asset: {
     entityId: string;
@@ -515,7 +516,7 @@ function DepositsTab({
       {/* Asset Balances Grid */}
       <div className="grid grid-cols-3 gap-4">
         {/* EUR Balance */}
-        <div className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white relative group">
+        <div className="flex flex-col min-w-0 overflow-hidden p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
               entityId: user.entityId!,
@@ -529,16 +530,16 @@ function DepositsTab({
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5" />
+            <DollarSign className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium text-emerald-100">EUR Cash</span>
           </div>
-          <p className="text-2xl font-bold font-mono">
+          <p className="text-base font-bold font-mono min-w-0">
             {'\u20AC'}{(entityAssets?.eurBalance ?? entityBalance?.balanceAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
 
         {/* CEA Balance */}
-        <div className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl text-white relative group">
+        <div className="flex flex-col min-w-0 overflow-hidden p-4 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
               entityId: user.entityId!,
@@ -552,17 +553,17 @@ function DepositsTab({
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <div className="flex items-center gap-2 mb-2">
-            <Leaf className="w-5 h-5" />
+            <Leaf className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium text-amber-100">CEA</span>
           </div>
-          <p className="text-2xl font-bold font-mono">
+          <p className="text-base font-bold font-mono min-w-0">
             {(entityAssets?.ceaBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             <span className="text-sm font-normal ml-1">tCO{'\u2082'}</span>
           </p>
         </div>
 
         {/* EUA Balance */}
-        <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white relative group">
+        <div className="flex flex-col min-w-0 overflow-hidden p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white relative group">
           <button
             onClick={() => onEditAsset({
               entityId: user.entityId!,
@@ -576,10 +577,10 @@ function DepositsTab({
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <div className="flex items-center gap-2 mb-2">
-            <Wind className="w-5 h-5" />
+            <Wind className="w-5 h-5 shrink-0" />
             <span className="text-sm font-medium text-blue-100">EUA</span>
           </div>
-          <p className="text-2xl font-bold font-mono">
+          <p className="text-base font-bold font-mono min-w-0">
             {(entityAssets?.euaBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             <span className="text-sm font-normal ml-1">tCO{'\u2082'}</span>
           </p>
@@ -616,67 +617,114 @@ function DepositsTab({
         </div>
       )}
 
-      {/* Deposit History */}
+      {/* Deposit & Withdrawal History */}
       <div>
-        <h3 className="font-semibold text-navy-900 dark:text-white mb-4">Deposit History</h3>
-        {deposits.length === 0 ? (
+        <h3 className="font-semibold text-navy-900 dark:text-white mb-4">Deposit & Withdrawal History</h3>
+        {depositAndWithdrawalHistory.length === 0 ? (
           <div className="text-center py-8 text-navy-500 dark:text-navy-400">
             <BanknoteIcon className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-            <p>No deposits recorded</p>
+            <p>No deposits or withdrawals recorded</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {deposits.map((deposit) => (
-              <div
-                key={deposit.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-700/50 border border-navy-100 dark:border-navy-600"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    'p-2 rounded-lg',
-                    deposit.status === 'confirmed'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : deposit.status === 'rejected'
-                      ? 'bg-red-100 dark:bg-red-900/30'
-                      : 'bg-amber-100 dark:bg-amber-900/30'
-                  )}>
-                    <DollarSign className={cn(
-                      'w-5 h-5',
-                      deposit.status === 'confirmed'
-                        ? 'text-emerald-600'
-                        : deposit.status === 'rejected'
-                        ? 'text-red-600'
-                        : 'text-amber-600'
-                    )} />
-                  </div>
-                  <div>
-                    {/* Show "—" when amount is missing to avoid masking invalid data */}
-                    <p className="font-semibold text-navy-900 dark:text-white">
-                      {deposit.amount != null
-                        ? formatCurrency(deposit.amount, deposit.currency ?? 'EUR')
-                        : '—'}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
-                      {deposit.wireReference && (
-                        <span>Ref: {deposit.wireReference}</span>
-                      )}
-                      <span>{formatRelativeTime(deposit.createdAt)}</span>
+            {depositAndWithdrawalHistory.map((item) => {
+              if (item.type === 'wire_deposit') {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-700/50 border border-navy-100 dark:border-navy-600"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        'p-2 rounded-lg',
+                        item.status === 'confirmed'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                          : item.status === 'rejected'
+                          ? 'bg-red-100 dark:bg-red-900/30'
+                          : 'bg-amber-100 dark:bg-amber-900/30'
+                      )}>
+                        <DollarSign className={cn(
+                          'w-5 h-5',
+                          item.status === 'confirmed'
+                            ? 'text-emerald-600'
+                            : item.status === 'rejected'
+                            ? 'text-red-600'
+                            : 'text-amber-600'
+                        )} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-navy-900 dark:text-white">
+                          {item.amount != null
+                            ? formatCurrency(item.amount, item.currency ?? 'EUR')
+                            : '—'}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                          {item.wireReference && (
+                            <span>Ref: {item.wireReference}</span>
+                          )}
+                          <span>{formatRelativeTime(item.createdAt)}</span>
+                        </div>
+                        {item.notes && (
+                          <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
+                            {item.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {deposit.notes && (
-                      <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
-                        {deposit.notes}
-                      </p>
-                    )}
+                    <Badge variant={
+                      item.status === 'confirmed' ? 'success' :
+                      item.status === 'rejected' ? 'danger' : 'warning'
+                    }>
+                      {item.status}
+                    </Badge>
                   </div>
+                );
+              }
+              const isWithdrawal = item.transactionType === 'WITHDRAWAL';
+              const amountLabel = item.assetType === 'EUR'
+                ? formatCurrency(isWithdrawal ? -Math.abs(item.amount) : item.amount, 'EUR')
+                : `${isWithdrawal ? '-' : ''}${Math.abs(item.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${item.assetType}`;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-700/50 border border-navy-100 dark:border-navy-600"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      'p-2 rounded-lg',
+                      isWithdrawal
+                        ? 'bg-red-100 dark:bg-red-900/30'
+                        : 'bg-emerald-100 dark:bg-emerald-900/30'
+                    )}>
+                      {isWithdrawal ? (
+                        <Minus className="w-5 h-5 text-red-600 dark:text-red-400" />
+                      ) : (
+                        <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      )}
+                    </div>
+                    <div>
+                      <p className={cn(
+                        'font-semibold',
+                        isWithdrawal ? 'text-red-600 dark:text-red-400' : 'text-navy-900 dark:text-white'
+                      )}>
+                        {amountLabel}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                        <span>{formatRelativeTime(item.createdAt)}</span>
+                      </div>
+                      {item.notes && (
+                        <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
+                          {item.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant={isWithdrawal ? 'danger' : 'success'}>
+                    {item.transactionType}
+                  </Badge>
                 </div>
-                <Badge variant={
-                  deposit.status === 'confirmed' ? 'success' :
-                  deposit.status === 'rejected' ? 'danger' : 'warning'
-                }>
-                  {deposit.status}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

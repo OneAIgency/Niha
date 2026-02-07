@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Trash2,
   Eye,
-  ArrowDownUp,
 } from 'lucide-react';
 import { Button, Card, Badge, ConfirmationModal } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
@@ -22,8 +21,9 @@ import {
   UserDetailModal,
 } from '../components/users';
 import { cn, formatRelativeTime } from '../utils';
+import { buildDepositAndWithdrawalHistory } from '../utils/depositHistory';
 import { adminApi, backofficeApi } from '../services/api';
-import type { User, UserRole, AdminUserFull, Deposit, EntityBalance } from '../types';
+import type { User, UserRole, AdminUserFull, Deposit, EntityBalance, DepositHistoryItem } from '../types';
 
 // Simple interface for entity assets display (subset of full EntityAssets)
 interface EntityAssetsDisplay {
@@ -100,6 +100,7 @@ export function UsersPage() {
   const [entityBalance, setEntityBalance] = useState<EntityBalance | null>(null);
   const [entityAssets, setEntityAssets] = useState<EntityAssetsDisplay | null>(null);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [depositAndWithdrawalHistory, setDepositAndWithdrawalHistory] = useState<DepositHistoryItem[]>([]);
   const [loadingDeposits, setLoadingDeposits] = useState(false);
   const [depositsError, setDepositsError] = useState<string | null>(null);
 
@@ -216,18 +217,6 @@ export function UsersPage() {
     setDeactivateUser(user);
   };
 
-  const handleSyncBalance = async (entityId: string) => {
-    try {
-      const result = await backofficeApi.syncEntityBalance(entityId);
-      alert(result.message);
-      // Refresh user list to show updated balance
-      loadUsers();
-    } catch (error) {
-      console.error('Failed to sync balance:', error);
-      alert('Failed to sync balance');
-    }
-  };
-
   const handleCreateEntityForUser = async (user: UserWithEntity) => {
     try {
       const result = await adminApi.createEntityForUser(user.id);
@@ -333,6 +322,29 @@ export function UsersPage() {
         euaBalance: assetsResponse.euaBalance ?? 0,
       });
       setDeposits(Array.isArray(depositList) ? depositList : []);
+
+      const wireItems: DepositHistoryItem[] = (Array.isArray(depositList) ? depositList : []).map((d) => ({
+        type: 'wire_deposit',
+        id: d.id,
+        amount: d.amount,
+        currency: d.currency,
+        status: d.status,
+        createdAt: d.createdAt,
+        wireReference: d.wireReference,
+        notes: d.notes,
+      }));
+      const recentTxs = assetsResponse.recentTransactions ?? [];
+      const assetItems: DepositHistoryItem[] = recentTxs.map((t: { id: string; transactionType: string; amount: number; assetType: string; createdAt: string; notes?: string }) => ({
+        type: 'asset_tx',
+        id: t.id,
+        transactionType: t.transactionType === 'WITHDRAWAL' ? 'WITHDRAWAL' : 'DEPOSIT',
+        amount: t.amount,
+        assetType: t.assetType,
+        createdAt: t.createdAt,
+        notes: t.notes,
+      }));
+      const merged = buildDepositAndWithdrawalHistory(wireItems, assetItems);
+      setDepositAndWithdrawalHistory(merged);
     } catch (error: unknown) {
       console.error('Failed to load deposits:', error);
       let errorMessage = 'Failed to load entity assets';
@@ -350,6 +362,7 @@ export function UsersPage() {
       setEntityBalance(null);
       setEntityAssets(null);
       setDeposits([]);
+      setDepositAndWithdrawalHistory([]);
     } finally {
       setLoadingDeposits(false);
     }
@@ -424,7 +437,7 @@ export function UsersPage() {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all' | 'DISABLED')}
-              className="px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="form-select"
             >
               <option value="all">All Roles</option>
               <option value="ADMIN">Admin</option>
@@ -577,15 +590,6 @@ export function UsersPage() {
                           >
                             <Plus className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSyncBalance(user.entityId!)}
-                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            title="Sync Balance (fix legacy deposits)"
-                          >
-                            <ArrowDownUp className="w-4 h-4" />
-                          </Button>
                         </>
                       ) : (
                         <Button
@@ -687,6 +691,7 @@ export function UsersPage() {
         entityBalance={entityBalance}
         entityAssets={entityAssets}
         deposits={deposits}
+        depositAndWithdrawalHistory={depositAndWithdrawalHistory}
       />
 
       {/* Password Reset Modal */}

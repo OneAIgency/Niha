@@ -18,7 +18,7 @@ import {
   FileText,
   Target,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, SubheaderNavButtonAction, AlertBanner, PageLoadingState } from '../components/common';
+import { Button, Card, Badge, Subheader, SubheaderNavButtonAction, AlertBanner, PageLoadingState, NumberInput } from '../components/common';
 import { usersApi } from '../services/api';
 import { formatRelativeTime, formatCurrency } from '../utils';
 import { useAuthStore } from '../stores/useStore';
@@ -92,7 +92,6 @@ export function FundingPage() {
 
   // Form state
   const [amount, setAmount] = useState('');
-  const [displayAmount, setDisplayAmount] = useState('');
   const [currency, setCurrency] = useState('EUR');
   const [wireReference, setWireReference] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -103,30 +102,6 @@ export function FundingPage() {
   const pendingDeposit = deposits.find((d) => d.status.toLowerCase() === 'pending');
   // Only disable for non-admin users
   const hasPendingDeposit = !isAdmin && !!pendingDeposit;
-
-  // Format amount with thousand separators for display
-  const formatAmountInput = (value: string) => {
-    // Remove all non-digit and non-decimal characters
-    const cleaned = value.replace(/[^\d.]/g, '');
-
-    // Handle multiple decimal points - keep only the first one
-    const parts = cleaned.split('.');
-    const integerPart = parts[0];
-    const decimalPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
-
-    // Add thousand separators to integer part
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    return formattedInteger + decimalPart;
-  };
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const formatted = formatAmountInput(inputValue);
-    setDisplayAmount(formatted);
-    // Store raw numeric value without commas
-    setAmount(formatted.replace(/,/g, ''));
-  };
 
   useEffect(() => {
     fetchData();
@@ -166,7 +141,6 @@ export function FundingPage() {
       const result = await usersApi.reportDeposit(amountNum, currency, wireReference || undefined);
       setSuccessMessage(result.message);
       setAmount('');
-      setDisplayAmount('');
       setWireReference('');
       // Refresh deposits
       const depositsData = await usersApi.getMyDeposits();
@@ -390,91 +364,94 @@ export function FundingPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Card>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-                    <Building2 className="w-5 h-5 text-blue-400" />
+                <Card padding="sm">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
+                    <Building2 className="w-4 h-4 text-blue-400" />
                     Wire Transfer Details
                   </h2>
 
                   {instructions && (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-navy-800/50 rounded-lg">
-                        <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Bank Name</p>
-                        <p className="text-white font-medium">{instructions.bankName}</p>
+                    <div className="space-y-2">
+                      <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg">
+                        <p className="text-[10px] text-navy-400 uppercase tracking-wider">Bank Name</p>
+                        <p className="text-white text-sm font-medium">{instructions.bankName}</p>
                       </div>
 
-                      <div className="p-3 bg-navy-800/50 rounded-lg">
-                        <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Account Name</p>
-                        <p className="text-white font-medium">{instructions.accountName}</p>
+                      <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg">
+                        <p className="text-[10px] text-navy-400 uppercase tracking-wider">Account Name</p>
+                        <p className="text-white text-sm font-medium">{instructions.accountName}</p>
                       </div>
 
                       {instructions.accountNumber && (
-                        <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Account Number</p>
-                            <p className="text-white font-mono">{instructions.accountNumber}</p>
+                        <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-navy-400 uppercase tracking-wider">Account Number</p>
+                            <p className="text-white text-sm font-mono truncate">{instructions.accountNumber}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="shrink-0 h-7 w-7 p-0"
                             onClick={() => copyToClipboard(instructions.accountNumber!, 'account')}
                           >
-                            {copied === 'account' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                            {copied === 'account' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                           </Button>
                         </div>
                       )}
 
                       {instructions.bankAddress && (
-                        <div className="p-3 bg-navy-800/50 rounded-lg">
-                          <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">Bank Address</p>
-                          <p className="text-white font-medium">{instructions.bankAddress}</p>
+                        <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg">
+                          <p className="text-[10px] text-navy-400 uppercase tracking-wider">Bank Address</p>
+                          <p className="text-white text-sm font-medium">{instructions.bankAddress}</p>
                         </div>
                       )}
 
                       {instructions.iban && (
-                        <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">IBAN</p>
-                            <p className="text-white font-mono">{instructions.iban}</p>
+                        <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-navy-400 uppercase tracking-wider">IBAN</p>
+                            <p className="text-white text-sm font-mono truncate">{instructions.iban}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="shrink-0 h-7 w-7 p-0"
                             onClick={() => copyToClipboard(instructions.iban!, 'iban')}
                           >
-                            {copied === 'iban' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                            {copied === 'iban' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                           </Button>
                         </div>
                       )}
 
                       {(instructions.swiftBic || instructions.swiftCode) && (
-                        <div className="p-3 bg-navy-800/50 rounded-lg flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-navy-400 uppercase tracking-wider mb-1">SWIFT/BIC</p>
-                            <p className="text-white font-mono">{instructions.swiftBic || instructions.swiftCode}</p>
+                        <div className="px-2.5 py-1.5 bg-navy-800/50 rounded-lg flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-navy-400 uppercase tracking-wider">SWIFT/BIC</p>
+                            <p className="text-white text-sm font-mono truncate">{instructions.swiftBic || instructions.swiftCode}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="shrink-0 h-7 w-7 p-0"
                             onClick={() => copyToClipboard((instructions.swiftBic || instructions.swiftCode)!, 'swift')}
                           >
-                            {copied === 'swift' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                            {copied === 'swift' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                           </Button>
                         </div>
                       )}
 
-                      <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                      <div className="px-2.5 py-1.5 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                         <div className="flex gap-2">
-                          <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-amber-200 text-sm font-medium">Important</p>
-                            <p className="text-amber-200/80 text-sm">{instructions.referenceInstructions}</p>
+                          <Info className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-amber-200 text-xs font-medium">Important</p>
+                            <p className="text-amber-200/80 text-xs">{instructions.referenceInstructions}</p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-navy-400">
-                        <Clock className="w-4 h-4" />
+                      <div className="flex items-center gap-1.5 text-xs text-navy-400">
+                        <Clock className="w-3.5 h-3.5" />
                         <span>Processing: {instructions.processingTime}</span>
                       </div>
                     </div>
@@ -499,13 +476,12 @@ export function FundingPage() {
                       <label className="block text-sm font-medium text-navy-300 mb-1">
                         Amount
                       </label>
-                      <input
-                        type="text"
-                        value={displayAmount}
-                        onChange={handleAmountChange}
+                      <NumberInput
+                        value={amount}
+                        onChange={(v) => setAmount(v)}
                         placeholder="Enter amount (e.g., 999,000)"
-                        inputMode="decimal"
-                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        decimals={2}
+                        className="bg-navy-800 border-navy-700 text-white placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         required
                       />
                     </div>
@@ -517,7 +493,7 @@ export function FundingPage() {
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full px-4 py-3 bg-navy-800 border border-navy-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        className="w-full form-select"
                       >
                         {CURRENCIES.map((c) => (
                           <option key={c} value={c}>{c}</option>

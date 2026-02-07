@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Settings, Percent, Building2, Plus, Pencil, Trash2, Save, RefreshCw } from 'lucide-react';
 import { feesApi, adminApi } from '../services/api';
 import { BackofficeLayout } from '../components/layout';
-import { AlertBanner } from '../components/common';
+import { AlertBanner, NumberInput } from '../components/common';
 import type {
   TradingFeeConfig,
   EntityFeeOverride,
@@ -271,26 +271,20 @@ export function FeeSettingsPage() {
                         <label className="block text-xs font-medium text-navy-600 dark:text-navy-400 mb-1">
                           Buyer Fee (%)
                         </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <NumberInput
                           value={editBidRate}
-                          onChange={(e) => setEditBidRate(e.target.value)}
-                          className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
+                          onChange={(v) => setEditBidRate(v)}
+                          decimals={2}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-navy-600 dark:text-navy-400 mb-1">
                           Seller Fee (%)
                         </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <NumberInput
                           value={editAskRate}
-                          onChange={(e) => setEditAskRate(e.target.value)}
-                          className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
+                          onChange={(v) => setEditAskRate(v)}
+                          decimals={2}
                         />
                       </div>
                       <div className="flex gap-2">
@@ -455,7 +449,7 @@ export function FeeSettingsPage() {
                   value={overrideEntityId}
                   onChange={(e) => setOverrideEntityId(e.target.value)}
                   disabled={!!editingOverride}
-                  className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-700 text-navy-900 dark:text-white disabled:opacity-50"
+                  className="w-full form-select disabled:opacity-50"
                 >
                   <option value="">Select a client...</option>
                   {entities.map((entity) => (
@@ -474,7 +468,7 @@ export function FeeSettingsPage() {
                   value={overrideMarket}
                   onChange={(e) => setOverrideMarket(e.target.value as MarketTypeEnum)}
                   disabled={!!editingOverride}
-                  className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-700 text-navy-900 dark:text-white disabled:opacity-50"
+                  className="w-full form-select disabled:opacity-50"
                 >
                   <option value="CEA_CASH">CEA Cash</option>
                   <option value="SWAP">Swap</option>
@@ -485,14 +479,11 @@ export function FeeSettingsPage() {
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
                   Buyer Fee (%) <span className="text-navy-500 font-normal">- leave empty to use default</span>
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <NumberInput
                   value={overrideBidRate}
-                  onChange={(e) => setOverrideBidRate(e.target.value)}
+                  onChange={(v) => setOverrideBidRate(v)}
                   placeholder="e.g., 0.50"
-                  className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  decimals={2}
                 />
               </div>
 
@@ -500,14 +491,11 @@ export function FeeSettingsPage() {
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
                   Seller Fee (%) <span className="text-navy-500 font-normal">- leave empty to use default</span>
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <NumberInput
                   value={overrideAskRate}
-                  onChange={(e) => setOverrideAskRate(e.target.value)}
+                  onChange={(v) => setOverrideAskRate(v)}
                   placeholder="e.g., 0.50"
-                  className="w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  decimals={2}
                 />
               </div>
             </div>

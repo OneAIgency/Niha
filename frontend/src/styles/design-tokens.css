@@ -90,6 +90,53 @@
   --color-info-light: rgba(59, 130, 246, 0.2);
   --color-info-text: #93c5fd;            /* blue-300 */
 
+  /* ========================================
+     INPUT ELEMENTS
+     CSS variables for text inputs, search inputs, error inputs, selects
+     ======================================== */
+
+  /* Default Text Input */
+  --input-bg: #1e293b;                    /* navy-800 */
+  --input-border: #475569;                /* navy-600 */
+  --input-border-width: 2px;
+  --input-text: #ffffff;
+  --input-placeholder: #64748b;           /* navy-400 */
+  --input-radius: 0.75rem;               /* 12px = rounded-xl */
+  --input-padding-x: 1rem;               /* 16px */
+  --input-padding-y: 0.75rem;            /* 12px */
+  --input-font-size: 0.875rem;           /* 14px = text-sm */
+  --input-focus-ring: #10b981;           /* emerald-500 */
+  --input-focus-ring-width: 2px;
+
+  /* Label */
+  --input-label-size: 0.875rem;          /* 14px */
+  --input-label-weight: 500;
+  --input-label-color: #cbd5e1;          /* navy-200 */
+
+  /* Error State */
+  --input-error-border: #ef4444;         /* red-500 */
+  --input-error-ring: #ef4444;           /* red-500 */
+  --input-error-label-color: #ef4444;    /* red-500 */
+  --input-error-text-color: #ef4444;     /* red-500 */
+  --input-error-text-size: 0.75rem;      /* 12px */
+
+  /* Select */
+  --select-bg: #1e293b;                  /* navy-800 */
+  --select-border: #475569;              /* navy-600 */
+  --select-text: #ffffff;
+  --select-radius: 0.5rem;              /* 8px = rounded-lg */
+  --select-padding-x: 1rem;
+  --select-padding-y: 0.5rem;
+  --select-padding-right: 3rem;          /* pr-12 for dropdown arrow */
+  --select-font-size: 0.875rem;
+  --select-focus-ring: #10b981;          /* emerald-500 */
+  --select-icon-color: #94a3b8;          /* navy-400 */
+
+  /* Search Input (extends default input) */
+  --input-search-icon-color: #94a3b8;    /* navy-400 */
+  --input-search-icon-size: 1.25rem;     /* 20px = h-5 w-5 */
+  --input-search-padding-left: 3rem;     /* pl-12 */
+
   /* Subheader nav (subpage button states – e.g. backoffice) */
   --color-subheader-nav-active-bg: #475569;   /* navy-600 – opened subpage */
   --color-subheader-nav-active-text: #ffffff;
@@ -107,6 +154,18 @@
   /* SubSubHeader nav count badge (new items / pending count – high visibility) */
   --color-subsubheader-nav-badge-bg: #dc2626;   /* red-600 */
   --color-subsubheader-nav-badge-text: #ffffff;
+
+  /* Sub-button (chip/toggle – e.g. category filters, option groups) */
+  --color-sub-button-active-bg: #10b981;        /* emerald-500 */
+  --color-sub-button-active-text: #ffffff;
+  --color-sub-button-inactive-bg: #1e293b;      /* navy-800 */
+  --color-sub-button-inactive-text: #e2e8f0;     /* navy-200 */
+  --color-sub-button-inactive-hover-bg: #334155; /* navy-700 */
+  --color-sub-button-inactive-hover-text: #cbd5e1; /* navy-300 */
+  --sub-button-padding-x: 1rem;                 /* 16px */
+  --sub-button-padding-y: 0.5rem;               /* 8px */
+  --sub-button-radius: 0.5rem;                   /* 8px = rounded-lg */
+  --sub-button-gap: 0.5rem;                     /* 8px between icon and label */
 
   /* Subheader bar (page section title bar – icon, title, description, nav) */
   --color-subheader-bg: #1e293b;   /* navy-800 */
@@ -375,6 +434,24 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Portfolio value card: value scales with container width (no overflow) */
+.portfolio-value-card {
+  container-type: inline-size;
+}
+.value-text-fluid {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.75rem, 8cqi, 1.5rem);
+}
+
+/* Dashboard summary cards: contain content, no overflow, fluid value support */
+.dashboard-summary-card {
+  container-type: inline-size;
+  overflow: hidden;
+  min-width: 0;
+}
+
 /* Background Utilities */
 .bg-page { background-color: var(--color-background); }
 .bg-surface { background-color: var(--color-surface); }
@@ -477,13 +554,39 @@
   color: var(--color-subsubheader-nav-badge-text);
 }
 
+/* Sub-button (chip/toggle – category filters, option groups; use with -active / -inactive) */
+.sub-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sub-button-gap);
+  padding: var(--sub-button-padding-y) var(--sub-button-padding-x);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border-radius: var(--sub-button-radius);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.sub-button-active {
+  background-color: var(--color-sub-button-active-bg);
+  color: var(--color-sub-button-active-text);
+}
+.sub-button-inactive {
+  background-color: var(--color-sub-button-inactive-bg);
+  color: var(--color-sub-button-inactive-text);
+}
+.sub-button-inactive:hover {
+  background-color: var(--color-sub-button-inactive-hover-bg);
+  color: var(--color-sub-button-inactive-hover-text);
+}
+
 /* Subheader bar (page section title – fixed below main header app-wide) */
 .subheader-bar {
   position: fixed;
   left: 0;
   right: 0;
   top: 4rem; /* h-16 = 64px (header height on mobile) */
-  z-index: var(--z-elevated);
+  z-index: var(--z-fixed);
   background-color: var(--color-subheader-bg);
   border-bottom: 1px solid var(--color-subheader-border);
   padding: var(--subheader-padding-y) var(--subheader-padding-x);

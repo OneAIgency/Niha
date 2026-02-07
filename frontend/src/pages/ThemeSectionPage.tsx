@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../stores/useStore';
 import { Card, Button, Badge, Tabs, ToggleGroup, ProgressBar, Skeleton, StatCard, ConfirmationModal } from '../components/common';
-import { TokenEditor, ThemeExportImport } from '../components/theme';
-import { DESIGN_TOKEN_CATEGORIES } from '../theme';
+import { TokenEditor, ThemeExportImport, InputElementDetailPanel } from '../components/theme';
+import { DESIGN_TOKEN_CATEGORIES, INPUT_ELEMENT_CONFIGS } from '../theme';
 
 /**
  * Theme Section Page - Renders individual design system sections based on route
@@ -576,6 +576,7 @@ function TypographySection({ textPrimary, textSecondary, textMuted }: { textPrim
 // BUTTONS SECTION
 // ============================================
 function ButtonsSection({ textSecondary }: { textSecondary: string }) {
+  const [activeSub, setActiveSub] = useState('a');
   return (
     <>
       <SectionHeader title="Buttons" />
@@ -609,6 +610,37 @@ function ButtonsSection({ textSecondary }: { textSecondary: string }) {
           </div>
         </div>
         <div>
+          <p className={`text-sm font-medium ${textSecondary} mb-3`}>Sub-button (chip/toggle)</p>
+          <p className={`text-xs ${textSecondary} mb-2`}>
+            Theme-driven chips for category filters or option groups. Classes: <code className="bg-navy-700 dark:bg-navy-800 px-1 rounded text-xs">sub-button sub-button-active</code> / <code className="bg-navy-700 dark:bg-navy-800 px-1 rounded text-xs">sub-button sub-button-inactive</code>.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(['a', 'b', 'c'] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`sub-button ${activeSub === id ? 'sub-button-active' : 'sub-button-inactive'}`}
+                onClick={() => setActiveSub(id)}
+              >
+                Option {id.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {(['x', 'y', 'z'] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`sub-button ${activeSub === id ? 'sub-button-active' : 'sub-button-inactive'}`}
+                onClick={() => setActiveSub(id)}
+              >
+                <BarChart3 className="h-4 w-4" />
+                With icon {id.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
           <p className={`text-sm font-medium ${textSecondary} mb-3`}>States</p>
           <div className="flex flex-wrap gap-3">
             <Button variant="primary" disabled>Disabled</Button>
@@ -623,53 +655,189 @@ function ButtonsSection({ textSecondary }: { textSecondary: string }) {
 // ============================================
 // INPUTS SECTION
 // ============================================
-function InputsSection({ textSecondary, textMuted, isDark }: { textSecondary: string; textMuted: string; isDark: boolean }) {
+function InputsSection({ textSecondary: _textSecondary, textMuted: _textMuted, isDark: _isDark }: { textSecondary: string; textMuted: string; isDark: boolean }) {
+  // Input element configs from theme registry
+  const defaultInputConfig = INPUT_ELEMENT_CONFIGS.find((c) => c.id === 'default-input')!;
+  const searchInputConfig = INPUT_ELEMENT_CONFIGS.find((c) => c.id === 'search-input')!;
+  const errorInputConfig = INPUT_ELEMENT_CONFIGS.find((c) => c.id === 'error-input')!;
+  const selectConfig = INPUT_ELEMENT_CONFIGS.find((c) => c.id === 'select-dropdown')!;
+
+  // CSS variable-driven inline styles for live preview
+  const inputBaseStyle: React.CSSProperties = {
+    width: '100%',
+    backgroundColor: 'var(--input-bg)',
+    borderColor: 'var(--input-border)',
+    borderWidth: 'var(--input-border-width)',
+    borderStyle: 'solid',
+    color: 'var(--input-text)',
+    borderRadius: 'var(--input-radius)',
+    paddingLeft: 'var(--input-padding-x)',
+    paddingRight: 'var(--input-padding-x)',
+    paddingTop: 'var(--input-padding-y)',
+    paddingBottom: 'var(--input-padding-y)',
+    fontSize: 'var(--input-font-size)',
+    outline: 'none',
+    transition: 'all 0.2s',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 'var(--input-label-size)',
+    fontWeight: 'var(--input-label-weight)' as React.CSSProperties['fontWeight'],
+    color: 'var(--input-label-color)',
+    display: 'block',
+    marginBottom: '0.5rem',
+  };
+
+  const searchInputStyle: React.CSSProperties = {
+    ...inputBaseStyle,
+    paddingLeft: 'var(--input-search-padding-left)',
+  };
+
+  const errorInputStyle: React.CSSProperties = {
+    ...inputBaseStyle,
+    borderColor: 'var(--input-error-border)',
+  };
+
+  const errorLabelStyle: React.CSSProperties = {
+    ...labelStyle,
+    color: 'var(--input-error-label-color)',
+  };
+
+  const selectStyle: React.CSSProperties = {
+    width: '100%',
+    backgroundColor: 'var(--select-bg)',
+    borderColor: 'var(--select-border)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    color: 'var(--select-text)',
+    borderRadius: 'var(--select-radius)',
+    paddingLeft: 'var(--select-padding-x)',
+    paddingRight: 'var(--select-padding-right)',
+    paddingTop: 'var(--select-padding-y)',
+    paddingBottom: 'var(--select-padding-y)',
+    fontSize: 'var(--select-font-size)',
+    appearance: 'none' as React.CSSProperties['appearance'],
+    outline: 'none',
+    transition: 'all 0.2s',
+  };
+
   return (
     <>
       <SectionHeader title="Inputs" />
-      <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>Default</label>
-            <input
-              type="text"
-              placeholder="Enter text..."
-              className={`w-full rounded-xl border-2 px-4 py-3 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
-            />
-          </div>
-          <div>
-            <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>With Icon</label>
-            <div className="relative">
-              <Search className={`absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${textMuted}`} />
+      <div className="space-y-6">
+        {/* Default Input */}
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label style={labelStyle}>Default</label>
               <input
                 type="text"
-                placeholder="Search..."
-                className={`w-full rounded-xl border-2 py-3 pl-12 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white placeholder-navy-400' : 'border-navy-200 bg-white text-navy-900 placeholder-navy-400'}`}
+                placeholder="Enter text..."
+                style={inputBaseStyle}
+                className="placeholder-navy-400 focus:ring-2 focus:border-transparent"
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow = `0 0 0 var(--input-focus-ring-width) var(--input-focus-ring)`;
+                  e.currentTarget.style.borderColor = 'transparent';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = 'var(--input-border)';
+                }}
               />
+              <InputElementDetailPanel config={defaultInputConfig} />
+            </div>
+
+            {/* Search Input */}
+            <div>
+              <label style={labelStyle}>With Icon</label>
+              <div className="relative">
+                <Search
+                  className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{
+                    left: '1rem',
+                    color: 'var(--input-search-icon-color)',
+                    width: 'var(--input-search-icon-size)',
+                    height: 'var(--input-search-icon-size)',
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  style={searchInputStyle}
+                  className="placeholder-navy-400"
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = `0 0 0 var(--input-focus-ring-width) var(--input-focus-ring)`;
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = 'var(--input-border)';
+                  }}
+                />
+              </div>
+              <InputElementDetailPanel config={searchInputConfig} />
+            </div>
+
+            {/* Error Input */}
+            <div>
+              <label style={errorLabelStyle}>Error State</label>
+              <input
+                type="text"
+                placeholder="Error state"
+                style={errorInputStyle}
+                className="placeholder-navy-400"
+                onFocus={(e) => {
+                  e.currentTarget.style.boxShadow = `0 0 0 var(--input-focus-ring-width) var(--input-error-ring)`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+              <p
+                className="mt-1"
+                style={{
+                  color: 'var(--input-error-text-color)',
+                  fontSize: 'var(--input-error-text-size)',
+                }}
+              >
+                This field is required
+              </p>
+              <InputElementDetailPanel config={errorInputConfig} />
+            </div>
+
+            {/* Select */}
+            <div>
+              <label style={labelStyle}>Select</label>
+              <div className="relative">
+                <select
+                  style={selectStyle}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = `0 0 0 2px var(--select-focus-ring)`;
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = 'var(--select-border)';
+                  }}
+                >
+                  <option>Select an option...</option>
+                  <option>Option 1</option>
+                  <option>Option 2</option>
+                </select>
+                <ChevronDown
+                  className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{
+                    color: 'var(--select-icon-color)',
+                    width: '1.25rem',
+                    height: '1.25rem',
+                  }}
+                />
+              </div>
+              <InputElementDetailPanel config={selectConfig} />
             </div>
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-red-500">Error State</label>
-            <input
-              type="text"
-              placeholder="Error state"
-              className={`w-full rounded-xl border-2 border-red-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDark ? 'bg-navy-800 text-white' : 'bg-white text-navy-900'}`}
-            />
-            <p className="mt-1 text-xs text-red-500">This field is required</p>
-          </div>
-          <div>
-            <label className={`mb-2 block text-sm font-medium ${textSecondary}`}>Select</label>
-            <div className="relative">
-              <select className={`w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-navy-600 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-900'}`}>
-                <option>Select an option...</option>
-                <option>Option 1</option>
-                <option>Option 2</option>
-              </select>
-              <ChevronDown className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none ${textMuted}`} />
-            </div>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </>
   );
 }

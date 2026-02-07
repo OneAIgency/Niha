@@ -333,6 +333,28 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Log unhandled exceptions and return useful error for 500s."""
+    import traceback
+
+    from fastapi import HTTPException
+    from fastapi.responses import JSONResponse
+
+    logger.error(
+        "Unhandled exception: %s\n%s",
+        exc,
+        traceback.format_exc(),
+        extra={"path": request.url.path, "method": request.method},
+    )
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__},
+    )
+
+
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(contact.router, prefix="/api/v1")

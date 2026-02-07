@@ -33,8 +33,8 @@ Comprehensive admin interface using the **same Layout** as the rest of the app (
 - **Market Orders** - Place orders for market makers with CEA/EUA toggle, Place BID/ASK modals, order book
 - **Liquidity** - Create liquidity
 - **Deposits** - AML/deposits management (separate from Onboarding Deposits tab). Client status (`user_role`) is shown consistently in deposit cards and tables via **ClientStatusBadge**; single source of truth (FUNDING when user announced transfer). See `app_truth.md` §8.
-- **Audit Logging** - Audit trail and action logging
-- **Users** - User management (accessible from backoffice Subheader nav). List and user detail modal show Status as **Active** or **DISABLED** (based on `is_active`); Role column shows DISABLED badge for disabled users.
+- **Audit Logging** - Audit trail and action logging. Includes add-asset operations (ENTITY_ASSET_DEPOSIT, ENTITY_ASSET_WITHDRAWAL); searchable by action_type or tag `entity_asset`.
+- **Users** - User management (accessible from backoffice Subheader nav). List and user detail modal show Status as **Active** or **DISABLED** (based on `is_active`); Role column shows DISABLED badge for disabled users. From User Detail, admins can adjust entity balances via **Add Asset** (Deposit / Withdraw) for EUR, CEA, or EUA. **Deposit & Withdrawal History** (Assets tab) shows a unified list of wire deposits and add-asset transactions, sorted by date. Add-asset operations create audit tickets visible in Logging.
 - **Settings** - Platform Settings: **Price Scraping Sources** (EUA/CEA price feeds) and **Mail & Authentication** (admin-only). Mail & Auth configures mail provider (Resend or SMTP), from address, invitation email subject/body/link base URL, and token expiry; when set, invitation emails use stored config; otherwise env (`RESEND_API_KEY`, `FROM_EMAIL`) is used.
 - **Theme** - Admin-only UI showcase at `/theme` (sample and containers subpages).
 

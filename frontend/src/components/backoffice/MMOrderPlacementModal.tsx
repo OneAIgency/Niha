@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
-import { AlertBanner, Button } from '../common';
+import { AlertBanner, Button, NumberInput } from '../common';
 import { getMarketMakers, getMarketMakerBalances } from '../../services/api';
 import { formatCurrency, formatQuantity } from '../../utils';
 
@@ -260,7 +260,7 @@ export function MMOrderPlacementModal({
                 <select
                   value={selectedMM}
                   onChange={(e) => setSelectedMM(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full form-select"
                   required
                   disabled={loading}
                 >
@@ -313,16 +313,14 @@ export function MMOrderPlacementModal({
                 <label className="block text-sm font-semibold text-navy-700 dark:text-navy-300 mb-2">
                   Price (EUR) *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(v) => setPrice(v)}
                   placeholder="0.0"
-                  step="0.1"
-                  min="0"
-                  className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  decimals={2}
                   required
                   disabled={loading}
+                  className="focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -331,16 +329,14 @@ export function MMOrderPlacementModal({
                 <label className="block text-sm font-semibold text-navy-700 dark:text-navy-300 mb-2">
                   Quantity ({certificateType}) *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
+                  onChange={(v) => setQuantity(v)}
                   placeholder="0"
-                  step="1"
-                  min="0"
-                  className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  decimals={0}
                   required
                   disabled={loading}
+                  className="focus:ring-2 focus:ring-emerald-500"
                 />
                 {side === 'ASK' && balances && (
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">

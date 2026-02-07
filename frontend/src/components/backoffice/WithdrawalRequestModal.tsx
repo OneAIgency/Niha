@@ -8,7 +8,7 @@
 
 import React, { useState } from 'react';
 import { X, Loader2, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
-import { AlertBanner } from '../common';
+import { AlertBanner, NumberInput } from '../common';
 import { withdrawalApi } from '../../services/api';
 import type { AssetType, WithdrawalRequest } from '../../types';
 
@@ -249,24 +249,15 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  {assetType === 'EUR' && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400">€</span>
-                  )}
-                  <input
-                    type="number"
+                  <NumberInput
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className={`w-full border border-navy-600 rounded-xl bg-navy-900 text-white p-3 ${assetType === 'EUR' ? 'pl-7' : ''} placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent`}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    max={getAvailableBalance()}
+                    onChange={(v) => setAmount(v)}
+                    placeholder={assetType === 'EUR' ? '0.00' : '0'}
+                    decimals={assetType === 'EUR' ? 2 : 0}
+                    icon={assetType === 'EUR' ? <span className="text-navy-400">€</span> : undefined}
+                    suffix={assetType !== 'EUR' ? assetType : undefined}
+                    className="border-navy-600 rounded-xl bg-navy-900 text-white placeholder-navy-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
-                  {assetType !== 'EUR' && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400">
-                      {assetType}
-                    </span>
-                  )}
                 </div>
                 <button
                   type="button"

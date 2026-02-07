@@ -14,7 +14,7 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react';
-import { Button, Badge, ConfirmationModal, AlertBanner } from '../common';
+import { Button, Badge, ConfirmationModal, AlertBanner, NumberInput } from '../common';
 import { backofficeApi } from '../../services/api';
 import { cn, formatRelativeTime } from '../../utils';
 import type { Order } from '../../types';
@@ -141,13 +141,12 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
             <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
               New Price *
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              step="0.01"
-              min="0.01"
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onChange={(v) => setPrice(v)}
+              decimals={2}
+              placeholder="0.01"
+              className="focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -156,13 +155,12 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
             <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
               New Quantity * <span className="text-navy-400">(min: {order.filledQuantity})</span>
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              step="1"
-              min={order.filledQuantity || 1}
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onChange={(v) => setQuantity(v)}
+              decimals={0}
+              placeholder="0"
+              className="focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 

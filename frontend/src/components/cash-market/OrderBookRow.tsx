@@ -15,11 +15,18 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
   // BID (buy) = red, ASK (sell) = green - standard trading convention
   const colorClasses = {
     hover: isBid ? 'hover:bg-red-50 dark:hover:bg-red-900/10' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/10',
-    depth: isBid ? 'bg-red-500/10 dark:bg-red-500/20' : 'bg-emerald-500/10 dark:bg-emerald-500/20',
+    depthFill: isBid ? 'fill-red-500/10 dark:fill-red-500/20' : 'fill-emerald-500/10 dark:fill-emerald-500/20',
     price: isBid ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400',
   };
 
-  const depthPosition = isBid ? 'right-0' : 'left-0';
+  // Smooth curve for depth: path in 0–100 coordinate space, curved edge instead of vertical bar
+  const curveAmount = 8;
+  const p = Math.min(100, Math.max(0, depthPercentage));
+  const depthPath =
+    isBid
+      ? `M ${100 - p},0 Q ${100 - p - curveAmount},50 ${100 - p},100 L 100,100 L 100,0 Z`
+      : `M 0,0 L ${p},0 Q ${p + curveAmount},50 ${p},100 L 0,100 Z`;
+
   const priceAction = isBid ? 'BUY' : 'SELL';
 
   const handleClick = () => {
@@ -42,12 +49,15 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
       onKeyDown={handleKeyDown}
       aria-label={`${priceAction} order at price €${level.price.toFixed(2)}, quantity ${formatQuantity(level.quantity)}`}
     >
-      {/* Depth Visualization */}
-      <div
-        className={`absolute ${depthPosition} top-0 bottom-0 ${colorClasses.depth} transition-all`}
-        style={{ width: `${depthPercentage}%` }}
+      {/* Depth: smooth curve (same semantics as before, curved edge instead of bar) */}
+      <svg
+        className="absolute inset-0 w-full h-full transition-all pointer-events-none"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
         aria-hidden="true"
-      />
+      >
+        <path d={depthPath} className={colorClasses.depthFill} />
+      </svg>
 
       {/* Values */}
       <div className="relative grid grid-cols-3 md:grid-cols-4 gap-2">
@@ -62,13 +72,13 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
             <div className={`text-right font-mono font-semibold ${colorClasses.price}`}>
               {level.price.toFixed(2)}
             </div>
-            <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
+            <div className="text-center text-xs text-navy-500 dark:text-navy-500">
               {level.orderCount}
             </div>
           </>
         ) : (
           <>
-            <div className="text-center text-[10px] text-navy-500 dark:text-navy-500">
+            <div className="text-center text-xs text-navy-500 dark:text-navy-500">
               {level.orderCount}
             </div>
             <div className={`text-left font-mono font-semibold ${colorClasses.price}`}>

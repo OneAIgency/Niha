@@ -23,7 +23,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
         <div className="flex items-center justify-start gap-2">
           <TrendingUp className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-red-700 dark:text-red-400 uppercase tracking-wider">
               Best Bid
             </span>
             <span className="font-mono font-bold text-sm md:text-base text-red-600 dark:text-red-400">
@@ -35,7 +35,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
         {/* Best Ask (Right Side) - GREEN */}
         <div className="flex items-center justify-end gap-2">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
               Best Ask
             </span>
             <span className="font-mono font-bold text-sm md:text-base text-emerald-600 dark:text-emerald-400">
@@ -48,7 +48,7 @@ export function OrderBookSpreadIndicator({ bestBid, bestAsk, spread }: OrderBook
 
       {/* Spread Info (Centered Below) */}
       <div className="px-4 pb-2 flex justify-center">
-        <div className="text-[10px] text-navy-600 dark:text-navy-400">
+        <div className="text-xs text-navy-600 dark:text-navy-400">
           <span className="font-medium">Spread: </span>
           <span className="font-mono font-semibold text-navy-900 dark:text-white">
             €{safeSpread.toFixed(2)}

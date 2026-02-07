@@ -346,19 +346,19 @@ function App() {
             }
           />
 
-          {/* Full-screen trading terminal - NO header/footer */}
-          <Route
-            path="/cash-market"
-            element={
-              <FundedRoute>
-                <CashMarketProPage />
-              </FundedRoute>
-            }
-          />
-
           {/* Public routes with layout */}
           <Route element={<Layout />}>
             <Route path="/contact" element={<ContactPage />} />
+
+            {/* Cash Market — same layout as Swap: Layout provides Header + main.pt-20 */}
+            <Route
+              path="/cash-market"
+              element={
+                <FundedRoute>
+                  <CashMarketProPage />
+                </FundedRoute>
+              }
+            />
 
             {/* Protected - All authenticated users */}
             <Route

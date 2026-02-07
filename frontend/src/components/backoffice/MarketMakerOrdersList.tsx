@@ -278,7 +278,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
               <select
                 value={selectedMM}
                 onChange={(e) => setSelectedMM(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full form-select text-sm"
               >
                 <option value="">All Market Makers</option>
                 {marketMakers.map((mm) => (
@@ -297,7 +297,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full form-select text-sm"
               >
                 <option value="">All Statuses</option>
                 <option value="OPEN">Open</option>
@@ -316,7 +316,7 @@ export function MarketMakerOrdersList({ certificateType }: MarketMakerOrdersList
                 <select
                   value={selectedCertType}
                   onChange={(e) => setSelectedCertType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full form-select text-sm"
                 >
                   <option value="">All Markets</option>
                   <option value="CEA">CEA Cash</option>

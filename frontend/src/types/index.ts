@@ -527,6 +527,11 @@ export interface Deposit {
   createdAt: string;
 }
 
+/** Unified item for Deposit History: wire deposit or add-asset transaction (deposit/withdrawal). */
+export type DepositHistoryItem =
+  | { type: 'wire_deposit'; id: string; amount?: number; currency?: Currency; status: DepositStatus; createdAt: string; wireReference?: string; notes?: string }
+  | { type: 'asset_tx'; id: string; transactionType: 'DEPOSIT' | 'WITHDRAWAL'; amount: number; assetType: string; createdAt: string; notes?: string };
+
 export interface DepositCreate {
   entityId: string;
   amount: number;
@@ -668,9 +673,20 @@ export interface EntityAssets {
   recentTransactions: AssetTransaction[];
 }
 
+/** Request shape for add-asset API (snake_case). Use this for backofficeApi.addAsset. */
+export interface AddAssetApiRequest {
+  asset_type: AssetType;
+  amount: number;
+  operation?: 'deposit' | 'withdraw';
+  reference?: string;
+  notes?: string;
+}
+
+/** @deprecated Prefer AddAssetApiRequest for API payloads. Kept for backwards compatibility. */
 export interface AddAssetRequest {
   assetType: AssetType;
   amount: number;
+  operation?: 'deposit' | 'withdraw';
   reference?: string;
   notes?: string;
 }

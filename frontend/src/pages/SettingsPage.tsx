@@ -14,7 +14,7 @@ import {
   Save,
   DollarSign,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, AlertBanner } from '../components/common';
+import { Button, Card, Badge, Subheader, AlertBanner, NumberInput } from '../components/common';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
@@ -478,7 +478,7 @@ export function SettingsPage() {
                             <select
                               value={source.scrapeLibrary || 'HTTPX'}
                               onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
-                              className="px-1 py-0.5 text-xs rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white w-full"
+                              className="w-full form-select text-xs"
                             >
                               <option value="HTTPX">HTTPX</option>
                               <option value="BEAUTIFULSOUP">BS4</option>
@@ -490,7 +490,7 @@ export function SettingsPage() {
                             <select
                               value={source.scrapeIntervalMinutes}
                               onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value))}
-                              className="px-1 py-0.5 text-xs rounded border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white w-full"
+                              className="w-full form-select text-xs"
                             >
                               <option value={5}>5m</option>
                               <option value={10}>10m</option>
@@ -753,7 +753,7 @@ export function SettingsPage() {
                   <select
                     value={mailForm.provider ?? 'resend'}
                     onChange={(e) => setMailForm({ ...mailForm, provider: e.target.value as 'resend' | 'smtp' })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-select"
                   >
                     <option value="resend">Resend</option>
                     <option value="smtp">SMTP</option>
@@ -808,14 +808,11 @@ export function SettingsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP port</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={65535}
+                      <NumberInput
                         value={mailForm.smtpPort ?? ''}
-                        onChange={(e) => setMailForm({ ...mailForm, smtpPort: e.target.value ? parseInt(e.target.value, 10) : undefined })}
-                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        onChange={(v) => setMailForm({ ...mailForm, smtpPort: v === '' ? undefined : parseInt(v, 10) })}
                         placeholder="587"
+                        decimals={0}
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-7">
@@ -863,13 +860,10 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation token expiry (days)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={365}
+                  <NumberInput
                     value={mailForm.invitationTokenExpiryDays ?? 7}
-                    onChange={(e) => setMailForm({ ...mailForm, invitationTokenExpiryDays: parseInt(e.target.value, 10) || 7 })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    onChange={(v) => setMailForm({ ...mailForm, invitationTokenExpiryDays: parseInt(v, 10) || 7 })}
+                    decimals={0}
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -897,7 +891,7 @@ export function SettingsPage() {
                   <select
                     value={mailForm.verificationMethod ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, verificationMethod: e.target.value || undefined })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-select"
                   >
                     <option value="">—</option>
                     <option value="magic_link">Magic link</option>
@@ -909,7 +903,7 @@ export function SettingsPage() {
                   <select
                     value={mailForm.authMethod ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, authMethod: e.target.value || undefined })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-select"
                   >
                     <option value="">—</option>
                     <option value="password">Password</option>
@@ -954,7 +948,7 @@ export function SettingsPage() {
                 <select
                   value={newSource.certificate_type}
                   onChange={(e) => setNewSource({ ...newSource, certificate_type: e.target.value as 'EUA' | 'CEA' })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-select"
                 >
                   <option value="EUA">EUA</option>
                   <option value="CEA">CEA</option>
@@ -965,7 +959,7 @@ export function SettingsPage() {
                 <select
                   value={newSource.scrape_library}
                   onChange={(e) => setNewSource({ ...newSource, scrape_library: e.target.value as ScrapeLibrary })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-select"
                 >
                   <option value="HTTPX">HTTPX (Fast, async HTTP)</option>
                   <option value="BEAUTIFULSOUP">BeautifulSoup (HTML parsing)</option>
@@ -978,7 +972,7 @@ export function SettingsPage() {
                 <select
                   value={newSource.scrape_interval_minutes}
                   onChange={(e) => setNewSource({ ...newSource, scrape_interval_minutes: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-select"
                 >
                   <option value={5}>5 minutes</option>
                   <option value={10}>10 minutes</option>
@@ -1055,7 +1049,7 @@ export function SettingsPage() {
                 <select
                   value={newExchangeSource.scrape_interval_minutes}
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, scrape_interval_minutes: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-select"
                 >
                   <option value={15}>15 minutes</option>
                   <option value={30}>30 minutes</option>

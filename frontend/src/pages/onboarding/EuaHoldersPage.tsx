@@ -1314,12 +1314,9 @@ const SwapAdvantages = () => {
           return (
             <button
               key={adv.id}
+              type="button"
               onClick={() => setSelectedAdvantage(adv.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                selectedAdvantage === adv.id
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-navy-700 text-navy-600'
-              }`}
+              className={`sub-button ${selectedAdvantage === adv.id ? 'sub-button-active' : 'sub-button-inactive'}`}
             >
               <Icon className="w-4 h-4" />
               {adv.label}

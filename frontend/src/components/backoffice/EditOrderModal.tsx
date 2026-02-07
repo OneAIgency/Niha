@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Trash2 } from 'lucide-react';
-import { Button, AlertBanner } from '../common';
+import { Button, AlertBanner, NumberInput } from '../common';
 import { formatCurrency, formatQuantity } from '../../utils';
 import type { CertificateType } from '../../types';
 
@@ -313,17 +313,15 @@ export function EditOrderModal({
                   >
                     Price (EUR)
                   </label>
-                  <input
+                  <NumberInput
                     id="edit-price-input"
-                    type="number"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(v) => setPrice(v)}
                     placeholder="0.0"
-                    step="0.1"
-                    min="0"
-                    className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    decimals={2}
                     required
                     disabled={loading || cancelling}
+                    className="focus:ring-2 focus:ring-emerald-500"
                   />
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                     Original: {formatCurrency(order.price ?? 0)}
@@ -338,18 +336,15 @@ export function EditOrderModal({
                   >
                     Remaining Quantity ({order.certificateType})
                   </label>
-                  <input
+                  <NumberInput
                     id="edit-quantity-input"
-                    type="number"
                     value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
+                    onChange={(v) => setQuantity(v)}
                     placeholder="0"
-                    step="1"
-                    min="1"
-                    max={order.remainingQuantity ?? undefined}
-                    className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    decimals={0}
                     required
                     disabled={loading || cancelling}
+                    className="focus:ring-2 focus:ring-emerald-500"
                   />
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                     Max: {formatQuantity(order.remainingQuantity ?? 0)} (remaining)

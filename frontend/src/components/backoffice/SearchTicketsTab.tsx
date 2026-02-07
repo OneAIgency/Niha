@@ -269,7 +269,7 @@ export function SearchTicketsTab() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full form-select text-sm"
             >
               <option value="">All</option>
               <option value="SUCCESS">Success</option>

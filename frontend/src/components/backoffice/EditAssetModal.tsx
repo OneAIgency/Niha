@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, DollarSign, Leaf, Wind, Save, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Button, AlertBanner } from '../common';
+import { Button, AlertBanner, NumberInput } from '../common';
 import { backofficeApi } from '../../services/api';
 import { cn } from '../../utils';
 import type { AssetType } from '../../types';
@@ -171,18 +171,12 @@ export function EditAssetModal({
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                     New Balance *
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={newBalance}
-                    onChange={(e) => setNewBalance(e.target.value)}
+                    onChange={(v) => setNewBalance(v)}
                     placeholder={assetType === 'EUR' ? '0.00' : '0'}
-                    step={assetType === 'EUR' ? '0.01' : '1'}
-                    min="0"
-                    className={cn(
-                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-navy-800 text-navy-900 dark:text-white font-mono text-lg',
-                      'placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
-                      config.borderClass, config.ringClass
-                    )}
+                    decimals={assetType === 'EUR' ? 2 : 0}
+                    className={cn(config.borderClass, config.ringClass)}
                     autoFocus
                   />
                 </div>

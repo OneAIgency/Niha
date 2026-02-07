@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, RefreshCw, Leaf, Wind, X, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
-import { Button, DataTable, Badge, AlertBanner, type Column } from '../common';
+import { Button, DataTable, Badge, AlertBanner, NumberInput, type Column } from '../common';
 import { getMarketMakerBalances, getMarketMakerTransactions, createTransaction } from '../../services/api';
 import { formatQuantity, formatRelativeTime } from '../../utils';
 import { cn } from '../../utils';
@@ -371,14 +371,12 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                   Amount *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(v) => setAmount(v)}
                   placeholder="0"
-                  min="0"
-                  step="1"
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  decimals={0}
+                  className="focus:ring-2 focus:ring-emerald-500"
                   autoFocus
                 />
               </div>

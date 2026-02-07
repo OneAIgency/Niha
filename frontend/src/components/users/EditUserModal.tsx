@@ -107,7 +107,7 @@ export function EditUserModal({
               <select
                 value={editForm.role}
                 onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white"
+                className="w-full form-select"
               >
                 <option value="MM">MM (Market Maker)</option>
                 <option value="NDA">NDA</option>

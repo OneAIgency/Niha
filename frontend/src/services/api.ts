@@ -69,6 +69,7 @@ import type {
   LiquidityStatus,
   AutoTradeMarketSettings,
   AutoTradeMarketSettingsUpdate,
+  AddAssetApiRequest,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -180,7 +181,8 @@ api.interceptors.response.use(
   },
   async (error) => {
     // Standardize error response format (message always string; data.detail unchanged for modal)
-    const d = error.response?.data?.detail;
+    const data = error.response?.data;
+    const d = data?.detail;
     let message: string;
     if (typeof d === 'string') {
       message = d;
@@ -191,11 +193,10 @@ api.interceptors.response.use(
       typeof (d as { error?: string }).error === 'string'
     ) {
       message = (d as { error: string }).error;
-    } else if (
-      error.response?.data?.message &&
-      typeof error.response.data.message === 'string'
-    ) {
-      message = error.response.data.message;
+    } else if (typeof data?.message === 'string') {
+      message = data.message;
+    } else if (typeof data === 'string') {
+      message = data;
     } else {
       message = error.message || 'An error occurred';
     }
@@ -1367,12 +1368,7 @@ export const backofficeApi = {
   },
 
   // Asset Management
-  addAsset: async (entityId: string, request: {
-    asset_type: 'EUR' | 'CEA' | 'EUA';
-    amount: number;
-    reference?: string;
-    notes?: string;
-  }): Promise<MessageResponse> => {
+  addAsset: async (entityId: string, request: AddAssetApiRequest): Promise<MessageResponse> => {
     const { data } = await api.post(`/backoffice/entities/${entityId}/add-asset`, request);
     return data;
   },
@@ -1545,6 +1541,13 @@ export const cashMarketApi = {
 
   cancelOrder: async (orderId: string): Promise<MessageResponse> => {
     const { data } = await api.delete(`/cash-market/orders/${orderId}`);
+    return data;
+  },
+
+  modifyOrder: async (orderId: string, update: { price: number }): Promise<unknown> => {
+    const { data } = await api.put(`/cash-market/orders/${orderId}/price`, {
+      new_price: update.price,
+    });
     return data;
   },
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from html import escape
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -1211,10 +1211,13 @@ class TransactionTypeEnum(str, Enum):
 
 
 class AddAssetRequest(BaseModel):
-    """Request to add assets to an entity"""
+    """Request to deposit or withdraw assets for an entity"""
 
     asset_type: AssetTypeEnum
-    amount: float = Field(..., gt=0, description="Amount to add (must be positive)")
+    amount: float = Field(..., gt=0, description="Amount (positive); sign determined by operation")
+    operation: Literal["deposit", "withdraw"] = Field(
+        default="deposit", description="Deposit adds to balance, withdraw subtracts"
+    )
     reference: Optional[str] = Field(
         None, max_length=100, description="External reference"
     )

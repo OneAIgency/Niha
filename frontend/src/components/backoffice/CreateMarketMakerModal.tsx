@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bot, Check } from 'lucide-react';
-import { AlertBanner, Button } from '../common';
+import { AlertBanner, Button, NumberInput } from '../common';
 import { createMarketMaker, getMarketMakers } from '../../services/api';
 import { usePrices } from '../../hooks/usePrices';
 import { MarketType, MarketMakerType, MARKET_MAKER_TYPES } from '../../types';
@@ -281,7 +281,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   setCeaBalance('');
                   setEuaBalance('');
                 }}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full form-select"
               >
                 <option value="CEA_CASH">CEA Cash (Trade CEA with EUR)</option>
                 <option value="SWAP">Swap (Exchange CEA↔EUA)</option>
@@ -303,7 +303,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   setCeaBalance('');
                   setEuaBalance('');
                 }}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full form-select"
               >
                 {market === 'CEA_CASH' ? (
                   <>
@@ -326,14 +326,12 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                   Initial EUR Balance *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={eurBalance}
-                  onChange={(e) => setEurBalance(e.target.value)}
+                  onChange={(v) => setEurBalance(v)}
                   placeholder="10000"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  decimals={2}
+                  className="focus:ring-2 focus:ring-emerald-500"
                 />
                 <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                   EUR balance for placing buy orders
@@ -345,14 +343,12 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                   Initial CEA Balance *
                 </label>
-                <input
-                  type="number"
+                <NumberInput
                   value={ceaBalance}
-                  onChange={(e) => setCeaBalance(e.target.value)}
+                  onChange={(v) => setCeaBalance(v)}
                   placeholder="1000"
-                  min="0"
-                  step="1"
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  decimals={0}
+                  className="focus:ring-2 focus:ring-amber-500"
                 />
                 {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
                   <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
@@ -370,14 +366,12 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                     Initial CEA Balance <span className="text-navy-400">(optional)</span>
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={ceaBalance}
-                    onChange={(e) => setCeaBalance(e.target.value)}
+                    onChange={(v) => setCeaBalance(v)}
                     placeholder="0"
-                    min="0"
-                    step="1"
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    decimals={0}
+                    className="focus:ring-2 focus:ring-amber-500"
                   />
                   {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
                     <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
@@ -392,14 +386,12 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
                     Initial EUA Balance <span className="text-navy-400">(optional)</span>
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={euaBalance}
-                    onChange={(e) => setEuaBalance(e.target.value)}
+                    onChange={(v) => setEuaBalance(v)}
                     placeholder="0"
-                    min="0"
-                    step="1"
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    decimals={0}
+                    className="focus:ring-2 focus:ring-blue-500"
                   />
                   {euaBalance && calculateEurValue(euaBalance, 'EUA') !== null && (
                     <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">

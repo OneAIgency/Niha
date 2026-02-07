@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
 
 from ...core.database import get_db
+from ...core.exceptions import handle_database_error
 from ...core.security import get_funded_user
 from ...models.models import (
     AssetType,
@@ -243,7 +244,7 @@ async def place_order(
 
     # Check if user is a Market Maker (they have full freedom)
     mm_result = await db.execute(
-        select(MarketMakerClient).where(MarketMakerClient.entity_id == current_user.entity_id)
+        select(MarketMakerClient).where(MarketMakerClient.user_id == current_user.id)
     )
     is_market_maker = mm_result.scalar_one_or_none() is not None
 
@@ -262,66 +263,79 @@ async def place_order(
             detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {order.price}, expected values like 9.30, 9.40, 9.50, etc."
         )
 
-    # Create the order in database
-    new_order = Order(
-        market=MarketType.CEA_CASH,
-        entity_id=current_user.entity_id,
-        certificate_type=CertTypeEnum(order.certificate_type.value),
-        side=OrderSideEnum(order.side.value),
-        price=Decimal(str(order.price)),
-        quantity=Decimal(str(order.quantity)),
-        filled_quantity=Decimal("0"),
-        status=OrderStatus.OPEN,
-    )
+    try:
+        # Create the order in database
+        new_order = Order(
+            market=MarketType.CEA_CASH,
+            entity_id=current_user.entity_id,
+            certificate_type=CertTypeEnum(order.certificate_type.value),
+            side=OrderSideEnum(order.side.value),
+            price=Decimal(str(order.price)),
+            quantity=Decimal(str(order.quantity)),
+            filled_quantity=Decimal("0"),
+            status=OrderStatus.OPEN,
+        )
 
-    db.add(new_order)
-    await db.flush()  # Get order ID before ticket creation
+        db.add(new_order)
+        await db.flush()  # Get order ID before ticket creation
 
-    # Create audit ticket for order placement
-    ticket = await TicketService.create_ticket(
-        db=db,
-        action_type="ORDER_PLACED",
-        entity_type="Order",
-        entity_id=new_order.id,
-        status=TicketStatus.SUCCESS,
-        user_id=current_user.id,
-        request_payload={
-            "certificate_type": order.certificate_type.value,
-            "side": order.side.value,
-            "price": float(order.price),
-            "quantity": float(order.quantity),
-        },
-        response_data={
-            "order_id": str(new_order.id),
-            "status": new_order.status.value,
-        },
-        tags=["order", "cash_market", order.side.value.lower()],
-    )
+        # Create audit ticket for order placement
+        await TicketService.create_ticket(
+            db=db,
+            action_type="ORDER_PLACED",
+            entity_type="Order",
+            entity_id=new_order.id,
+            status=TicketStatus.SUCCESS,
+            user_id=current_user.id,
+            request_payload={
+                "certificate_type": order.certificate_type.value,
+                "side": order.side.value,
+                "price": float(order.price),
+                "quantity": float(order.quantity),
+            },
+            response_data={
+                "order_id": str(new_order.id),
+                "status": new_order.status.value,
+            },
+            tags=["order", "cash_market", order.side.value.lower()],
+        )
 
-    # Try to match the order against the book immediately
-    # This ensures we never have crossing orders (negative spread)
-    match_result = await LimitOrderMatcher.match_incoming_order(
-        db=db,
-        incoming_order=new_order,
-        user_id=current_user.id,
-    )
+        # Try to match the order against the book immediately
+        # This ensures we never have crossing orders (negative spread)
+        await LimitOrderMatcher.match_incoming_order(
+            db=db,
+            incoming_order=new_order,
+            user_id=current_user.id,
+        )
 
-    await db.commit()
-    await db.refresh(new_order)
+        await db.commit()
+        await db.refresh(new_order)
 
-    return OrderResponse(
-        id=new_order.id,
-        entity_id=new_order.entity_id,
-        certificate_type=new_order.certificate_type.value,
-        side=new_order.side.value,
-        price=float(new_order.price),
-        quantity=float(new_order.quantity),
-        filled_quantity=float(new_order.filled_quantity),
-        remaining_quantity=float(new_order.quantity - new_order.filled_quantity),
-        status=new_order.status.value,
-        created_at=new_order.created_at,
-        updated_at=new_order.updated_at,
-    )
+        return OrderResponse(
+            id=new_order.id,
+            entity_id=new_order.entity_id,
+            certificate_type=new_order.certificate_type.value,
+            side=new_order.side.value,
+            price=float(new_order.price),
+            quantity=float(new_order.quantity),
+            filled_quantity=float(new_order.filled_quantity),
+            remaining_quantity=float(new_order.quantity - new_order.filled_quantity),
+            status=new_order.status.value,
+            created_at=new_order.created_at,
+            updated_at=new_order.updated_at,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        if "redis" in str(e).lower() or "connection" in str(e).lower():
+            logger.error("Order placement failed (Redis/ticket): %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=503,
+                detail="Ticket service temporarily unavailable. Please try again.",
+            ) from e
+        raise handle_database_error(e, "place order", logger) from e
 
 
 @router.get("/orders/my", response_model=List[OrderResponse])
@@ -395,7 +409,7 @@ async def cancel_order(
 
     # Check if user is a Market Maker (only they can cancel)
     mm_result = await db.execute(
-        select(MarketMakerClient).where(MarketMakerClient.entity_id == current_user.entity_id)
+        select(MarketMakerClient).where(MarketMakerClient.user_id == current_user.id)
     )
     is_market_maker = mm_result.scalar_one_or_none() is not None
 

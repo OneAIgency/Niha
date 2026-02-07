@@ -507,6 +507,8 @@ For reject, delete, or destructive actions use `variant="secondary"` with the er
 </Button>
 ```
 
+Forms that offer both a primary and a destructive action in the same view (e.g. **Add Asset** modal: Deposit = primary, Withdraw = secondary with red tokens) use this pattern: primary for the additive/safe action, secondary + red for subtractive/destructive.
+
 #### Subheader nav buttons (subpage navigation)
 
 Used in backoffice and other subheader bars. States are defined in `design-tokens.css` and applied via utility classes:
@@ -574,6 +576,38 @@ Highlighting the button for the current page uses the same logic as Subheader (a
 />
 ```
 
+#### Number inputs
+
+**Numeric fields** (amounts, quantities, prices, fees, etc.) use the shared **`NumberInput`** component from `frontend/src/components/common/NumberInput.tsx`. Do not use raw `<input type="number">`.
+
+- **Default style**: `rounded-lg`, single `border`, `px-3 py-2`, `border-navy-300 dark:border-navy-600`, `bg-white dark:bg-navy-800`, `text-navy-900 dark:text-white`. Focus: `focus:ring-2 focus:ring-emerald-500`. Error: `border-red-500 focus:ring-red-500`.
+- **Formatting**: Values are displayed with **comma as thousands separator** (e.g. `1,000.50`) via `locale="en-US"` (default). The component uses `type="text"` and `inputMode="decimal"` under the hood; `onChange` receives the raw numeric string (no commas).
+- **Props**: `value` (string | number), `onChange: (value: string) => void`, `decimals?: number` (default `2`), `locale?: string` (default `'en-US'`). Optional: `label`, `error`, `icon`, `suffix`, `placeholder`, and standard input attributes (e.g. `disabled`, `required`).
+
+```tsx
+import { NumberInput } from '../common';
+
+// Amount with 2 decimals (e.g. currency)
+<NumberInput
+  value={amount}
+  onChange={(v) => setAmount(v)}
+  decimals={2}
+  placeholder="0.00"
+/>
+
+// Integer quantity
+<NumberInput value={quantity} onChange={(v) => setQuantity(v)} decimals={0} placeholder="0" />
+
+// With label and error
+<NumberInput
+  label="Price (EUR)"
+  value={price}
+  onChange={(v) => setPrice(v)}
+  decimals={2}
+  error={priceError}
+/>
+```
+
 ---
 
 ### Badges
@@ -631,6 +665,16 @@ import { ClientStatusBadge } from '@/components/common';
 <ClientStatusBadge role={deposit.user_role ?? deposit.userRole} />
 // Renders role (e.g. FUNDING, APPROVED) or "—" when missing
 ```
+
+#### Deposit & Withdrawal History (User Detail, Assets tab)
+
+Unified list of wire deposits and add-asset transactions. Use design tokens consistently:
+
+- **Wire deposits**: `DollarSign` icon (emerald), Badge `variant="success"` for cleared, `variant="danger"` for rejected. Use `formatCurrency` from `utils` for amount display.
+- **Add-asset deposits**: `DollarSign` icon, Badge `variant="success"`, positive amount.
+- **Add-asset withdrawals**: `Minus` icon (red-500), Badge `variant="danger"`, amount with minus prefix (e.g. `-€1,000.00`). Follows "Red = sell/negative" trading semantics.
+
+Merge and sort via `buildDepositAndWithdrawalHistory` (`utils/depositHistory.ts`); cap at 50 items.
 
 ---
 
