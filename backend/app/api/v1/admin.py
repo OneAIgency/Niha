@@ -23,6 +23,7 @@ from ...models.models import (
     AutoTradeMarketSettings,
     AutoTradeRule,
     AutoTradeSettings,
+    CashMarketTrade,
     Certificate,
     CertificateStatus,
     CertificateType,
@@ -36,6 +37,7 @@ from ...models.models import (
     MailProvider,
     MarketMakerClient,
     MarketMakerType,
+    MarketType,
     Order,
     OrderSide,
     OrderStatus,
@@ -2222,7 +2224,13 @@ async def get_all_market_settings(
             avg_order_count=settings.avg_order_count,
             min_order_volume_eur=settings.min_order_volume_eur,
             volume_variety=settings.volume_variety,
+            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
+            max_orders_per_price_level=settings.max_orders_per_price_level,
+            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
+            min_order_value_variation_pct=settings.min_order_value_variation_pct,
             interval_seconds=settings.interval_seconds,
+            order_interval_variation_pct=settings.order_interval_variation_pct,
+            max_order_volume_eur=settings.max_order_volume_eur,
             max_liquidity_threshold=settings.max_liquidity_threshold,
             internal_trade_interval=settings.internal_trade_interval,
             internal_trade_volume_min=settings.internal_trade_volume_min,
@@ -2236,6 +2244,468 @@ async def get_all_market_settings(
         ))
 
     return responses
+
+
+@router.post("/auto-trade-market-settings/refresh-cea")
+async def refresh_cea_market(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Refresh CEA Cash market: cancel all MM orders, fetch scraped price,
+    and recreate BID + ASK orders from the auto-trade market settings.
+
+    Rules:
+    - best_bid = scraped CEA price (rounded to 0.1)
+    - best_ask = best_bid + 0.1
+    - BID orders placed from best_bid downward (each -0.1 EUR)
+    - ASK orders placed from best_ask upward (each +0.1 EUR)
+    - Contiguous price levels (no gaps > 0.1)
+    - Respects avg_order_count, max_orders_per_price_level, min/max order volume
+    """
+    import random
+    from sqlalchemy import and_
+    from app.services.price_scraper import price_scraper
+
+    try:
+        # 1. Cancel all OPEN/PARTIALLY_FILLED CEA_CASH MM orders
+        cancel_result = await db.execute(
+            select(Order).where(
+                and_(
+                    Order.market == MarketType.CEA_CASH,
+                    Order.market_maker_id.isnot(None),
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+        )
+        orders_to_cancel = list(cancel_result.scalars().all())
+        orders_cancelled = len(orders_to_cancel)
+
+        for order in orders_to_cancel:
+            order.status = OrderStatus.CANCELLED
+            order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        await db.flush()
+
+        # 2. Fetch scraped CEA price
+        prices = await price_scraper.get_current_prices()
+        cea_price_raw = Decimal(str(prices["cea"]["price"]))
+        # Round to nearest 0.1
+        cea_price = (cea_price_raw / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+
+        # Mean-reversion price deviation:
+        # - Read last deviation from Redis; decay it 60% + add small noise
+        # - Large deviations die quickly: +18% → ~+7% → ~+3% → ~+1%
+        # - Fresh start (no history): standard gauss(0, 0.07)
+        from app.core.security import RedisManager
+        DECAY_FACTOR = 0.4       # keep 40% of previous deviation
+        NOISE_SIGMA = 0.03       # small random noise on each refresh
+        MAX_DEVIATION = 0.20     # hard cap ±20%
+        REDIS_KEY = "cea:last_deviation"
+
+        try:
+            r = await RedisManager.get_redis()
+            last_raw = await r.get(REDIS_KEY)
+            if last_raw is not None:
+                last_dev = float(last_raw)
+                # Decay toward zero + fresh noise
+                deviation_pct = last_dev * DECAY_FACTOR + random.gauss(0, NOISE_SIGMA)
+            else:
+                # First call or expired — fresh deviation
+                deviation_pct = random.gauss(0, 0.07)
+            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, deviation_pct))
+            # Store for next call (TTL 1h — resets if nobody refreshes for a while)
+            await r.set(REDIS_KEY, str(round(deviation_pct, 6)), ex=3600)
+        except Exception:
+            # Redis unavailable — fallback to stateless gauss
+            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, random.gauss(0, 0.07)))
+
+        mid_price = cea_price * (1 + Decimal(str(round(deviation_pct, 4))))
+        mid_price = (mid_price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
+
+        best_bid = mid_price
+        best_ask = mid_price + Decimal("0.1")
+
+        # 3. Load market settings for CEA_BID and CEA_ASK
+        bid_settings_result = await db.execute(
+            select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == "CEA_BID")
+        )
+        bid_settings = bid_settings_result.scalar_one_or_none()
+
+        ask_settings_result = await db.execute(
+            select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == "CEA_ASK")
+        )
+        ask_settings = ask_settings_result.scalar_one_or_none()
+
+        if not bid_settings or not ask_settings:
+            raise HTTPException(status_code=404, detail="CEA_BID or CEA_ASK settings not found")
+
+        # 4. Get active market makers
+        buyer_result = await db.execute(
+            select(MarketMakerClient).where(
+                and_(
+                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER,
+                )
+            )
+        )
+        buyers = list(buyer_result.scalars().all())
+
+        seller_result = await db.execute(
+            select(MarketMakerClient).where(
+                and_(
+                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
+                )
+            )
+        )
+        sellers = list(seller_result.scalars().all())
+
+        if not buyers or not sellers:
+            raise HTTPException(status_code=400, detail="No active CEA_BUYER or CEA_SELLER market makers")
+
+        bid_orders_created = 0
+        ask_orders_created = 0
+        price_step = Decimal("0.1")
+
+        MAX_ORDERS_PER_LEVEL = 3  # hard cap per price level
+
+        # Helper: random volume uniformly between min_eur and max_eur
+        def random_volume_eur(min_eur, max_eur):
+            """Random EUR value between min and max. Gives true diversity."""
+            lo = float(min_eur) if min_eur else 1.0
+            hi = float(max_eur) if max_eur else lo * 10
+            if hi <= lo:
+                hi = lo * 2
+            return Decimal(str(round(random.uniform(lo, hi), 2)))
+
+        # 5. Create BID orders (from best_bid downward)
+        bid_min_vol = bid_settings.min_order_volume_eur
+        bid_max_vol = bid_settings.max_order_volume_eur
+        bid_target = bid_settings.target_liquidity or Decimal("50000000")
+        bid_max_orders = int(bid_settings.avg_order_count or 200) * 2  # safety cap
+
+        current_price = best_bid
+        orders_at_level = 0
+        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        buyer_idx = 0
+        bid_liquidity_eur = Decimal("0")
+
+        for _ in range(bid_max_orders):
+            if current_price <= Decimal("0.1") or bid_liquidity_eur >= bid_target:
+                break
+
+            if orders_at_level >= max_at_this_level:
+                current_price -= price_step
+                current_price = current_price.quantize(Decimal("0.1"))
+                orders_at_level = 0
+                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+                if current_price <= Decimal("0"):
+                    break
+
+            # Cap max volume by remaining budget
+            remaining = bid_target - bid_liquidity_eur
+            effective_max = min(bid_max_vol, remaining) if bid_max_vol else remaining
+            if effective_max < bid_min_vol:
+                break  # Can't even fit one min-size order
+
+            order_value_eur = random_volume_eur(bid_min_vol, effective_max)
+            quantity = (order_value_eur / current_price).quantize(Decimal("1"))
+            if quantity < 1:
+                quantity = Decimal("1")
+
+            mm = buyers[buyer_idx % len(buyers)]
+            buyer_idx += 1
+
+            order = Order(
+                market=MarketType.CEA_CASH,
+                market_maker_id=mm.id,
+                certificate_type=CertificateType.CEA,
+                side=OrderSide.BUY,
+                price=current_price,
+                quantity=quantity,
+                filled_quantity=Decimal("0"),
+                status=OrderStatus.OPEN,
+            )
+            db.add(order)
+            bid_orders_created += 1
+            orders_at_level += 1
+            bid_liquidity_eur += current_price * quantity
+
+        # 6. Create ASK orders (from best_ask upward)
+        ask_min_vol = ask_settings.min_order_volume_eur
+        ask_max_vol = ask_settings.max_order_volume_eur
+        ask_target = ask_settings.target_liquidity or Decimal("90000000")
+        ask_max_orders = int(ask_settings.avg_order_count or 200) * 2  # safety cap
+
+        current_price = best_ask
+        orders_at_level = 0
+        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        seller_idx = 0
+        ask_liquidity_eur = Decimal("0")
+
+        for _ in range(ask_max_orders):
+            if ask_liquidity_eur >= ask_target:
+                break
+
+            if orders_at_level >= max_at_this_level:
+                current_price += price_step
+                current_price = current_price.quantize(Decimal("0.1"))
+                orders_at_level = 0
+                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+
+            # Cap max volume by remaining budget
+            remaining = ask_target - ask_liquidity_eur
+            effective_max = min(ask_max_vol, remaining) if ask_max_vol else remaining
+            if effective_max < ask_min_vol:
+                break
+
+            order_value_eur = random_volume_eur(ask_min_vol, effective_max)
+            quantity = (order_value_eur / current_price).quantize(Decimal("1"))
+            if quantity < 1:
+                quantity = Decimal("1")
+
+            mm = sellers[seller_idx % len(sellers)]
+            seller_idx += 1
+
+            order = Order(
+                market=MarketType.CEA_CASH,
+                market_maker_id=mm.id,
+                certificate_type=CertificateType.CEA,
+                side=OrderSide.SELL,
+                price=current_price,
+                quantity=quantity,
+                filled_quantity=Decimal("0"),
+                status=OrderStatus.OPEN,
+            )
+            db.add(order)
+            ask_orders_created += 1
+            orders_at_level += 1
+            ask_liquidity_eur += current_price * quantity
+
+        await db.commit()
+
+        return {
+            "success": True,
+            "orders_cancelled": orders_cancelled,
+            "cea_price_eur": str(cea_price),
+            "new_best_bid": str(best_bid),
+            "mid_price_eur": str(mid_price),
+            "price_deviation_pct": str(round(deviation_pct * 100, 1)),
+            "new_best_bid": str(best_bid),
+            "new_best_ask": str(best_ask),
+            "bid_orders_created": bid_orders_created,
+            "ask_orders_created": ask_orders_created,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error refreshing CEA market: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh CEA market: {str(e)}")
+
+
+@router.post("/auto-trade-market-settings/place-random-order")
+async def place_random_order(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Place a single random MM order in the CEA cash market.
+    Randomly picks: BUY or SELL, limit or market-like, price near best bid/ask.
+    Used by the frontend on a 10-180s timer to simulate organic activity.
+    """
+    import random
+    from sqlalchemy import and_
+    from app.services.limit_order_matching import LimitOrderMatcher
+
+    try:
+        # Pick a random side
+        side = random.choice([OrderSide.BUY, OrderSide.SELL])
+
+        # Get the right MM type for this side
+        mm_type = MarketMakerType.CEA_BUYER if side == OrderSide.BUY else MarketMakerType.CEA_SELLER
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(
+                and_(
+                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.mm_type == mm_type,
+                )
+            )
+        )
+        mms = list(mm_result.scalars().all())
+        if not mms:
+            raise HTTPException(status_code=400, detail=f"No active {mm_type.value} market makers")
+        mm = random.choice(mms)
+
+        # Get current best bid/ask
+        best_bid_result = await db.execute(
+            select(func.max(Order.price)).where(
+                and_(
+                    Order.market == MarketType.CEA_CASH,
+                    Order.certificate_type == CertificateType.CEA,
+                    Order.side == OrderSide.BUY,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+        )
+        best_bid = best_bid_result.scalar()
+
+        best_ask_result = await db.execute(
+            select(func.min(Order.price)).where(
+                and_(
+                    Order.market == MarketType.CEA_CASH,
+                    Order.certificate_type == CertificateType.CEA,
+                    Order.side == OrderSide.SELL,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+        )
+        best_ask = best_ask_result.scalar()
+
+        if not best_bid or not best_ask:
+            raise HTTPException(status_code=400, detail="No orderbook — run Refresh CEA first")
+
+        price_step = Decimal("0.1")
+
+        # Decide: limit order (80%) or market-crossing order (20%)
+        is_market_like = random.random() < 0.20
+
+        if side == OrderSide.BUY:
+            if is_market_like:
+                # Market-like: buy at best_ask (will match immediately)
+                price = best_ask
+            else:
+                # Limit: place at or slightly below best_bid (0 to -3 ticks)
+                offset = random.randint(0, 3)
+                price = best_bid - price_step * offset
+        else:
+            if is_market_like:
+                # Market-like: sell at best_bid (will match immediately)
+                price = best_bid
+            else:
+                # Limit: place at or slightly above best_ask (0 to +3 ticks)
+                offset = random.randint(0, 3)
+                price = best_ask + price_step * offset
+
+        price = max(price, price_step)  # floor at 0.1
+        price = price.quantize(Decimal("0.1"))
+
+        # Random volume: 10K - 500K EUR equivalent
+        volume_eur = Decimal(str(round(random.uniform(10_000, 500_000), 2)))
+        quantity = (volume_eur / price).quantize(Decimal("1"))
+        if quantity < 1:
+            quantity = Decimal("1")
+
+        order = Order(
+            market=MarketType.CEA_CASH,
+            market_maker_id=mm.id,
+            certificate_type=CertificateType.CEA,
+            side=side,
+            price=price,
+            quantity=quantity,
+            filled_quantity=Decimal("0"),
+            status=OrderStatus.OPEN,
+        )
+        db.add(order)
+        await db.flush()
+
+        # Try to match if it crosses the spread
+        trades_matched = 0
+        if is_market_like:
+            result = await LimitOrderMatcher.match_incoming_order(
+                db=db,
+                incoming_order=order,
+                user_id=current_user.id,
+            )
+            trades_matched = result.trades_created if result else 0
+
+        await db.commit()
+
+        return {
+            "success": True,
+            "side": side.value,
+            "price": str(price),
+            "quantity": str(quantity),
+            "volume_eur": str(volume_eur),
+            "is_market_like": is_market_like,
+            "trades_matched": trades_matched,
+            "market_maker": mm.name,
+            "status": order.status.value,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error placing random order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to place random order: {str(e)}")
+
+
+@router.get("/auto-trade-market-settings/mm-activity")
+async def get_mm_activity(
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """
+    Get recent MM orders and trades for the activity feed.
+    Returns orders and trades merged chronologically, newest first.
+    """
+    from sqlalchemy import and_, literal
+
+    # Recent MM orders (all statuses)
+    orders_result = await db.execute(
+        select(Order)
+        .where(
+            and_(
+                Order.market_maker_id.isnot(None),
+                Order.market == MarketType.CEA_CASH,
+            )
+        )
+        .order_by(Order.created_at.desc())
+        .limit(limit)
+    )
+    orders = list(orders_result.scalars().all())
+
+    # Recent trades
+    trades_result = await db.execute(
+        select(CashMarketTrade)
+        .where(CashMarketTrade.certificate_type == CertificateType.CEA)
+        .order_by(CashMarketTrade.executed_at.desc())
+        .limit(limit)
+    )
+    trades = list(trades_result.scalars().all())
+
+    # Build unified activity list
+    activity = []
+
+    for o in orders:
+        activity.append({
+            "type": "order",
+            "id": str(o.id),
+            "side": o.side.value,
+            "price": str(o.price),
+            "quantity": str(o.quantity),
+            "filled_quantity": str(o.filled_quantity or 0),
+            "status": o.status.value,
+            "timestamp": o.created_at.isoformat() if o.created_at else None,
+        })
+
+    for t in trades:
+        activity.append({
+            "type": "trade",
+            "id": str(t.id),
+            "price": str(t.price),
+            "quantity": str(t.quantity),
+            "timestamp": t.executed_at.isoformat() if t.executed_at else None,
+        })
+
+    # Sort by timestamp descending
+    activity.sort(key=lambda x: x["timestamp"] or "", reverse=True)
+
+    return activity[:limit]
 
 
 @router.get("/auto-trade-market-settings/{market_key}", response_model=AutoTradeMarketSettingsResponse)
@@ -2286,7 +2756,13 @@ async def get_market_settings(
         avg_order_count=settings.avg_order_count,
         min_order_volume_eur=settings.min_order_volume_eur,
         volume_variety=settings.volume_variety,
+        avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
+        max_orders_per_price_level=settings.max_orders_per_price_level,
+        max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
+        min_order_value_variation_pct=settings.min_order_value_variation_pct,
         interval_seconds=settings.interval_seconds,
+        order_interval_variation_pct=settings.order_interval_variation_pct,
+        max_order_volume_eur=settings.max_order_volume_eur,
         max_liquidity_threshold=settings.max_liquidity_threshold,
         internal_trade_interval=settings.internal_trade_interval,
         internal_trade_volume_min=settings.internal_trade_volume_min,
@@ -2363,7 +2839,13 @@ async def update_market_settings(
             avg_order_count=settings.avg_order_count,
             min_order_volume_eur=settings.min_order_volume_eur,
             volume_variety=settings.volume_variety,
+            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
+            max_orders_per_price_level=settings.max_orders_per_price_level,
+            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
+            min_order_value_variation_pct=settings.min_order_value_variation_pct,
             interval_seconds=settings.interval_seconds,
+            order_interval_variation_pct=settings.order_interval_variation_pct,
+            max_order_volume_eur=settings.max_order_volume_eur,
             max_liquidity_threshold=settings.max_liquidity_threshold,
             internal_trade_interval=settings.internal_trade_interval,
             internal_trade_volume_min=settings.internal_trade_volume_min,

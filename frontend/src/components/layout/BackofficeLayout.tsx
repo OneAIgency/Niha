@@ -5,7 +5,6 @@ import {
   Users,
   Activity,
   Bot,
-  ShoppingCart,
   Zap,
   UserPlus,
   Percent,
@@ -13,7 +12,7 @@ import {
 import { Subheader, SubSubHeader, SubheaderNavButton } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/market-orders' | '/backoffice/liquidity' | '/backoffice/fee-settings' | '/backoffice/auto-trade' | '/backoffice/logging' | '/users';
+type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/fee-settings' | '/backoffice/auto-trade' | '/backoffice/logging' | '/users';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -69,18 +68,6 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-blue-500',
     description: 'Manage MM clients and assets',
   },
-  '/backoffice/market-orders': {
-    icon: ShoppingCart,
-    iconBg: 'bg-emerald-500/20',
-    iconColor: 'text-emerald-500',
-    description: 'Place orders for MM clients',
-  },
-  '/backoffice/liquidity': {
-    icon: Zap,
-    iconBg: 'bg-amber-500/20',
-    iconColor: 'text-amber-500',
-    description: 'Create liquidity',
-  },
   '/backoffice/fee-settings': {
     icon: Percent,
     iconBg: 'bg-emerald-500/20',
@@ -110,9 +97,7 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
 const BACKOFFICE_NAV = [
   { to: '/backoffice/onboarding', label: 'Onboarding', icon: UserPlus },
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
-  { to: '/backoffice/market-orders', label: 'Market Orders', icon: ShoppingCart },
-  { to: '/backoffice/liquidity', label: 'Liquidity', icon: Zap },
-  { to: '/backoffice/fee-settings', label: 'Fees', icon: Percent },
+{ to: '/backoffice/fee-settings', label: 'Fees', icon: Percent },
   { to: '/backoffice/auto-trade', label: 'Auto Trade', icon: Activity },
   { to: '/backoffice/logging', label: 'Audit Logging', icon: FileText },
   { to: '/users', label: 'Users', icon: Users },

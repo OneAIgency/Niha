@@ -783,18 +783,18 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
     asks = sorted(ask_levels.values(), key=lambda x: x["price"])
     bids = sorted(bid_levels.values(), key=lambda x: x["price"], reverse=True)
 
-    # Calculate cumulative quantities
+    # Calculate cumulative quantities (CEA/EUA: integers only)
     ask_cumulative = 0
     for ask in asks:
         ask_cumulative += ask["quantity"]
-        ask["cumulative_quantity"] = round(ask_cumulative, 2)
-        ask["quantity"] = round(ask["quantity"], 2)
+        ask["cumulative_quantity"] = int(round(ask_cumulative))
+        ask["quantity"] = int(round(ask["quantity"]))
 
     bid_cumulative = 0
     for bid in bids:
         bid_cumulative += bid["quantity"]
-        bid["cumulative_quantity"] = round(bid_cumulative, 2)
-        bid["quantity"] = round(bid["quantity"], 2)
+        bid["cumulative_quantity"] = int(round(bid_cumulative))
+        bid["quantity"] = int(round(bid["quantity"]))
 
     # Market stats
     best_ask = asks[0]["price"] if asks else None
@@ -831,8 +831,10 @@ async def get_real_orderbook(db: AsyncSession, certificate_type: str) -> dict:
         # No trades in 24h - use current best prices as fallback
         high_24h = last_price
         low_24h = last_price
-        volume_24h = 0.0
+        volume_24h = 0
         change_24h = 0.0
+
+    volume_24h = int(round(volume_24h)) if trades_24h else 0
 
     return {
         "certificate_type": certificate_type,

@@ -14,7 +14,7 @@ import { Card } from '../common';
 import { SettlementDetails } from './SettlementDetails';
 import { settlementApi } from '../../services/api';
 import type { SettlementBatch } from '../../types';
-import { formatCurrency, formatQuantity } from '../../utils';
+import { formatCurrency, formatCertificateQuantity } from '../../utils';
 
 export function PendingSettlements() {
   const [settlements, setSettlements] = useState<SettlementBatch[]>([]);
@@ -214,7 +214,7 @@ export function PendingSettlements() {
                     <div>
                       <div className="text-xs text-navy-500 dark:text-navy-400 mb-0.5">Quantity</div>
                       <div className="text-sm font-mono font-medium text-navy-900 dark:text-white">
-                        {formatQuantity(settlement.quantity)}
+                        {formatCertificateQuantity(settlement.quantity)}
                       </div>
                     </div>
                     <div>

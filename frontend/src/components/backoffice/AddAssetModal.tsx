@@ -124,9 +124,14 @@ export function AddAssetModal({
     setError(null);
 
     try {
+      // CEA/EUA: whole certificates only — send integer
+      const amountToSend =
+        selectedAsset === 'CEA' || selectedAsset === 'EUA'
+          ? Math.round(amountNum)
+          : amountNum;
       await backofficeApi.addAsset(entityId, {
         asset_type: selectedAsset,
-        amount: amountNum,
+        amount: amountToSend,
         operation,
         reference: reference || undefined,
         notes: notes || undefined,

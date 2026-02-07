@@ -5,7 +5,7 @@ from html import escape
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 def sanitize_string(value: Optional[str]) -> Optional[str]:
@@ -14,6 +14,32 @@ def sanitize_string(value: Optional[str]) -> Optional[str]:
         return None
     # Strip whitespace and escape HTML entities
     return escape(value.strip())
+
+
+def _coerce_certificate_quantity(value: Any) -> int:
+    """Coerce CEA/EUA quantity to integer (whole certificates only)."""
+    if value is None:
+        raise ValueError("Quantity is required")
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        raise ValueError("Quantity must be a number")
+    if n != int(round(n)) or n <= 0:
+        raise ValueError("CEA/EUA quantity must be a positive integer")
+    return int(round(n))
+
+
+def _coerce_certificate_quantity_optional(value: Any) -> Optional[int]:
+    """Coerce optional CEA/EUA quantity to integer."""
+    if value is None:
+        return None
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        raise ValueError("Quantity must be a number")
+    if n != int(round(n)) or n <= 0:
+        raise ValueError("CEA/EUA quantity must be a positive integer")
+    return int(round(n))
 
 
 # Enums
@@ -254,19 +280,24 @@ class EntityResponse(BaseModel):
         from_attributes = True
 
 
-# Certificate Schemas
+# Certificate Schemas (CEA/EUA quantities are integers only)
 class CertificateCreate(BaseModel):
     certificate_type: CertificateType
-    quantity: float = Field(..., gt=0)
+    quantity: int = Field(..., gt=0, description="Whole certificates only")
     unit_price: float = Field(..., gt=0)
     vintage_year: Optional[int] = Field(None, ge=2020, le=2030)
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> int:
+        return _coerce_certificate_quantity(v)
 
 
 class CertificateResponse(BaseModel):
     id: UUID
     anonymous_code: str
     certificate_type: str
-    quantity: float
+    quantity: int
     unit_price: float
     vintage_year: Optional[int]
     status: str
@@ -279,23 +310,28 @@ class CertificateResponse(BaseModel):
 class MarketplaceListing(BaseModel):
     anonymous_code: str
     certificate_type: str
-    quantity: float
+    quantity: int
     unit_price: float
     vintage_year: Optional[int]
     created_at: datetime
 
 
-# Trade Schemas
+# Trade Schemas (CEA/EUA quantities are integers only)
 class TradeCreate(BaseModel):
     certificate_id: UUID
-    quantity: float = Field(..., gt=0)
+    quantity: int = Field(..., gt=0)
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> int:
+        return _coerce_certificate_quantity(v)
 
 
 class TradeResponse(BaseModel):
     id: UUID
     trade_type: str
     certificate_type: str
-    quantity: float
+    quantity: int
     price_per_unit: float
     total_value: float
     status: str
@@ -305,12 +341,17 @@ class TradeResponse(BaseModel):
         from_attributes = True
 
 
-# Swap Schemas
+# Swap Schemas (CEA/EUA quantities are integers only)
 class SwapCreate(BaseModel):
     from_type: CertificateType
     to_type: CertificateType
-    quantity: float = Field(..., gt=0)
+    quantity: int = Field(..., gt=0)
     desired_rate: Optional[float] = Field(None, gt=0)
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> int:
+        return _coerce_certificate_quantity(v)
 
 
 class SwapResponse(BaseModel):
@@ -318,7 +359,7 @@ class SwapResponse(BaseModel):
     anonymous_code: str
     from_type: str
     to_type: str
-    quantity: float
+    quantity: int
     desired_rate: Optional[float]
     status: str
     created_at: datetime
@@ -354,10 +395,10 @@ class PriceHistoryResponse(BaseModel):
     data: List[PriceHistoryItem]
 
 
-# Dashboard Schemas
+# Dashboard Schemas (CEA/EUA volumes are integers only)
 class PortfolioSummary(BaseModel):
-    total_eua: float
-    total_cea: float
+    total_eua: int
+    total_cea: int
     total_value_usd: float
     pending_swaps: int
     completed_trades: int
@@ -617,12 +658,17 @@ class PaginatedResponse(BaseModel):
     pagination: Dict[str, int]
 
 
-# CEA Cash Market Order Schemas
+# CEA Cash Market Order Schemas (CEA quantities are integers only)
 class OrderCreate(BaseModel):
     certificate_type: CertificateType
     side: OrderSide
     price: float = Field(..., gt=0)
-    quantity: float = Field(..., gt=0)
+    quantity: int = Field(..., gt=0, description="Whole CEA certificates only")
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> int:
+        return _coerce_certificate_quantity(v)
 
 
 class OrderResponse(BaseModel):
@@ -631,9 +677,9 @@ class OrderResponse(BaseModel):
     certificate_type: str
     side: str
     price: float
-    quantity: float
-    filled_quantity: float
-    remaining_quantity: float
+    quantity: int
+    filled_quantity: int
+    remaining_quantity: int
     status: str
     created_at: datetime
     updated_at: Optional[datetime]
@@ -644,9 +690,9 @@ class OrderResponse(BaseModel):
 
 class OrderBookLevel(BaseModel):
     price: float
-    quantity: float
+    quantity: int
     order_count: int
-    cumulative_quantity: float
+    cumulative_quantity: int
 
 
 # =============================================================================
@@ -655,11 +701,11 @@ class OrderBookLevel(BaseModel):
 
 
 class OrderFill(BaseModel):
-    """Single fill from the order book"""
+    """Single fill from the order book (CEA quantity is integer)"""
 
     seller_code: str
     price: float
-    quantity: float
+    quantity: int
     cost: float
 
 
@@ -671,7 +717,7 @@ class OrderPreviewRequest(BaseModel):
     amount_eur: Optional[float] = Field(
         None, gt=0, description="Amount in EUR to spend (for BUY)"
     )
-    quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
+    quantity: Optional[int] = Field(None, gt=0, description="Quantity to buy/sell (whole CEA only)")
     order_type: OrderType = OrderType.MARKET
     limit_price: Optional[float] = Field(
         None, gt=0, description="Limit price (required for LIMIT orders)"
@@ -680,9 +726,14 @@ class OrderPreviewRequest(BaseModel):
         False, description="Only execute if entire order can be filled"
     )
 
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> Optional[int]:
+        return _coerce_certificate_quantity_optional(v)
+
 
 class OrderPreviewResponse(BaseModel):
-    """Response with preview of order execution"""
+    """Response with preview of order execution (CEA quantities are integers)"""
 
     certificate_type: str
     side: str
@@ -690,13 +741,13 @@ class OrderPreviewResponse(BaseModel):
 
     # Input parameters
     amount_eur: Optional[float] = None
-    quantity_requested: Optional[float] = None
+    quantity_requested: Optional[int] = None
     limit_price: Optional[float] = None
     all_or_none: bool = False
 
     # Calculated fills
     fills: List[OrderFill] = []
-    total_quantity: float
+    total_quantity: int
     total_cost_gross: float  # Before fees
 
     # Price analysis
@@ -729,10 +780,15 @@ class MarketOrderRequest(BaseModel):
     amount_eur: Optional[float] = Field(
         None, gt=0, description="Amount in EUR to spend (for BUY)"
     )
-    quantity: Optional[float] = Field(None, gt=0, description="Quantity to buy/sell")
+    quantity: Optional[int] = Field(None, gt=0, description="Quantity to buy/sell (whole CEA only)")
     all_or_none: bool = Field(
         False, description="Only execute if entire order can be filled"
     )
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> Optional[int]:
+        return _coerce_certificate_quantity_optional(v)
 
 
 class LimitOrderRequest(BaseModel):
@@ -741,14 +797,19 @@ class LimitOrderRequest(BaseModel):
     certificate_type: CertificateType
     side: OrderSide
     price: float = Field(..., gt=0, description="Limit price")
-    quantity: float = Field(..., gt=0, description="Quantity to buy/sell")
+    quantity: int = Field(..., gt=0, description="Quantity to buy/sell (whole CEA only)")
     all_or_none: bool = Field(
         False, description="Only execute if entire order can be filled"
     )
 
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def quantity_int(cls, v: Any) -> int:
+        return _coerce_certificate_quantity(v)
+
 
 class OrderExecutionResponse(BaseModel):
-    """Response after order execution"""
+    """Response after order execution (CEA quantities are integers)"""
 
     success: bool
     order_id: Optional[UUID] = None
@@ -760,7 +821,7 @@ class OrderExecutionResponse(BaseModel):
     order_type: str
 
     # What was filled
-    total_quantity: float
+    total_quantity: int
     total_cost_gross: float
     platform_fee: float
     total_cost_net: float
@@ -771,7 +832,7 @@ class OrderExecutionResponse(BaseModel):
 
     # Updated balances
     eur_balance: float
-    certificate_balance: float
+    certificate_balance: int
 
 
 class OrderBookResponse(BaseModel):
@@ -782,7 +843,7 @@ class OrderBookResponse(BaseModel):
     best_bid: Optional[float]
     best_ask: Optional[float]
     last_price: Optional[float]
-    volume_24h: float
+    volume_24h: int
     change_24h: float
     high_24h: Optional[float] = None
     low_24h: Optional[float] = None
@@ -790,7 +851,7 @@ class OrderBookResponse(BaseModel):
 
 class MarketDepthPoint(BaseModel):
     price: float
-    cumulative_quantity: float
+    cumulative_quantity: int
 
 
 class MarketDepthResponse(BaseModel):
@@ -803,7 +864,7 @@ class CashMarketTradeResponse(BaseModel):
     id: UUID
     certificate_type: str
     price: float
-    quantity: float
+    quantity: int
     side: str  # BUY if taker was buyer, SELL if taker was seller
     executed_at: datetime
 
@@ -817,7 +878,7 @@ class MarketStatsResponse(BaseModel):
     change_24h: float
     high_24h: float
     low_24h: float
-    volume_24h: float
+    volume_24h: int
     total_bids: int
     total_asks: int
 
@@ -1211,10 +1272,10 @@ class TransactionTypeEnum(str, Enum):
 
 
 class AddAssetRequest(BaseModel):
-    """Request to deposit or withdraw assets for an entity"""
+    """Request to deposit or withdraw assets for an entity. CEA/EUA amounts are whole numbers only."""
 
     asset_type: AssetTypeEnum
-    amount: float = Field(..., gt=0, description="Amount (positive); sign determined by operation")
+    amount: float = Field(..., gt=0, description="Amount (positive); sign determined by operation. Integer when asset_type is CEA or EUA.")
     operation: Literal["deposit", "withdraw"] = Field(
         default="deposit", description="Deposit adds to balance, withdraw subtracts"
     )
@@ -1223,13 +1284,20 @@ class AddAssetRequest(BaseModel):
     )
     notes: Optional[str] = Field(None, description="Admin notes")
 
+    @model_validator(mode="after")
+    def cea_eua_amount_integer(self) -> "AddAssetRequest":
+        if self.asset_type in (AssetTypeEnum.CEA, AssetTypeEnum.EUA):
+            if self.amount != int(round(self.amount)):
+                raise ValueError("CEA and EUA amounts must be whole numbers (no fractional certificates)")
+        return self
+
 
 class EntityHoldingResponse(BaseModel):
-    """Single asset holding for an entity"""
+    """Single asset holding for an entity. CEA/EUA quantity is integer."""
 
     entity_id: UUID
     asset_type: str
-    quantity: float
+    quantity: float  # API passes int for CEA/EUA, float for EUR
     updated_at: datetime
 
     class Config:
@@ -1237,13 +1305,13 @@ class EntityHoldingResponse(BaseModel):
 
 
 class AssetTransactionResponse(BaseModel):
-    """Asset transaction record for audit trail"""
+    """Asset transaction record for audit trail. CEA/EUA amount and balances are integers."""
 
     id: UUID
     entity_id: UUID
     asset_type: str
     transaction_type: str
-    amount: float
+    amount: float  # API passes int for CEA/EUA
     balance_before: float
     balance_after: float
     reference: Optional[str]
@@ -1256,13 +1324,13 @@ class AssetTransactionResponse(BaseModel):
 
 
 class EntityAssetsResponse(BaseModel):
-    """Complete asset overview for an entity"""
+    """Complete asset overview for an entity. CEA/EUA balances are integers."""
 
     entity_id: UUID
     entity_name: str
     eur_balance: float = 0
-    cea_balance: float = 0
-    eua_balance: float = 0
+    cea_balance: float = 0  # Integer in API response
+    eua_balance: float = 0  # Integer in API response
     recent_transactions: List[AssetTransactionResponse] = []
 
 
@@ -1313,8 +1381,8 @@ class MarketMakerResponse(BaseModel):
     is_active: bool
     current_balances: Dict[str, MarketMakerBalance]  # {CEA: {...}, EUA: {...}}
     eur_balance: Optional[Decimal] = None
-    cea_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
-    eua_balance: Optional[Decimal] = None  # Flattened for frontend compatibility
+    cea_balance: Optional[Decimal] = None  # Flattened; integer for CEA
+    eua_balance: Optional[Decimal] = None  # Flattened; integer for EUA
     total_orders: int = 0
     total_trades: int = 0
     created_at: datetime
@@ -1324,11 +1392,11 @@ class MarketMakerResponse(BaseModel):
         from_attributes = True
 
 
-# Asset Transaction Schemas
+# Asset Transaction Schemas (CEA/EUA amount and balance_after are integers)
 class AssetTransactionCreate(BaseModel):
     certificate_type: str  # CEA, EUA
     transaction_type: str  # DEPOSIT, WITHDRAWAL
-    amount: Decimal = Field(..., gt=0)
+    amount: Decimal = Field(..., gt=0)  # Integer for CEA/EUA
     notes: Optional[str] = None
 
 
@@ -1338,8 +1406,8 @@ class MarketMakerTransactionResponse(BaseModel):
     market_maker_id: UUID
     certificate_type: str
     transaction_type: str
-    amount: Decimal
-    balance_after: Decimal
+    amount: Decimal  # Integer when certificate_type is CEA/EUA
+    balance_after: Decimal  # Integer when certificate_type is CEA/EUA
     notes: Optional[str]
     created_by: UUID
     created_at: datetime
@@ -1381,12 +1449,22 @@ class AutoTradeRuleCreate(BaseModel):
     percentage_from_market: Optional[Decimal] = Field(None, ge=0)
     max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)  # Max % deviation from scraped price
 
-    # Quantity settings
+    # Quantity settings (CEA/EUA: whole numbers only)
     quantity_mode: AutoTradeQuantityMode = AutoTradeQuantityMode.FIXED
     fixed_quantity: Optional[Decimal] = Field(None, gt=0)
     percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
     min_quantity: Optional[Decimal] = Field(None, gt=0)
     max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    @field_validator("fixed_quantity", "min_quantity", "max_quantity", mode="before")
+    @classmethod
+    def quantity_whole_number(cls, v: Any) -> Any:
+        if v is None:
+            return v
+        d = Decimal(str(v)) if not isinstance(v, Decimal) else v
+        if d != d.to_integral_value():
+            raise ValueError("CEA/EUA quantity must be a whole number (no fractions)")
+        return d
 
     # Timing
     interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$")
@@ -1418,12 +1496,22 @@ class AutoTradeRuleUpdate(BaseModel):
     percentage_from_market: Optional[Decimal] = Field(None, ge=0)
     max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)
 
-    # Quantity settings
+    # Quantity settings (CEA/EUA: whole numbers only)
     quantity_mode: Optional[AutoTradeQuantityMode] = None
     fixed_quantity: Optional[Decimal] = Field(None, gt=0)
     percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
     min_quantity: Optional[Decimal] = Field(None, gt=0)
     max_quantity: Optional[Decimal] = Field(None, gt=0)
+
+    @field_validator("fixed_quantity", "min_quantity", "max_quantity", mode="before")
+    @classmethod
+    def quantity_whole_number(cls, v: Any) -> Any:
+        if v is None:
+            return v
+        d = Decimal(str(v)) if not isinstance(v, Decimal) else v
+        if d != d.to_integral_value():
+            raise ValueError("CEA/EUA quantity must be a whole number (no fractions)")
+        return d
 
     # Timing
     interval_mode: Optional[str] = Field(None, pattern="^(fixed|random)$")
@@ -1556,8 +1644,14 @@ class AutoTradeMarketSettingsResponse(BaseModel):
     price_deviation_pct: Decimal  # Percentage deviation from best price
     avg_order_count: int  # Average number of orders to maintain
     min_order_volume_eur: Decimal  # Minimum order volume in EUR
-    volume_variety: int  # 1-10 scale for volume diversity
+    volume_variety: int  # 1-10 scale for volume diversity (legacy)
+    avg_order_count_variation_pct: Decimal = Decimal("10.0")
+    max_orders_per_price_level: int = 3
+    max_orders_per_level_variation_pct: Decimal = Decimal("10.0")
+    min_order_value_variation_pct: Decimal = Decimal("10.0")
     interval_seconds: int = 60  # Order placement interval in seconds
+    order_interval_variation_pct: Decimal = Decimal("10.0")
+    max_order_volume_eur: Optional[Decimal] = None
     max_liquidity_threshold: Optional[Decimal] = None  # Trigger internal trades above this
     internal_trade_interval: Optional[int] = None  # Interval for internal trades when at target
     internal_trade_volume_min: Optional[Decimal] = None  # Min volume per internal trade (EUR)
@@ -1587,7 +1681,13 @@ class AutoTradeMarketSettingsUpdate(BaseModel):
     avg_order_count: Optional[int] = Field(None, ge=1, le=1000)
     min_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
     volume_variety: Optional[int] = Field(None, ge=1, le=10)
+    avg_order_count_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    max_orders_per_price_level: Optional[int] = Field(None, ge=1, le=100)
+    max_orders_per_level_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    min_order_value_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
     interval_seconds: Optional[int] = Field(None, ge=5, le=3600)  # 5 sec to 1 hour
+    order_interval_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    max_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
     max_liquidity_threshold: Optional[Decimal] = Field(None, ge=0)
     internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600)  # 10 sec to 1 hour
     internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0)
@@ -1635,65 +1735,6 @@ class TicketLogStats(BaseModel):
     by_action_type: Dict[str, int]
     by_user: List[Dict[str, Any]]
     actions_over_time: List[Dict[str, Any]]
-
-
-# =============================================================================
-# Liquidity Management Schemas
-# =============================================================================
-
-
-class LiquidityPreviewRequest(BaseModel):
-    certificate_type: CertificateType
-    bid_amount_eur: Decimal = Field(..., gt=0)
-    ask_amount_eur: Decimal = Field(..., gt=0)
-
-
-class MarketMakerAllocation(BaseModel):
-    mm_id: UUID
-    mm_name: str
-    mm_type: MarketMakerTypeEnum
-    allocation: Decimal = Field(..., gt=0)
-    orders_count: int
-
-
-class LiquidityPlan(BaseModel):
-    mms: List[MarketMakerAllocation]
-    total_amount: Decimal
-    price_levels: List[Dict[str, Any]]
-
-
-class MissingAssets(BaseModel):
-    asset_type: str
-    required: Decimal = Field(..., ge=0)
-    available: Decimal = Field(..., ge=0)
-    shortfall: Decimal = Field(..., ge=0)
-
-
-class LiquidityPreviewResponse(BaseModel):
-    can_execute: bool
-    certificate_type: str
-    bid_plan: LiquidityPlan
-    ask_plan: LiquidityPlan
-    missing_assets: Optional[MissingAssets] = None
-    suggested_actions: List[str]
-    total_orders_count: int
-    estimated_spread: Decimal = Field(..., ge=0)
-
-
-class LiquidityCreateRequest(BaseModel):
-    certificate_type: CertificateType
-    bid_amount_eur: Decimal = Field(..., gt=0)
-    ask_amount_eur: Decimal = Field(..., gt=0)
-    notes: Optional[str] = None
-
-
-class LiquidityCreateResponse(BaseModel):
-    success: bool
-    liquidity_operation_id: UUID
-    orders_created: int
-    bid_liquidity_eur: Decimal = Field(..., gt=0)
-    ask_liquidity_eur: Decimal = Field(..., gt=0)
-    market_makers_used: List[Dict[str, Any]]
 
 
 class ProvisionAction(str, Enum):

@@ -9,14 +9,12 @@ from .api.v1 import (
     admin,
     admin_fees,
     admin_logging,
-    admin_market_orders,
     assets,
     auth,
     backoffice,
     cash_market,
     contact,
     deposits,
-    liquidity,
     market_maker,
     marketplace,
     onboarding,
@@ -368,9 +366,7 @@ app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(cash_market.router, prefix="/api/v1")
 app.include_router(settlement.router, prefix="/api/v1")
 app.include_router(market_maker.router, prefix="/api/v1/admin")
-app.include_router(admin_market_orders.router, prefix="/api/v1/admin")
 app.include_router(admin_logging.router, prefix="/api/v1/admin")
-app.include_router(liquidity.router, prefix="/api/v1/admin")
 app.include_router(admin_fees.router, prefix="/api/v1/admin")
 app.include_router(deposits.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")

@@ -3,7 +3,7 @@ import type { FC } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Search, MapPin, ArrowRightLeft } from 'lucide-react';
 import { Button, Card, Badge } from '../common';
-import { formatRelativeTime, formatCurrency, formatQuantity } from '../../utils';
+import { formatRelativeTime, formatCurrency, formatCertificateQuantity } from '../../utils';
 
 interface UserSession {
   id: string;
@@ -162,7 +162,7 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
                       </Badge>
                       <div>
                         <p className="font-medium text-navy-900 dark:text-white">
-                          {formatQuantity(trade.quantity)} {trade.certificateType}
+                          {formatCertificateQuantity(trade.quantity)} {trade.certificateType}
                         </p>
                         <p className="text-xs text-navy-500 dark:text-navy-400">
                           {formatRelativeTime(trade.createdAt)}

@@ -146,8 +146,8 @@ async def get_marketplace_stats(db=Depends(get_db)):  # noqa: B008
         "cea_listings": len(cea_orders),
         "eua_listings": 0,  # No EUA market
         "active_swaps": 0,  # Swap market coming soon
-        "total_cea_volume": round(total_cea_volume, 2),
-        "total_eua_volume": 0.0,
+        "total_cea_volume": int(round(total_cea_volume)),
+        "total_eua_volume": 0,
         "total_market_value_eur": round(total_cea_value, 2),
         "avg_cea_price": round(
             sum(float(o.price) for o in cea_orders) / len(cea_orders), 4

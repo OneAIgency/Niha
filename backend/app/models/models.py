@@ -1319,8 +1319,26 @@ class AutoTradeMarketSettings(Base):
     # 10 = very diverse order sizes
     volume_variety = Column(Integer, nullable=False, default=5)
 
+    # Avg order count variation (percentage ±)
+    avg_order_count_variation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("10.0"))
+
+    # Max orders per price level
+    max_orders_per_price_level = Column(Integer, nullable=False, default=3)
+
+    # Max orders per price level variation (percentage ±)
+    max_orders_per_level_variation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("10.0"))
+
+    # Min order value variation (percentage ±)
+    min_order_value_variation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("10.0"))
+
     # Order placement interval in seconds
     interval_seconds = Column(Integer, nullable=False, default=60)
+
+    # Order interval variation (percentage ±)
+    order_interval_variation_pct = Column(Numeric(5, 2), nullable=False, default=Decimal("10.0"))
+
+    # Max order volume in EUR (single order cap)
+    max_order_volume_eur = Column(Numeric(18, 2), nullable=True)
 
     # Max liquidity threshold in EUR - if exceeded, execute internal trades to reduce
     max_liquidity_threshold = Column(Numeric(18, 2), nullable=True)

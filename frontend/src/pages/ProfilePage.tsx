@@ -288,11 +288,13 @@ export function ProfilePage() {
       setError('Please enter a valid amount');
       return;
     }
+    // CEA/EUA: whole certificates only — send integer
+    const amountToSend = (creditAssetType === 'CEA' || creditAssetType === 'EUA') ? Math.floor(amount) : amount;
 
     setIsCrediting(true);
     setError(null);
     try {
-      const newBalances = await adminApi.creditMyEntity(creditAssetType, amount);
+      const newBalances = await adminApi.creditMyEntity(creditAssetType, amountToSend);
       setBalances(newBalances);
       setSuccessMessage(`Credited ${formatNumberWithSeparators(amount)} ${creditAssetType}`);
       setTimeout(() => setSuccessMessage(null), 3000);

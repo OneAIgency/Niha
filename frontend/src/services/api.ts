@@ -49,7 +49,6 @@ import type {
   MarketMakerType,
   MarketMakerQueryParams,
   MarketMakerTransaction,
-  MarketMakerOrder,
   SettlementBatch,
   Trade,
   TransactionType,
@@ -74,11 +73,6 @@ import type {
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
 import { MARKET_MAKER_TYPES } from '../types';
-import type {
-  LiquidityPreviewResponse,
-  LiquidityCreationRequest,
-  LiquidityCreationResponse,
-} from '../types/liquidity';
 import { logger } from '../utils/logger';
 import { transformKeysToCamelCase, transformKeysToSnakeCase } from '../utils/dataTransform';
 import { TOKEN_KEY } from '../constants/auth';
@@ -1128,6 +1122,50 @@ export const adminApi = {
     return data;
   },
 
+  refreshCeaMarket: async (): Promise<{
+    success: boolean;
+    orders_cancelled: number;
+    cea_price_eur: string;
+    mid_price_eur: string;
+    price_deviation_pct: string;
+    new_best_bid: string;
+    new_best_ask: string;
+    bid_orders_created: number;
+    ask_orders_created: number;
+  }> => {
+    const { data } = await api.post('/admin/auto-trade-market-settings/refresh-cea');
+    return data;
+  },
+
+  placeRandomOrder: async (): Promise<{
+    success: boolean;
+    side: string;
+    price: string;
+    quantity: string;
+    volume_eur: string;
+    is_market_like: boolean;
+    trades_matched: number;
+    market_maker: string;
+    status: string;
+  }> => {
+    const { data } = await api.post('/admin/auto-trade-market-settings/place-random-order');
+    return data;
+  },
+
+  getMmActivity: async (limit = 50): Promise<Array<{
+    type: 'order' | 'trade';
+    id: string;
+    side?: string;
+    price: string;
+    quantity: string;
+    filled_quantity?: string;
+    status?: string;
+    timestamp: string;
+  }>> => {
+    const { data } = await api.get(`/admin/auto-trade-market-settings/mm-activity?limit=${limit}`);
+    return data;
+  },
+
   // ==================== Admin Testing Tools ====================
 
   /**
@@ -1521,11 +1559,12 @@ export const cashMarketApi = {
     return data;
   },
 
+  // CEA/EUA: quantity and volume fields are whole numbers only (no fractional certificates).
   placeOrder: async (order: {
     certificate_type: CertificateType;
     side: OrderSide;
     price: number;
-    quantity: number;
+    quantity: number; // integer for CEA
   }): Promise<MessageResponse> => {
     const { data } = await api.post('/cash-market/orders', order);
     return data;
@@ -1765,6 +1804,22 @@ export const depositEurToMarketMaker = async (
   return response;
 };
 
+export const withdrawEurFromMarketMaker = async (
+  marketMakerId: string,
+  amount: number,
+  notes?: string
+): Promise<{
+  balance_before: number;
+  balance_after: number;
+  ticket_id: string;
+  message: string;
+}> => {
+  const params = new URLSearchParams({ amount: String(amount) });
+  if (notes) params.append('notes', notes);
+  const { data: response } = await api.post(`/admin/market-makers/${marketMakerId}/eur-withdrawal?${params.toString()}`);
+  return response;
+};
+
 export interface MarketMakerTransactionQueryParams {
   page?: number;
   per_page?: number;
@@ -1989,46 +2044,6 @@ export const getAutoTradeMonitor = async (): Promise<AutoTradeMonitorResponse> =
   return data;
 };
 
-// Market Orders API (Admin)
-export const getAdminOrderBook = async (certificateType: string): Promise<{ data: OrderBook }> => {
-  const { data } = await api.get(`/admin/market-orders/orderbook/${certificateType}`);
-  return { data };
-};
-
-export const placeMarketMakerOrder = (data: {
-  market_maker_id: string;
-  certificate_type: 'CEA' | 'EUA';
-  side: 'BID' | 'ASK';
-  price: number;
-  quantity: number;
-}) => api.post('/admin/market-orders', data);
-
-// Alias for consistency
-export const placeAdminMarketOrder = placeMarketMakerOrder;
-
-export const getMarketMakerOrders = async (params?: {
-  market_maker_id?: string;
-  status?: string;
-  certificate_type?: string;
-}): Promise<{ data: MarketMakerOrder[] }> => {
-  const { data } = await api.get('/admin/market-orders', { params });
-  return { data: data || [] };
-};
-
-export const cancelMarketMakerOrder = (orderId: string) =>
-  api.delete(`/admin/market-orders/${orderId}`);
-
-// Get ALL orders (both entity and market maker) - for unified order book view
-export const getAllOrders = async (params?: {
-  certificate_type?: string;
-  status?: string;
-  page?: number;
-  per_page?: number;
-}): Promise<{ data: Order[] }> => {
-  const { data } = await api.get('/admin/market-orders/all', { params });
-  return { data: data || [] };
-};
-
 // Logging/Audit API
 export const getTickets = (params?: {
   date_from?: string;
@@ -2059,27 +2074,6 @@ export const getFailedActions = (params?: {
   limit?: number;
   offset?: number;
 }) => api.get('/admin/logging/failed-actions', { params });
-
-// Liquidity API
-export const liquidityApi = {
-  previewLiquidity: async (
-    certificateType: CertificateType,
-    bidEur: number,
-    askEur: number
-  ): Promise<LiquidityPreviewResponse> => {
-    const { data } = await api.post('/admin/liquidity/preview', {
-      certificate_type: certificateType,
-      bid_eur: bidEur,
-      ask_eur: askEur,
-    });
-    return data;
-  },
-
-  createLiquidity: async (request: LiquidityCreationRequest): Promise<LiquidityCreationResponse> => {
-    const { data } = await api.post('/admin/liquidity/create', request);
-    return data;
-  },
-};
 
 export const settlementApi = {
   getPendingSettlements: async (): Promise<{ data: SettlementBatch[]; count: number }> => {

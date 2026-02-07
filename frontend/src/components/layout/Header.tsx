@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
 import { useAuthStore, useUIStore } from '../../stores/useStore';
 import { usePrices } from '../../hooks/usePrices';
+import { getEffectiveRole } from '../../utils/effectiveRole';
 import { cn } from '../../utils';
 import type { User as UserType } from '../../types';
 
@@ -22,7 +23,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, simulatedRole, logout } = useAuthStore();
   const { prices } = usePrices();
   const { theme } = useUIStore();
   const location = useLocation();
@@ -30,8 +31,9 @@ export function Header() {
 
   const isLandingPage = location.pathname === '/';
   const isDark = theme === 'dark';
-  const role = user?.role ?? null;
+  const role = getEffectiveRole(user, simulatedRole) ?? user?.role ?? null;
   const isAdmin = role === 'ADMIN';
+  const isRealAdmin = user?.role === 'ADMIN';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -79,9 +81,10 @@ export function Header() {
     // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + MM
     const canCashMarket = ['CEA', 'CEA_SETTLE', 'MM'].includes(role);
     // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + MM
-    const canSwap = ['SWAP', 'MM'].includes(role);
-    const canDashboard = ['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
-    const canFunding = ['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canSwap = ['CEA', 'SWAP', 'MM'].includes(role);
+    // AML: Dashboard only (no Funding in header); canDashboard includes AML, canFunding excludes AML
+    const canDashboard = ['AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canFunding = ['APPROVED', 'FUNDING', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
     const canOnboarding = ['NDA', 'KYC'].includes(role);
 
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
@@ -196,7 +199,9 @@ export function Header() {
                         )}>
                           {user?.firstName && user?.lastName
                             ? user?.email
-                            : user?.role || 'User'}
+                            : user?.role === 'ADMIN' && simulatedRole
+                              ? `ADMIN (simulând: ${simulatedRole})`
+                              : (role ?? 'User')}
                         </p>
                       </div>
 
@@ -215,7 +220,7 @@ export function Header() {
                           Profile
                         </button>
 
-                        {isAdmin && (
+                        {isRealAdmin && (
                           <>
                             <button
                               onClick={() => handleMenuItemClick('/settings')}

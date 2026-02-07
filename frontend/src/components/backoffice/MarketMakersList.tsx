@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DataTable, Badge, Card, type Column } from '../common';
 import { CheckCircle, XCircle, Leaf, Wind, Activity, Wallet, TrendingUp, Lock } from 'lucide-react';
-import { formatQuantity, formatCurrency } from '../../utils';
+import { formatCertificateQuantity, formatCurrency } from '../../utils';
 import { usePrices } from '../../hooks/usePrices';
 import { getMarketMakerBalances } from '../../services/api';
 import type { MarketMaker } from '../../types';
@@ -149,7 +149,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               <div className="flex items-center justify-end gap-2">
                 <Leaf className="w-4 h-4 text-amber-500" />
                 <span className="font-mono font-bold text-lg text-amber-600 dark:text-amber-400">
-                  {loadingBalances ? '...' : formatQuantity(ceaBal.available)} CEA
+                  {loadingBalances ? '...' : formatCertificateQuantity(ceaBal.available)} CEA
                 </span>
               </div>
               {/* EUR Value of Available CEA */}
@@ -161,7 +161,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               {/* CEA Sold with value */}
               {!loadingBalances && ceaSold > 0 && (
                 <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
-                  <div>Sold: {formatQuantity(ceaSold)} CEA</div>
+                  <div>Sold: {formatCertificateQuantity(ceaSold)} CEA</div>
                   <div className="font-mono text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(ceaSoldValue, 'EUR')}
                   </div>
@@ -177,7 +177,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               <div className="flex items-center justify-end gap-2">
                 <Wind className="w-4 h-4 text-blue-500" />
                 <span className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
-                  {loadingBalances ? '...' : formatQuantity(euaBal.available)} EUA
+                  {loadingBalances ? '...' : formatCertificateQuantity(euaBal.available)} EUA
                 </span>
               </div>
               {/* EUR Value of Available EUA */}
@@ -335,7 +335,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                       <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
                     </div>
                     <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {formatQuantity(totalCEA)} CEA
+                      {formatCertificateQuantity(totalCEA)} CEA
                     </div>
                     <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
                       {formatCurrency(ceaValueEur, 'EUR')} · {ceaSellers.length} Seller{ceaSellers.length !== 1 ? 's' : ''}
@@ -385,34 +385,17 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 divide-x divide-navy-200 dark:divide-navy-700">
-                  {/* CEA */}
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Leaf className="w-4 h-4 text-amber-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
-                    </div>
-                    <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {formatQuantity(totalCEAAvailable)} CEA
-                    </div>
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {formatCurrency(ceaValue, 'EUR')}
-                    </div>
+                {/* Stats: EUA only (swap liquidity) */}
+                <div className="p-5">
+                  <div className="flex items-center justify-end gap-2 mb-2">
+                    <Wind className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-medium text-navy-600 dark:text-navy-300">EUA Available</span>
                   </div>
-
-                  {/* EUA */}
-                  <div className="p-5 text-right">
-                    <div className="flex items-center justify-end gap-2 mb-2">
-                      <Wind className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">EUA Available</span>
-                    </div>
-                    <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400">
-                      {formatQuantity(totalEUAAvailable)} EUA
-                    </div>
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
-                      {formatCurrency(euaValue, 'EUR')}
-                    </div>
+                  <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400 text-right">
+                    {formatCertificateQuantity(totalEUAAvailable)} EUA
+                  </div>
+                  <div className="text-xs text-navy-500 dark:text-navy-400 mt-1 text-right">
+                    {formatCurrency(euaValue, 'EUR')}
                   </div>
                 </div>
               </Card>

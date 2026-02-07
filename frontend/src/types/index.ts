@@ -1037,8 +1037,14 @@ export interface AutoTradeMarketSettings {
   priceDeviationPct: number;  // Percentage deviation from best price
   avgOrderCount: number;  // Average number of orders to maintain
   minOrderVolumeEur: number;  // Minimum order volume in EUR
-  volumeVariety: number;  // 1-10 scale for volume diversity
+  volumeVariety: number;  // 1-10 scale for volume diversity (legacy)
+  avgOrderCountVariationPct: number;  // ±% variation on avg_order_count
+  maxOrdersPerPriceLevel: number;  // Cap orders at one price level
+  maxOrdersPerLevelVariationPct: number;  // ±% variation on max per level
+  minOrderValueVariationPct: number;  // ±% variation on min order value
   intervalSeconds: number;  // Order placement interval in seconds
+  orderIntervalVariationPct: number;  // ±% variation on interval
+  maxOrderVolumeEur: number | null;  // Max EUR per single order
   maxLiquidityThreshold: number | null;  // Trigger internal trades above this EUR value
   internalTradeInterval: number | null;  // Interval for internal trades when at target (seconds)
   internalTradeVolumeMin: number | null;  // Min volume per internal trade (EUR)
@@ -1058,7 +1064,13 @@ export interface AutoTradeMarketSettingsUpdate {
   avgOrderCount?: number;
   minOrderVolumeEur?: number;
   volumeVariety?: number;
+  avgOrderCountVariationPct?: number;
+  maxOrdersPerPriceLevel?: number;
+  maxOrdersPerLevelVariationPct?: number;
+  minOrderValueVariationPct?: number;
   intervalSeconds?: number;
+  orderIntervalVariationPct?: number;
+  maxOrderVolumeEur?: number | null;
   maxLiquidityThreshold?: number | null;
   internalTradeInterval?: number | null;
   internalTradeVolumeMin?: number | null;

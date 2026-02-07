@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, RefreshCw, RotateCcw, Loader2, ShieldAlert } from 'lucide-react';
-import { Button, Card, Input, AlertBanner } from '../components/common';
+import { Button, Input, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { MarketMakersList } from '../components/backoffice/MarketMakersList';
 import { CreateMarketMakersModal } from '../components/backoffice/CreateMarketMakersModal';
@@ -146,13 +146,11 @@ export function MarketMakersPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card>
-          <MarketMakersList
-            marketMakers={marketMakers}
-            loading={loading}
-            onSelectMM={handleSelectMM}
-          />
-        </Card>
+        <MarketMakersList
+          marketMakers={marketMakers}
+          loading={loading}
+          onSelectMM={handleSelectMM}
+        />
       </motion.div>
 
       {/* Create Market Makers Modal */}

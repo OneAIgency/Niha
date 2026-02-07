@@ -61,8 +61,12 @@ When creating or reviewing components, verify:
 - Responsive on mobile, tablet, and desktop
 - Handles loading, error, and empty states
 - **Client status badge:** Use `ClientStatusBadge` (or `clientStatusVariant` from `utils/roleBadge`) for deposit/client role display in cards and tables; design tokens only. See `frontend/docs/DESIGN_SYSTEM.md` § Badges → Client status badge. **Client state rule:** use ONLY `user.role` (users) or `request.user_role` (contact requests); never `request_type` or `request.status`. See `app_truth.md` §8.
+- **Dashboard Cash (EUR) card (AML):** When `user?.role === 'AML'`, the Cash (EUR) summary card must show an amber background at 50% opacity (`bg-amber-500/50`, `dark:bg-amber-400/50`) and the secondary line text "UNDER AML APPROVAL" (optionally with "Total deposited: €X · " when `totalDeposited > 0`). Use design tokens only. See `frontend/docs/DESIGN_SYSTEM.md` § Cards and `app_truth.md` §8.
+- **CEA/EUA quantities:** Display certificate amounts (CEA/EUA balance, volume, order quantity) with `formatCertificateQuantity` from `utils`; use `decimals={0}` on `NumberInput` for CEA/EUA amount/quantity inputs. API payloads must send whole numbers only. See `app_truth.md` §5.
 
 **Backoffice nav levels:** Subheader nav uses `.subheader-nav-btn`, `.subheader-nav-btn-active`, `.subheader-nav-btn-inactive` from `frontend/src/styles/design-tokens.css`. SubSubHeader nav (child-level, e.g. Onboarding subpages) uses `.subsubheader-nav-btn*` and count badge `.subsubheader-nav-badge`; customize via CSS variables in the same file. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8–9.
+
+**Admin role simulation floater:** Fixed bottom-right, z-index below modals (e.g. `z-40`). Design tokens only (navy, emerald focus); light/dark support. `aria-label` on the control group and on the select. See `app_truth.md` §8–9 and `frontend/src/components/admin/RoleSimulationFloater.tsx`.
 
 **Settings pages:** Platform Settings (e.g. Price Scraping Sources, Mail & Authentication) use the same Card/Input patterns and design tokens; each section is wrapped in `.card_back` or `<Card />`. No hard-coded colors; use navy/emerald/amber/blue/red tokens per the design system.
 

@@ -583,6 +583,7 @@ Highlighting the button for the current page uses the same logic as Subheader (a
 - **Default style**: `rounded-lg`, single `border`, `px-3 py-2`, `border-navy-300 dark:border-navy-600`, `bg-white dark:bg-navy-800`, `text-navy-900 dark:text-white`. Focus: `focus:ring-2 focus:ring-emerald-500`. Error: `border-red-500 focus:ring-red-500`.
 - **Formatting**: Values are displayed with **comma as thousands separator** (e.g. `1,000.50`) via `locale="en-US"` (default). The component uses `type="text"` and `inputMode="decimal"` under the hood; `onChange` receives the raw numeric string (no commas).
 - **Props**: `value` (string | number), `onChange: (value: string) => void`, `decimals?: number` (default `2`), `locale?: string` (default `'en-US'`). Optional: `label`, `error`, `icon`, `suffix`, `placeholder`, and standard input attributes (e.g. `disabled`, `required`).
+- **CEA/EUA certificate quantities**: Use `decimals={0}` for inputs (whole numbers only; no fractional certificates). For display, use `formatCertificateQuantity(value)` from `utils` so certificate balances, volumes, and quantities show with zero decimal places.
 
 ```tsx
 import { NumberInput } from '../common';
@@ -595,7 +596,7 @@ import { NumberInput } from '../common';
   placeholder="0.00"
 />
 
-// Integer quantity
+// Integer quantity (e.g. CEA/EUA certificates – whole numbers only)
 <NumberInput value={quantity} onChange={(v) => setQuantity(v)} decimals={0} placeholder="0" />
 
 // With label and error
@@ -692,6 +693,8 @@ Merge and sort via `buildDepositAndWithdrawalHistory` (`utils/depositHistory.ts`
 
 To change the card back look, edit these variables in `design-tokens.css` (in `:root` for light, in `.dark` for dark).
 
+**Dashboard summary cards (Portfolio):** The Cash (EUR) card follows the standard card pattern. For users with role **AML**, the card additionally uses an amber background at 50% opacity (`bg-amber-500/50`, `dark:bg-amber-400/50`) and displays the secondary line **"UNDER AML APPROVAL"** (with optional "Total deposited: €X · " when applicable). This indicates funds pending AML approval without introducing new tokens.
+
 #### Variants
 
 1. **Default** - Card back (dark surface, less rounded) — **use as standard for cards and sections**
@@ -763,6 +766,10 @@ To change the card back look, edit these variables in `design-tokens.css` (in `:
   </div>
 </div>
 ```
+
+#### Admin overlay (role simulation floater)
+
+The **RoleSimulationFloater** (`frontend/src/components/admin/RoleSimulationFloater.tsx`) is shown only when `user?.role === 'ADMIN'`. Use fixed positioning (e.g. `fixed bottom-4 right-4`), `z-40` so it sits below modals. Style with design tokens only: navy for background/border/text, emerald for focus ring on the select. Support light and dark via `dark:` variants. Provide `aria-label` on the group and on the select. See `app_truth.md` §8–9 and `docs/commands/interface.md`.
 
 ---
 

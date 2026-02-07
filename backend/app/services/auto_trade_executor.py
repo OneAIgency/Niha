@@ -87,11 +87,17 @@ class AutoTradeExecutor:
         return list(result.scalars().all())
 
     @staticmethod
-    def calculate_next_execution_time(rule: AutoTradeRule) -> datetime:
+    def calculate_next_execution_time(
+        rule: AutoTradeRule,
+        interval_variation_pct: Optional[Decimal] = None,
+    ) -> datetime:
         """
         Calculate the next execution time based on interval mode.
         For random mode, picks a random interval between min and max.
         Prefers seconds-based intervals if set, otherwise falls back to minutes.
+
+        If interval_variation_pct is provided (from market settings), applies
+        ±pct% random variation to the calculated interval.
         """
         # Naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
         now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -113,6 +119,12 @@ class AutoTradeExecutor:
                 interval_secs = rule.interval_seconds
             else:
                 interval_secs = (rule.interval_minutes or 5) * 60
+
+        # Apply market-level interval variation if provided
+        if interval_variation_pct is not None and interval_variation_pct > 0:
+            pct = float(interval_variation_pct)
+            factor = 1.0 + random.uniform(-pct / 100, pct / 100)
+            interval_secs = max(1, int(interval_secs * factor))
 
         return now + timedelta(seconds=interval_secs)
 
@@ -272,16 +284,23 @@ class AutoTradeExecutor:
         target_liquidity: Optional[Decimal],
         current_liquidity: Decimal,
         avg_order_count: int,
+        variation_pct: Optional[Decimal] = None,
+        max_volume_eur: Optional[Decimal] = None,
     ) -> Decimal:
         """
         Calculate order volume based on variety setting and liquidity needs.
 
+        If variation_pct is provided, uses percentage-based variation (±pct% of min_volume_eur).
+        Otherwise falls back to the legacy 1-10 volume_variety scale.
+
         Args:
             min_volume_eur: Minimum order volume in EUR
-            volume_variety: 1-10 scale (1=uniform, 10=very diverse)
+            volume_variety: 1-10 scale (1=uniform, 10=very diverse) — legacy
             target_liquidity: Target liquidity in EUR
             current_liquidity: Current liquidity in EUR
             avg_order_count: Target number of orders
+            variation_pct: ±% variation on min_order_value (new, takes precedence)
+            max_volume_eur: Maximum order volume in EUR (new, optional cap)
 
         Returns:
             Order volume in EUR
@@ -298,28 +317,30 @@ class AutoTradeExecutor:
         # Ensure we're at least at minimum volume
         base_volume = max(base_volume, min_volume_eur)
 
-        # Apply variety factor
-        # variety=1: orders are exactly base_volume (uniform)
-        # variety=10: orders range from 0.5x to 3x base_volume
-        if volume_variety <= 1:
-            # Uniform - no variation
-            return base_volume
-        else:
-            # Calculate variation range based on variety (1-10 scale)
-            # At variety=5: range is 0.75x to 1.5x
-            # At variety=10: range is 0.5x to 3x
-            variation_factor = (volume_variety - 1) / 9.0  # 0.0 to 1.0
-            min_multiplier = Decimal(str(1.0 - 0.5 * variation_factor))  # 1.0 down to 0.5
-            max_multiplier = Decimal(str(1.0 + 2.0 * variation_factor))  # 1.0 up to 3.0
+        # New percentage-based variation (takes precedence over legacy scale)
+        if variation_pct is not None and variation_pct > 0:
+            pct = float(variation_pct)
+            factor = Decimal(str(1.0 + random.uniform(-pct / 100, pct / 100)))
+            varied_volume = base_volume * factor
+            varied_volume = max(varied_volume, min_volume_eur)
+            if max_volume_eur is not None and max_volume_eur > 0:
+                varied_volume = min(varied_volume, max_volume_eur)
+            return varied_volume
 
-            # Random multiplier within range
+        # Legacy variety factor (1-10 scale)
+        if volume_variety <= 1:
+            result = base_volume
+        else:
+            variation_factor = (volume_variety - 1) / 9.0
+            min_multiplier = Decimal(str(1.0 - 0.5 * variation_factor))
+            max_multiplier = Decimal(str(1.0 + 2.0 * variation_factor))
             random_factor = Decimal(str(random.random()))
             multiplier = min_multiplier + random_factor * (max_multiplier - min_multiplier)
+            result = max(base_volume * multiplier, min_volume_eur)
 
-            varied_volume = base_volume * multiplier
-
-            # Ensure we're still at minimum
-            return max(varied_volume, min_volume_eur)
+        if max_volume_eur is not None and max_volume_eur > 0:
+            result = min(result, max_volume_eur)
+        return result
 
     @staticmethod
     def calculate_price_with_deviation(
@@ -885,31 +906,7 @@ class AutoTradeExecutor:
             if active_count >= rule.max_active_orders:
                 return False, f"max_active_orders_reached ({active_count}/{rule.max_active_orders})"
 
-        # Check min balance requirement
-        if rule.min_balance:
-            if rule.side == OrderSide.BUY:
-                # Check EUR balance
-                eur_available = balances.get("EUR", {}).get("available", Decimal("0"))
-                if eur_available < rule.min_balance:
-                    return False, f"min_balance_not_met (EUR: {eur_available} < {rule.min_balance})"
-            else:
-                # Check certificate balance
-                cert_available = balances.get(certificate_type.value, {}).get("available", Decimal("0"))
-                if cert_available < rule.min_balance:
-                    return False, f"min_balance_not_met ({certificate_type.value}: {cert_available} < {rule.min_balance})"
-
-        # Check sufficient balance for the order
-        if rule.side == OrderSide.BUY:
-            # For BUY orders: need EUR
-            required_eur = (price or Decimal("0")) * quantity
-            eur_available = balances.get("EUR", {}).get("available", Decimal("0"))
-            if required_eur > eur_available:
-                return False, f"insufficient_eur ({required_eur} required, {eur_available} available)"
-        else:
-            # For SELL orders: need certificates
-            cert_available = balances.get(certificate_type.value, {}).get("available", Decimal("0"))
-            if quantity > cert_available:
-                return False, f"insufficient_certificates ({quantity} required, {cert_available} available)"
+        # Market makers have unlimited resources — skip balance checks
 
         # Check price deviation from scraped price
         if rule.max_price_deviation and market_price and price:
@@ -1197,6 +1194,9 @@ class AutoTradeExecutor:
                 "market_key": market_key,
             }
 
+            # Extract interval variation for scheduling (used throughout execute_rule)
+            _interval_var = market_settings.order_interval_variation_pct if market_settings else None
+
             # Include market settings params in result for debugging
             if market_settings:
                 result["market_settings"] = {
@@ -1243,7 +1243,7 @@ class AutoTradeExecutor:
 
                 # Update rule execution tracking
                 rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 rule.execution_count = (rule.execution_count or 0) + 1
                 await db.commit()
 
@@ -1261,7 +1261,7 @@ class AutoTradeExecutor:
                 result["reason"] = "liquidity_at_target"
                 result["action"] = "skipped"
                 # Schedule next execution
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 await db.commit()
                 return result
 
@@ -1278,7 +1278,7 @@ class AutoTradeExecutor:
 
                 # Update rule execution tracking
                 rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 rule.execution_count = (rule.execution_count or 0) + 1
                 await db.commit()
 
@@ -1316,8 +1316,8 @@ class AutoTradeExecutor:
             else:
                 market_price = await AutoTradeExecutor.get_market_price(certificate_type.value)
 
-            # Get balances
-            balances = await MarketMakerService.get_balances(db, market_maker.id)
+            # MMs have unlimited resources — skip balance fetch
+            balances: Dict[str, Dict[str, Decimal]] = {}
 
             # Get best prices for price calculation
             best_bid, best_ask = await AutoTradeExecutor.get_best_prices(db, certificate_type)
@@ -1354,9 +1354,65 @@ class AutoTradeExecutor:
             if price is None and rule.order_type == "LIMIT":
                 result["reason"] = f"price_calculation_failed: {price_reason}"
                 # Schedule next execution anyway
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 await db.commit()
                 return result
+
+            # Max orders per price level enforcement
+            if market_settings and price and market_settings.max_orders_per_price_level:
+                from sqlalchemy import and_ as sql_and, func as sql_func
+                max_per_level = market_settings.max_orders_per_price_level
+                # Apply variation to the max
+                if market_settings.max_orders_per_level_variation_pct and market_settings.max_orders_per_level_variation_pct > 0:
+                    pct = float(market_settings.max_orders_per_level_variation_pct)
+                    factor = 1.0 + random.uniform(-pct / 100, pct / 100)
+                    max_per_level = max(1, round(max_per_level * factor))
+
+                # Count existing orders at this price level
+                count_result = await db.execute(
+                    select(sql_func.count()).select_from(Order).where(
+                        sql_and(
+                            Order.certificate_type == certificate_type,
+                            Order.side == rule.side,
+                            Order.price == price,
+                            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                        )
+                    )
+                )
+                orders_at_price = count_result.scalar() or 0
+
+                # If at capacity, shift to next available price level
+                if orders_at_price >= max_per_level:
+                    step = Decimal("0.1") if market_type != MarketType.SWAP else Decimal("0.0001")
+                    shifted = False
+                    for shift in range(1, 20):  # Try up to 20 levels
+                        if rule.side == OrderSide.BUY:
+                            candidate = price - step * shift
+                            if candidate <= Decimal("0"):
+                                break
+                        else:
+                            candidate = price + step * shift
+
+                        count_result = await db.execute(
+                            select(sql_func.count()).select_from(Order).where(
+                                sql_and(
+                                    Order.certificate_type == certificate_type,
+                                    Order.side == rule.side,
+                                    Order.price == candidate,
+                                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                                )
+                            )
+                        )
+                        if (count_result.scalar() or 0) < max_per_level:
+                            price = candidate
+                            shifted = True
+                            break
+
+                    if not shifted:
+                        result["reason"] = "all_price_levels_at_max_capacity"
+                        rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
+                        await db.commit()
+                        return result
 
             # Calculate quantity - use market settings for volume variety if available
             if market_settings and price and price > 0:
@@ -1367,6 +1423,8 @@ class AutoTradeExecutor:
                     target_liq,
                     current_liq or Decimal("0"),
                     market_settings.avg_order_count,
+                    variation_pct=market_settings.min_order_value_variation_pct,
+                    max_volume_eur=market_settings.max_order_volume_eur,
                 )
                 # Convert EUR volume to quantity (certificates)
                 # IMPORTANT: For SWAP market, price is ratio (CEA/EUA), not EUR price!
@@ -1391,7 +1449,7 @@ class AutoTradeExecutor:
 
             if quantity is None or quantity <= 0:
                 result["reason"] = f"quantity_calculation_failed: {qty_reason}"
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 await db.commit()
                 return result
 
@@ -1403,7 +1461,7 @@ class AutoTradeExecutor:
 
             if not is_valid:
                 result["reason"] = f"validation_failed: {validation_reason}"
-                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule)
+                rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                 await db.commit()
                 return result
 
@@ -1676,16 +1734,7 @@ async def fill_spread_with_orders(
             mm = buyers[buyer_idx % len(buyers)]
             buyer_idx += 1
 
-            # Check balance
-            balances = await MarketMakerService.get_balances(db, mm.id)
-            eur_available = balances.get("EUR", {}).get("available", Decimal("0"))
-            required_eur = price * quantity_per_level
-
-            if eur_available < required_eur:
-                logger.warning(f"MM {mm.name} insufficient EUR for bid at {price}")
-                continue
-
-            # Create bid order
+            # Create bid order (MMs have unlimited resources)
             order = Order(
                 market=market_type,
                 market_maker_id=mm.id,
@@ -1709,30 +1758,7 @@ async def fill_spread_with_orders(
             mm = sellers[seller_idx % len(sellers)]
             seller_idx += 1
 
-            # Check balance
-            balances = await MarketMakerService.get_balances(db, mm.id)
-            cert_available = balances.get(certificate_type.value, {}).get("available", Decimal("0"))
-
-            if cert_available < quantity_per_level:
-                logger.warning(f"MM {mm.name} insufficient {certificate_type.value} for ask at {price}")
-                continue
-
-            # Lock certificates via transaction
-            try:
-                transaction, ticket_id = await MarketMakerService.create_transaction(
-                    db=db,
-                    market_maker_id=mm.id,
-                    certificate_type=certificate_type,
-                    transaction_type=TransactionType.TRADE_DEBIT,
-                    amount=-quantity_per_level,
-                    notes=f"Fill spread - lock for sell order at {price}",
-                    created_by_id=admin_user_id,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to lock certificates for ask at {price}: {e}")
-                continue
-
-            # Create ask order
+            # Create ask order (MMs have unlimited resources)
             order = Order(
                 market=market_type,
                 market_maker_id=mm.id,

@@ -14,7 +14,7 @@ import {
 import { Card, Button } from '../common';
 import { settlementApi } from '../../services/api';
 import type { SettlementBatch, SettlementStatus } from '../../types';
-import { formatCurrency, formatQuantity, formatDate } from '../../utils';
+import { formatCurrency, formatCertificateQuantity, formatDate } from '../../utils';
 
 interface SettlementDetailsProps {
   settlementId: string;
@@ -251,7 +251,7 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
             <div>
               <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Quantity</div>
               <div className="text-sm font-mono font-medium text-navy-900 dark:text-white">
-                {formatQuantity(settlement.quantity)}
+                {formatCertificateQuantity(settlement.quantity)}
               </div>
             </div>
             <div>

@@ -99,9 +99,11 @@ async def list_market_makers(
         )
         total_trades = trade_count_result.scalar() or 0
 
-        # Extract CEA and EUA balances for frontend compatibility
-        cea_balance = balances.get("CEA", {}).get("total", 0)
-        eua_balance = balances.get("EUA", {}).get("total", 0)
+        # Extract CEA and EUA balances for frontend compatibility (integers only)
+        cea_total = balances.get("CEA", {}).get("total", 0)
+        eua_total = balances.get("EUA", {}).get("total", 0)
+        cea_balance = int(round(float(cea_total))) if cea_total is not None else None
+        eua_balance = int(round(float(eua_total))) if eua_total is not None else None
 
         response.append(
             MarketMakerResponse(
@@ -113,8 +115,8 @@ async def list_market_makers(
                 is_active=mm.is_active,
                 current_balances=formatted_balances,
                 eur_balance=mm.eur_balance,
-                cea_balance=cea_balance,
-                eua_balance=eua_balance,
+                cea_balance=Decimal(cea_balance) if cea_balance is not None else None,
+                eua_balance=Decimal(eua_balance) if eua_balance is not None else None,
                 total_orders=total_orders,
                 total_trades=total_trades,
                 created_at=mm.created_at,
@@ -868,6 +870,72 @@ async def deposit_eur_to_market_maker(
         "balance_after": float(mm.eur_balance),
         "ticket_id": ticket.ticket_id,
         "message": f"Deposited {amount} EUR to {mm.name}",
+    }
+
+
+@router.post("/{market_maker_id}/eur-withdrawal", response_model=dict)
+async def withdraw_eur_from_market_maker(
+    market_maker_id: UUID,
+    amount: Decimal = Query(..., gt=0, description="EUR amount to withdraw"),  # noqa: B008
+    notes: Optional[str] = Query(None, description="Optional notes"),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Withdraw EUR from a Market Maker (typically CEA_BUYER type).
+    Admin-only endpoint. Validates sufficient balance.
+
+    Returns: {balance_before, balance_after, ticket_id, message}
+    """
+    result = await db.execute(
+        select(MarketMakerClient).where(MarketMakerClient.id == market_maker_id)
+    )
+    mm = result.scalar_one_or_none()
+
+    if not mm:
+        raise HTTPException(status_code=404, detail="Market Maker not found")
+
+    if not mm.is_active:
+        raise HTTPException(status_code=400, detail="Market Maker is inactive")
+
+    if mm.eur_balance < amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient EUR balance. Available: {mm.eur_balance}",
+        )
+
+    balance_before = mm.eur_balance
+    mm.eur_balance = mm.eur_balance - amount
+    await db.flush()
+
+    ticket = await TicketService.create_ticket(
+        db=db,
+        action_type="MM_EUR_WITHDRAWAL",
+        entity_type="MarketMaker",
+        entity_id=mm.id,
+        status=TicketStatus.SUCCESS,
+        user_id=admin_user.id,
+        request_payload={
+            "amount": str(amount),
+            "notes": notes,
+        },
+        before_state={"eur_balance": str(balance_before)},
+        after_state={"eur_balance": str(mm.eur_balance)},
+        tags=["market_maker", "eur_withdrawal"],
+    )
+
+    await db.commit()
+
+    logger.info(
+        f"Admin {admin_user.email} withdrew {amount} EUR "
+        f"from Market Maker {mm.name} (balance: {balance_before} -> {mm.eur_balance})"
+    )
+
+    return {
+        "balance_before": float(balance_before),
+        "balance_after": float(mm.eur_balance),
+        "ticket_id": ticket.ticket_id,
+        "message": f"Withdrew {amount} EUR from {mm.name}",
     }
 
 

@@ -10,10 +10,10 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'user-1',
     email: 'user@example.com',
-    first_name: 'Test',
-    last_name: 'User',
+    firstName: 'Test',
+    lastName: 'User',
     role: 'NDA',
-    entity_id: undefined,
+    entityId: undefined,
     ...overrides,
   };
 }
@@ -39,8 +39,8 @@ describe('getPostLoginRedirect', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'FUNDING' }))).toBe('/funding');
   });
 
-  it('sends AML users to /funding', () => {
-    expect(getPostLoginRedirect(makeUser({ role: 'AML' }))).toBe('/funding');
+  it('sends AML users to /dashboard', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'AML' }))).toBe('/dashboard');
   });
 
   it('sends CEA users to /cash-market', () => {
@@ -69,6 +69,12 @@ describe('getPostLoginRedirect', () => {
 
   it('sends MM (Market Maker) users to /dashboard', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'MM' }))).toBe('/dashboard');
+  });
+
+  it('accepts role-only object (e.g. effective role for admin simulation)', () => {
+    expect(getPostLoginRedirect({ role: 'NDA' })).toBe('/onboarding');
+    expect(getPostLoginRedirect({ role: 'REJECTED' })).toBe('/login');
+    expect(getPostLoginRedirect({ role: 'ADMIN' })).toBe('/dashboard');
   });
 
   it('redirects eu@eu.ro by role (no special-case override)', () => {

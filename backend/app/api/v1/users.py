@@ -462,9 +462,9 @@ async def get_my_entity_assets(
         if holding.asset_type == AssetType.EUR:
             eur_balance = float(holding.quantity)
         elif holding.asset_type == AssetType.CEA:
-            cea_balance = float(holding.quantity)
+            cea_balance = int(round(float(holding.quantity)))
         elif holding.asset_type == AssetType.EUA:
-            eua_balance = float(holding.quantity)
+            eua_balance = int(round(float(holding.quantity)))
 
     # Also check Entity.balance_amount for backward compatibility
     if eur_balance == 0 and entity.balance_amount:

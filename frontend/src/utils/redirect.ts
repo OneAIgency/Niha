@@ -1,50 +1,63 @@
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
+
+/** User-like object with at least role (for redirect with effective/simulated role). */
+export type UserOrRole = User | { role: UserRole };
 
 /**
  * Determines the appropriate redirect path after user login based on user role and email.
- * 
+ * Accepts a full User or a { role } object (e.g. effective role when admin simulates).
+ *
  * This function centralizes the redirect logic to prevent mismatches between
  * LoginPage and route guards (e.g., DashboardRoute). All redirect logic should
  * use this function to ensure consistency.
- * 
- * @param user - The authenticated user object
+ *
+ * @param userOrRole - The authenticated user object or { role: UserRole }
  * @returns The path to redirect to after login
- * 
+ *
  * @example
  * ```typescript
  * const redirectPath = getPostLoginRedirect(user);
  * navigate(redirectPath, { replace: true });
+ * // With effective role (admin simulation):
+ * const redirectPath = getPostLoginRedirect({ ...user, role: effectiveRole });
  * ```
  */
-export function getPostLoginRedirect(user: User): string {
+export function getPostLoginRedirect(userOrRole: UserOrRole): string {
+  const role = userOrRole.role;
+
   // Rejected: no access
-  if (user.role === 'REJECTED') {
+  if (role === 'REJECTED') {
     return '/login';
   }
 
   // NDA, KYC: onboarding (KYC form)
-  if (user.role === 'NDA' || user.role === 'KYC') {
+  if (role === 'NDA' || role === 'KYC') {
     return '/onboarding';
   }
 
-  // APPROVED, FUNDING, AML: funding page
-  if (user.role === 'APPROVED' || user.role === 'FUNDING' || user.role === 'AML') {
+  // AML: dashboard (no funding access)
+  if (role === 'AML') {
+    return '/dashboard';
+  }
+
+  // APPROVED, FUNDING: funding page
+  if (role === 'APPROVED' || role === 'FUNDING') {
     return '/funding';
   }
 
-  // CEA, CEA_SETTLE: dashboard
-  if (user.role === 'CEA' || user.role === 'CEA_SETTLE') {
-    return '/dashboard';
+  // CEA, CEA_SETTLE: cash market (CEA buying)
+  if (role === 'CEA' || role === 'CEA_SETTLE') {
+    return '/cash-market';
   }
 
   // SWAP: swap page (can execute CEA→EUA swap)
-  if (user.role === 'SWAP') {
+  if (role === 'SWAP') {
     return '/swap';
   }
 
-  // EUA_SETTLE: dashboard (waiting for EUA settlement, no swap access)
-  if (user.role === 'EUA_SETTLE') {
-    return '/dashboard';
+  // EUA_SETTLE: swap (EUA settlement flow)
+  if (role === 'EUA_SETTLE') {
+    return '/swap';
   }
 
   // MM (Market Maker), EUA, ADMIN: full access → dashboard

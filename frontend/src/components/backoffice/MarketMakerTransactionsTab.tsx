@@ -2,18 +2,37 @@ import { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Leaf, Wind, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Button, DataTable, Badge, AlertBanner, type Column } from '../common';
 import { getMarketMakerBalances, getMarketMakerTransactions } from '../../services/api';
-import { formatQuantity, formatRelativeTime } from '../../utils';
+import { formatCertificateQuantity, formatRelativeTime } from '../../utils';
 import { cn } from '../../utils';
 import { BalanceCards } from './BalanceCards';
 import { TransactionForm } from './TransactionForm';
 
+type MarketMakerType = 'CEA_BUYER' | 'CEA_SELLER' | 'EUA_OFFER';
+
 interface MarketMakerTransactionsTabProps {
   marketMakerId: string;
+  mmType?: MarketMakerType;
+  /** When false, CEA balance card is hidden. True only for CEA_SELLER. */
+  showCea?: boolean;
+  /** When false, EUA balance card is hidden. True only for EUA_OFFER. */
+  showEua?: boolean;
+  /** When false, CEA option is hidden in Add Transaction form. True for CEA_SELLER and CEA_BUYER. */
+  showCeaOption?: boolean;
+  /** When false, EUA option is hidden in Add Transaction form. True only for EUA_OFFER. */
+  showEuaOption?: boolean;
 }
 
+/** Matches getMarketMakerBalances API response for use with BalanceCards detailed variant */
 interface Balance {
   ceaBalance: number;
   euaBalance: number;
+  eurBalance: number;
+  ceaAvailable: number;
+  euaAvailable: number;
+  eurAvailable: number;
+  ceaLocked: number;
+  euaLocked: number;
+  eurLocked: number;
 }
 
 interface Transaction {
@@ -28,8 +47,25 @@ interface Transaction {
   [key: string]: unknown;
 }
 
-export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransactionsTabProps) {
-  const [balances, setBalances] = useState<Balance>({ ceaBalance: 0, euaBalance: 0 });
+export function MarketMakerTransactionsTab({
+  marketMakerId,
+  mmType,
+  showCea = true,
+  showEua = true,
+  showCeaOption = true,
+  showEuaOption = true,
+}: MarketMakerTransactionsTabProps) {
+  const [balances, setBalances] = useState<Balance>({
+    ceaBalance: 0,
+    euaBalance: 0,
+    eurBalance: 0,
+    ceaAvailable: 0,
+    euaAvailable: 0,
+    eurAvailable: 0,
+    ceaLocked: 0,
+    euaLocked: 0,
+    eurLocked: 0,
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +179,7 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
           )}
         >
           {row.transactionType === 'deposit' ? '+' : '-'}
-          {formatQuantity(Number(value))}
+          {formatCertificateQuantity(Number(value))}
         </span>
       ),
     },
@@ -153,13 +189,14 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
       width: '15%',
       align: 'right',
       render: (value) => (
-        <span className="font-mono text-navy-900 dark:text-white">{formatQuantity(Number(value))}</span>
+        <span className="font-mono text-navy-900 dark:text-white">{formatCertificateQuantity(Number(value))}</span>
       ),
     },
     {
       key: 'notes',
       header: 'Notes',
       width: '25%',
+      align: 'right',
       render: (value) => (
         <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-1">{value ? String(value) : '-'}</span>
       ),
@@ -173,10 +210,27 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
         <AlertBanner variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
-      {/* Balances Section */}
+      {/* Balances Section - detailed variant shows EUR/CEA/EUA AVAILABLE, Initial Balance, Locked in Orders */}
       <div>
         <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-4">Current Balances</h3>
-        <BalanceCards balances={balances} loading={loading} variant="simple" />
+        <BalanceCards
+          balances={{
+            EUR: (mmType === 'CEA_BUYER' || balances.eurBalance > 0)
+              ? {
+                  available: balances.eurAvailable ?? 0,
+                  locked: balances.eurLocked ?? 0,
+                  total: balances.eurBalance ?? 0,
+                }
+              : undefined,
+            CEA: { available: balances.ceaAvailable, locked: balances.ceaLocked, total: balances.ceaBalance },
+            EUA: { available: balances.euaAvailable, locked: balances.euaLocked, total: balances.euaBalance },
+          }}
+          loading={loading}
+          variant="detailed"
+          showCea={showCea}
+          showEua={showEua}
+          forceShowEur={mmType === 'CEA_BUYER'}
+        />
       </div>
 
       {/* Transaction History */}
@@ -221,7 +275,14 @@ export function MarketMakerTransactionsTab({ marketMakerId }: MarketMakerTransac
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
         marketMakerId={marketMakerId}
-        currentBalances={balances}
+        currentBalances={{
+          ceaBalance: balances.ceaBalance,
+          euaBalance: balances.euaBalance,
+          eurBalance: balances.eurBalance,
+        }}
+        useEur={mmType === 'CEA_BUYER'}
+        showCea={showCeaOption}
+        showEua={showEuaOption}
       />
     </div>
   );

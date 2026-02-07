@@ -477,7 +477,7 @@ async def get_user_trades(
             "id": str(t.id),
             "trade_type": t.trade_type.value,
             "certificate_type": t.certificate_type.value,
-            "quantity": float(t.quantity),
+            "quantity": int(round(float(t.quantity))),
             "price_per_unit": float(t.price_per_unit),
             "total_value": float(t.total_value),
             "status": t.status.value,
@@ -1084,7 +1084,16 @@ async def add_asset_to_entity(
         await db.flush()  # Get the holding ID
 
     balance_before = Decimal(str(holding.quantity))
-    amount_abs = Decimal(str(asset_request.amount))
+    # CEA/EUA: whole certificates only — round amount to integer
+    raw_amount = float(asset_request.amount)
+    if model_asset_type in (AssetType.CEA, AssetType.EUA):
+        amount_abs = Decimal(str(int(round(raw_amount))))
+        if amount_abs <= 0:
+            raise HTTPException(
+                status_code=400, detail="CEA/EUA amount must be a positive whole number"
+            )
+    else:
+        amount_abs = Decimal(str(asset_request.amount))
     is_withdraw = asset_request.operation == "withdraw"
 
     if is_withdraw:
@@ -1158,14 +1167,19 @@ async def add_asset_to_entity(
         AssetType.EUA: "EUA certificates",
     }[model_asset_type]
 
+    # CEA/EUA: show whole number in message; EUR: show 2 decimals
+    if model_asset_type in (AssetType.CEA, AssetType.EUA):
+        amt_str = f"{int(round(float(asset_request.amount))):,}"
+    else:
+        amt_str = f"{asset_request.amount:,.2f}"
     if is_withdraw:
         msg = (
-            f"Successfully withdrew {asset_request.amount:,.2f} {asset_label} "
+            f"Successfully withdrew {amt_str} {asset_label} "
             f"from {entity.name}"
         )
     else:
         msg = (
-            f"Successfully added {asset_request.amount:,.2f} {asset_label} "
+            f"Successfully added {amt_str} {asset_label} "
             f"to {entity.name}"
         )
     return MessageResponse(message=msg)
@@ -1218,21 +1232,24 @@ async def get_entity_assets(
     )
     transactions = transactions_result.scalars().all()
 
+    def _amt(v, at: AssetType) -> float:
+        return int(round(float(v))) if at in (AssetType.CEA, AssetType.EUA) else float(v)
+
     return EntityAssetsResponse(
         entity_id=UUID(entity_id),
         entity_name=entity.name,
         eur_balance=float(balances[AssetType.EUR]),
-        cea_balance=float(balances[AssetType.CEA]),
-        eua_balance=float(balances[AssetType.EUA]),
+        cea_balance=int(round(float(balances[AssetType.CEA]))),
+        eua_balance=int(round(float(balances[AssetType.EUA]))),
         recent_transactions=[
             AssetTransactionResponse(
                 id=t.id,
                 entity_id=t.entity_id,
                 asset_type=t.asset_type,
                 transaction_type=t.transaction_type,
-                amount=float(t.amount),
-                balance_before=float(t.balance_before),
-                balance_after=float(t.balance_after),
+                amount=_amt(t.amount, t.asset_type),
+                balance_before=_amt(t.balance_before, t.asset_type),
+                balance_after=_amt(t.balance_after, t.asset_type),
                 reference=t.reference,
                 notes=t.notes,
                 created_by=t.created_by,
@@ -1280,15 +1297,18 @@ async def get_entity_transactions(
     result = await db.execute(query)
     transactions = result.scalars().all()
 
+    def _amt(v, at) -> float:
+        return int(round(float(v))) if at in (AssetType.CEA, AssetType.EUA) else float(v)
+
     return [
         {
             "id": str(t.id),
             "entity_id": str(t.entity_id),
             "asset_type": t.asset_type.value,
             "transaction_type": t.transaction_type.value,
-            "amount": float(t.amount),
-            "balance_before": float(t.balance_before),
-            "balance_after": float(t.balance_after),
+            "amount": _amt(t.amount, t.asset_type),
+            "balance_before": _amt(t.balance_before, t.asset_type),
+            "balance_after": _amt(t.balance_after, t.asset_type),
             "reference": t.reference,
             "notes": t.notes,
             "created_by": str(t.created_by),
@@ -1473,9 +1493,9 @@ async def get_entity_orders(
             "certificate_type": o.certificate_type.value,
             "side": o.side.value,
             "price": float(o.price),
-            "quantity": float(o.quantity),
-            "filled_quantity": float(o.filled_quantity),
-            "remaining_quantity": float(o.quantity - o.filled_quantity),
+            "quantity": int(round(float(o.quantity))),
+            "filled_quantity": int(round(float(o.filled_quantity or 0))),
+            "remaining_quantity": int(round(float(o.quantity - (o.filled_quantity or 0)))),
             "status": o.status.value,
             "created_at": o.created_at.isoformat(),
             "updated_at": o.updated_at.isoformat() if o.updated_at else None,
@@ -1557,20 +1577,26 @@ async def admin_update_order(
             raise HTTPException(status_code=400, detail="Price must be greater than 0")
         order.price = Decimal(str(new_price))
 
-    # Update quantity if provided
+    # Update quantity if provided (CEA cash market: whole certificates only)
     if "quantity" in update and update["quantity"] is not None:
         new_quantity = float(update["quantity"])
         if new_quantity <= 0:
             raise HTTPException(
                 status_code=400, detail="Quantity must be greater than 0"
             )
-        if new_quantity < float(order.filled_quantity):
+        if new_quantity != int(round(new_quantity)):
+            raise HTTPException(
+                status_code=400,
+                detail="CEA quantity must be a whole number (no fractional certificates)",
+            )
+        quantity_int = int(round(new_quantity))
+        if quantity_int < float(order.filled_quantity):
             filled = float(order.filled_quantity)
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot reduce quantity below filled amount ({filled})",
             )
-        order.quantity = Decimal(str(new_quantity))
+        order.quantity = Decimal(str(quantity_int))
 
     # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
     order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1583,9 +1609,9 @@ async def admin_update_order(
         "certificate_type": order.certificate_type.value,
         "side": order.side.value,
         "price": float(order.price),
-        "quantity": float(order.quantity),
-        "filled_quantity": float(order.filled_quantity),
-        "remaining_quantity": float(order.quantity - order.filled_quantity),
+        "quantity": int(round(float(order.quantity))),
+        "filled_quantity": int(round(float(order.filled_quantity or 0))),
+        "remaining_quantity": int(round(float(order.quantity - (order.filled_quantity or 0)))),
         "status": order.status.value,
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat() if order.updated_at else None,

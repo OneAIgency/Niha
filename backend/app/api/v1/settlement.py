@@ -101,7 +101,7 @@ async def get_my_pending_settlements(
                 "settlement_type": settlement.settlement_type.value,
                 "status": settlement.status.value,
                 "asset_type": settlement.asset_type.value,
-                "quantity": float(settlement.quantity),
+                "quantity": int(round(float(settlement.quantity))),
                 "price": float(settlement.price),
                 "total_value_eur": float(settlement.total_value_eur),
                 "expected_settlement_date": (
@@ -224,7 +224,7 @@ async def get_settlement_details(
         "settlement_type": settlement.settlement_type.value,
         "status": settlement.status.value,
         "asset_type": settlement.asset_type.value,
-        "quantity": float(settlement.quantity),
+        "quantity": int(round(float(settlement.quantity))),
         "price": float(settlement.price),
         "total_value_eur": float(settlement.total_value_eur),
         "expected_settlement_date": settlement.expected_settlement_date.isoformat(),

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, RefreshCw, Leaf, Wind, X, ArrowUpCircle, ArrowDownCircle, AlertCircle } from 'lucide-react';
 import { Button, DataTable, Badge, AlertBanner, NumberInput, type Column } from '../common';
 import { getMarketMakerBalances, getMarketMakerTransactions, createTransaction } from '../../services/api';
-import { formatQuantity, formatRelativeTime } from '../../utils';
+import { formatCertificateQuantity, formatRelativeTime } from '../../utils';
 import { cn } from '../../utils';
 
 interface MarketMakerTransactionsSectionProps {
@@ -177,7 +177,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
           'font-mono font-semibold',
           row.transactionType === 'deposit' ? 'text-emerald-600' : 'text-red-600'
         )}>
-          {row.transactionType === 'deposit' ? '+' : '-'}{formatQuantity(Number(value))}
+          {row.transactionType === 'deposit' ? '+' : '-'}{formatCertificateQuantity(Number(value))}
         </span>
       ),
     },
@@ -188,7 +188,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
       align: 'right',
       render: (value) => (
         <span className="font-mono text-navy-900 dark:text-white">
-          {formatQuantity(Number(value))}
+          {formatCertificateQuantity(Number(value))}
         </span>
       ),
     },
@@ -223,7 +223,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
               <span className="text-xs uppercase tracking-wider font-medium">CEA Balance</span>
             </div>
             <div className="text-2xl font-bold font-mono text-amber-700 dark:text-amber-300">
-              {loading ? '...' : formatQuantity(balances.ceaBalance)}
+              {loading ? '...' : formatCertificateQuantity(balances.ceaBalance)}
             </div>
           </div>
           <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
@@ -232,7 +232,7 @@ export function MarketMakerTransactionsSection({ marketMakerId }: MarketMakerTra
               <span className="text-xs uppercase tracking-wider font-medium">EUA Balance</span>
             </div>
             <div className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-300">
-              {loading ? '...' : formatQuantity(balances.euaBalance)}
+              {loading ? '...' : formatCertificateQuantity(balances.euaBalance)}
             </div>
           </div>
         </div>

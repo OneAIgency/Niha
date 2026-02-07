@@ -14,6 +14,7 @@ import {
 import { swapsApi, cashMarketApi, usersApi } from '../services/api';
 import { Subheader, AlertBanner } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
+import { getEffectiveRole } from '../utils/effectiveRole';
 import type { SwapCalculation } from '../types';
 
 interface SwapRate {
@@ -45,6 +46,10 @@ interface OrderbookLevel {
 }
 
 export function CeaSwapMarketPage() {
+  const { user, simulatedRole } = useAuthStore();
+  const effectiveRole = getEffectiveRole(user ?? null, simulatedRole);
+  const isCeaPreview = effectiveRole === 'CEA';
+
   const [swapRate, setSwapRate] = useState<SwapRate | null>(null);
   const [userBalances, setUserBalances] = useState<UserBalances | null>(null);
   const [swapCalculation, setSwapCalculation] = useState<SwapCalculation | null>(null);
@@ -265,7 +270,90 @@ export function CeaSwapMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-900">
+    <div className="min-h-screen bg-navy-900 relative">
+      {/* CEA Preview: Blur Overlay */}
+      {isCeaPreview && (
+        <div className="fixed inset-0 z-40" style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}>
+          <div className="absolute inset-0 bg-navy-900/70" />
+        </div>
+      )}
+
+      {/* CEA Preview: Info Modal */}
+      <AnimatePresence>
+        {isCeaPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-md"
+            >
+              {/* Modal card */}
+              <div className="relative bg-navy-800 border border-navy-600 rounded-2xl overflow-hidden">
+                {/* Top accent bar */}
+                <div className="h-1 bg-gradient-to-r from-emerald-500 via-blue-400 to-emerald-500" />
+
+                {/* Header */}
+                <div className="px-8 pt-8 pb-4">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                      <ArrowRightLeft className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-white tracking-tight">Swap Market</h2>
+                      <p className="text-sm text-navy-400">CEA to EUA exchange</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="px-8 pb-6">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">Available after CEA purchase</span>
+                  </div>
+                </div>
+
+                {/* Visual swap preview */}
+                <div className="px-8 pb-6">
+                  <div className="flex items-center justify-center gap-4 py-6 bg-navy-700/50 border border-navy-600 rounded-xl">
+                    <div className="text-center">
+                      <div className="w-10 h-10 mx-auto rounded-lg bg-amber-500/20 flex items-center justify-center mb-2">
+                        <Leaf className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div className="text-sm font-semibold text-amber-400">CEA</div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-navy-400" />
+                    <div className="text-center">
+                      <div className="w-10 h-10 mx-auto rounded-lg bg-blue-500/20 flex items-center justify-center mb-2">
+                        <span className="text-lg">🇪🇺</span>
+                      </div>
+                      <div className="text-sm font-semibold text-blue-400">EUA</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-8 pb-8">
+                  <div className="flex items-start gap-3 px-4 py-3 bg-navy-700/30 border border-navy-600/50 rounded-xl">
+                    <Shield className="w-4 h-4 text-navy-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-navy-400 leading-relaxed">
+                      The Swap Market allows you to exchange your CEA certificates for EU Emission Allowances (EUA). This feature will be unlocked once you complete a CEA purchase on the Cash Market.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Subheader */}
       <Subheader
         icon={<ArrowRightLeft className="w-5 h-5 text-emerald-500" />}

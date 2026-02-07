@@ -17,9 +17,7 @@ export { DesignSystemPage } from './DesignSystemPage';
 export { ThemePage } from './ThemePage';
 export { ThemeSectionPage } from './ThemeSectionPage';
 export { MarketMakersPage } from './MarketMakersPage';
-export { MarketOrdersPage } from './MarketOrdersPage';
 export { default as LoggingPage } from './LoggingPage';
-export { CreateLiquidityPage } from './CreateLiquidityPage';
 export { FeeSettingsPage } from './FeeSettingsPage';
 
 // Onboarding sub-pages

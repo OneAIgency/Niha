@@ -100,7 +100,14 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
               <MarketMakerDetailsTab marketMaker={marketMaker} onUpdateSuccess={onSuccess} />
             )}
             {activeTab === 'transactions' && (
-              <MarketMakerTransactionsTab marketMakerId={marketMaker.id} />
+              <MarketMakerTransactionsTab
+                marketMakerId={marketMaker.id}
+                mmType={marketMaker.mmType}
+                showCea={marketMaker.mmType === 'CEA_SELLER'}
+                showEua={marketMaker.mmType === 'EUA_OFFER'}
+                showCeaOption={marketMaker.mmType !== 'EUA_OFFER'}
+                showEuaOption={marketMaker.mmType === 'EUA_OFFER'}
+              />
             )}
             {activeTab === 'autotrade' && (
               <MarketMakerAutoTradeTab marketMaker={marketMaker} />

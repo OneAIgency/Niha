@@ -54,6 +54,20 @@ export function formatQuantity(value: number | undefined | null): string {
   }).format(value);
 }
 
+/**
+ * Format CEA/EUA certificate quantity (whole numbers only, no fractional certificates).
+ * Use for all certificate balance, volume, and quantity display.
+ */
+export function formatCertificateQuantity(value: number | undefined | null): string {
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(value));
+}
+
 // Format date (locale date string)
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -196,6 +210,9 @@ export {
 
 // Export redirect utilities
 export { getPostLoginRedirect } from './redirect';
+
+// Export effective role (admin role simulation)
+export { getEffectiveRole, USER_ROLES } from './effectiveRole';
 
 // Export user utilities
 export { formatUserName, getUserInitials } from './userUtils';

@@ -163,7 +163,7 @@ async def get_recent_trades(
             id=t.id,
             certificate_type=t.certificate_type.value,
             price=float(t.price),
-            quantity=float(t.quantity),
+            quantity=int(round(float(t.quantity))),
             side="BUY",  # All trades from client perspective are buys
             executed_at=t.executed_at,
         )
@@ -208,7 +208,7 @@ async def get_market_stats(
     else:
         high_24h = orderbook["last_price"]
         low_24h = orderbook["last_price"]
-        volume_24h = 0.0
+        volume_24h = 0
         change_24h = 0.0
 
     return MarketStatsResponse(
@@ -217,7 +217,7 @@ async def get_market_stats(
         change_24h=change_24h,
         high_24h=high_24h,
         low_24h=low_24h,
-        volume_24h=volume_24h,
+        volume_24h=int(round(volume_24h)) if trades_24h else 0,
         total_bids=len(orderbook["bids"]),
         total_asks=len(orderbook["asks"]),
     )
@@ -317,9 +317,9 @@ async def place_order(
             certificate_type=new_order.certificate_type.value,
             side=new_order.side.value,
             price=float(new_order.price),
-            quantity=float(new_order.quantity),
-            filled_quantity=float(new_order.filled_quantity),
-            remaining_quantity=float(new_order.quantity - new_order.filled_quantity),
+            quantity=int(round(float(new_order.quantity))),
+            filled_quantity=int(round(float(new_order.filled_quantity or 0))),
+            remaining_quantity=int(round(float(new_order.quantity - (new_order.filled_quantity or 0)))),
             status=new_order.status.value,
             created_at=new_order.created_at,
             updated_at=new_order.updated_at,
@@ -383,9 +383,9 @@ async def get_my_orders(
             certificate_type=o.certificate_type.value,
             side=o.side.value,
             price=float(o.price),
-            quantity=float(o.quantity),
-            filled_quantity=float(o.filled_quantity),
-            remaining_quantity=float(o.quantity - o.filled_quantity),
+            quantity=int(round(float(o.quantity))),
+            filled_quantity=int(round(float(o.filled_quantity or 0))),
+            remaining_quantity=int(round(float(o.quantity - (o.filled_quantity or 0)))),
             status=o.status.value,
             created_at=o.created_at,
             updated_at=o.updated_at,
@@ -566,9 +566,9 @@ async def modify_order_price(
         certificate_type=order.certificate_type.value,
         side=order.side.value,
         price=float(order.price),
-        quantity=float(order.quantity),
-        filled_quantity=float(order.filled_quantity),
-        remaining_quantity=float(order.quantity - order.filled_quantity),
+        quantity=int(round(float(order.quantity))),
+        filled_quantity=int(round(float(order.filled_quantity or 0))),
+        remaining_quantity=int(round(float(order.quantity - (order.filled_quantity or 0)))),
         status=order.status.value,
         created_at=order.created_at,
         updated_at=order.updated_at,
@@ -619,13 +619,13 @@ async def get_cea_orderbook(db=Depends(get_db)):  # noqa: B008
         price_levels[price_key]["order_count"] += 1
         price_levels[price_key]["seller_codes"].append(seller.client_code)
 
-    # Convert to sorted list and calculate cumulative
+    # Convert to sorted list and calculate cumulative (CEA quantities as integers)
     asks = sorted(price_levels.values(), key=lambda x: x["price"])
     cumulative = 0
     for ask in asks:
         cumulative += ask["quantity"]
-        ask["cumulative_quantity"] = round(cumulative, 2)
-        ask["quantity"] = round(ask["quantity"], 2)
+        ask["cumulative_quantity"] = int(round(cumulative))
+        ask["quantity"] = int(round(ask["quantity"]))
 
     # Calculate market stats
     best_ask = asks[0]["price"] if asks else None
@@ -668,8 +668,8 @@ async def get_cea_sellers(db=Depends(get_db)):  # noqa: B008
             "client_code": s.client_code,
             "name": s.name,
             "company_name": s.company_name,
-            "cea_balance": float(s.cea_balance) if s.cea_balance else 0,
-            "cea_sold": float(s.cea_sold) if s.cea_sold else 0,
+            "cea_balance": int(round(float(s.cea_balance))) if s.cea_balance else 0,
+            "cea_sold": int(round(float(s.cea_sold))) if s.cea_sold else 0,
             "total_transactions": s.total_transactions or 0,
         }
         for s in sellers
@@ -855,8 +855,8 @@ async def get_user_balances(
     return {
         "entity_id": str(current_user.entity_id),
         "eur_balance": float(eur_balance),
-        "cea_balance": float(cea_balance),
-        "eua_balance": float(eua_balance),
+        "cea_balance": int(round(float(cea_balance))),
+        "eua_balance": int(round(float(eua_balance))),
     }
 
 
@@ -915,19 +915,19 @@ async def preview_order(
         side=request.side.value,
         order_type=request.order_type.value,
         amount_eur=float(amount_eur) if amount_eur else None,
-        quantity_requested=float(quantity) if quantity else None,
+        quantity_requested=int(round(float(quantity))) if quantity else None,
         limit_price=float(limit_price) if limit_price else None,
         all_or_none=request.all_or_none,
         fills=[
             OrderFill(
                 seller_code=f.seller_code,
                 price=float(f.price_eur),
-                quantity=float(f.quantity),
+                quantity=int(round(float(f.quantity))),
                 cost=float(f.cost_eur),
             )
             for f in preview.fills
         ],
-        total_quantity=float(preview.total_quantity),
+        total_quantity=int(round(float(preview.total_quantity))),
         total_cost_gross=float(preview.total_cost_gross),
         weighted_avg_price=float(preview.weighted_avg_price),
         best_price=float(preview.best_price) if preview.best_price else None,
@@ -1002,7 +1002,7 @@ async def execute_market_order(
         certificate_type=request.certificate_type.value,
         side=request.side.value,
         order_type="MARKET",
-        total_quantity=float(result.total_quantity),
+        total_quantity=int(round(float(result.total_quantity))),
         total_cost_gross=float(result.total_cost_gross),
         platform_fee=float(result.platform_fee),
         total_cost_net=float(result.total_cost_net),
@@ -1011,11 +1011,11 @@ async def execute_market_order(
             OrderFill(
                 seller_code=f.seller_code,
                 price=float(f.price_eur),
-                quantity=float(f.quantity),
+                quantity=int(round(float(f.quantity))),
                 cost=float(f.cost_eur),
             )
             for f in result.fills
         ],
         eur_balance=float(result.eur_balance),
-        certificate_balance=float(result.certificate_balance),
+        certificate_balance=int(round(float(result.certificate_balance))),
     )

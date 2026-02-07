@@ -119,3 +119,71 @@ async def test_add_asset_withdrawal_creates_ticket():
     assert "withdrawal" in (ticket.tags or [])
     assert ticket.after_state is not None
     assert ticket.after_state.get("operation") == "withdraw"
+
+
+@pytest.mark.asyncio
+async def test_add_asset_cea_fractional_amount_rejected():
+    """POST add-asset with fractional CEA amount returns 422 (CEA/EUA must be whole numbers)."""
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+
+        entity_id = await _get_first_entity_id()
+
+        response = await client.post(
+            f"/api/v1/backoffice/entities/{entity_id}/add-asset",
+            json={
+                "asset_type": "CEA",
+                "amount": 100.5,
+                "operation": "deposit",
+                "notes": "pytest fractional CEA rejected",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 422, response.text
+        detail = response.json().get("detail", [])
+        if isinstance(detail, list) and detail:
+            msg = detail[0].get("msg", "")
+        else:
+            msg = str(detail)
+        assert "whole" in msg.lower() or "integer" in msg.lower()
+
+
+@pytest.mark.asyncio
+async def test_add_asset_eua_fractional_amount_rejected():
+    """POST add-asset with fractional EUA amount returns 422 (CEA/EUA must be whole numbers)."""
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+
+        entity_id = await _get_first_entity_id()
+
+        response = await client.post(
+            f"/api/v1/backoffice/entities/{entity_id}/add-asset",
+            json={
+                "asset_type": "EUA",
+                "amount": 50.25,
+                "operation": "deposit",
+                "notes": "pytest fractional EUA rejected",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 422, response.text
+        detail = response.json().get("detail", [])
+        if isinstance(detail, list) and detail:
+            msg = detail[0].get("msg", "")
+        else:
+            msg = str(detail)
+        assert "whole" in msg.lower() or "integer" in msg.lower()

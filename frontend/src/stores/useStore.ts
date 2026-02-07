@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, Prices, ContactRequestResponse } from '../types';
+import type { User, UserRole, Prices, ContactRequestResponse } from '../types';
 import { TOKEN_KEY } from '../constants/auth';
 import { logger } from '../utils/logger';
 
@@ -11,8 +11,11 @@ interface AuthState {
   user: User | null;
   token: string | null;  // Kept for backwards compatibility, but not used for auth
   isAuthenticated: boolean;
+  /** Admin-only: simulated role for testing (redirects and page content use this). Persisted in session. */
+  simulatedRole: UserRole | null;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
+  setSimulatedRole: (role: UserRole | null) => void;
 }
 
 export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
@@ -21,6 +24,7 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
       user: null,
       token: null,  // Kept for backwards compatibility during transition
       isAuthenticated: false,
+      simulatedRole: null,
       _hasHydrated: false,
       setAuth: (user, token) => {
         // Token is now in httpOnly cookie, but we keep a copy for backwards compatibility
@@ -44,9 +48,10 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
         } catch (error) {
           logger.error('[AuthStore] Failed to remove token', error);
         }
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ user: null, token: null, isAuthenticated: false, simulatedRole: null });
         logger.debug('[AuthStore] Auth state cleared, isAuthenticated=false');
       },
+      setSimulatedRole: (role) => set({ simulatedRole: role }),
     }),
     {
       name: 'auth-storage',
@@ -57,6 +62,7 @@ export const useAuthStore = create<AuthState & { _hasHydrated: boolean }>()(
         user: state.user,
         token: state.token,  // Kept for backwards compatibility
         isAuthenticated: state.isAuthenticated,
+        simulatedRole: state.simulatedRole,
       }),
       // Control rehydration to prevent navigation loops
       onRehydrateStorage: () => {

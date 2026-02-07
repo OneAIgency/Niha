@@ -1,10 +1,12 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout, ThemeLayout } from './components/layout';
+import { RoleSimulationFloater } from './components/admin';
 import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
 import { getPostLoginRedirect } from './utils/redirect';
+import { getEffectiveRole } from './utils/effectiveRole';
 import { logger } from './utils/logger';
 
 /**
@@ -64,9 +66,7 @@ const ComponentShowcasePage = lazy(() => import('./pages/ComponentShowcasePage')
 const DesignSystemPage = lazy(() => import('./pages/DesignSystemPage').then(m => ({ default: m.DesignSystemPage })));
 const ThemeSectionPage = lazy(() => import('./pages/ThemeSectionPage').then(m => ({ default: m.ThemeSectionPage })));
 const MarketMakersPage = lazy(() => import('./pages/MarketMakersPage').then(m => ({ default: m.MarketMakersPage })));
-const MarketOrdersPage = lazy(() => import('./pages/MarketOrdersPage').then(m => ({ default: m.MarketOrdersPage })));
 const LoggingPage = lazy(() => import('./pages/LoggingPage'));
-const CreateLiquidityPage = lazy(() => import('./pages/CreateLiquidityPage').then(m => ({ default: m.CreateLiquidityPage })));
 const BackofficeOnboardingPage = lazy(() => import('./pages/BackofficeOnboardingPage').then(m => ({ default: m.BackofficeOnboardingPage })));
 const FeeSettingsPage = lazy(() => import('./pages/FeeSettingsPage').then(m => ({ default: m.FeeSettingsPage })));
 const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
@@ -107,8 +107,9 @@ function AuthGuard({
   blockRoles?: UserRole[];
   redirectWhenBlocked?: string;
 }) {
-  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, user, simulatedRole, _hasHydrated } = useAuthStore();
   const location = useLocation();
+  const effectiveRole = getEffectiveRole(user, simulatedRole);
 
   // CRITICAL: Wait for Zustand to rehydrate before making any decisions
   // This prevents the flash/loop where auth state is temporarily undefined
@@ -122,25 +123,24 @@ function AuthGuard({
       // Not authenticated - redirect to login
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
-    // Rejected users have no access
-    if (user.role === 'REJECTED') {
+    // Rejected users have no access (use effective role so admin simulating REJECTED goes to login)
+    if (effectiveRole === 'REJECTED') {
       return <Navigate to="/login" replace />;
     }
 
-    // ADMIN SUPERUSER: bypass all role checks - ADMIN has access to everything
-    if (user.role === 'ADMIN') {
+    // ADMIN with no simulation: bypass role checks (full access). With simulation we use effectiveRole below.
+    if (user.role === 'ADMIN' && simulatedRole == null) {
       return <>{children}</>;
     }
 
-    // Check role-based access (allowed roles)
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-      // User doesn't have required role - redirect to their appropriate page
-      const target = redirectTo ?? getPostLoginRedirect(user);
+    // Check role-based access (allowed roles) using effective role
+    if (allowedRoles && effectiveRole != null && !allowedRoles.includes(effectiveRole)) {
+      const target = redirectTo ?? getPostLoginRedirect({ ...user, role: effectiveRole });
       return <Navigate to={target} replace />;
     }
 
-    // Block specific roles (e.g. PENDING) and redirect to onboarding
-    if (blockRoles && blockRoles.includes(user.role)) {
+    // Block specific roles (e.g. NDA) and redirect to onboarding
+    if (blockRoles && effectiveRole != null && blockRoles.includes(effectiveRole)) {
       return <Navigate to={redirectWhenBlocked} replace />;
     }
 
@@ -149,10 +149,10 @@ function AuthGuard({
   }
 
   // Route does NOT require auth (like /login)
-  // If user is already authenticated, redirect them away
+  // If user is already authenticated, redirect them away (using effective role for target)
   if (isAuthenticated && user) {
-    const targetPath = getPostLoginRedirect(user);
-    // Don't redirect if already on target path (prevent loops)
+    const roleForRedirect = effectiveRole ?? user.role;
+    const targetPath = getPostLoginRedirect({ ...user, role: roleForRedirect });
     if (location.pathname !== targetPath) {
       return <Navigate to={targetPath} replace />;
     }
@@ -217,10 +217,10 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Funding page: APPROVED and beyond, ADMIN, MM. Users can add funds at any stage. */
+/** Funding page: APPROVED and beyond, ADMIN, MM. AML excluded (dashboard only). CEA excluded (uses cash market). */
 function ApprovedRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
+    <RoleProtectedRoute allowedRoles={['APPROVED', 'FUNDING', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -238,24 +238,28 @@ function FundedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Dashboard: CEA and above (funded users with market access), ADMIN, or MM. */
+/** Dashboard: AML, CEA and above (funded users with market access), ADMIN, or MM. AML has dashboard access but no funding. */
 function DashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
+    <RoleProtectedRoute allowedRoles={['AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
       {children}
     </RoleProtectedRoute>
   );
 }
 
-/** Catch-all: redirect authenticated users to their home, others to login. */
+/** Catch-all: redirect authenticated users to their home (by effective role), others to login. */
 function CatchAllRedirect() {
-  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, user, simulatedRole, _hasHydrated } = useAuthStore();
 
   if (!_hasHydrated) {
     return <PageLoader />;
   }
 
-  const target = isAuthenticated && user ? getPostLoginRedirect(user) : '/login';
+  const effectiveRole = getEffectiveRole(user, simulatedRole);
+  const roleForRedirect = effectiveRole ?? user?.role;
+  const target = isAuthenticated && user && roleForRedirect
+    ? getPostLoginRedirect({ ...user, role: roleForRedirect })
+    : '/login';
   return <Navigate to={target} replace />;
 }
 
@@ -395,7 +399,7 @@ function App() {
             <Route
               path="/swap"
               element={
-                <RoleProtectedRoute allowedRoles={['SWAP', 'ADMIN', 'MM']}>
+                <RoleProtectedRoute allowedRoles={['CEA', 'SWAP', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
                 </RoleProtectedRoute>
               }
@@ -528,31 +532,11 @@ function App() {
               }
             />
             <Route
-              path="/backoffice/market-orders"
-              element={
-                <AdminRoute>
-                  <BackofficeErrorBoundary>
-                    <MarketOrdersPage />
-                  </BackofficeErrorBoundary>
-                </AdminRoute>
-              }
-            />
-            <Route
               path="/backoffice/logging"
               element={
                 <AdminRoute>
                   <BackofficeErrorBoundary>
                     <LoggingPage />
-                  </BackofficeErrorBoundary>
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/backoffice/liquidity"
-              element={
-                <AdminRoute>
-                  <BackofficeErrorBoundary>
-                    <CreateLiquidityPage />
                   </BackofficeErrorBoundary>
                 </AdminRoute>
               }
@@ -581,6 +565,7 @@ function App() {
           {/* Catch-all redirect */}
           <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
+        <RoleSimulationFloater />
       </Suspense>
     </Router>
   );

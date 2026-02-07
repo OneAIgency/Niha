@@ -1,4 +1,4 @@
-import { formatQuantity } from '../../utils';
+import { formatCertificateQuantity } from '../../utils';
 import type { OrderBookLevel } from '../../types';
 
 interface OrderBookRowProps {
@@ -47,7 +47,7 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
       className={`relative px-4 py-1 ${colorClasses.hover} cursor-pointer transition-colors group`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      aria-label={`${priceAction} order at price €${level.price.toFixed(2)}, quantity ${formatQuantity(level.quantity)}`}
+      aria-label={`${priceAction} order at price €${level.price.toFixed(2)}, quantity ${formatCertificateQuantity(level.quantity)}`}
     >
       {/* Depth: smooth curve (same semantics as before, curved edge instead of bar) */}
       <svg
@@ -64,10 +64,10 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
         {isBid ? (
           <>
             <div className="text-right font-mono text-navy-600 dark:text-navy-400 hidden md:block">
-              {formatQuantity(level.cumulativeQuantity)}
+              {formatCertificateQuantity(level.cumulativeQuantity)}
             </div>
             <div className="text-right font-mono text-navy-900 dark:text-white">
-              {formatQuantity(level.quantity)}
+              {formatCertificateQuantity(level.quantity)}
             </div>
             <div className={`text-right font-mono font-semibold ${colorClasses.price}`}>
               {level.price.toFixed(2)}
@@ -85,10 +85,10 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
               {level.price.toFixed(2)}
             </div>
             <div className="text-left font-mono text-navy-900 dark:text-white">
-              {formatQuantity(level.quantity)}
+              {formatCertificateQuantity(level.quantity)}
             </div>
             <div className="text-left font-mono text-navy-600 dark:text-navy-400 hidden md:block">
-              {formatQuantity(level.cumulativeQuantity)}
+              {formatCertificateQuantity(level.cumulativeQuantity)}
             </div>
           </>
         )}

@@ -44,19 +44,19 @@ class SwapDirection(str, Enum):
 
 
 class CreateSwapRequest(BaseModel):
-    """Request model for creating a swap."""
+    """Request model for creating a swap. CEA/EUA quantities are whole numbers only."""
 
     from_type: str = Field(..., description="Source certificate type (CEA or EUA)")
     to_type: str = Field(..., description="Target certificate type (CEA or EUA)")
-    quantity: float = Field(..., gt=0, description="Quantity to swap")
+    quantity: int = Field(..., gt=0, description="Quantity to swap (whole certificates only)")
     desired_rate: Optional[float] = Field(None, description="Desired exchange rate")
 
 
 @router.get("/available")
 async def get_available_swaps(
     direction: SwapDirection = SwapDirection.ALL,
-    min_quantity: Optional[float] = None,
-    max_quantity: Optional[float] = None,
+    min_quantity: Optional[int] = None,
+    max_quantity: Optional[int] = None,
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=50),  # noqa: B008
     current_user: User = Depends(get_swap_user),  # noqa: B008
@@ -132,7 +132,7 @@ async def get_my_swaps(
     )
     swaps = result.scalars().all()
 
-    # Convert to response format
+    # Convert to response format (CEA/EUA quantities as integers)
     return {
         "data": [
             {
@@ -140,9 +140,9 @@ async def get_my_swaps(
                 "anonymous_code": swap.anonymous_code,
                 "from_type": swap.from_type.value,
                 "to_type": swap.to_type.value,
-                "quantity": float(swap.quantity),
+                "quantity": int(round(float(swap.quantity))),
                 "desired_rate": float(swap.desired_rate) if swap.desired_rate else None,
-                "equivalent_quantity": float(swap.quantity * swap.desired_rate) if swap.desired_rate else 0,
+                "equivalent_quantity": int(round(float(swap.quantity * swap.desired_rate))) if swap.desired_rate else 0,
                 "status": swap.status.value.lower(),
                 "created_at": swap.created_at.isoformat() if swap.created_at else None,
             }
@@ -153,7 +153,7 @@ async def get_my_swaps(
 @router.get("/calculator")
 async def calculate_swap(
     from_type: str,
-    quantity: float = Query(..., gt=0),  # noqa: B008
+    quantity: int = Query(..., gt=0),  # noqa: B008  whole certificates only
     current_user: User = Depends(get_swap_user),  # noqa: B008
 ):
     """
@@ -183,7 +183,7 @@ async def calculate_swap(
         },
         "output": {
             "type": output_type,
-            "quantity": round(output_quantity, 2),
+            "quantity": int(round(output_quantity)),
             "value_eur": round(
                 output_quantity * (eua_price if output_type == "EUA" else cea_price), 2
             ),
@@ -211,8 +211,8 @@ async def get_swap_stats(
         "matched_today": 0,
         "eua_to_cea_requests": 0,
         "cea_to_eua_requests": 0,
-        "total_eua_volume": 0.0,
-        "total_cea_volume": 0.0,
+        "total_eua_volume": 0,
+        "total_cea_volume": 0,
         "current_rate": prices["swap_rate"],
         "avg_requested_rate": 0.0,
         "message": "Swap market coming soon.",
@@ -225,11 +225,11 @@ async def get_swap_stats(
 
 
 class CreateSwapOfferRequest(BaseModel):
-    """Request model for creating a swap offer (market maker liquidity)."""
+    """Request model for creating a swap offer (market maker liquidity). EUA quantity is whole number only."""
 
     market_maker_id: UUID = Field(..., description="Market maker ID (must be EUA_OFFER type)")
     ratio: float = Field(..., gt=0, description="CEA/EUA ratio (e.g., 0.1182 means 1 CEA = 0.1182 EUA)")
-    eua_quantity: float = Field(..., gt=0, description="Amount of EUA to offer")
+    eua_quantity: int = Field(..., gt=0, description="Amount of EUA to offer (whole certificates only)")
 
 
 class CreateSwapOfferBatchRequest(BaseModel):
@@ -280,25 +280,27 @@ async def get_swap_offers(
 
         remaining = float(order.quantity) - float(order.filled_quantity)
         if remaining > 0:
+            remaining_int = int(round(remaining))
             offers_by_mm[mm_id]["offers"].append({
                 "order_id": str(order.id),
                 "ratio": float(order.price),  # price = CEA/EUA ratio
-                "eua_available": remaining,
+                "eua_available": remaining_int,
                 "created_at": order.created_at.isoformat() if order.created_at else None,
             })
-            offers_by_mm[mm_id]["total_eua_available"] += remaining
+            offers_by_mm[mm_id]["total_eua_available"] += remaining_int
 
-    # Flatten to list and calculate best rate for each MM
+    # Flatten to list and calculate best rate for each MM (eua_available as int)
     offers_list = []
     for mm_data in offers_by_mm.values():
         if mm_data["offers"]:
             best_ratio = max(o["ratio"] for o in mm_data["offers"])
+            total_eua = int(mm_data["total_eua_available"])
             offers_list.append({
                 "market_maker_id": mm_data["market_maker_id"],
                 "market_maker_name": mm_data["market_maker_name"],
                 "direction": mm_data["direction"],
-                "ratio": best_ratio,  # Best ratio offered
-                "eua_available": mm_data["total_eua_available"],
+                "ratio": best_ratio,
+                "eua_available": total_eua,
                 "rate": best_ratio,
                 "offers_count": len(mm_data["offers"]),
             })
@@ -350,21 +352,21 @@ async def get_swap_orderbook(
         if ratio not in price_levels:
             price_levels[ratio] = {
                 "ratio": ratio,
-                "eua_quantity": 0.0,
+                "eua_quantity": 0,
                 "orders_count": 0,
             }
 
-        price_levels[ratio]["eua_quantity"] += remaining
+        price_levels[ratio]["eua_quantity"] += int(round(remaining))
         price_levels[ratio]["orders_count"] += 1
 
     # Convert to sorted list (best ratio first = highest)
     asks = sorted(price_levels.values(), key=lambda x: x["ratio"], reverse=True)
 
-    # Calculate totals
+    # Calculate totals (integers for CEA/EUA)
     total_eua = sum(level["eua_quantity"] for level in asks)
 
     # Add cumulative totals for depth visualization
-    cumulative = 0.0
+    cumulative = 0
     for level in asks:
         cumulative += level["eua_quantity"]
         level["cumulative_eua"] = cumulative
@@ -448,7 +450,7 @@ async def create_swap_offer(
         "market_maker_id": str(request.market_maker_id),
         "market_maker_name": mm.name,
         "ratio": float(order.price),
-        "eua_quantity": float(order.quantity),
+        "eua_quantity": int(round(float(order.quantity))),
         "status": order.status.value,
         "created_at": order.created_at.isoformat() if order.created_at else None,
     }
