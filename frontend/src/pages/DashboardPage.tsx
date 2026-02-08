@@ -222,6 +222,8 @@ export function DashboardPage() {
   const isRefreshingBalanceRef = useRef<boolean>(false);
   const isAmlUser = effectiveRole === 'AML';
   const [amlDeposit, setAmlDeposit] = useState<Deposit | null>(null);
+  // AML modal: show on mount when AML; any click dismisses modal; blur stays while isAmlUser
+  const [showAmlModal, setShowAmlModal] = useState(true);
 
   // Note: Balance update events follow the pattern { detail: { type: string, source?: string } }
   // Currently we just refresh on any balance update event
@@ -405,6 +407,11 @@ export function DashboardPage() {
       }
     };
     fetchAmlDeposit();
+  }, [isAmlUser]);
+
+  // When user is AML, show modal on enter; when role changes away from AML, reset so next AML visit shows modal again
+  useEffect(() => {
+    setShowAmlModal(isAmlUser);
   }, [isAmlUser]);
 
   // Initial fetch on mount
@@ -639,14 +646,19 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* AML Modal */}
+      {/* AML Modal – click anywhere (including on modal) dismisses; blur stays via overlay above */}
       <AnimatePresence>
-        {isAmlUser && (
+        {isAmlUser && showAmlModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setShowAmlModal(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowAmlModal(false); }}
+            aria-label="Dismiss AML review"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}

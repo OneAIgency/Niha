@@ -6,7 +6,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 
 ### Core Trading Platform
 - **User Authentication** - Secure JWT-based authentication with optimized navigation flow and role-based redirects. Users in **NDA** or **KYC** roles can access only onboarding (`/onboarding`, sub-routes, `/onboarding1`, `/learn-more`) and public routes; all other protected routes redirect them to `/onboarding`. Login page offers ENTER (password) and NDA (request access); after NDA submit, a "Request Submitted" confirmation is shown, then after 5 seconds the content fades out and an ambient animation is displayed. Preview: `/login?preview=nda-success` shows the NDA success flow without submitting.
-- **User status flow (0010)** — Full onboarding flow **NDA → KYC → APPROVED → FUNDING → AML → CEA → CEA_SETTLE → SWAP → EUA_SETTLE → EUA**. **AML** users see **DASHBOARD** in the header and redirect to `/dashboard` (no funding access). On the dashboard, the Cash (EUR) card shows **"UNDER AML APPROVAL"** and an amber background (50% opacity) for AML users. **MM (Market Maker)** is an admin-only role: created via Backoffice → Users → Create User (no contact request); MM has the same route and API access as EUA/ADMIN (dashboard, funding, cash market, swap). Role-based redirects (`getPostLoginRedirect`), route guards (`OnboardingRoute`, `ApprovedRoute`, `FundedRoute`, `DashboardRoute`, etc.), and API protection (`get_onboarding_user`, `get_swap_user`, `get_approved_user`, `get_funded_user`) align with this flow. Details in **`app_truth.md`** §8 and **`docs/ROLE_TRANSITIONS.md`**.
+- **User status flow (0010)** — Full onboarding flow **NDA → KYC → APPROVED → FUNDING → AML → CEA → CEA_SETTLE → SWAP → EUA_SETTLE → EUA**. **AML** users see **DASHBOARD** in the header and redirect to `/dashboard` (no funding access). On the dashboard, the Cash (EUR) card shows **"UNDER AML APPROVAL"** and an amber background (50% opacity) for AML users. **AML live updates (0025)** — When admin clears a deposit (AML→CEA), the client page updates in real time via WebSocket (no refresh); AML users see an AML review modal (click anywhere to dismiss) and a blur overlay that persists until the role updates. **MM (Market Maker)** is an admin-only role: created via Backoffice → Users → Create User (no contact request); MM has the same route and API access as EUA/ADMIN (dashboard, funding, cash market, swap). Role-based redirects (`getPostLoginRedirect`), route guards (`OnboardingRoute`, `ApprovedRoute`, `FundedRoute`, `DashboardRoute`, etc.), and API protection (`get_onboarding_user`, `get_swap_user`, `get_approved_user`, `get_funded_user`) align with this flow. Details in **`app_truth.md`** §8 and **`docs/ROLE_TRANSITIONS.md`**.
 - **Admin role simulation** — When logged in as **ADMIN**, a floating control (bottom-right) lets you simulate any platform role for testing redirects and page content. Simulation is frontend-only (API and token stay as the real admin). Redirects and page logic (e.g. Dashboard, Header) use the effective role; Backoffice entry in the header is shown for real ADMIN only. See **`app_truth.md`** §8.
 - **User Profile Management** - View and manage personal information (admin-only editing)
 - **Password Management** - Secure password change with strength validation
@@ -249,6 +249,32 @@ curl -X GET http://localhost:8000/api/v1/settlement/pending \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### WebSocket – Client Realtime
+
+Authenticated clients receive realtime events (e.g. role updates) via WebSocket:
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `WS /api/v1/client/ws?token=<jwt>` | JWT query param | Role updates when admin clears deposit (AML→CEA) |
+
+**Connection:** Pass `token` as query parameter. Invalid or blacklisted token returns close code 4001.
+
+**Message types:**
+- `connected` – Initial confirmation on connect
+- `heartbeat` – Every 30 seconds (keep-alive)
+- `role_updated` – Role changed (e.g. AML→CEA); client should refetch `GET /users/me` and update auth store
+
+**Example `role_updated` payload:**
+```json
+{
+  "type": "role_updated",
+  "data": { "role": "CEA", "entity_id": "uuid" },
+  "timestamp": "2026-02-08T12:00:00.000Z"
+}
+```
+
+Frontend: `useClientRealtime` (mounted in Layout) handles connection and `role_updated`; see `app_truth.md` §8.
+
 ## Environment Variables
 
 ### Backend (.env)
@@ -324,6 +350,8 @@ docker compose exec backend alembic upgrade head
 ```
 
 **MM (Market Maker) user shows as NDA or wrong role:** Ensure migrations are applied (`alembic upgrade head`); the `userrole` enum must include `MM`. Create new users with role **MM (Market Maker)** from Backoffice → Users → Create User, or edit an existing user and set role to MM in Edit User. Refresh the Users list.
+
+**AML user not seeing live role update after admin clears deposit:** The client WebSocket (`WS /api/v1/client/ws`) must be connected. Check: (1) user is authenticated; (2) `useClientRealtime` is mounted (Layout); (3) Vite dev proxy or `VITE_WS_URL` allows WebSocket to backend. On disconnect, the hook auto-reconnects after 5 seconds. Verify backend logs for `role_updated` broadcast and frontend console for "Client WebSocket connected".
 
 **Frontend proxy errors:**
 ```bash

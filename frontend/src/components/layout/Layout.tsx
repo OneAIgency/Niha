@@ -1,9 +1,11 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { useClientRealtime } from '../../hooks/useClientRealtime';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
 export function Layout() {
   const location = useLocation();
+  useClientRealtime();
   const isLandingPage = location.pathname === '/';
 
   return (

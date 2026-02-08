@@ -26,6 +26,7 @@ from ...services import deposit_service
 from ...services.deposit_service import DepositNotFoundError, InvalidDepositStateError
 from ...services.ticket_service import TicketService
 from .backoffice import backoffice_ws_manager
+from .client_ws import client_ws_manager
 
 router = APIRouter(prefix="/deposits", tags=["Deposits"])
 
@@ -597,7 +598,7 @@ async def clear_deposit(
     - Manually with force_clear=True before hold expires
     """
     try:
-        deposit, upgraded_count = await deposit_service.clear_deposit(
+        deposit, upgraded_user_ids = await deposit_service.clear_deposit(
             db=db,
             deposit_id=UUID(deposit_id),
             admin_id=admin_user.id,
@@ -620,7 +621,7 @@ async def clear_deposit(
             response_data={
                 "amount": float(deposit.amount) if deposit.amount else 0,
                 "currency": deposit.currency.value if deposit.currency else None,
-                "upgraded_users": upgraded_count,
+                "upgraded_users": len(upgraded_user_ids),
             },
             tags=["deposit", "clear", "admin"],
         )
@@ -637,10 +638,16 @@ async def clear_deposit(
                 "entity_name": deposit.entity.name if deposit.entity else None,
                 "amount": float(deposit.amount) if deposit.amount else 0,
                 "currency": deposit.currency.value if deposit.currency else None,
-                "upgraded_users": upgraded_count,
+                "upgraded_users": len(upgraded_user_ids),
                 "ticket_id": ticket.ticket_id,
             },
         )
+        # Notify upgraded users (AML→CEA) so client can refetch /users/me and update UI
+        if upgraded_user_ids:
+            await client_ws_manager.broadcast_to_users(
+                upgraded_user_ids,
+                {"type": "role_updated", "data": {"role": "CEA", "entity_id": str(deposit.entity_id)}},
+            )
         return deposit_to_response(deposit)
 
     except DepositNotFoundError as e:

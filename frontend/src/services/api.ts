@@ -406,6 +406,14 @@ export const pricesApi = {
   },
 };
 
+// Client Realtime Types (role_updated e.g. AML→CEA after clear deposit)
+export interface ClientWebSocketMessage {
+  type: 'connected' | 'heartbeat' | 'role_updated';
+  data?: { role?: string; entityId?: string };
+  message?: string;
+  timestamp: string;
+}
+
 // Backoffice Realtime Types
 export interface BackofficeWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted';
@@ -413,6 +421,55 @@ export interface BackofficeWebSocketMessage {
   message?: string;
   timestamp: string;
 }
+
+// Client Realtime API (authenticated WS for role updates etc.)
+export const clientRealtimeApi = {
+  connectWebSocket: (
+    token: string,
+    onMessage: (message: ClientWebSocketMessage) => void,
+    onOpen?: () => void,
+    onClose?: () => void,
+    onError?: (error: Event) => void
+  ): WebSocket => {
+    const getWsUrl = (): string => {
+      if (import.meta.env.VITE_WS_URL) {
+        return `${import.meta.env.VITE_WS_URL}/api/v1/client/ws?token=${encodeURIComponent(token)}`;
+      }
+      const { protocol, hostname, port } = window.location;
+      const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+      if (port === '5173') {
+        return `${wsProtocol}//${hostname}:${port}/api/v1/client/ws?token=${encodeURIComponent(token)}`;
+      }
+      return `${wsProtocol}//${hostname}:8000/api/v1/client/ws?token=${encodeURIComponent(token)}`;
+    };
+    const wsUrl = getWsUrl();
+    logger.debug('Connecting to client WebSocket');
+    const ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      logger.debug('Client WebSocket connected');
+      onOpen?.();
+    };
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as ClientWebSocketMessage;
+        const transformed = transformKeysToCamelCase<ClientWebSocketMessage>(data);
+        logger.debug('Client WebSocket message', { type: transformed.type });
+        onMessage(transformed);
+      } catch (err) {
+        logger.error('Failed to parse client WebSocket message', err);
+      }
+    };
+    ws.onclose = () => {
+      logger.debug('Client WebSocket disconnected');
+      onClose?.();
+    };
+    ws.onerror = (error) => {
+      logger.error('Client WebSocket error', error);
+      onError?.(error);
+    };
+    return ws;
+  },
+};
 
 // Backoffice Realtime API
 export const backofficeRealtimeApi = {

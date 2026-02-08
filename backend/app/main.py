@@ -13,6 +13,7 @@ from .api.v1 import (
     auth,
     backoffice,
     cash_market,
+    client_ws,
     contact,
     deposits,
     market_maker,
@@ -361,6 +362,7 @@ app.include_router(marketplace.router, prefix="/api/v1")
 app.include_router(swaps.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(client_ws.router, prefix="/api/v1")
 app.include_router(backoffice.router, prefix="/api/v1")
 app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(cash_market.router, prefix="/api/v1")

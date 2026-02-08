@@ -7,9 +7,6 @@ import {
   Zap,
   Play,
   Square,
-  ChevronDown,
-  ChevronUp,
-  Activity,
 } from 'lucide-react';
 import { Card, Button, formatNumberWithSeparators, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
@@ -63,21 +60,6 @@ const COLOR_MAP = {
 };
 
 // ============================================================================
-// TYPES
-// ============================================================================
-
-interface MmActivityItem {
-  type: 'order' | 'trade';
-  id: string;
-  side?: string;
-  price: string;
-  quantity: string;
-  filledQuantity?: string;
-  status?: string;
-  timestamp: string;
-}
-
-// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -100,16 +82,6 @@ function getApiErrorMessage(err: unknown): string {
 
 function randomInterval(): number {
   return (ORDER_INTERVAL_MIN_S + Math.random() * (ORDER_INTERVAL_MAX_S - ORDER_INTERVAL_MIN_S)) * 1000;
-}
-
-function timeAgo(isoStr: string): string {
-  const diff = Date.now() - new Date(isoStr).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  return `${h}h ago`;
 }
 
 // ============================================================================
@@ -233,89 +205,6 @@ function MarketSection({ settings, onToggle, isToggling }: {
 }
 
 // ============================================================================
-// MM ACTIVITY LOG (floating panel above RoleSimulationFloater)
-// ============================================================================
-
-function MmActivityLog({ activity }: { activity: MmActivityItem[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const latest = activity[0];
-
-  if (!latest) {
-    return (
-      <div className="fixed bottom-16 right-4 z-40 w-80 rounded-xl border bg-navy-800 border-navy-600 shadow-lg px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-navy-400">
-          <Activity className="w-3.5 h-3.5" />
-          <span>No MM activity yet</span>
-        </div>
-      </div>
-    );
-  }
-
-  const renderItem = (item: MmActivityItem, isFirst = false) => {
-    const isTrade = item.type === 'trade';
-    const isBuy = item.side === 'BUY';
-
-    return (
-      <div
-        key={item.id}
-        className={`flex items-center gap-2 text-[11px] ${isFirst ? '' : 'border-t border-navy-700/40 pt-1.5 mt-1.5'}`}
-      >
-        {isTrade ? (
-          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">TRADE</span>
-        ) : (
-          <span className={`px-1.5 py-0.5 rounded font-medium ${
-            isBuy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-          }`}>
-            {item.side}
-          </span>
-        )}
-        <span className="text-white font-medium">{`€${Number(item.price).toFixed(1)}`}</span>
-        <span className="text-navy-400">{`×${formatNumberWithSeparators(Number(item.quantity), 'en-US', 0)}`}</span>
-        {item.status && item.status !== 'OPEN' && (
-          <span className={`text-[10px] ${item.status === 'FILLED' ? 'text-amber-400' : 'text-navy-500'}`}>
-            {item.status}
-          </span>
-        )}
-        <span className="ml-auto text-navy-500 text-[10px]">{timeAgo(item.timestamp)}</span>
-      </div>
-    );
-  };
-
-  return (
-    <div className="fixed bottom-16 right-4 z-40 w-80 rounded-xl border bg-navy-800 border-navy-600 shadow-lg overflow-hidden">
-      {/* Header — click to expand/collapse */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-navy-700/50 transition-colors"
-      >
-        <div className="flex items-center gap-2 text-xs text-navy-300 font-medium">
-          <Activity className="w-3.5 h-3.5 text-emerald-400" />
-          MM Activity
-          <span className="text-navy-500 font-normal">({activity.length})</span>
-        </div>
-        {expanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-navy-400" />
-        ) : (
-          <ChevronUp className="w-3.5 h-3.5 text-navy-400" />
-        )}
-      </button>
-
-      {/* Latest item always visible */}
-      <div className="px-3 pb-2">
-        {renderItem(latest, true)}
-      </div>
-
-      {/* Expanded: show rest of history */}
-      {expanded && activity.length > 1 && (
-        <div className="px-3 pb-2 max-h-64 overflow-y-auto">
-          {activity.slice(1).map((item) => renderItem(item))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
 // MAIN PAGE
 // ============================================================================
 
@@ -335,9 +224,6 @@ export function AutoTradePage() {
   const orderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // MM Activity log
-  const [activity, setActivity] = useState<MmActivityItem[]>([]);
-
   const loadMarkets = useCallback(async (silent = false) => {
     try {
       const data = await adminApi.getMarketSettings();
@@ -352,26 +238,12 @@ export function AutoTradePage() {
     }
   }, []);
 
-  // Load MM activity
-  const loadActivity = useCallback(async () => {
-    try {
-      const data = await adminApi.getMmActivity(30);
-      setActivity(data);
-    } catch {
-      // silent — activity panel is non-critical
-    }
-  }, []);
-
   // Initial load + auto-refresh
   useEffect(() => {
     loadMarkets();
-    loadActivity();
-    refreshTimerRef.current = setInterval(() => {
-      loadMarkets(true);
-      loadActivity();
-    }, REFRESH_INTERVAL_MS);
+    refreshTimerRef.current = setInterval(() => loadMarkets(true), REFRESH_INTERVAL_MS);
     return () => { if (refreshTimerRef.current) clearInterval(refreshTimerRef.current); };
-  }, [loadMarkets, loadActivity]);
+  }, [loadMarkets]);
 
   // Toggle handler
   const handleToggle = useCallback(async (marketKey: string, enabled: boolean) => {
@@ -398,13 +270,12 @@ export function AutoTradePage() {
         `${result.bid_orders_created} bids + ${result.ask_orders_created} asks.`
       );
       await loadMarkets(true);
-      await loadActivity();
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setRefreshing(false);
     }
-  }, [loadMarkets, loadActivity]);
+  }, [loadMarkets]);
 
   // Clear refresh result after 8s
   useEffect(() => {
@@ -419,12 +290,11 @@ export function AutoTradePage() {
     try {
       await adminApi.placeRandomOrder();
       setOrderCount(c => c + 1);
-      await loadActivity();
       await loadMarkets(true);
     } catch {
       // silent — don't break the timer
     }
-  }, [loadActivity, loadMarkets]);
+  }, [loadMarkets]);
 
   const scheduleNextOrder = useCallback(() => {
     const delay = randomInterval();
@@ -564,9 +434,6 @@ export function AutoTradePage() {
           )}
         </div>
       </div>
-
-      {/* Floating MM Activity Log (above RoleSimulationFloater) */}
-      <MmActivityLog activity={activity} />
     </BackofficeLayout>
   );
 }

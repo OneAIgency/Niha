@@ -2570,7 +2570,7 @@ async def place_random_order(
         price_step = Decimal("0.1")
 
         # Decide: limit order (80%) or market-crossing order (20%)
-        is_market_like = random.random() < 0.20
+        is_market_like = random.random() < 0.10
 
         if side == OrderSide.BUY:
             if is_market_like:
@@ -2593,7 +2593,7 @@ async def place_random_order(
         price = price.quantize(Decimal("0.1"))
 
         # Random volume: 10K - 500K EUR equivalent
-        volume_eur = Decimal(str(round(random.uniform(10_000, 500_000), 2)))
+        volume_eur = Decimal(str(round(random.uniform(200_000, 5_000_000), 2)))
         quantity = (volume_eur / price).quantize(Decimal("1"))
         if quantity < 1:
             quantity = Decimal("1")

@@ -335,7 +335,7 @@ async def clear_deposit(
     admin_id: UUID,
     admin_notes: Optional[str] = None,
     force_clear: bool = False,
-) -> Tuple[Deposit, int]:
+) -> Tuple[Deposit, List[UUID]]:
     """
     Clear deposit and credit funds to entity balance.
 
@@ -351,7 +351,7 @@ async def clear_deposit(
         force_clear: Allow clearing before hold expires
 
     Returns:
-        Updated Deposit record
+        Tuple of (updated Deposit record, list of user IDs upgraded AML→CEA).
 
     Raises:
         DepositNotFoundError: If deposit doesn't exist
@@ -393,7 +393,7 @@ async def clear_deposit(
         )
     )
     users_to_upgrade = users_result.scalars().all()
-    upgraded_count = len(users_to_upgrade)
+    upgraded_user_ids = [u.id for u in users_to_upgrade]
     for u in users_to_upgrade:
         u.role = UserRole.CEA
     await db.flush()
@@ -434,10 +434,10 @@ async def clear_deposit(
         deposit.amount,
         currency_val,
         deposit.entity_id,
-        upgraded_count,
+        len(upgraded_user_ids),
     )
 
-    return deposit, upgraded_count
+    return deposit, upgraded_user_ids
 
 
 async def reject_deposit(

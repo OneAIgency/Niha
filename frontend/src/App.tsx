@@ -1,7 +1,7 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout, ThemeLayout } from './components/layout';
-import { RoleSimulationFloater } from './components/admin';
+import { MmActivityFloater, RoleSimulationFloater } from './components/admin';
 import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -565,6 +565,7 @@ function App() {
           {/* Catch-all redirect */}
           <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
+        <MmActivityFloater />
         <RoleSimulationFloater />
       </Suspense>
     </Router>
