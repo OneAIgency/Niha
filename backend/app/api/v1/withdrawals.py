@@ -6,6 +6,7 @@ Provides endpoints for:
 - Admin: Review, approve, complete, reject withdrawals
 """
 
+import logging
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -16,8 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
 from ...core.security import get_admin_user, get_current_user
-from ...models.models import AssetType, User
+from ...models.models import AssetType, User, Withdrawal
 from ...services import withdrawal_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/withdrawals", tags=["withdrawals"])
 
@@ -129,6 +132,19 @@ async def request_withdrawal(
         )
 
     await db.commit()
+
+    # Withdrawal confirmation email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        await _email_svc.send_withdrawal_requested(
+            to_email=current_user.email,
+            first_name=current_user.first_name or "",
+            amount=float(request.amount),
+            currency=request.asset_type,
+        )
+    except Exception:
+        logger.debug("Withdrawal request email failed for user %s", current_user.id)
+
     return result
 
 
@@ -202,6 +218,23 @@ async def approve_withdrawal(
         )
 
     await db.commit()
+
+    # Withdrawal approved email (fire-and-forget)
+    if result.get("success"):
+        try:
+            from sqlalchemy import select as _sel
+            from ...services.email_service import email_service as _email_svc
+            w = (await db.execute(_sel(Withdrawal).where(Withdrawal.id == withdrawal_id))).scalar_one_or_none()
+            if w:
+                u = (await db.execute(_sel(User).where(User.entity_id == w.entity_id))).scalars().first()
+                if u:
+                    await _email_svc.send_withdrawal_approved(
+                        to_email=u.email, first_name=u.first_name or "",
+                        amount=float(w.amount), currency=w.asset_type.value if w.asset_type else "EUR",
+                    )
+        except Exception:
+            logger.debug("Withdrawal approved email failed for %s", withdrawal_id)
+
     return result
 
 
@@ -228,6 +261,24 @@ async def complete_withdrawal(
         )
 
     await db.commit()
+
+    # Withdrawal completed email (fire-and-forget)
+    if result.get("success"):
+        try:
+            from sqlalchemy import select as _sel
+            from ...services.email_service import email_service as _email_svc
+            w = (await db.execute(_sel(Withdrawal).where(Withdrawal.id == withdrawal_id))).scalar_one_or_none()
+            if w:
+                u = (await db.execute(_sel(User).where(User.entity_id == w.entity_id))).scalars().first()
+                if u:
+                    await _email_svc.send_withdrawal_completed(
+                        to_email=u.email, first_name=u.first_name or "",
+                        amount=float(w.amount), currency=w.asset_type.value if w.asset_type else "EUR",
+                        wire_reference=request.wire_reference or "",
+                    )
+        except Exception:
+            logger.debug("Withdrawal completed email failed for %s", withdrawal_id)
+
     return result
 
 
@@ -254,4 +305,22 @@ async def reject_withdrawal(
         )
 
     await db.commit()
+
+    # Withdrawal rejected email (fire-and-forget)
+    if result.get("success"):
+        try:
+            from sqlalchemy import select as _sel
+            from ...services.email_service import email_service as _email_svc
+            w = (await db.execute(_sel(Withdrawal).where(Withdrawal.id == withdrawal_id))).scalar_one_or_none()
+            if w:
+                u = (await db.execute(_sel(User).where(User.entity_id == w.entity_id))).scalars().first()
+                if u:
+                    await _email_svc.send_withdrawal_rejected(
+                        to_email=u.email, first_name=u.first_name or "",
+                        amount=float(w.amount), currency=w.asset_type.value if w.asset_type else "EUR",
+                        reason=request.rejection_reason or "",
+                    )
+        except Exception:
+            logger.debug("Withdrawal rejected email failed for %s", withdrawal_id)
+
     return result

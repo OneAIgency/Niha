@@ -448,6 +448,13 @@ async def setup_password_from_invitation(
     await db.commit()
     await db.refresh(user)
 
+    # Welcome email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        await _email_svc.send_welcome_activated(user.email, user.first_name or "")
+    except Exception:
+        logger.debug("Welcome email failed for %s", user.email)
+
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 

@@ -915,6 +915,22 @@ async def reject_pending_deposit(
     deposit.status = DepositStatus.REJECTED
     await db.commit()
 
+    # Deposit rejection email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        user_result = await db.execute(select(User).where(User.entity_id == deposit.entity_id))
+        user = user_result.scalars().first()
+        if user:
+            await _email_svc.send_deposit_rejected(
+                to_email=user.email,
+                first_name=user.first_name or "",
+                amount=float(deposit.amount),
+                currency=deposit.currency or "EUR",
+                reason="REJECTED_BY_ADMIN",
+            )
+    except Exception:
+        logger.debug("Deposit rejection email failed for deposit %s", deposit_id)
+
     return MessageResponse(message="Deposit rejected")
 
 
