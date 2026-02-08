@@ -48,7 +48,8 @@ interface OrderbookLevel {
 export function CeaSwapMarketPage() {
   const { user, simulatedRole } = useAuthStore();
   const effectiveRole = getEffectiveRole(user ?? null, simulatedRole);
-  const isCeaPreview = effectiveRole === 'CEA';
+  const isCeaPreview = effectiveRole === 'CEA' || effectiveRole === 'CEA_SETTLE';
+  const canSwap = !isCeaPreview;
 
   const [swapRate, setSwapRate] = useState<SwapRate | null>(null);
   const [userBalances, setUserBalances] = useState<UserBalances | null>(null);
@@ -196,7 +197,9 @@ export function CeaSwapMarketPage() {
     : (swapCalculation?.output.quantity ?? (ceaBalance * ceaToEuaRate));
   const platformFeeEua = estimatedEuaGross * platformFeePct / 100;
   const netEua = estimatedEuaGross - platformFeeEua;
-  const euaValueEur = swapCalculation?.output.valueEur ?? (netEua * (swapRate?.euaPriceEur || 80));
+  const euaPriceEur = swapRate?.euaPriceEur ?? 80;
+  const euaValueEur = swapCalculation?.output.valueEur ?? (netEua * euaPriceEur);
+  const platformFeeEur = platformFeeEua * euaPriceEur;
 
   // Format helpers
   const formatNumber = (num: number | undefined | null, decimals = 2) => {
@@ -222,11 +225,11 @@ export function CeaSwapMarketPage() {
     setSwapError(null);
 
     try {
-      // Create swap request
+      // Create swap request (backend expects quantity as integer)
       const swapRequest = await swapsApi.createSwapRequest({
         from_type: 'CEA',
         to_type: 'EUA',
-        quantity: ceaBalance,
+        quantity: Math.floor(ceaBalance),
         desired_rate: ceaToEuaRate,
       });
 
@@ -253,9 +256,18 @@ export function CeaSwapMarketPage() {
       // Refresh balances after successful swap
       await fetchData();
     } catch (error: unknown) {
-      console.error('Error placing swap:', error);
-      const err = error as { response?: { data?: { detail?: string } } };
-      setSwapError(err.response?.data?.detail || 'Failed to execute swap. Please try again.');
+      const err = error as { response?: { status?: number; data?: { detail?: unknown } } };
+      const detail = err.response?.data?.detail;
+      console.error('Error placing swap:', { error, status: err.response?.status, detail });
+      let message = 'Failed to execute swap. Please try again.';
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (detail && typeof detail === 'object' && !Array.isArray(detail) && typeof (detail as { message?: string }).message === 'string') {
+        message = (detail as { message: string }).message;
+      } else if (Array.isArray(detail) && detail.length > 0 && typeof detail[0] === 'object' && detail[0] !== null && 'msg' in detail[0]) {
+        message = String((detail[0] as { msg: string }).msg);
+      }
+      setSwapError(message);
     } finally {
       setIsPlacingSwap(false);
     }
@@ -285,14 +297,14 @@ export function CeaSwapMarketPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md"
+              className="relative w-full max-w-md pointer-events-auto"
             >
               {/* Modal card */}
               <div className="relative bg-navy-800 border border-navy-600 rounded-2xl overflow-hidden">
@@ -531,7 +543,11 @@ export function CeaSwapMarketPage() {
                               <div
                                 key={index}
                                 className={`grid grid-cols-8 gap-1 px-2 py-1 text-xs hover:bg-navy-700/50 relative ${
-                                  isFilled ? 'bg-red-500/10' : 'bg-red-500/5'
+                                  canSwap && isFilled
+                                    ? 'bg-amber-400/30'
+                                    : isFilled
+                                      ? 'bg-red-500/10'
+                                      : 'bg-red-500/5'
                                 }`}
                               >
                                 {/* Row background + darker liquidity bar (same theme as Cash Market ask) */}
@@ -622,8 +638,8 @@ export function CeaSwapMarketPage() {
                     <div className="text-xs text-navy-500 dark:text-navy-500">EUA</div>
                   </div>
                 </div>
-                <div className="text-center text-sm text-navy-500 dark:text-navy-500 mt-4">
-                  Ratio: 1 CEA = {formatNumber(ceaToEuaRate, 4)} EUA
+                <div className="text-center text-blue-400 font-bold font-mono mt-4 bg-blue-400/30 rounded-lg py-2">
+                  Average Ratio: {formatNumber(ceaBalance > 0 && orderbook.length > 0 ? weightedAvgRatio : ceaToEuaRate, 4)} EUA
                 </div>
               </div>
 
@@ -638,16 +654,12 @@ export function CeaSwapMarketPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-navy-600 dark:text-navy-400">Platform fee</span>
-                  <span className="text-emerald-400 font-mono">{formatNumber(platformFeeEua, 0)} EUA</span>
+                  <span className="text-emerald-400 font-mono">~{formatCurrency(platformFeeEur)}</span>
                 </div>
                 <div className="border-t border-navy-200 dark:border-navy-700 pt-2">
                   <div className="flex justify-between">
                     <span className="text-white font-medium">Net EUA</span>
                     <span className="text-blue-400 font-bold font-mono">{formatNumber(netEua, 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs mt-1">
-                    <span className="text-navy-500 dark:text-navy-500">Value</span>
-                    <span className="text-navy-600 dark:text-navy-400">~{formatCurrency(euaValueEur)}</span>
                   </div>
                 </div>
               </div>
