@@ -32,9 +32,9 @@ NIHA Carbon Trading Platform is functional with:
 - [ ] Verify mobile responsiveness on key pages
 
 #### 2. Cash Market Improvements
-- [ ] Real-time order book updates via WebSocket
+- [x] Real-time order book updates via WebSocket
 - [ ] Order history view
-- [ ] Trade confirmation modal
+- [x] Trade confirmation modal
 - [ ] Price alerts system
 
 #### 3. Settlement Dashboard Enhancements
@@ -52,7 +52,7 @@ NIHA Carbon Trading Platform is functional with:
 
 #### 5. Admin Tools
 - [ ] Bulk operations in user management
-- [ ] Audit log viewer
+- [x] Audit log viewer
 - [ ] System health dashboard improvements
 - [ ] Report generation
 

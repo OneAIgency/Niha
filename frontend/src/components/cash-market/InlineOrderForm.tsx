@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cashMarketApi } from '../../services/api';
 import type { CertificateType, OrderBookLevel } from '../../types';
+import { TradeConfirmationModal } from './TradeConfirmationModal';
 
 // ─────────────────────────────────────────────────
 // Types
@@ -44,21 +45,6 @@ interface OrderPreview {
   executionMessage: string;
   partialFill: boolean;
   willBePlacedInBook?: boolean;
-}
-
-function getApiErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as {
-      response?: { data?: { detail?: string | { msg?: string; error?: string }[] | { error?: string }; message?: string } };
-    }).response;
-    const d = res?.data?.detail;
-    if (typeof d === 'string') return d;
-    if (typeof d === 'object' && d !== null && 'error' in d) return String((d as { error?: string }).error);
-    if (Array.isArray(d) && d[0]?.msg) return String(d[0].msg);
-    const m = res?.data?.message;
-    if (typeof m === 'string') return m;
-  }
-  return (err as Error)?.message ?? 'Order placement failed. Please try again.';
 }
 
 interface InlineOrderFormProps {
@@ -139,7 +125,7 @@ export function InlineOrderForm({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Local calculation from ASK orderbook — instant, no API call
   const calc = useMemo(
@@ -179,21 +165,25 @@ export function InlineOrderForm({
     fetchPreview();
   }, [fetchPreview]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!preview?.canExecute || availableBalance <= 0) return;
+    setShowConfirmation(true);
+  };
 
+  const handleConfirmExecute = async () => {
     setIsSubmitting(true);
-    setSubmitError(null);
     try {
       await onOrderSubmit({ orderType: 'MARKET', amountEur: availableBalance });
+      setShowConfirmation(false);
       setPreview(null);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
       await onRefresh();
     } catch (error) {
       console.error('Order submission error:', error);
-      setSubmitError(getApiErrorMessage(error));
+      // Re-throw so the modal catches and displays the error inline
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
@@ -401,21 +391,6 @@ export function InlineOrderForm({
           )}
         </AnimatePresence>
 
-        {/* ── Submit Error ── */}
-        {submitError && (
-          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-900/15 border border-red-800/30 mb-3">
-            <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-red-300 flex-1">{submitError}</p>
-            <button
-              type="button"
-              onClick={() => setSubmitError(null)}
-              className="text-red-400 hover:text-red-300 text-xs font-medium"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
         {/* ── Submit Button ── */}
         <motion.button
           whileHover={canSubmit ? { scale: 1.005 } : {}}
@@ -458,6 +433,33 @@ export function InlineOrderForm({
       </form>
         </>
       )}
+
+      {/* ── Trade Confirmation Modal ── */}
+      <TradeConfirmationModal
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={handleConfirmExecute}
+        trade={
+          calc && preview
+            ? {
+                certificateType,
+                side: 'BUY',
+                amountEur: availableBalance,
+                estimatedQuantity: calc.totalQty,
+                avgPrice: calc.avgPrice,
+                levelsUsed: calc.levelsUsed,
+                bestPrice: preview.bestPrice,
+                worstPrice: preview.worstPrice,
+                platformFeeRate: preview.platformFeeRate ?? null,
+                platformFeeAmount: preview.platformFeeAmount ?? null,
+                totalCostGross: preview.totalCostGross ?? null,
+                totalCostNet: preview.totalCostNet ?? null,
+                remainingBalance: preview.remainingBalance ?? null,
+                partialFill: preview.partialFill,
+              }
+            : null
+        }
+      />
     </div>
   );
 }
