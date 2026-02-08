@@ -44,6 +44,10 @@ from ...models.models import (
     ScrapeLibrary,
     ScrapeStatus,
     ScrapingSource,
+    SettlementBatch,
+    SettlementStatus,
+    SettlementStatusHistory,
+    SettlementType,
     SwapRequest,
     SwapStatus,
     User,
@@ -75,6 +79,7 @@ from ...schemas.schemas import (
     UserSessionResponse,
 )
 from ...services.email_service import email_service
+from ...services.settlement_service import SettlementService, calculate_settlement_progress
 from .backoffice import backoffice_ws_manager
 
 logger = logging.getLogger(__name__)
@@ -879,11 +884,58 @@ async def change_user_role(
 
     old_role = user.role.value
     user.role = role_update.role
+
+    # ── Auto-settle pending batches when crossing settlement gates ──
+    batches_settled = 0
+    if user.entity_id:
+        role_order = [
+            "NDA", "KYC", "APPROVED", "FUNDING", "AML",
+            "CEA", "CEA_SETTLE", "SWAP", "EUA_SETTLE", "EUA",
+        ]
+        old_idx = role_order.index(old_role) if old_role in role_order else -1
+        new_idx = role_order.index(role_update.role.value) if role_update.role.value in role_order else -1
+
+        cea_settle_idx = role_order.index("CEA_SETTLE")  # 6
+        eua_settle_idx = role_order.index("EUA_SETTLE")  # 8
+
+        settlement_gates: list[tuple[int, SettlementType]] = []
+
+        # Crossing past CEA_SETTLE → settle CEA_PURCHASE batches
+        if old_idx <= cea_settle_idx < new_idx:
+            settlement_gates.append((cea_settle_idx, SettlementType.CEA_PURCHASE))
+
+        # Crossing past EUA_SETTLE → settle SWAP_CEA_TO_EUA batches
+        if old_idx <= eua_settle_idx < new_idx:
+            settlement_gates.append((eua_settle_idx, SettlementType.SWAP_CEA_TO_EUA))
+
+        for _gate_idx, stype in settlement_gates:
+            pending_r = await db.execute(
+                select(SettlementBatch).where(
+                    SettlementBatch.entity_id == user.entity_id,
+                    SettlementBatch.settlement_type == stype,
+                    SettlementBatch.status.notin_([
+                        SettlementStatus.SETTLED, SettlementStatus.FAILED,
+                    ]),
+                )
+            )
+            for batch in pending_r.scalars().all():
+                batch.status = SettlementStatus.SETTLED
+                batch.actual_settlement_date = datetime.now(timezone.utc).replace(tzinfo=None)
+                batch.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                db.add(SettlementStatusHistory(
+                    settlement_batch_id=batch.id,
+                    status=SettlementStatus.SETTLED,
+                    notes=f"Auto-settled: admin advanced role from {old_role} to {role_update.role.value}",
+                    updated_by=admin_user.id,
+                ))
+                batches_settled += 1
+
     await db.commit()
 
-    return MessageResponse(
-        message=f"User role changed from {old_role} to {role_update.role.value}"
-    )
+    msg = f"User role changed from {old_role} to {role_update.role.value}"
+    if batches_settled:
+        msg += f" ({batches_settled} settlement batch{'es' if batches_settled > 1 else ''} auto-settled)"
+    return MessageResponse(message=msg)
 
 
 @router.delete("/users/{user_id}", response_model=MessageResponse)
@@ -1523,6 +1575,7 @@ async def refresh_scraping_source(
 ):
     """
     Force refresh prices from a scraping source.
+    For carboncredits.com sources, refreshes all carboncredits.com sources in one request (0026).
     Admin only.
     """
     from ...services.price_scraper import price_scraper
@@ -1536,7 +1589,21 @@ async def refresh_scraping_source(
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
     try:
-        await price_scraper.refresh_source(source, db)
+        if source.url and "carboncredits.com" in source.url:
+            # One request updates all carboncredits.com sources (0026)
+            all_cc = await db.execute(
+                select(ScrapingSource).where(
+                    ScrapingSource.is_active.is_(True),
+                    ScrapingSource.url.isnot(None),
+                    ScrapingSource.url.contains("carboncredits.com"),
+                )
+            )
+            carboncredits_sources = all_cc.scalars().all()
+            await price_scraper.refresh_carboncredits_sources(
+                db, carboncredits_sources
+            )
+        else:
+            await price_scraper.refresh_source(source, db)
         return MessageResponse(message="Prices refreshed successfully")
     except Exception as e:
         logger.exception(
@@ -2506,6 +2573,185 @@ async def refresh_cea_market(
         raise HTTPException(status_code=500, detail=f"Failed to refresh CEA market: {str(e)}")
 
 
+@router.post("/auto-trade-market-settings/refresh-swap")
+async def refresh_swap_market(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Refresh SWAP EUA market: cancel all MM swap orders, fetch scraped prices,
+    and recreate ASK orders from the auto-trade market settings.
+
+    Rules:
+    - base_ratio = scraped_cea / scraped_eua (with mean-reversion deviation)
+    - ASK orders placed from mid_ratio upward (each +0.0001)
+    - Only SELL orders (EUA_OFFER market makers)
+    - Respects avg_order_count, target_liquidity, min/max order volume
+    - Liquidity measured as: remaining_eua_qty * eua_price_eur
+    """
+    import random
+    from sqlalchemy import and_
+    from app.services.price_scraper import price_scraper
+
+    try:
+        # 1. Cancel all OPEN/PARTIALLY_FILLED SWAP MM orders
+        cancel_result = await db.execute(
+            select(Order).where(
+                and_(
+                    Order.market == MarketType.SWAP,
+                    Order.market_maker_id.isnot(None),
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                )
+            )
+        )
+        orders_to_cancel = list(cancel_result.scalars().all())
+        orders_cancelled = len(orders_to_cancel)
+
+        for order in orders_to_cancel:
+            order.status = OrderStatus.CANCELLED
+            order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        await db.flush()
+
+        # 2. Fetch scraped prices
+        prices = await price_scraper.get_current_prices()
+        cea_price = Decimal(str(prices["cea"]["price"]))
+        eua_price = Decimal(str(prices["eua"]["price"]))
+
+        if eua_price <= 0:
+            raise HTTPException(status_code=400, detail="Invalid EUA price from scraper")
+
+        base_ratio = (cea_price / eua_price).quantize(Decimal("0.0001"))
+
+        # 3. Mean-reversion price deviation (same pattern as CEA)
+        from app.core.security import RedisManager
+        DECAY_FACTOR = 0.4
+        NOISE_SIGMA = 0.03
+        MAX_DEVIATION = 0.20
+        REDIS_KEY = "swap:last_deviation"
+
+        try:
+            r = await RedisManager.get_redis()
+            last_raw = await r.get(REDIS_KEY)
+            if last_raw is not None:
+                last_dev = float(last_raw)
+                deviation_pct = last_dev * DECAY_FACTOR + random.gauss(0, NOISE_SIGMA)
+            else:
+                deviation_pct = random.gauss(0, 0.07)
+            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, deviation_pct))
+            await r.set(REDIS_KEY, str(round(deviation_pct, 6)), ex=3600)
+        except Exception:
+            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, random.gauss(0, 0.07)))
+
+        mid_ratio = base_ratio * (1 + Decimal(str(round(deviation_pct, 4))))
+        mid_ratio = mid_ratio.quantize(Decimal("0.0001"))
+
+        # 4. Load EUA_SWAP market settings
+        settings_result = await db.execute(
+            select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == "EUA_SWAP")
+        )
+        swap_settings = settings_result.scalar_one_or_none()
+        if not swap_settings:
+            raise HTTPException(status_code=404, detail="EUA_SWAP settings not found")
+
+        # 5. Load active EUA_OFFER market makers
+        mm_result = await db.execute(
+            select(MarketMakerClient).where(
+                and_(
+                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
+                )
+            )
+        )
+        eua_mms = list(mm_result.scalars().all())
+        if not eua_mms:
+            raise HTTPException(status_code=400, detail="No active EUA_OFFER market makers")
+
+        # 6. Create ASK orders from mid_ratio upward
+        target_liquidity_eur = swap_settings.target_liquidity or Decimal("90000000")
+        min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
+        max_vol = swap_settings.max_order_volume_eur or Decimal("5000000")
+        max_orders = int(swap_settings.avg_order_count or 100) * 2  # safety cap
+        ratio_step = Decimal("0.0001")
+        MAX_ORDERS_PER_LEVEL = 3
+
+        def random_volume_eur(lo, hi):
+            lo_f = float(lo) if lo else 1.0
+            hi_f = float(hi) if hi else lo_f * 10
+            if hi_f <= lo_f:
+                hi_f = lo_f * 2
+            return Decimal(str(round(random.uniform(lo_f, hi_f), 2)))
+
+        current_ratio = mid_ratio
+        orders_at_level = 0
+        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        mm_idx = 0
+        liquidity_eur = Decimal("0")
+        orders_created = 0
+
+        for _ in range(max_orders):
+            if liquidity_eur >= target_liquidity_eur:
+                break
+
+            if orders_at_level >= max_at_this_level:
+                current_ratio += ratio_step
+                current_ratio = current_ratio.quantize(Decimal("0.0001"))
+                orders_at_level = 0
+                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+
+            # Cap max volume by remaining budget
+            remaining = target_liquidity_eur - liquidity_eur
+            effective_max = min(max_vol, remaining) if max_vol else remaining
+            if effective_max < min_vol:
+                break
+
+            order_value_eur = random_volume_eur(min_vol, effective_max)
+            # eua_quantity = volume_eur / eua_price_eur (whole certificates)
+            eua_quantity = (order_value_eur / eua_price).quantize(Decimal("1"))
+            if eua_quantity < 1:
+                eua_quantity = Decimal("1")
+
+            mm = eua_mms[mm_idx % len(eua_mms)]
+            mm_idx += 1
+
+            order = Order(
+                market=MarketType.SWAP,
+                market_maker_id=mm.id,
+                certificate_type=CertificateType.EUA,
+                side=OrderSide.SELL,
+                price=current_ratio,
+                quantity=eua_quantity,
+                filled_quantity=Decimal("0"),
+                status=OrderStatus.OPEN,
+            )
+            db.add(order)
+            orders_created += 1
+            orders_at_level += 1
+            liquidity_eur += eua_quantity * eua_price
+
+        await db.commit()
+
+        return {
+            "success": True,
+            "orders_cancelled": orders_cancelled,
+            "cea_price_eur": str(cea_price),
+            "eua_price_eur": str(eua_price),
+            "base_ratio": str(base_ratio),
+            "mid_ratio": str(mid_ratio),
+            "price_deviation_pct": str(round(deviation_pct * 100, 1)),
+            "orders_created": orders_created,
+            "liquidity_eur": str(liquidity_eur.quantize(Decimal("1"))),
+            "target_liquidity_eur": str(target_liquidity_eur),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error refreshing SWAP market: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh SWAP market: {str(e)}")
+
+
 @router.post("/auto-trade-market-settings/place-random-order")
 async def place_random_order(
     db: AsyncSession = Depends(get_db),
@@ -2837,6 +3083,12 @@ async def place_random_order(
             )
             trades_matched = result.trades_created if result else 0
 
+            # Cancel unfilled remainder of market-crossing orders.
+            # Without this, a partially-filled BUY@best_ask lingers on the
+            # BID side at the ASK price, collapsing the spread to zero.
+            if order.status != OrderStatus.FILLED:
+                order.status = OrderStatus.CANCELLED
+
         await db.commit()
 
         # ════════════════════════════════════════════════════════════════
@@ -2868,6 +3120,154 @@ async def place_random_order(
         await db.rollback()
         logger.exception(f"Error placing random order: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to place random order: {str(e)}")
+
+
+async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
+    """
+    Reactive SWAP auto-trade: place one replenishment order if liquidity is below target.
+
+    Called after execute_swap to refill consumed ASK liquidity. Also exposed via endpoint.
+    Returns dict with result info, or {"skipped": True} if no replenishment needed.
+    """
+    import random
+    from decimal import Decimal
+    from sqlalchemy import and_
+    from app.services.price_scraper import price_scraper
+
+    _MIN_VOL = Decimal("200000")
+    _MAX_VOL = Decimal("5000000")
+
+    # 1. Load settings
+    settings_r = await db.execute(
+        select(AutoTradeMarketSettings).where(AutoTradeMarketSettings.market_key == "EUA_SWAP")
+    )
+    swap_settings = settings_r.scalar_one_or_none()
+    if not swap_settings or not swap_settings.enabled:
+        return {"skipped": True, "reason": "EUA_SWAP settings disabled or not found"}
+
+    target_eur = swap_settings.target_liquidity or Decimal("90000000")
+
+    # 2. Fetch scraped prices
+    try:
+        prices = await price_scraper.get_current_prices()
+        cea_price = Decimal(str(prices["cea"]["price"]))
+        eua_price = Decimal(str(prices["eua"]["price"]))
+    except Exception:
+        cea_price = Decimal("13.0")
+        eua_price = Decimal("75.0")
+
+    if eua_price <= 0:
+        return {"skipped": True, "reason": "Invalid EUA price"}
+
+    base_ratio = (cea_price / eua_price).quantize(Decimal("0.0001"))
+
+    # 3. Calculate current SWAP liquidity in EUR
+    liq_r = await db.execute(
+        select(func.sum(Order.quantity - Order.filled_quantity))
+        .where(
+            Order.market == MarketType.SWAP,
+            Order.side == OrderSide.SELL,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            Order.market_maker_id.isnot(None),
+        )
+    )
+    remaining_eua = Decimal(str(liq_r.scalar() or 0))
+    current_liq_eur = remaining_eua * eua_price
+
+    # 4. Check if replenishment needed (>= 95% of target → skip)
+    if current_liq_eur >= target_eur * Decimal("0.95"):
+        return {
+            "skipped": True,
+            "reason": "Liquidity at target",
+            "current_pct": str(round(current_liq_eur / target_eur * 100, 1)),
+        }
+
+    deficit_eur = target_eur - current_liq_eur
+
+    # 5. Load active EUA_OFFER market makers
+    mm_r = await db.execute(
+        select(MarketMakerClient).where(
+            and_(
+                MarketMakerClient.is_active == True,
+                MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
+            )
+        )
+    )
+    eua_mms = list(mm_r.scalars().all())
+    if not eua_mms:
+        return {"skipped": True, "reason": "No active EUA_OFFER market makers"}
+
+    # 6. Calculate order parameters
+    # Fill deficit in a few orders (3-8), but place just 1 per call
+    num_orders_to_fill = random.randint(3, 8)
+    volume_eur = deficit_eur / num_orders_to_fill
+    volume_eur = max(_MIN_VOL, min(_MAX_VOL, volume_eur))
+
+    # Ratio: base + small positive spread (0% to +5% — MM profit margin)
+    spread_offset = Decimal(str(round(random.uniform(0, 0.05), 4)))
+    ratio = base_ratio * (1 + spread_offset)
+    ratio = ratio.quantize(Decimal("0.0001"))
+
+    # EUA quantity from EUR volume
+    eua_quantity = (volume_eur / eua_price).quantize(Decimal("1"))
+    if eua_quantity < 1:
+        eua_quantity = Decimal("1")
+
+    mm = random.choice(eua_mms)
+
+    # 7. Place the order
+    order = Order(
+        market=MarketType.SWAP,
+        market_maker_id=mm.id,
+        certificate_type=CertificateType.EUA,
+        side=OrderSide.SELL,
+        price=ratio,
+        quantity=eua_quantity,
+        filled_quantity=Decimal("0"),
+        status=OrderStatus.OPEN,
+    )
+    db.add(order)
+    await db.flush()
+
+    return {
+        "success": True,
+        "action": "swap_replenishment",
+        "ratio": str(ratio),
+        "eua_quantity": str(eua_quantity),
+        "volume_eur": str(volume_eur.quantize(Decimal("1"))),
+        "deficit_eur": str(deficit_eur.quantize(Decimal("1"))),
+        "current_liquidity_pct": str(round(current_liq_eur / target_eur * 100, 1)),
+        "market_maker": mm.name,
+        "order_id": str(order.id),
+    }
+
+
+@router.post("/auto-trade-market-settings/place-random-swap-order")
+async def place_random_swap_order(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Place a single SWAP replenishment order if liquidity is below target.
+
+    Simpler than CEA place_random_order:
+    - ASK only (SELL EUA)
+    - No spread correction, no price alignment, no BID side
+    - Places 1 order per call, ratio near base (scraped CEA/EUA) with small MM margin
+    """
+    try:
+        result = await _place_random_swap_order_internal(db)
+        if result.get("skipped"):
+            return result
+        await db.commit()
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error placing random swap order: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to place random swap order: {str(e)}")
 
 
 @router.get("/auto-trade-market-settings/mm-activity")
@@ -3093,8 +3493,35 @@ async def update_market_settings(
 
 
 async def _calculate_market_liquidity(db: AsyncSession, market_key: str) -> "Decimal":
-    """Calculate current liquidity for a market side."""
+    """Calculate current liquidity for a market side in EUR.
+
+    For CEA markets: SUM(price_EUR * remaining_qty)  — price is already EUR.
+    For EUA_SWAP:    SUM(remaining_eua_qty) * scraped_eua_price_EUR
+                     (price field = ratio, NOT EUR, so we use scraped EUA price)
+    """
     from decimal import Decimal
+
+    if market_key == "EUA_SWAP":
+        # SWAP: liquidity = remaining EUA quantity * current EUA price in EUR
+        from app.services.price_scraper import price_scraper
+
+        try:
+            prices = await price_scraper.get_current_prices()
+            eua_price = Decimal(str(prices["eua"]["price"]))
+        except Exception:
+            eua_price = Decimal("75.0")  # fallback BASE_EUA_EUR
+
+        result = await db.execute(
+            select(func.sum(Order.quantity - Order.filled_quantity))
+            .where(
+                Order.market == MarketType.SWAP,
+                Order.side == OrderSide.SELL,
+                Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                Order.market_maker_id.isnot(None),
+            )
+        )
+        remaining_eua = Decimal(str(result.scalar() or 0))
+        return remaining_eua * eua_price
 
     # Map market_key to certificate_type and side
     if market_key == "CEA_BID":
@@ -3103,9 +3530,6 @@ async def _calculate_market_liquidity(db: AsyncSession, market_key: str) -> "Dec
     elif market_key == "CEA_ASK":
         cert_type = CertificateType.CEA
         side = OrderSide.SELL
-    elif market_key == "EUA_SWAP":
-        cert_type = CertificateType.EUA
-        side = OrderSide.SELL  # Swap offers are on ASK side
     else:
         return Decimal("0")
 
@@ -3391,3 +3815,161 @@ async def get_my_balances(
         raise
     except Exception as e:
         raise handle_database_error(e, "getting admin balances") from e
+
+
+# ==================== Settlement Management ====================
+
+
+@router.get("/settlements/pending")
+async def get_admin_pending_settlements(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Get all pending settlement batches across ALL entities (Admin only).
+
+    Returns non-SETTLED, non-FAILED settlement batches with entity names
+    and primary user contact info for each entity.
+    """
+    try:
+        from ...services.settlement_service import get_pending_settlements as _get_pending
+
+        # Fetch all pending batches (entity_id=None returns all)
+        batches = await _get_pending(db=db, entity_id=None)
+
+        # Collect unique entity IDs and fetch one user per entity
+        entity_ids = list({b.entity_id for b in batches if b.entity_id})
+        user_map: dict[UUID, User] = {}
+        if entity_ids:
+            from sqlalchemy import distinct
+            from sqlalchemy.orm import load_only
+
+            user_result = await db.execute(
+                select(User)
+                .where(User.entity_id.in_(entity_ids))
+                .options(load_only(User.id, User.entity_id, User.email, User.role))
+                .distinct(User.entity_id)
+                .order_by(User.entity_id, User.created_at.asc())
+            )
+            for u in user_result.scalars().all():
+                if u.entity_id and u.entity_id not in user_map:
+                    user_map[u.entity_id] = u
+
+        result = []
+        for batch in batches:
+            progress = calculate_settlement_progress(batch)
+            entity_name = batch.entity.legal_name if batch.entity else "Unknown"
+            user = user_map.get(batch.entity_id) if batch.entity_id else None
+
+            result.append({
+                "id": str(batch.id),
+                "batch_reference": batch.batch_reference,
+                "entity_name": entity_name,
+                "settlement_type": batch.settlement_type.value,
+                "status": batch.status.value,
+                "asset_type": batch.asset_type.value,
+                "quantity": int(round(float(batch.quantity))),
+                "price": float(batch.price),
+                "total_value_eur": float(batch.total_value_eur),
+                "expected_settlement_date": batch.expected_settlement_date.isoformat(),
+                "actual_settlement_date": (
+                    batch.actual_settlement_date.isoformat()
+                    if batch.actual_settlement_date else None
+                ),
+                "progress_percent": progress,
+                "user_email": user.email if user else None,
+                "user_role": user.role.value if user and user.role else None,
+                "created_at": batch.created_at.isoformat(),
+                "updated_at": batch.updated_at.isoformat(),
+            })
+
+        return {"data": result, "count": len(result)}
+
+    except Exception as e:
+        raise handle_database_error(e, "get admin pending settlements") from e
+
+
+@router.post("/settlements/{batch_id}/settle")
+async def settle_batch_now(
+    batch_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """
+    Instantly settle a single settlement batch (Admin only).
+
+    - Sets status to SETTLED with audit trail
+    - Credits EntityHolding via finalize_settlement
+    - Triggers role transitions (CEA_SETTLE→SWAP or EUA_SETTLE→EUA)
+    """
+    try:
+        result = await db.execute(
+            select(SettlementBatch).where(SettlementBatch.id == batch_id)
+        )
+        batch = result.scalar_one_or_none()
+
+        if not batch:
+            raise HTTPException(status_code=404, detail="Settlement batch not found")
+
+        if batch.status in (SettlementStatus.SETTLED, SettlementStatus.FAILED):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Batch already {batch.status.value} — cannot settle"
+            )
+
+        old_status = batch.status.value
+
+        # 1. Update status to SETTLED
+        batch.status = SettlementStatus.SETTLED
+        batch.actual_settlement_date = datetime.now(timezone.utc).replace(tzinfo=None)
+        batch.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # 2. Add audit trail
+        db.add(SettlementStatusHistory(
+            settlement_batch_id=batch.id,
+            status=SettlementStatus.SETTLED,
+            notes=f"Instant settle by admin (was {old_status})",
+            updated_by=current_user.id,
+        ))
+
+        # 3. Finalize — credit EntityHolding + create AssetTransaction
+        await SettlementService.finalize_settlement(db, batch, current_user.id)
+
+        # Flush so role transition queries see the SETTLED status
+        await db.flush()
+
+        # 4. Trigger role transitions
+        from ...services.role_transitions import (
+            transition_cea_settle_to_swap_if_all_cea_settled,
+            transition_eua_settle_to_eua_if_all_swap_settled,
+            transition_swap_to_eua_settle_if_cea_zero,
+        )
+
+        entity_id = batch.entity_id
+        roles_changed = 0
+        if batch.settlement_type == SettlementType.CEA_PURCHASE:
+            roles_changed += await transition_cea_settle_to_swap_if_all_cea_settled(
+                db, entity_id
+            )
+        elif batch.settlement_type == SettlementType.SWAP_CEA_TO_EUA:
+            roles_changed += await transition_swap_to_eua_settle_if_cea_zero(
+                db, entity_id
+            )
+            roles_changed += await transition_eua_settle_to_eua_if_all_swap_settled(
+                db, entity_id
+            )
+
+        await db.commit()
+
+        msg = f"Settlement {batch.batch_reference} settled instantly ({old_status} → SETTLED)"
+        if roles_changed:
+            msg += f", {roles_changed} user role(s) advanced"
+
+        logger.info(msg)
+        return {"message": msg, "batch_reference": batch.batch_reference}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "settle batch now") from e

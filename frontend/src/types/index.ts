@@ -813,6 +813,12 @@ export interface SettlementStatusHistory {
   createdAt: string;
 }
 
+export interface AdminSettlementBatch extends SettlementBatch {
+  entityName: string;
+  userEmail: string | null;
+  userRole: string | null;
+}
+
 // =============================================================================
 // Withdrawal Types
 // =============================================================================

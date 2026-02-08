@@ -13,13 +13,10 @@ import {
   CheckCircle2,
   ArrowUpRight,
   ArrowDownRight,
-  ChevronRight,
   Download,
   BarChart3,
   PieChart,
-  Activity,
   Shield,
-  Zap,
   AlertCircle,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
@@ -30,7 +27,6 @@ import type { Deposit } from '../types';
 import {
   DataTable,
   Tabs,
-  ProgressBar,
   Skeleton,
   Subheader,
   AlertBanner,
@@ -213,7 +209,6 @@ export function DashboardPage() {
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedSettlement, setSelectedSettlement] = useState<SettlementBatch | null>(null);
   const [pendingCeaSettlements, setPendingCeaSettlements] = useState<SettlementBatch[]>([]);
@@ -331,13 +326,10 @@ export function DashboardPage() {
     try {
       const myOrders = await cashMarketApi.getMyOrders();
       setOrders(myOrders);
-      if (myOrders.length > 0 && !expandedOrder) {
-        setExpandedOrder(myOrders[0].id);
-      }
     } catch (err) {
       console.error('Failed to fetch orders:', err);
     }
-  }, [expandedOrder]);
+  }, []);
 
   /**
    * Fetches completed swap transactions for display in transaction history.
@@ -583,9 +575,6 @@ export function DashboardPage() {
     return true;
   });
 
-  // Active (pending) orders for display
-  const activeOrders = orders.filter(o => o.status !== 'FILLED' && o.status !== 'CANCELLED');
-
   // Holdings breakdown
   const holdingsData = [
     {
@@ -646,19 +635,15 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* AML Modal – click anywhere (including on modal) dismisses; blur stays via overlay above */}
+      {/* AML Modal – fixed, does not dismiss on click; Header AU element is above (z-[110]) for logout access */}
       <AnimatePresence>
         {isAmlUser && showAmlModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 cursor-pointer"
-            onClick={() => setShowAmlModal(false)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowAmlModal(false); }}
-            aria-label="Dismiss AML review"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
+            aria-hidden="true"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1082,14 +1067,13 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* Holdings Breakdown & Active Orders */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Holdings Breakdown */}
+        {/* Holdings Breakdown */}
+        <div className="grid grid-cols-1 gap-6 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="content_wrapper p-0 lg:col-span-2"
+            className="content_wrapper p-0"
           >
             <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1169,138 +1153,6 @@ export function DashboardPage() {
                   </div>
                 );
               })}
-            </div>
-          </motion.div>
-
-          {/* Active Orders */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="content_wrapper p-0"
-          >
-            <div className="px-5 py-4 border-b border-navy-700 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-navy-400" />
-                <h2 className="font-semibold text-white">Active Orders</h2>
-                {activeOrders.length > 0 && (
-                  <span className="px-2 py-0.5 bg-navy-500/20 text-navy-400 text-xs rounded-full">
-                    {activeOrders.length}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="p-4">
-              {loadingOrders ? (
-                <div className="space-y-3">
-                  <Skeleton variant="rectangular" height={60} />
-                  <Skeleton variant="rectangular" height={60} />
-                </div>
-              ) : activeOrders.length === 0 ? (
-                <div className="text-center py-8 text-navy-500">
-                  <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No active orders</p>
-                  <p className="text-xs mt-1">Your orders will appear here</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-navy-700/50 rounded-lg overflow-hidden"
-                    >
-                      {/* Order Header */}
-                      <button
-                        onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-navy-700/70 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            order.side === 'BUY' ? 'bg-emerald-500/20' : 'bg-red-500/20'
-                          }`}>
-                            {order.side === 'BUY' ? (
-                              <ArrowDownRight className={`w-4 h-4 text-emerald-400`} />
-                            ) : (
-                              <ArrowUpRight className={`w-4 h-4 text-red-400`} />
-                            )}
-                          </div>
-                          <div className="text-left">
-                            <div className="font-medium text-white text-sm">
-                              {order.side} {getOrderField(order, 'certificateType') || 'CEA'}
-                            </div>
-                            <div className="text-xs text-navy-500">
-                              {formatNumber(order.quantity)} @ €{order.price.toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            order.status === 'OPEN' ? 'bg-amber-500/20 text-amber-400' :
-                            order.status === 'PARTIALLY_FILLED' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-navy-400/20 text-navy-400'
-                          }`}>
-                            {order.status.replace('_', ' ')}
-                          </span>
-                          <ChevronRight className={`w-4 h-4 text-navy-400 transition-transform ${
-                            expandedOrder === order.id ? 'rotate-90' : ''
-                          }`} />
-                        </div>
-                      </button>
-
-                      {/* Order Details */}
-                      <AnimatePresence>
-                        {expandedOrder === order.id && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-4 pb-4 space-y-3">
-                              {/* Progress */}
-                              {(() => {
-                                const filled = Number(getOrderField(order, 'filledQuantity')) || 0;
-                                return filled > 0 && (
-                                  <div>
-                                    <div className="flex items-center justify-between text-xs mb-2">
-                                      <span className="text-navy-400">Filled</span>
-                                      <span className="text-white font-mono">
-                                        {formatNumber(filled)} / {formatNumber(order.quantity)}
-                                      </span>
-                                    </div>
-                                    <ProgressBar
-                                      value={(filled / order.quantity) * 100}
-                                      variant="success"
-                                      size="sm"
-                                    />
-                                  </div>
-                                );
-                              })()}
-
-                              {/* Details */}
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="bg-navy-800/50 rounded-lg p-3">
-                                  <div className="text-navy-500 mb-1">Total Value</div>
-                                  <div className="font-mono text-white">
-                                    {formatCurrency(order.quantity * order.price, 2)}
-                                  </div>
-                                </div>
-                                <div className="bg-navy-800/50 rounded-lg p-3">
-                                  <div className="text-navy-500 mb-1">Created</div>
-                                  <div className="font-mono text-white">
-                                    {safeParseDate(getOrderField(order, 'createdAt'))?.toLocaleDateString() || 'Unknown'}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </motion.div>
         </div>

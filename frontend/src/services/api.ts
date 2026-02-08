@@ -50,6 +50,7 @@ import type {
   MarketMakerQueryParams,
   MarketMakerTransaction,
   SettlementBatch,
+  AdminSettlementBatch,
   Trade,
   TransactionType,
   Withdrawal,
@@ -969,6 +970,11 @@ export const adminApi = {
     return data;
   },
 
+  changeUserRole: async (id: string, role: UserRole): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/users/${id}/role`, { role });
+    return data;
+  },
+
   // Full User Details (with auth history, sessions, stats)
   getUserFull: async (id: string): Promise<AdminUserFull> => {
     const { data } = await api.get(`/admin/users/${id}/full`);
@@ -1209,6 +1215,35 @@ export const adminApi = {
     return data;
   },
 
+  placeRandomSwapOrder: async (): Promise<{
+    success?: boolean;
+    skipped?: boolean;
+    action?: string;
+    ratio?: string;
+    euaQuantity?: string;
+    volumeEur?: string;
+    deficitEur?: string;
+    currentLiquidityPct?: string;
+    marketMaker?: string;
+    reason?: string;
+  }> => {
+    const { data } = await api.post('/admin/auto-trade-market-settings/place-random-swap-order');
+    return data;
+  },
+
+  refreshSwapMarket: async (): Promise<{
+    success: boolean;
+    ordersCancelled: number;
+    ordersCreated: number;
+    baseRatio: string;
+    midRatio: string;
+    liquidityEur: string;
+    targetLiquidityEur: string;
+  }> => {
+    const { data } = await api.post('/admin/auto-trade-market-settings/refresh-swap');
+    return data;
+  },
+
   getMmActivity: async (limit = 50): Promise<Array<{
     type: 'order' | 'trade';
     id: string;
@@ -1249,6 +1284,24 @@ export const adminApi = {
    */
   getMyBalances: async (): Promise<EntityBalances> => {
     const { data } = await api.get('/admin/me/balances');
+    return data;
+  },
+
+  // ==================== Settlement Management ====================
+
+  /**
+   * Get all pending settlement batches across all entities
+   */
+  getAdminPendingSettlements: async (): Promise<{ data: AdminSettlementBatch[]; count: number }> => {
+    const { data } = await api.get('/admin/settlements/pending');
+    return data;
+  },
+
+  /**
+   * Instantly settle a single settlement batch
+   */
+  settleSettlementBatch: async (batchId: string): Promise<{ message: string; batchReference: string }> => {
+    const { data } = await api.post(`/admin/settlements/${batchId}/settle`);
     return data;
   },
 };
@@ -2135,7 +2188,11 @@ export const getFailedActions = (params?: {
 export const settlementApi = {
   getPendingSettlements: async (): Promise<{ data: SettlementBatch[]; count: number }> => {
     const { data } = await api.get<{ data: SettlementBatch[]; count: number }>('/settlement/pending');
-    return data;
+    const list = data?.data;
+    return {
+      data: Array.isArray(list) ? list : [],
+      count: typeof data?.count === 'number' ? data.count : 0,
+    };
   },
 
   getSettlementDetails: async (settlementId: string): Promise<SettlementBatch> => {

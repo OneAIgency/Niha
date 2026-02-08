@@ -35,6 +35,7 @@ docker compose exec backend alembic upgrade head
 |----------|---------|
 | `app_truth.md` | **SSOT** - roles, routes, ports, business rules |
 | `docs/ROLE_TRANSITIONS.md` | User role flow (NDA → KYC → ... → EUA) |
+| `docs/ADMIN_SCRAPING.md` | Price scraping (EUA/CEA), carboncredits.com single fetch, 429 backoff, admin API |
 | `frontend/docs/DESIGN_SYSTEM.md` | UI components, tokens, patterns |
 | `project-goals.md` | Current sprint goals and priorities |
 

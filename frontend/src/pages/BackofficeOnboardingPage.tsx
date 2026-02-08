@@ -34,7 +34,7 @@ import type {
   PendingDeposit,
   DocumentViewerState,
 } from '../types/backoffice';
-import type { Deposit } from '../types';
+import type { Deposit, AdminSettlementBatch } from '../types';
 
 interface IPLookupResult {
   ip: string;
@@ -51,19 +51,21 @@ interface IPLookupResult {
   as: string;
 }
 
-type OnboardingSubpage = 'requests' | 'kyc' | 'deposits' | 'aml';
+type OnboardingSubpage = 'requests' | 'kyc' | 'deposits' | 'aml' | 'settlements';
 
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
   { path: 'deposits', label: 'Deposits', icon: Banknote },
   { path: 'aml', label: 'AML', icon: Shield },
+  { path: 'settlements', label: 'Settlements', icon: Timer },
 ];
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
   if (pathname.endsWith('/kyc') || pathname.includes('/onboarding/kyc')) return 'kyc';
   if (pathname.endsWith('/deposits') || pathname.includes('/onboarding/deposits')) return 'deposits';
   if (pathname.endsWith('/aml') || pathname.includes('/onboarding/aml')) return 'aml';
+  if (pathname.endsWith('/settlements') || pathname.includes('/onboarding/settlements')) return 'settlements';
   return 'requests';
 }
 
@@ -110,6 +112,7 @@ export function BackofficeOnboardingPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pendingDeposits, setPendingDeposits] = useState<PendingDeposit[]>([]);
   const [amlDeposits, setAmlDeposits] = useState<Deposit[]>([]);
+  const [settlementBatches, setSettlementBatches] = useState<AdminSettlementBatch[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -161,6 +164,9 @@ export function BackofficeOnboardingPage() {
       } else if (activeSubpage === 'aml') {
         const onHoldRes = await backofficeApi.getOnHoldDeposits({ include_expired: true });
         setAmlDeposits(onHoldRes.deposits || []);
+      } else if (activeSubpage === 'settlements') {
+        const res = await adminApi.getAdminPendingSettlements();
+        setSettlementBatches(res.data || []);
       }
     } catch (err) {
       logger.error('Failed to load data', err);
@@ -385,6 +391,19 @@ export function BackofficeOnboardingPage() {
     }
   };
 
+  const handleSettleNow = async (batchId: string) => {
+    setActionLoading(`settle-${batchId}`);
+    try {
+      await adminApi.settleSettlementBatch(batchId);
+      setSettlementBatches(prev => prev.filter(b => b.id !== batchId));
+    } catch (err) {
+      logger.error('Failed to settle batch', err);
+      setError('Failed to settle batch');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getUserDocuments = (userId: string) =>
     kycDocuments.filter(d => d.userId === userId);
 
@@ -393,7 +412,7 @@ export function BackofficeOnboardingPage() {
       {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
         const to = `/backoffice/onboarding/${path}`;
         const isActive = activeSubpage === path;
-        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : pendingDeposits.length;
+        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : path === 'settlements' ? settlementBatches.length : pendingDeposits.length;
         return (
           <Link
             key={path}
@@ -603,6 +622,128 @@ export function BackofficeOnboardingPage() {
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           {isExpired ? 'Clear' : 'Force Clear'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeSubpage === 'settlements' && (
+        <Card>
+          <div className="flex items-center gap-2 mb-6">
+            <Timer className="w-5 h-5 text-emerald-500" />
+            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+              Settlement Queue
+            </h2>
+            <Badge variant="info" className="ml-2">
+              {settlementBatches.length} pending
+            </Badge>
+          </div>
+
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : settlementBatches.length === 0 ? (
+            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+              <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No settlements pending</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {settlementBatches.map((batch) => {
+                const expectedDate = new Date(batch.expectedSettlementDate);
+                const now = new Date();
+                const diffMs = expectedDate.getTime() - now.getTime();
+                const isOverdue = diffMs < 0;
+                const absDiffMs = Math.abs(diffMs);
+                const days = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const timeLabel = isOverdue
+                  ? `Overdue ${days > 0 ? `${days}d ` : ''}${hours}h`
+                  : `${days > 0 ? `${days}d ` : ''}${hours}h remaining`;
+
+                const typeLabel = batch.settlementType === 'CEA_PURCHASE'
+                  ? 'CEA Purchase' : 'Swap CEA→EUA';
+                const typeVariant = batch.settlementType === 'CEA_PURCHASE'
+                  ? 'info' as const : 'warning' as const;
+
+                return (
+                  <div
+                    key={batch.id}
+                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                            {batch.entityName}
+                          </h3>
+                          <Badge variant={typeVariant}>{typeLabel}</Badge>
+                          <Badge variant={
+                            batch.status === 'PENDING' ? 'warning' :
+                            batch.status === 'IN_TRANSIT' ? 'info' :
+                            batch.status === 'AT_CUSTODY' ? 'info' :
+                            'default'
+                          }>
+                            {batch.status.replace(/_/g, ' ')}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Quantity:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                              {batch.quantity.toLocaleString()} tCO₂
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">Value:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                              €{batch.totalValueEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-navy-500 dark:text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-700 dark:text-navy-200">
+                              {batch.userEmail ?? '—'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Timer className="w-4 h-4 text-navy-400" />
+                            <span className={`font-medium ${isOverdue ? 'text-red-500' : 'text-emerald-600'}`}>
+                              {timeLabel}
+                            </span>
+                          </div>
+                        </div>
+                        {batch.userRole && (
+                          <div className="mt-2">
+                            <Badge variant="default" className="text-xs">
+                              {batch.userRole.replace(/_/g, ' ')}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleSettleNow(batch.id)}
+                          loading={actionLoading === `settle-${batch.id}`}
+                          disabled={actionLoading !== null}
+                          className="bg-emerald-500 hover:bg-emerald-600"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Settle Now
                         </Button>
                       </div>
                     </div>

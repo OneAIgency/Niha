@@ -209,6 +209,7 @@ export function AutoTradePage() {
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshingSwap, setRefreshingSwap] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -268,6 +269,25 @@ export function AutoTradePage() {
     }
   }, [loadMarkets]);
 
+  // Refresh Swap Market handler
+  const handleRefreshSwap = useCallback(async () => {
+    setRefreshingSwap(true);
+    setRefreshResult(null);
+    try {
+      const result = await adminApi.refreshSwapMarket();
+      const dev = result.midRatio ? ` (mid ratio: ${result.midRatio})` : '';
+      setRefreshResult(
+        `Swap: base ratio ${result.baseRatio}${dev}. ` +
+        `${result.ordersCreated} orders → €${Number(result.liquidityEur).toLocaleString('en-US', { maximumFractionDigits: 0 })} / €${Number(result.targetLiquidityEur).toLocaleString('en-US', { maximumFractionDigits: 0 })}.`
+      );
+      await loadMarkets(true);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setRefreshingSwap(false);
+    }
+  }, [loadMarkets]);
+
   // Clear refresh result after 8s
   useEffect(() => {
     if (refreshResult) {
@@ -317,6 +337,15 @@ export function AutoTradePage() {
         icon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
       >
         Refresh CEA
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleRefreshSwap}
+        disabled={refreshingSwap}
+        icon={<ArrowLeftRight className={`w-4 h-4 ${refreshingSwap ? 'animate-spin' : ''}`} />}
+      >
+        Refresh Swap
       </Button>
       <Button
         variant="ghost"

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
@@ -32,6 +33,8 @@ from ...models.models import (
 from ...services.market_maker_service import MarketMakerService
 from ...services.price_scraper import price_scraper
 from ...services.settlement_service import SettlementService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/swaps", tags=["Swap"])
 
@@ -708,9 +711,10 @@ async def create_swap(
                 },
             )
 
-        # Get EUA available from MarketMakerService (calculates from transactions - locked orders)
-        balances = await MarketMakerService.get_balances(db, eua_mm.id)
-        total_eua_available = float(balances.get("EUA", {}).get("available", 0))
+        # Use eua_balance from the market maker record (SSOT for swap EUA inventory).
+        # MarketMakerService.get_balances() calculates from AssetTransaction which
+        # isn't populated for the SWAP market maker's virtual EUA inventory.
+        total_eua_available = float(eua_mm.eua_balance) if eua_mm.eua_balance else 0.0
 
         # Get best ratio from available SWAP orders to calculate EUA needed
         result = await db.execute(
@@ -950,11 +954,10 @@ async def execute_swap(
     eua_price = prices["eua"]["price"]
 
     # Create settlement batch for EUA delivery (T+10-14 days)
-    # Use naive datetime for DB compatibility (model uses datetime.utcnow which is naive)
+    # Use naive datetime for DB compatibility (model uses TIMESTAMP WITHOUT TIME ZONE)
     expected_settlement = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    expected_settlement = expected_settlement + timedelta(days=14)
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    ) + timedelta(days=14)
 
     batch_reference = await SettlementService.generate_batch_reference(
         db, SettlementType.SWAP_CEA_TO_EUA, CertificateType.EUA
@@ -989,12 +992,34 @@ async def execute_swap(
     swap.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update user role from SWAP to EUA_SETTLE
+    # Note: current_user is loaded from a separate session (get_current_user) so it's
+    # detached — we must query the user from this endpoint's db session to persist changes.
     from ...models.models import UserRole
 
     if current_user.role == UserRole.SWAP:
-        current_user.role = UserRole.EUA_SETTLE
+        user_result = await db.execute(
+            select(User).where(User.id == current_user.id)
+        )
+        user_in_session = user_result.scalar_one_or_none()
+        if user_in_session:
+            user_in_session.role = UserRole.EUA_SETTLE
 
     await db.commit()
+
+    # Reactive auto-trade: replenish consumed SWAP liquidity (non-critical)
+    try:
+        from app.api.v1.admin import _place_random_swap_order_internal
+
+        replenish_result = await _place_random_swap_order_internal(db)
+        if replenish_result.get("success"):
+            await db.commit()
+            logger.info(f"Swap auto-trade replenishment: placed {replenish_result.get('eua_quantity')} EUA at ratio {replenish_result.get('ratio')}")
+    except Exception as e:
+        logger.warning(f"Swap auto-trade replenishment failed (non-critical): {e}")
+        try:
+            await db.rollback()
+        except Exception:
+            pass
 
     return {
         "success": True,

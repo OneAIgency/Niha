@@ -141,8 +141,44 @@ async def lifespan(app: FastAPI):
                     sources = result.scalars().all()
 
                     now = datetime.now(timezone.utc).replace(tzinfo=None)
-                    for source in sources:
-                        # Check if it's time to scrape based on configured interval
+
+                    # Partition: carboncredits.com uses one shared fetch per cycle (0026)
+                    carboncredits_sources = [
+                        s for s in sources
+                        if s.url and "carboncredits.com" in s.url
+                    ]
+                    other_sources = [
+                        s for s in sources
+                        if not s.url or "carboncredits.com" not in s.url
+                    ]
+
+                    # One request for all carboncredits.com sources if any is due
+                    if carboncredits_sources:
+                        any_due = any(
+                            s.last_scrape_at is None
+                            or (now - s.last_scrape_at).total_seconds() / 60
+                            >= s.scrape_interval_minutes
+                            for s in carboncredits_sources
+                        )
+                        if any_due:
+                            try:
+                                await price_scraper.refresh_carboncredits_sources(
+                                    db, carboncredits_sources
+                                )
+                                for s in carboncredits_sources:
+                                    if s.last_price is not None:
+                                        logger.info(
+                                            "Auto-scraped %s: %s",
+                                            s.name,
+                                            s.last_price,
+                                        )
+                            except Exception as e:
+                                logger.warning(
+                                    "Auto-scrape failed for carboncredits.com: %s",
+                                    e,
+                                )
+
+                    for source in other_sources:
                         if source.last_scrape_at is None:
                             should_scrape = True
                         else:
@@ -150,18 +186,23 @@ async def lifespan(app: FastAPI):
                                 now - source.last_scrape_at
                             ).total_seconds() / 60
                             should_scrape = (
-                                minutes_since_last >= source.scrape_interval_minutes
+                                minutes_since_last
+                                >= source.scrape_interval_minutes
                             )
 
                         if should_scrape:
                             try:
                                 await price_scraper.refresh_source(source, db)
                                 logger.info(
-                                    f"Auto-scraped {source.name}: {source.last_price}"
+                                    "Auto-scraped %s: %s",
+                                    source.name,
+                                    source.last_price,
                                 )
                             except Exception as e:
                                 logger.warning(
-                                    f"Auto-scrape failed for {source.name}: {e}"
+                                    "Auto-scrape failed for %s: %s",
+                                    source.name,
+                                    e,
                                 )
             except Exception as e:
                 logger.error(f"Price scraping scheduler error: {e}", exc_info=True)

@@ -34,6 +34,20 @@ function getApiErrorMessage(err: unknown): string {
   return (err as Error)?.message ?? 'Something went wrong.';
 }
 
+const SCRAPE_LIBRARY_OPTIONS: { value: ScrapeLibrary; label: string }[] = [
+  { value: 'HTTPX', label: 'HTTPX' },
+  { value: 'BEAUTIFULSOUP', label: 'BS4' },
+  { value: 'SELENIUM', label: 'Selenium' },
+  { value: 'PLAYWRIGHT', label: 'Playwright' },
+];
+const SCRAPE_INTERVAL_OPTIONS: { value: number; label: string }[] = [
+  { value: 5, label: '5m' },
+  { value: 10, label: '10m' },
+  { value: 15, label: '15m' },
+  { value: 30, label: '30m' },
+  { value: 60, label: '1h' },
+];
+
 export function SettingsPage() {
   const [sources, setSources] = useState<ScrapingSource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -425,29 +439,29 @@ export function SettingsPage() {
                 </Button>
               </div>
 
-              <div className="w-full">
-                <table className="w-full table-fixed">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full table-fixed min-w-[800px]">
                   <thead>
                     <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[25%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[26%]">
                         Source
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[14%]">
                         Library
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
                         Interval
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[9%]">
                         Last Scrape
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[18%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[17%]">
                         Last Price
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
                         Status
                       </th>
-                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[21%]">
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[16%]">
                         Actions
                       </th>
                     </tr>
@@ -462,49 +476,65 @@ export function SettingsPage() {
                     ) : (
                       sources.map((source) => (
                         <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
-                          <td className="py-2 px-2">
+                          <td className="py-2 px-2 align-middle">
                             <div className="min-w-0">
                               <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-1.5">
-                                <Badge variant={source.certificateType === 'EUA' ? 'info' : 'warning'} className="text-[10px] px-1.5 py-0.5">
+                                <Badge variant={source.certificateType === 'EUA' ? 'info' : 'warning'} className="text-[10px] px-1.5 py-0.5 shrink-0">
                                   {source.certificateType}
                                 </Badge>
                               </p>
-                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate">
+                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate" title={source.url}>
                                 {source.url}
                               </p>
                             </div>
                           </td>
-                          <td className="py-2 px-2">
-                            <select
-                              value={source.scrapeLibrary || 'HTTPX'}
-                              onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
-                              className="w-full form-select text-xs"
-                            >
-                              <option value="HTTPX">HTTPX</option>
-                              <option value="BEAUTIFULSOUP">BS4</option>
-                              <option value="SELENIUM">Selenium</option>
-                              <option value="PLAYWRIGHT">Playwright</option>
-                            </select>
+                          <td className="py-2 px-2 align-middle">
+                            <div className="min-w-0 w-full">
+                              <select
+                                value={
+                                  (() => {
+                                    const v = source.scrapeLibrary ?? 'HTTPX';
+                                    return SCRAPE_LIBRARY_OPTIONS.some((o) => o.value === v) ? v : 'HTTPX';
+                                  })()
+                                }
+                                onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
+                                className="w-full min-w-[6.5rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800"
+                                aria-label={`Library for ${source.certificateType} source`}
+                              >
+                                {SCRAPE_LIBRARY_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </td>
-                          <td className="py-2 px-2">
-                            <select
-                              value={source.scrapeIntervalMinutes}
-                              onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value))}
-                              className="w-full form-select text-xs"
-                            >
-                              <option value={5}>5m</option>
-                              <option value={10}>10m</option>
-                              <option value={15}>15m</option>
-                              <option value={30}>30m</option>
-                              <option value={60}>1h</option>
-                            </select>
+                          <td className="py-2 px-2 align-middle">
+                            <div className="min-w-0 w-full">
+                              <select
+                                value={String(
+                                  SCRAPE_INTERVAL_OPTIONS.some((o) => o.value === (source.scrapeIntervalMinutes ?? 5))
+                                    ? source.scrapeIntervalMinutes ?? 5
+                                    : 5
+                                )}
+                                onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value, 10))}
+                                className="w-full min-w-[4rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800"
+                                aria-label={`Interval for ${source.certificateType} source`}
+                              >
+                                {SCRAPE_INTERVAL_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={String(opt.value)}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </td>
-                          <td className="py-2 px-2">
-                            <span className="text-xs text-navy-600 dark:text-navy-300">
+                          <td className="py-2 px-2 align-middle">
+                            <span className="text-xs text-navy-600 dark:text-navy-300 whitespace-nowrap">
                               {formatTimeAgo(source.lastScrapeAt)}
                             </span>
                           </td>
-                          <td className="py-2 px-2">
+                          <td className="py-2 px-2 align-middle min-w-0">
                             {source.lastPrice ? (
                               <div className="flex flex-col">
                                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
@@ -525,16 +555,16 @@ export function SettingsPage() {
                               </div>
                             )}
                           </td>
-                          <td className="py-2 px-2">
-                            <div className="flex items-center gap-1">
+                          <td className="py-2 px-2 align-middle">
+                            <div className="flex items-center gap-1 whitespace-nowrap">
                               {getStatusIcon(source.lastScrapeStatus)}
                               <span className="text-[10px] text-navy-600 dark:text-navy-300">
                                 {getStatusLabel(source.lastScrapeStatus)}
                               </span>
                             </div>
                           </td>
-                          <td className="py-2 px-2">
-                            <div className="flex justify-end gap-1">
+                          <td className="py-2 px-2 align-middle">
+                            <div className="flex justify-end gap-1 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"

@@ -5,10 +5,14 @@ Role transitions for onboarding flow (0010).
 - CEA_SETTLE → SWAP: when all CEA_PURCHASE settlement batches for entity are SETTLED.
 - SWAP → EUA_SETTLE: when entity CEA balance reaches 0 (all CEA swapped).
 - EUA_SETTLE → EUA: when all SWAP_CEA_TO_EUA settlement batches for entity are SETTLED.
+
+All transitions push a `role_updated` WebSocket message so the client UI updates
+in realtime (refetches GET /users/me and updates the auth store).
 """
 
 import logging
 from decimal import Decimal
+from typing import List
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -25,6 +29,34 @@ from ..models.models import (
 from .balance_utils import get_entity_balance
 
 logger = logging.getLogger(__name__)
+
+
+async def _notify_role_updated(user_ids: List[UUID], new_role: str, entity_id: UUID) -> None:
+    """
+    Schedule role_updated WebSocket push after a brief delay.
+
+    The delay ensures the DB commit has completed before the client
+    refetches GET /users/me (transition functions are called pre-commit).
+    """
+    if not user_ids:
+        return
+
+    import asyncio
+
+    async def _send():
+        await asyncio.sleep(0.15)  # 150ms — commit will have completed by now
+        try:
+            from ..api.v1.client_ws import client_ws_manager
+
+            await client_ws_manager.broadcast_to_users(
+                user_ids,
+                {"type": "role_updated", "data": {"role": new_role, "entity_id": str(entity_id)}},
+            )
+            logger.info("WebSocket role_updated sent to %d user(s) → %s", len(user_ids), new_role)
+        except Exception as e:
+            logger.warning("Failed to send role_updated WS: %s", e)
+
+    asyncio.create_task(_send())
 
 
 async def transition_cea_to_cea_settle_if_eur_zero(
@@ -52,6 +84,7 @@ async def transition_cea_to_cea_settle_if_eur_zero(
             entity_id,
             len(users),
         )
+        await _notify_role_updated([u.id for u in users], "CEA_SETTLE", entity_id)
     return len(users)
 
 
@@ -103,6 +136,7 @@ async def transition_cea_settle_to_swap_if_all_cea_settled(
             entity_id,
             len(users),
         )
+        await _notify_role_updated([u.id for u in users], "SWAP", entity_id)
     return len(users)
 
 
@@ -132,6 +166,7 @@ async def transition_swap_to_eua_settle_if_cea_zero(
             entity_id,
             len(users),
         )
+        await _notify_role_updated([u.id for u in users], "EUA_SETTLE", entity_id)
     return len(users)
 
 
@@ -181,4 +216,5 @@ async def transition_eua_settle_to_eua_if_all_swap_settled(
             entity_id,
             len(users),
         )
+        await _notify_role_updated([u.id for u in users], "EUA", entity_id)
     return len(users)

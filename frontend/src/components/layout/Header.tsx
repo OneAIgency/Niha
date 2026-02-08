@@ -78,13 +78,13 @@ export function Header() {
     }
 
     // Regular users: show only their allowed sections
-    // CEA Cash Market: only CEA/CEA_SETTLE (buying CEA) + MM
-    const canCashMarket = ['CEA', 'CEA_SETTLE', 'MM'].includes(role);
+    // CEA Cash Market: only CEA (pre-purchase) + MM
+    const canCashMarket = ['CEA', 'MM'].includes(role);
     // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + MM
-    const canSwap = ['CEA', 'SWAP', 'MM'].includes(role);
+    const canSwap = ['CEA', 'CEA_SETTLE', 'SWAP', 'MM'].includes(role);
     // AML: Dashboard only (no Funding in header); canDashboard includes AML, canFunding excludes AML
     const canDashboard = ['AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
-    const canFunding = ['APPROVED', 'FUNDING', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+    const canFunding = ['APPROVED', 'FUNDING', 'MM'].includes(role);
     const canOnboarding = ['NDA', 'KYC'].includes(role);
 
     if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });

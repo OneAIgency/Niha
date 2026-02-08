@@ -42,7 +42,7 @@ Configuration is managed via Pydantic Settings in `backend/app/core/config.py`.
 
 ### Integrations
 - **Email**: Mail can be configured via **Settings** (admin-only). Stored configuration (mail provider, from address, invitation template, link base URL, token expiry) is in the database; when present, invitation (and optionally other) emails use it. When no stored config or "use env" is set, `RESEND_API_KEY` and `FROM_EMAIL` from env are used (Resend).
-- **Scraping**: Updates every 300s (5 mins)
+- **Price scraping (EUA/CEA)**: Configured per source in **Settings → Price Scraping Sources** (admin-only). Each source has URL, certificate type (EUA/CEA), scrape interval, and library (httpx, etc.). **carboncredits.com**: All sources whose URL contains `carboncredits.com` share a single external API (`fetchcarbonprices.php`). The system makes **one HTTP request per refresh cycle** for that group and updates all carboncredits.com sources (EUA and CEA) from the same CSV response. Scheduler (`price_scraping_scheduler_loop` in `main.py`) and admin **Refresh** use this shared fetch when any of the sources in the group is carboncredits.com. **429 backoff**: When the carboncredits.com API returns HTTP 429 (rate limit), the backend sets a Redis backoff key (`carboncredits_backoff_until`) so no further request is sent until the backoff period ends. Backoff duration is taken from the `Retry-After` header (seconds or HTTP-date), default 5 minutes, capped at 10 minutes. Test and Refresh in Settings show the user-friendly message "Rate limited by source. Please wait a few minutes before retrying." See `docs/ADMIN_SCRAPING.md` for API and behaviour.
 
 ## 5. Business Logic Truths
 - **Settlement Cycle**: T+3 Business Days for CEA purchases, T+10-14 for EUA swaps.

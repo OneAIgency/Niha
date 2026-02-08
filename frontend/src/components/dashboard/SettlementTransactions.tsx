@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Clock,
@@ -9,32 +9,10 @@ import {
   ChevronRight,
   Calendar,
 } from 'lucide-react';
-import { Card, Tabs, type Tab } from '../common';
+import { Card } from '../common';
 import { settlementApi } from '../../services/api';
 import type { SettlementBatch, SettlementStatus } from '../../types';
 import { formatCurrency, formatCertificateQuantity, formatDate } from '../../utils';
-
-/** Filter option: maps to backend statuses (PROCESSING = TRANSFER_INITIATED | IN_TRANSIT | AT_CUSTODY). */
-type StatusFilter = 'all' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-
-const PROCESSING_STATUSES: SettlementStatus[] = ['TRANSFER_INITIATED', 'IN_TRANSIT', 'AT_CUSTODY'];
-
-const statusFilterTabs: Tab[] = [
-  { id: 'all', label: 'All' },
-  { id: 'PENDING', label: 'Pending' },
-  { id: 'PROCESSING', label: 'Processing' },
-  { id: 'COMPLETED', label: 'Completed' },
-  { id: 'FAILED', label: 'Failed' },
-];
-
-function matchesStatusFilter(settlement: SettlementBatch, filter: StatusFilter): boolean {
-  if (filter === 'all') return true;
-  if (filter === 'PENDING') return settlement.status === 'PENDING';
-  if (filter === 'PROCESSING') return PROCESSING_STATUSES.includes(settlement.status);
-  if (filter === 'COMPLETED') return settlement.status === 'SETTLED';
-  if (filter === 'FAILED') return settlement.status === 'FAILED';
-  return true;
-}
 
 interface SettlementTransactionsProps {
   onSettlementClick?: (settlement: SettlementBatch) => void;
@@ -44,7 +22,6 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
   const [settlements, setSettlements] = useState<SettlementBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   useEffect(() => {
     fetchSettlements();
@@ -57,7 +34,8 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
     try {
       setError(null);
       const response = await settlementApi.getPendingSettlements();
-      setSettlements(response.data);
+      const list = response?.data;
+      setSettlements(Array.isArray(list) ? list : []);
     } catch (err: unknown) {
       console.error('Failed to fetch settlements:', err);
       const error = err as { response?: { data?: { detail?: string } } };
@@ -158,11 +136,6 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
     );
   }
 
-  const filteredSettlements = useMemo(
-    () => settlements.filter((s) => matchesStatusFilter(s, statusFilter)),
-    [settlements, statusFilter]
-  );
-
   if (settlements.length === 0) {
     return (
       <Card className="p-6">
@@ -175,24 +148,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-navy-400">Status:</span>
-        <Tabs
-          tabs={statusFilterTabs}
-          activeTab={statusFilter}
-          onChange={(id) => setStatusFilter(id as StatusFilter)}
-          variant="pills"
-          size="sm"
-        />
-      </div>
-      {filteredSettlements.length === 0 ? (
-        <Card className="p-6">
-          <div className="flex items-center justify-center py-8 text-navy-400">
-            No settlements match the selected filter
-          </div>
-        </Card>
-      ) : (
-        filteredSettlements.map((settlement) => (
+      {settlements.map((settlement) => (
         <motion.div
           key={settlement.id}
           initial={{ opacity: 0, y: 10 }}
@@ -239,7 +195,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                   <div className="flex items-center gap-1">
                     <span className="text-navy-500 dark:text-navy-500">Value:</span>
                     <span className="font-mono font-medium">
-                      {formatCurrency(settlement.totalValueEur, 'EUR')}
+                      {formatCurrency(settlement.totalValueEur ?? 0, 'EUR')}
                     </span>
                   </div>
                 </div>
@@ -280,8 +236,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
             </div>
           </Card>
         </motion.div>
-        ))
-      )}
+      ))}
     </div>
   );
 }

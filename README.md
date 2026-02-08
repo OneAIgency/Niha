@@ -12,7 +12,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 - **Password Management** - Secure password change with strength validation
 - **Entity Management** - Multi-entity support with KYC verification
 - **Certificate Marketplace** - Browse and trade EUA and CEA certificates. CEA and EUA quantities are whole numbers only (no fractional certificates); all inputs, API, and display use integers for certificate amounts.
-- **Real-time Price Feeds** - Live market data for carbon allowances
+- **Real-time Price Feeds** - Live market data for carbon allowances. EUA/CEA prices are scraped from configured sources (Settings → Price Scraping Sources). For carboncredits.com, one request per cycle updates both EUA and CEA sources; on HTTP 429 the system backs off (Redis) using `Retry-After` or a 5–10 min default.
 - **Order Book** - Full order matching and execution
 - **Cash Market** - EUR balance management and transfers
 

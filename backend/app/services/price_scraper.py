@@ -4,7 +4,7 @@ import random
 import re
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from bs4 import BeautifulSoup
@@ -32,6 +32,16 @@ class PriceScraper:
     # Base prices from market research (fallback)
     BASE_EUA_EUR = 75.0  # EU Allowances in EUR
     BASE_CEA_EUR = 13.0  # China Allowances in EUR (converted from ~100 CNY)
+
+    # Single endpoint for carboncredits.com; one fetch returns EU + China prices (0026)
+    CARBONCREDITS_API_URL = (
+        "https://carboncredits.com/wp-content/themes/fetchcarbonprices.php"
+    )
+
+    # 429 backoff: Redis key holding ISO timestamp until which we skip carboncredits fetch
+    CARBONCREDITS_BACKOFF_KEY = "carboncredits_backoff_until"
+    CARBONCREDITS_BACKOFF_DEFAULT_SECONDS = 300  # 5 min when Retry-After missing
+    CARBONCREDITS_BACKOFF_MAX_SECONDS = 600  # cap 10 min
 
     def __init__(self):
         self.last_eua_price = self.BASE_EUA_EUR
@@ -235,12 +245,16 @@ class PriceScraper:
         price = await self._extract_price(result, source, config)
         return price
 
-    async def _scrape_carboncredits(self, source: ScrapingSource) -> Optional[float]:
+    async def _fetch_carboncredits_prices(
+        self,
+    ) -> Dict[CertificateType, float]:
         """
-        Special scraping logic for carboncredits.com.
-        Uses their PHP endpoint that returns CSV data.
+        Single GET to carboncredits.com API; parse CSV and return EUA + CEA prices.
+        Used by both single-source test and shared refresh (0026 – one request per cycle).
+        Raises on HTTP 429 so callers can map to rate-limit message.
+        Respects Redis backoff after 429 (skip until Retry-After or default 5 min).
         """
-        api_url = "https://carboncredits.com/wp-content/themes/fetchcarbonprices.php"
+        await self._check_carboncredits_backoff()
 
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
@@ -251,53 +265,141 @@ class PriceScraper:
                     "Referer": "https://carboncredits.com/carbon-prices-today/",
                     "Accept": "*/*",
                 }
-                response = await client.get(api_url, headers=headers)
+                response = await client.get(
+                    self.CARBONCREDITS_API_URL, headers=headers
+                )
 
-                if response.status_code == 200:
-                    content = response.text
-                    logger.info(f"CarbonCredits API response: {content[:500]}")
-
-                    # Parse CSV-like data
-                    # Format: "Market,Price,Change,YTD\nEU,€88.65,+1.23%,+5.67%\n..."
-                    lines = content.strip().split("\n")
-
-                    for line in lines:
-                        # Handle quoted fields and commas
-                        parts = self._parse_csv_line(line)
-                        if len(parts) >= 2:
-                            market = parts[0].strip().lower()
-                            price_str = parts[1].strip()
-
-                            # Match based on certificate type
-                            if source.certificate_type == CertificateType.EUA:
-                                if (
-                                    "european" in market
-                                    or "eu" in market
-                                    or "eua" in market
-                                ):
-                                    price = self._parse_price(price_str)
-                                    if price:
-                                        logger.info(f"Found EUA price: {price}")
-                                        return price
-                            elif source.certificate_type == CertificateType.CEA:
-                                if (
-                                    "china" in market
-                                    or "cea" in market
-                                    or "chinese" in market
-                                ):
-                                    price = self._parse_price(price_str)
-                                    if price:
-                                        logger.info(f"Found CEA price: {price}")
-                                        return price
-
-                    cert_val = source.certificate_type.value
-                    raise Exception(f"Could not find {cert_val} price")
-                else:
+                if response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After")
+                    backoff_seconds = self._parse_retry_after_seconds(retry_after)
+                    await self._set_carboncredits_backoff(backoff_seconds)
+                    raise Exception(
+                        "HTTP 429 – rate limited by source. "
+                        "Please wait a few minutes before retrying."
+                    )
+                if response.status_code != 200:
                     raise Exception(f"HTTP {response.status_code}")
 
+                content = response.text
+                logger.info(f"CarbonCredits API response: {content[:500]}")
+
+                prices: Dict[CertificateType, float] = {}
+                lines = content.strip().split("\n")
+
+                for line in lines:
+                    parts = self._parse_csv_line(line)
+                    if len(parts) >= 2:
+                        market = parts[0].strip().lower()
+                        price_str = parts[1].strip()
+
+                        if (
+                            "european" in market
+                            or "eu" in market
+                            or "eua" in market
+                        ):
+                            price = self._parse_price(price_str)
+                            if price is not None:
+                                prices[CertificateType.EUA] = price
+                                logger.info(f"Found EUA price: {price}")
+                        elif (
+                            "china" in market
+                            or "cea" in market
+                            or "chinese" in market
+                        ):
+                            price = self._parse_price(price_str)
+                            if price is not None:
+                                prices[CertificateType.CEA] = price
+                                logger.info(f"Found CEA price: {price}")
+
+                if CertificateType.EUA not in prices and CertificateType.CEA not in prices:
+                    raise Exception("Could not find EU or China price in response")
+                return prices
+
         except Exception as e:
-            logger.error(f"CarbonCredits scrape failed: {e}")
+            logger.error("CarbonCredits fetch failed: %s", e)
             raise
+
+    def _parse_retry_after_seconds(self, retry_after: Optional[str]) -> int:
+        """
+        Parse Retry-After header: integer seconds or HTTP-date.
+        Returns seconds to wait, capped between 60 and CARBONCREDITS_BACKOFF_MAX_SECONDS.
+        """
+        if not retry_after or not retry_after.strip():
+            return self.CARBONCREDITS_BACKOFF_DEFAULT_SECONDS
+        raw = retry_after.strip()
+        try:
+            # Integer seconds
+            secs = int(raw)
+            secs = max(60, min(secs, self.CARBONCREDITS_BACKOFF_MAX_SECONDS))
+            return secs
+        except ValueError:
+            pass
+        try:
+            # HTTP-date (e.g. Wed, 21 Oct 2015 07:28:00 GMT)
+            from email.utils import parsedate_to_datetime
+
+            dt = parsedate_to_datetime(raw)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            delta = (dt - datetime.now(timezone.utc)).total_seconds()
+            secs = max(60, min(int(delta), self.CARBONCREDITS_BACKOFF_MAX_SECONDS))
+            return secs
+        except Exception:
+            return self.CARBONCREDITS_BACKOFF_DEFAULT_SECONDS
+
+    async def _check_carboncredits_backoff(self) -> None:
+        """Raise if we are in 429 backoff period (Redis). Message includes 429 for API mapping."""
+        try:
+            r = await RedisManager.get_redis()
+            until_str = await r.get(self.CARBONCREDITS_BACKOFF_KEY)
+            if not until_str:
+                return
+            until = datetime.fromisoformat(until_str.replace("Z", "+00:00"))
+            if until.tzinfo is None:
+                until = until.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            if now < until:
+                raise Exception(
+                    "HTTP 429 – rate limited by source (in backoff until %s). "
+                    "Please wait before retrying."
+                    % until.strftime("%Y-%m-%d %H:%M:%S UTC")
+                )
+        except Exception as e:
+            if "429" in str(e) or "rate limit" in str(e).lower():
+                raise
+            logger.warning("CarbonCredits backoff check failed (Redis): %s", e)
+            # Fail open: allow fetch if Redis is unavailable
+
+    async def _set_carboncredits_backoff(self, backoff_seconds: int) -> None:
+        """Set Redis key so scheduler/API skip carboncredits fetch until backoff ends."""
+        try:
+            until = datetime.now(timezone.utc) + timedelta(seconds=backoff_seconds)
+            r = await RedisManager.get_redis()
+            await r.setex(
+                self.CARBONCREDITS_BACKOFF_KEY,
+                backoff_seconds,
+                until.isoformat(),
+            )
+            logger.info(
+                "CarbonCredits 429 backoff set: skip until %s (%s s)",
+                until.strftime("%Y-%m-%d %H:%M UTC"),
+                backoff_seconds,
+            )
+        except Exception as e:
+            logger.warning("Failed to set CarbonCredits backoff (Redis): %s", e)
+
+    async def _scrape_carboncredits(self, source: ScrapingSource) -> Optional[float]:
+        """
+        Special scraping logic for carboncredits.com.
+        Uses shared single fetch; returns price for this source's certificate type (0026).
+        """
+        prices = await self._fetch_carboncredits_prices()
+        price = prices.get(source.certificate_type)
+        if price is None:
+            raise Exception(
+                f"Could not find {source.certificate_type.value} price in response"
+            )
+        return price
 
     def _parse_csv_line(self, line: str) -> list:
         """Parse a CSV line handling quoted fields"""
@@ -470,77 +572,160 @@ class PriceScraper:
                 pass  # Don't fail on update error during exception handling
             raise
 
-    async def fetch_prices_from_web(self) -> Optional[Dict]:
+    async def refresh_carboncredits_sources(
+        self, db, sources: List[ScrapingSource]
+    ) -> None:
         """
-        Attempt to fetch real prices from carboncredits.com
+        One GET to carboncredits.com; update all given sources from the same response (0026).
+        sources must be active scraping sources whose url contains 'carboncredits.com'.
         """
-        try:
-            api_url = (
-                "https://carboncredits.com/wp-content/themes/fetchcarbonprices.php"
+        from sqlalchemy import update
+
+        if not sources:
+            return
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        prices = await self._fetch_carboncredits_prices()
+
+        for source in sources:
+            price = prices.get(source.certificate_type)
+            if price is None:
+                await db.execute(
+                    update(ScrapingSource)
+                    .where(ScrapingSource.id == source.id)
+                    .values(
+                        last_scrape_at=now,
+                        last_scrape_status=ScrapeStatus.FAILED,
+                    )
+                )
+                logger.warning(
+                    "CarbonCredits refresh: no price for %s (source %s)",
+                    source.certificate_type.value,
+                    source.name,
+                )
+                continue
+
+            price_decimal = Decimal(str(price))
+            price_eur = None
+            exchange_rate = None
+            if source.certificate_type == CertificateType.CEA:
+                try:
+                    rate = await currency_service.get_rate("CNY", "EUR")
+                    price_eur = (price_decimal * rate).quantize(Decimal("0.0001"))
+                    exchange_rate = (Decimal("1.0") / rate).quantize(
+                        Decimal("0.00000001")
+                    )
+                    logger.info(
+                        "CEA conversion: %s CNY * %s = %s EUR (rate EUR/CNY: %s)",
+                        price_decimal,
+                        rate,
+                        price_eur,
+                        exchange_rate,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to convert CEA price to EUR: %s", e)
+
+            update_values = {
+                "last_price": price_decimal,
+                "last_scrape_at": now,
+                "last_scrape_status": ScrapeStatus.SUCCESS,
+            }
+            if price_eur is not None:
+                update_values["last_price_eur"] = price_eur
+                update_values["last_exchange_rate"] = exchange_rate
+
+            await db.execute(
+                update(ScrapingSource)
+                .where(ScrapingSource.id == source.id)
+                .values(**update_values)
             )
 
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-                headers = {
-                    "User-Agent": (
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-                    ),
-                    "Referer": "https://carboncredits.com/carbon-prices-today/",
-                }
-                response = await client.get(api_url, headers=headers)
+            source.last_price = price_decimal
+            source.last_scrape_at = now
+            source.last_scrape_status = ScrapeStatus.SUCCESS
+            if price_eur is not None:
+                source.last_price_eur = price_eur
+                source.last_exchange_rate = exchange_rate
 
-                if response.status_code == 200:
-                    content = response.text
-                    prices = {}
+            history = PriceHistory(
+                certificate_type=source.certificate_type,
+                price=price_decimal,
+                currency="EUR"
+                if source.certificate_type == CertificateType.EUA
+                else "CNY",
+                source=source.name,
+            )
+            db.add(history)
+            logger.info("Refreshed %s: %s", source.name, price)
 
-                    for line in content.strip().split("\n"):
-                        parts = self._parse_csv_line(line)
-                        if len(parts) >= 2:
-                            market = parts[0].strip().lower()
-                            price_str = parts[1].strip()
+        await db.commit()
 
-                            if "european" in market or "eu" in market:
-                                prices["eua"] = self._parse_price(price_str)
-                            elif "china" in market:
-                                prices["cea"] = self._parse_price(price_str)
+        # Warm Redis cache so get_current_prices() can serve without extra request (0026)
+        eua_eur = None
+        cea_eur = None
+        for s in sources:
+            if s.certificate_type == CertificateType.EUA and s.last_price is not None:
+                eua_eur = float(s.last_price)
+            elif s.certificate_type == CertificateType.CEA and s.last_price_eur is not None:
+                cea_eur = float(s.last_price_eur)
+        if eua_eur is not None and cea_eur is not None:
+            try:
+                await RedisManager.cache_prices(
+                    {
+                        "eua_eur": str(eua_eur),
+                        "cea_eur": str(cea_eur),
+                        "eua_change": "0",
+                        "cea_change": "0",
+                        "updated_at": now.isoformat(),
+                    }
+                )
+            except Exception as e:
+                logger.warning("Failed to cache prices after carboncredits refresh: %s", e)
 
-                    if prices:
-                        return prices
-
+    async def fetch_prices_from_web(self) -> Optional[Dict]:
+        """
+        Fetch real prices from carboncredits.com using shared single request (0026).
+        Respects 429 and Redis backoff; returns None on rate limit or error.
+        """
+        try:
+            prices = await self._fetch_carboncredits_prices()
+            return {
+                "eua": prices.get(CertificateType.EUA),
+                "cea": prices.get(CertificateType.CEA),
+            }
         except Exception as e:
-            logger.warning(f"Failed to fetch prices from web: {e}")
-
+            logger.warning("Failed to fetch prices from web: %s", e)
         return None
 
     async def get_current_prices(self) -> Dict:
         """Get current carbon prices with realistic variance - ALL IN EUR"""
 
-        # Try to fetch real prices first
+        # Prefer cache to avoid duplicate requests (0026); then try shared fetch
+        cached = await RedisManager.get_cached_prices()
+        if cached and "eua_eur" in cached and "cea_eur" in cached:
+            return {
+                "eua": {
+                    "price": float(cached.get("eua_eur", self.BASE_EUA_EUR)),
+                    "currency": "EUR",
+                    "change_24h": float(cached.get("eua_change", 0)),
+                },
+                "cea": {
+                    "price": float(cached.get("cea_eur", self.BASE_CEA_EUR)),
+                    "currency": "EUR",
+                    "change_24h": float(cached.get("cea_change", 0)),
+                },
+                "updated_at": cached.get(
+                    "updated_at", datetime.now(timezone.utc).isoformat()
+                ),
+            }
+
         web_prices = await self.fetch_prices_from_web()
 
         if web_prices and web_prices.get("eua"):
             eua_eur = web_prices["eua"]
             cea_cny = web_prices.get("cea", 100.0)  # CEA fetched in CNY
         else:
-            # Check cache
-            cached = await RedisManager.get_cached_prices()
-            if cached and "eua_eur" in cached:
-                return {
-                    "eua": {
-                        "price": float(cached.get("eua_eur", self.BASE_EUA_EUR)),
-                        "currency": "EUR",
-                        "change_24h": float(cached.get("eua_change", 0)),
-                    },
-                    "cea": {
-                        "price": float(cached.get("cea_eur", self.BASE_CEA_EUR)),
-                        "currency": "EUR",
-                        "change_24h": float(cached.get("cea_change", 0)),
-                    },
-                    "updated_at": cached.get(
-                        "updated_at", datetime.now(timezone.utc).isoformat()
-                    ),
-                }
-
-            # Fallback to simulated prices
+            # No cache and no successful fetch (e.g. 429/backoff) – use simulated
             eua_eur = self._apply_variance(self.BASE_EUA_EUR)
             cea_cny = 100.0  # Fallback CEA in CNY
 

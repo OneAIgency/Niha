@@ -45,9 +45,14 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/funding';
   }
 
-  // CEA, CEA_SETTLE: cash market (CEA buying)
-  if (role === 'CEA' || role === 'CEA_SETTLE') {
+  // CEA: cash market (pre-purchase)
+  if (role === 'CEA') {
     return '/cash-market';
+  }
+
+  // CEA_SETTLE: swap (waiting for CEA settlement)
+  if (role === 'CEA_SETTLE') {
+    return '/swap';
   }
 
   // SWAP: swap page (can execute CEA→EUA swap)
