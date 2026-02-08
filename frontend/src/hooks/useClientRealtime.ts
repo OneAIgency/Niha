@@ -39,6 +39,16 @@ export function useClientRealtime() {
             logger.error('Client realtime: failed to refetch profile after role_updated', err);
           });
       }
+
+      if (message.type === 'balance_updated') {
+        // Dispatch window event so dashboard (and any page) refreshes balances immediately
+        window.dispatchEvent(
+          new CustomEvent('nihao:balanceUpdated', {
+            detail: message.data ?? { type: 'balance_updated', source: 'websocket' },
+          }),
+        );
+        logger.debug('Client realtime: balance_updated received, dispatched nihao:balanceUpdated');
+      }
     },
     [setAuth]
   );

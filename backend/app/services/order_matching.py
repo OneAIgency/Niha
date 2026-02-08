@@ -34,6 +34,7 @@ from ..models.models import (
     TransactionType,
 )
 from ..services.currency_service import currency_service
+from ..services.balance_utils import get_entity_eur_balance
 from ..services.settlement_service import SettlementService
 
 # Default platform fee rate: 0.5% (fallback if no config exists)
@@ -301,7 +302,7 @@ async def preview_buy_order(
     )
 
     # Get available balance
-    available_eur = await get_entity_balance(db, entity_id, AssetType.EUR)
+    available_eur = await get_entity_eur_balance(db, entity_id)
 
     # Validate inputs
     if amount_eur is None and quantity is None:
@@ -588,7 +589,7 @@ async def execute_market_buy_order(
             platform_fee=Decimal("0"),
             total_cost_net=Decimal("0"),
             weighted_avg_price=Decimal("0"),
-            eur_balance=await get_entity_balance(db, entity_id, AssetType.EUR),
+            eur_balance=await get_entity_eur_balance(db, entity_id),
             certificate_balance=await get_entity_balance(db, entity_id, AssetType.CEA),
         )
 

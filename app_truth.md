@@ -88,6 +88,12 @@ The swap market allows users with CEA role (or higher) to exchange CEA for EUA.
 **CEA and EUA volumes (integer only)**  
 CEA and EUA are certificates traded in whole units only; there are no fractional certificates. **CEA and EUA volumes/quantities/amounts are whole numbers only; no fractional certificates.** All API request fields and response fields representing CEA or EUA quantity/volume/amount must be integers; UI must accept and display only whole numbers for CEA/EUA. EUR amounts (e.g. balance_amount, deposit amount, order value in EUR) remain decimal where applicable; only certificate quantities (CEA count, EUA count) and certificate amounts in add-asset/transactions for CEA/EUA are integer.
 
+**EUR balance display (single source of truth)**  
+The EUR balance shown to users (Dashboard Cash (EUR), Backoffice User Assets, Cash Market balances) must be consistent everywhere. It is computed as: **EntityHolding (EUR)** when present and > 0; otherwise **Entity.balance_amount** as fallback. The helper `get_entity_eur_balance` in `backend/app/services/balance_utils.py` implements this (optional args `entity` and `eur_holding_quantity` avoid extra queries when the caller already has them). Both endpoints below use it so all users see the same EUR values from the database.
+
+- **`GET /api/v1/cash-market/user/balances`** (FUNDED or ADMIN): Returns current user's asset balances. Response: `{ "entity_id": "<uuid>", "eur_balance": <float>, "cea_balance": <int>, "eua_balance": <int> }`. Used by Dashboard and Cash Market page.
+- **`GET /api/v1/backoffice/entities/{entity_id}/assets`** (Admin): Returns entity's asset balances and recent_transactions (last 50 add-asset ops). Response: `eur_balance`, `cea_balance`, `eua_balance` (CEA/EUA as int) plus `recent_transactions[]`. Used by Backoffice User Detail → Assets tab.
+
 ## 6. Development Standards
 - **Linter**: `ruff` (run with `ruff check .`)
 - **Formatter**: `ruff format`

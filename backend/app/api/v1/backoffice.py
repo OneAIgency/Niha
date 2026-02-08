@@ -54,7 +54,7 @@ from ...schemas.schemas import (
     UserApprovalRequest,
 )
 from ...services.email_service import email_service
-from ...services.balance_utils import update_entity_balance
+from ...services.balance_utils import get_entity_eur_balance, update_entity_balance
 from ...services.ticket_service import TicketService
 
 # Constants for deposit validation
@@ -1097,11 +1097,27 @@ async def add_asset_to_entity(
     is_withdraw = asset_request.operation == "withdraw"
 
     if is_withdraw:
-        amount_debit = -amount_abs
-        if balance_before + amount_debit < 0:
-            raise HTTPException(
-                status_code=400, detail="Insufficient balance"
-            )
+        # For CEA/EUA, the displayed balance is floor(actual), so if the user
+        # withdraws the full displayed amount, it may be slightly more than the
+        # fractional holding (e.g. withdraw 608808 when holding is 608807.89).
+        # In that case, withdraw the entire actual balance instead of failing.
+        if model_asset_type in (AssetType.CEA, AssetType.EUA):
+            displayed_balance = Decimal(str(int(float(balance_before))))
+            if amount_abs == displayed_balance or amount_abs >= balance_before:
+                # Full withdrawal — drain the actual holding (including dust)
+                amount_debit = -balance_before
+            elif amount_abs > displayed_balance:
+                raise HTTPException(
+                    status_code=400, detail="Insufficient balance"
+                )
+            else:
+                amount_debit = -amount_abs
+        else:
+            amount_debit = -amount_abs
+            if balance_before + amount_debit < 0:
+                raise HTTPException(
+                    status_code=400, detail="Insufficient balance"
+                )
         balance_after = balance_before + amount_debit
         transaction_type = TransactionType.WITHDRAWAL
         amount_for_tx = amount_debit
@@ -1218,9 +1234,10 @@ async def get_entity_assets(
     for h in holdings:
         balances[h.asset_type] = h.quantity
 
-    # If EUR holding doesn't exist but entity has balance_amount, use that
-    if balances[AssetType.EUR] == 0 and entity.balance_amount:
-        balances[AssetType.EUR] = entity.balance_amount
+    # Use shared EUR logic (EntityHolding + Entity.balance_amount fallback); pass entity and eur to avoid extra queries
+    balances[AssetType.EUR] = await get_entity_eur_balance(
+        db, UUID(entity_id), entity=entity, eur_holding_quantity=balances[AssetType.EUR]
+    )
 
     # Get recent transactions (limit aligned with frontend unified history cap)
     RECENT_ASSET_TRANSACTIONS_LIMIT = 50
@@ -1233,14 +1250,14 @@ async def get_entity_assets(
     transactions = transactions_result.scalars().all()
 
     def _amt(v, at: AssetType) -> float:
-        return int(round(float(v))) if at in (AssetType.CEA, AssetType.EUA) else float(v)
+        return int(float(v)) if at in (AssetType.CEA, AssetType.EUA) else float(v)
 
     return EntityAssetsResponse(
         entity_id=UUID(entity_id),
         entity_name=entity.name,
         eur_balance=float(balances[AssetType.EUR]),
-        cea_balance=int(round(float(balances[AssetType.CEA]))),
-        eua_balance=int(round(float(balances[AssetType.EUA]))),
+        cea_balance=int(float(balances[AssetType.CEA])),
+        eua_balance=int(float(balances[AssetType.EUA])),
         recent_transactions=[
             AssetTransactionResponse(
                 id=t.id,

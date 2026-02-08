@@ -683,7 +683,11 @@ async def create_swap(
     )
     holding = result.scalar_one_or_none()
 
-    if not holding or float(holding.quantity) < request.quantity:
+    # Compare as rounded integers — the balance API returns int(round(quantity))
+    # so the frontend sends that rounded value. Raw decimal comparison would reject
+    # a "full balance" swap when quantity has fractional certificates (e.g. 301982.51
+    # rounded to 301983 by the API, but 301982.51 < 301983 fails the raw check).
+    if not holding or int(round(float(holding.quantity))) < request.quantity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Insufficient {from_cert.value} balance",
@@ -853,7 +857,8 @@ async def execute_swap(
     )
     cea_holding = result.scalar_one_or_none()
 
-    if not cea_holding or float(cea_holding.quantity) < cea_quantity:
+    # Same rounding as balance API — see create_swap comment for rationale
+    if not cea_holding or int(round(float(cea_holding.quantity))) < int(cea_quantity):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Insufficient CEA balance",
@@ -946,8 +951,12 @@ async def execute_swap(
 
         order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Deduct CEA from user's holdings
-    cea_holding.quantity = Decimal(str(float(cea_holding.quantity) - cea_quantity))
+    # Deduct CEA from user's holdings.
+    # When swapping the full balance, the integer-rounded quantity may exceed
+    # the raw decimal (e.g. 301983 vs 301982.51). Clamp to zero to avoid
+    # tiny negative balances from rounding.
+    new_cea = float(cea_holding.quantity) - cea_quantity
+    cea_holding.quantity = Decimal("0") if new_cea < 0 else Decimal(str(new_cea))
 
     # Get current EUA price for settlement value calculation
     prices = await price_scraper.get_current_prices()

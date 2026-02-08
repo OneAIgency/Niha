@@ -119,6 +119,7 @@ See `app_truth.md` §10. These files are locked:
 4. **Deposits**: APPROVED→FUNDING only via first `announce_deposit` (no manual "fund user")
 5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list
 6. **Swap market ratio**: `Order.price` = **CEA/EUA ratio** (NOT EUR price!). The ratio represents how many EUA you get per 1 CEA. Example: ratio 0.1177 means 1 CEA → 0.1177 EUA. See `app_truth.md` §5 for full specs
+7. **EUR balance display**: Dashboard, Backoffice User Assets, and Cash Market all show the same EUR (EntityHolding EUR, or Entity.balance_amount fallback). Helper: `balance_utils.get_entity_eur_balance`. See `app_truth.md` §5
 
 ## Testing
 

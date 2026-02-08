@@ -5,6 +5,7 @@ Order-driven market with order book, market depth, and FIFO matching.
 Trade CEA certificates with EUR.
 """
 
+import asyncio
 import logging
 import uuid
 
@@ -67,6 +68,8 @@ from ...schemas.schemas import (
     OrderResponse,
     OrderSide,
 )
+from ..v1.client_ws import client_ws_manager
+from ...services.balance_utils import get_entity_eur_balance
 from ...services.order_matching import (
     DEFAULT_FEE_RATE,
     execute_market_buy_order,
@@ -668,8 +671,8 @@ async def get_cea_sellers(db=Depends(get_db)):  # noqa: B008
             "client_code": s.client_code,
             "name": s.name,
             "company_name": s.company_name,
-            "cea_balance": int(round(float(s.cea_balance))) if s.cea_balance else 0,
-            "cea_sold": int(round(float(s.cea_sold))) if s.cea_sold else 0,
+            "cea_balance": int(float(s.cea_balance)) if s.cea_balance else 0,
+            "cea_sold": int(float(s.cea_sold)) if s.cea_sold else 0,
             "total_transactions": s.total_transactions or 0,
         }
         for s in sellers
@@ -839,6 +842,9 @@ async def get_user_balances(
 ):
     """
     Get the current user's asset balances (EUR, CEA, EUA). FUNDED or ADMIN only.
+
+    EUR uses get_entity_eur_balance (EntityHolding + Entity.balance_amount fallback)
+    so the value matches Backoffice and Dashboard. CEA/EUA from EntityHolding only.
     """
     if not current_user.entity_id:
         return {
@@ -848,15 +854,15 @@ async def get_user_balances(
             "eua_balance": 0,
         }
 
-    eur_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+    eur_balance = await get_entity_eur_balance(db, current_user.entity_id)
     cea_balance = await get_entity_balance(db, current_user.entity_id, AssetType.CEA)
     eua_balance = await get_entity_balance(db, current_user.entity_id, AssetType.EUA)
 
     return {
         "entity_id": str(current_user.entity_id),
         "eur_balance": float(eur_balance),
-        "cea_balance": int(round(float(cea_balance))),
-        "eua_balance": int(round(float(eua_balance))),
+        "cea_balance": int(float(cea_balance)),
+        "eua_balance": int(float(eua_balance)),
     }
 
 
@@ -876,7 +882,7 @@ async def preview_order(
         raise HTTPException(status_code=400, detail="User must have an entity to trade")
 
     # Get available balance
-    available_eur = await get_entity_balance(db, current_user.entity_id, AssetType.EUR)
+    available_eur = await get_entity_eur_balance(db, current_user.entity_id)
 
     # Only support BUY for now (CEA market)
     if request.side != OrderSide.BUY:
@@ -995,6 +1001,23 @@ async def execute_market_order(
         f"qty={result.total_quantity}, cost={result.total_cost_net}, trades={len(result.fills)}"
     )
 
+    # Notify user via WebSocket so all pages refresh balances in real-time
+    if result.success:
+        async def _send_balance_update():
+            await asyncio.sleep(0.15)  # small delay for DB commit visibility
+            await client_ws_manager.broadcast_to_users(
+                [current_user.id],
+                {
+                    "type": "balance_updated",
+                    "data": {
+                        "eur_balance": float(result.eur_balance),
+                        "cea_balance": int(float(result.certificate_balance)),
+                        "source": "trade_executed",
+                    },
+                },
+            )
+        asyncio.create_task(_send_balance_update())
+
     return OrderExecutionResponse(
         success=result.success,
         order_id=result.order_id,
@@ -1017,5 +1040,5 @@ async def execute_market_order(
             for f in result.fills
         ],
         eur_balance=float(result.eur_balance),
-        certificate_balance=int(round(float(result.certificate_balance))),
+        certificate_balance=int(float(result.certificate_balance)),
     )

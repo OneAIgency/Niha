@@ -14,7 +14,7 @@ A modern carbon trading platform for EU ETS (EUA) and Chinese carbon allowances 
 - **Certificate Marketplace** - Browse and trade EUA and CEA certificates. CEA and EUA quantities are whole numbers only (no fractional certificates); all inputs, API, and display use integers for certificate amounts.
 - **Real-time Price Feeds** - Live market data for carbon allowances. EUA/CEA prices are scraped from configured sources (Settings → Price Scraping Sources). For carboncredits.com, one request per cycle updates both EUA and CEA sources; on HTTP 429 the system backs off (Redis) using `Retry-After` or a 5–10 min default.
 - **Order Book** - Full order matching and execution
-- **Cash Market** - EUR balance management and transfers
+- **Cash Market** - EUR balance management and transfers. EUR balance is shown consistently on Dashboard, Backoffice User Assets, and Cash Market (EntityHolding + Entity.balance_amount fallback; see `app_truth.md` §5).
 
 ### Admin Backoffice (v1.0.0) ✨
 Comprehensive admin interface using the **same Layout** as the rest of the app (one Header, one Footer). Default view is **Onboarding**; compact Subheader nav and optional SubSubHeader for page-specific actions.

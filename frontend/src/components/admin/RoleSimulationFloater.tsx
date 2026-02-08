@@ -1,4 +1,4 @@
-import { useAuthStore } from '../../stores/useStore';
+import { useAuthStore, usePricesStore } from '../../stores/useStore';
 import { USER_ROLES } from '../../utils/effectiveRole';
 import type { UserRole } from '../../types';
 
@@ -10,6 +10,7 @@ const NO_SIMULATION_VALUE = '__none__';
  */
 export function RoleSimulationFloater() {
   const { user, simulatedRole, setSimulatedRole } = useAuthStore();
+  const { prices } = usePricesStore();
 
   if (!user || user.role !== 'ADMIN') {
     return null;
@@ -22,12 +23,28 @@ export function RoleSimulationFloater() {
     setSimulatedRole(v === NO_SIMULATION_VALUE ? null : (v as UserRole));
   };
 
+  // Best ratio = CEA price / EUA price (same formula as backend swaps.py:106)
+  const ceaPrice = prices?.cea?.price ?? 0;
+  const euaPrice = prices?.eua?.price ?? 0;
+  const bestRatio = euaPrice > 0 ? ceaPrice / euaPrice : 0;
+
   return (
     <div
-      className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border px-3 py-2 shadow-lg bg-white border-navy-200 text-navy-800 dark:bg-navy-800 dark:border-navy-600 dark:text-navy-100"
+      className="fixed bottom-4 right-4 z-40 flex items-center gap-3 rounded-xl border px-3 py-2 shadow-lg bg-white border-navy-200 text-navy-800 dark:bg-navy-800 dark:border-navy-600 dark:text-navy-100"
       role="group"
-      aria-label="Simulare rol (test)"
+      aria-label="Admin controls"
     >
+      {/* Best Ratio card */}
+      <div className="flex items-center gap-1.5 border-r border-navy-200 dark:border-navy-600 pr-3">
+        <span className="text-xs font-medium text-navy-600 whitespace-nowrap dark:text-navy-300">
+          Best ratio
+        </span>
+        <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+          {bestRatio > 0 ? bestRatio.toFixed(4) : '...'}
+        </span>
+      </div>
+
+      {/* Role simulation */}
       <label
         htmlFor="role-simulation-select"
         className="text-xs font-medium text-navy-600 whitespace-nowrap dark:text-navy-300"
