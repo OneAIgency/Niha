@@ -399,7 +399,7 @@ function App() {
             <Route
               path="/swap"
               element={
-                <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'ADMIN', 'MM']}>
+                <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
                 </RoleProtectedRoute>
               }

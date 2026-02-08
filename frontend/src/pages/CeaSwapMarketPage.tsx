@@ -251,21 +251,9 @@ export function CeaSwapMarketPage() {
       setShowFinalDialog(false);
       setShowSuccessDialog(true);
 
-      // Refresh user data to get updated role (SWAP → EUA_SETTLE)
-      // This ensures the user can still access the swap page and dashboard
-      try {
-        const updatedUser = await usersApi.getProfile();
-        const token = sessionStorage.getItem('auth_token');
-        if (token) {
-          useAuthStore.getState().setAuth(updatedUser, token);
-        }
-      } catch (refreshErr) {
-        console.warn('Failed to refresh user data after swap:', refreshErr);
-        // Non-critical - user will get updated on next login
-      }
-
-      // Refresh balances after successful swap
-      await fetchData();
+      // NOTE: Do NOT refresh user role here — it would change to EUA_SETTLE
+      // and trigger a route guard redirect, closing the success dialog.
+      // Role will be refreshed when user navigates away (dashboard button or close).
     } catch (error: unknown) {
       const err = error as { response?: { status?: number; data?: { detail?: unknown } } };
       const detail = err.response?.data?.detail;
@@ -863,13 +851,29 @@ export function CeaSwapMarketPage() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={closeAllDialogs}
+                  onClick={async () => {
+                    // Refresh user role before navigating away
+                    try {
+                      const updatedUser = await usersApi.getProfile();
+                      const token = sessionStorage.getItem('auth_token');
+                      if (token) useAuthStore.getState().setAuth(updatedUser, token);
+                    } catch { /* will refresh on next load */ }
+                    closeAllDialogs();
+                  }}
                   className="flex-1 py-3 rounded-lg border border-navy-200 dark:border-navy-600 text-navy-300 dark:text-navy-300 hover:bg-navy-100 dark:bg-navy-800 transition-colors"
                 >
                   Close
                 </button>
                 <button
-                  onClick={() => window.location.href = '/dashboard'}
+                  onClick={async () => {
+                    // Refresh user role then navigate to dashboard
+                    try {
+                      const updatedUser = await usersApi.getProfile();
+                      const token = sessionStorage.getItem('auth_token');
+                      if (token) useAuthStore.getState().setAuth(updatedUser, token);
+                    } catch { /* will refresh on next load */ }
+                    window.location.href = '/dashboard';
+                  }}
                   className="flex-1 py-3 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-400 transition-colors"
                 >
                   Go to Dashboard
