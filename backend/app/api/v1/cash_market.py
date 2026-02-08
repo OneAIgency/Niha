@@ -1038,6 +1038,21 @@ async def execute_market_order(
         {"type": "orderbook_updated", "data": {"certificate_type": request.certificate_type.value}},
     ))
 
+    # Trade confirmation email to buyer (fire-and-forget)
+    if result.success:
+        try:
+            from ...services.email_service import email_service as _email_svc
+            await _email_svc.send_trade_confirmation(
+                to_email=current_user.email,
+                trade_type="BUY",
+                certificate_type=request.certificate_type.value,
+                quantity=float(result.total_quantity),
+                price=float(result.weighted_avg_price),
+                total=float(result.total_cost_net),
+            )
+        except Exception:
+            logger.debug("Trade confirmation email failed for user %s", current_user.id)
+
     return OrderExecutionResponse(
         success=result.success,
         order_id=result.order_id,

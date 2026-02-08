@@ -9,6 +9,7 @@ All deposit management routes with AML hold support.
 """
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
@@ -17,6 +18,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
@@ -29,6 +31,8 @@ from ...services.ticket_service import TicketService
 from .backoffice import backoffice_ws_manager
 from .client_ws import client_ws_manager
 from ...services.ws_utils import get_entity_user_ids
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/deposits", tags=["Deposits"])
 
@@ -340,6 +344,19 @@ async def announce_deposit(
         },
     )
 
+    # Deposit announcement confirmation email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        await _email_svc.send_deposit_announced(
+            to_email=current_user.email,
+            first_name=current_user.first_name or "Client",
+            amount=float(request.amount),
+            currency=request.currency.value,
+            reference=request.source_bank or "",
+        )
+    except Exception:
+        logger.debug("Deposit announced email failed for user %s", current_user.id)
+
     return deposit_to_response(deposit, include_entity=False, include_relations=False)
 
 
@@ -582,6 +599,24 @@ async def confirm_deposit(
                 {"type": "deposit_status_updated", "data": {"deposit_id": str(deposit.id), "status": "ON_HOLD"}},
             ))
 
+        # Deposit on-hold email to entity users (fire-and-forget)
+        try:
+            from ...services.email_service import email_service as _email_svc
+            _entity_users = await db.execute(
+                select(User).where(User.entity_id == deposit.entity_id, User.is_active == True)  # noqa: E712
+            )
+            for _eu in _entity_users.scalars().all():
+                if _eu.email:
+                    await _email_svc.send_deposit_on_hold(
+                        to_email=_eu.email,
+                        first_name=_eu.first_name or "Client",
+                        amount=float(deposit.confirmed_amount or deposit.amount),
+                        currency="EUR",
+                        hold_until=deposit.hold_expires_at.strftime("%Y-%m-%d") if deposit.hold_expires_at else "TBD",
+                    )
+        except Exception:
+            logger.debug("Deposit on-hold email failed for deposit %s", deposit.id)
+
         # Reload with relationships
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
@@ -658,6 +693,24 @@ async def clear_deposit(
                 upgraded_user_ids,
                 {"type": "role_updated", "data": {"role": "CEA", "entity_id": str(deposit.entity_id)}},
             )
+
+        # Deposit cleared email to entity users (fire-and-forget)
+        try:
+            from ...services.email_service import email_service as _email_svc
+            _entity_users = await db.execute(
+                select(User).where(User.entity_id == deposit.entity_id, User.is_active == True)  # noqa: E712
+            )
+            for _eu in _entity_users.scalars().all():
+                if _eu.email:
+                    await _email_svc.send_deposit_cleared(
+                        to_email=_eu.email,
+                        first_name=_eu.first_name or "Client",
+                        amount=float(deposit.amount) if deposit.amount else 0,
+                        currency=deposit.currency.value if deposit.currency else "EUR",
+                    )
+        except Exception:
+            logger.debug("Deposit cleared email failed for deposit %s", deposit.id)
+
         return deposit_to_response(deposit)
 
     except DepositNotFoundError as e:
@@ -705,6 +758,24 @@ async def reject_deposit(
                 entity_user_ids,
                 {"type": "deposit_status_updated", "data": {"deposit_id": str(deposit.id), "status": "REJECTED"}},
             ))
+
+        # Deposit rejected email to entity users (fire-and-forget)
+        try:
+            from ...services.email_service import email_service as _email_svc
+            _entity_users = await db.execute(
+                select(User).where(User.entity_id == deposit.entity_id, User.is_active == True)  # noqa: E712
+            )
+            for _eu in _entity_users.scalars().all():
+                if _eu.email:
+                    await _email_svc.send_deposit_rejected(
+                        to_email=_eu.email,
+                        first_name=_eu.first_name or "Client",
+                        amount=float(deposit.amount) if deposit.amount else 0,
+                        currency=deposit.currency.value if deposit.currency else "EUR",
+                        reason=request.reason.value,
+                    )
+        except Exception:
+            logger.debug("Deposit rejected email failed for deposit %s", deposit.id)
 
         # Reload with relationships
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)

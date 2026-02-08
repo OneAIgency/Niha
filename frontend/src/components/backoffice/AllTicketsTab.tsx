@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Search, RefreshCw, ChevronLeft, ChevronRight, Filter, Shield, Link2, AlertTriangle } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
 import { Button, AlertBanner } from '../common';
 import { getTickets } from '../../services/api';
@@ -31,53 +31,53 @@ interface TicketLog {
   userEmail?: string;
   userRole?: string;
   userCompany?: string;
+  userFullName?: string;
   mmName?: string;
+  // Client-side grouping metadata (added during processing)
+  _groupId?: string;
+  _isGroupStart?: boolean;
+  _isGroupEnd?: boolean;
+  _isGroupMiddle?: boolean;
 }
 
 // ---------------------------------------------------------------------------
-// Action label mapping – human-readable names
+// Action label mapping
 // ---------------------------------------------------------------------------
 type ActionCategory = 'auth' | 'trading' | 'deposit' | 'withdrawal' | 'kyc' | 'mm' | 'auto_trade' | 'admin' | 'swap' | 'system';
 
 interface ActionMeta {
   label: string;
   category: ActionCategory;
-  icon: string; // emoji as compact icon
 }
 
 const ACTION_MAP: Record<string, ActionMeta> = {
-  USER_LOGIN:                { label: 'Login',              category: 'auth',       icon: '🔑' },
-  USER_LOGIN_MAGIC_LINK:     { label: 'Login (Magic Link)', category: 'auth',       icon: '🔗' },
-  ORDER_PLACED:              { label: 'Place Order',        category: 'trading',    icon: '📊' },
-  ORDER_CANCELLED:           { label: 'Cancel Order',       category: 'trading',    icon: '✕' },
-  ORDER_MODIFIED:            { label: 'Modify Order',       category: 'trading',    icon: '✏️' },
-  ASSET_TRADE_DEBIT:         { label: 'Trade Debit',        category: 'trading',    icon: '💱' },
-  AUTO_TRADE_ORDER_PLACED:   { label: 'Auto Trade',         category: 'auto_trade', icon: '🤖' },
-  ENTITY_ASSET_DEPOSIT:      { label: 'Asset Deposit',      category: 'deposit',    icon: '📥' },
-  ENTITY_ASSET_WITHDRAWAL:   { label: 'Asset Withdrawal',   category: 'withdrawal', icon: '📤' },
-  DEPOSIT_ANNOUNCED:         { label: 'Deposit Alert',      category: 'deposit',    icon: '🔔' },
-  DEPOSIT_CONFIRMED:         { label: 'Confirm Deposit',    category: 'admin',      icon: '✓' },
-  DEPOSIT_CLEARED:           { label: 'Clear Deposit',      category: 'admin',      icon: '✓✓' },
-  KYC_DOCUMENT_UPLOADED:     { label: 'KYC Upload',         category: 'kyc',        icon: '📄' },
-  KYC_SUBMITTED:             { label: 'KYC Submitted',      category: 'kyc',        icon: '📋' },
-  MM_CREATED:                { label: 'Create MM',          category: 'mm',         icon: '🏦' },
-  MM_UPDATED:                { label: 'Update MM',          category: 'mm',         icon: '🏦' },
-  MM_DELETED:                { label: 'Delete MM',          category: 'mm',         icon: '🏦' },
-  MM_RESET_ALL:              { label: 'Reset All MM',       category: 'mm',         icon: '🏦' },
-  MM_EUR_DEPOSIT:            { label: 'MM EUR Deposit',     category: 'mm',         icon: '💰' },
-  MM_EUR_WITHDRAWAL:         { label: 'MM EUR Withdrawal',  category: 'mm',         icon: '💸' },
-  SWAP_CREATED:              { label: 'Swap',               category: 'swap',       icon: '🔄' },
+  USER_LOGIN:                { label: 'Login',              category: 'auth' },
+  USER_LOGIN_MAGIC_LINK:     { label: 'Magic Link Login',   category: 'auth' },
+  ORDER_PLACED:              { label: 'Place Order',        category: 'trading' },
+  ORDER_CANCELLED:           { label: 'Cancel Order',       category: 'trading' },
+  ORDER_MODIFIED:            { label: 'Modify Order',       category: 'trading' },
+  ASSET_TRADE_DEBIT:         { label: 'Trade Debit',        category: 'trading' },
+  AUTO_TRADE_ORDER_PLACED:   { label: 'Auto Trade',         category: 'auto_trade' },
+  ENTITY_ASSET_DEPOSIT:      { label: 'Asset Deposit',      category: 'deposit' },
+  ENTITY_ASSET_WITHDRAWAL:   { label: 'Asset Withdrawal',   category: 'withdrawal' },
+  DEPOSIT_ANNOUNCED:         { label: 'Announce Deposit',   category: 'deposit' },
+  DEPOSIT_CONFIRMED:         { label: 'Confirm Deposit',    category: 'admin' },
+  DEPOSIT_CLEARED:           { label: 'Clear Deposit',      category: 'admin' },
+  KYC_DOCUMENT_UPLOADED:     { label: 'KYC Upload',         category: 'kyc' },
+  KYC_SUBMITTED:             { label: 'KYC Submit',         category: 'kyc' },
+  MM_CREATED:                { label: 'Create MM',          category: 'mm' },
+  MM_UPDATED:                { label: 'Update MM',          category: 'mm' },
+  MM_DELETED:                { label: 'Delete MM',          category: 'mm' },
+  MM_RESET_ALL:              { label: 'Reset All MM',       category: 'mm' },
+  MM_EUR_DEPOSIT:            { label: 'MM Deposit',         category: 'mm' },
+  MM_EUR_WITHDRAWAL:         { label: 'MM Withdrawal',      category: 'mm' },
+  SWAP_CREATED:              { label: 'Swap',               category: 'swap' },
 };
 
 function getActionMeta(actionType: string, tags: string[]): ActionMeta {
   const mapped = ACTION_MAP[actionType];
   if (mapped) return mapped;
-  // Fallback: humanize the action type
-  const label = actionType
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-  // Guess category from tags
+  const label = actionType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   let category: ActionCategory = 'system';
   if (tags.includes('admin')) category = 'admin';
   else if (tags.includes('order') || tags.includes('cash_market')) category = 'trading';
@@ -87,98 +87,313 @@ function getActionMeta(actionType: string, tags: string[]): ActionMeta {
   else if (tags.includes('kyc')) category = 'kyc';
   else if (tags.includes('auto_trade')) category = 'auto_trade';
   else if (tags.includes('auth')) category = 'auth';
-  return { label, category, icon: '•' };
+  return { label, category };
 }
 
 // ---------------------------------------------------------------------------
 // Category styling
 // ---------------------------------------------------------------------------
 const CATEGORY_STYLES: Record<ActionCategory, { pill: string; row: string }> = {
-  auth:       { pill: 'bg-navy-100 text-navy-700 dark:bg-navy-700 dark:text-navy-300',                           row: '' },
-  trading:    { pill: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',              row: '' },
-  deposit:    { pill: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',                          row: '' },
-  withdrawal: { pill: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',                      row: '' },
-  kyc:        { pill: 'bg-navy-50 text-navy-600 dark:bg-navy-700/50 dark:text-navy-300',                           row: '' },
-  mm:         { pill: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',                   row: '' },
-  auto_trade: { pill: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',                          row: '' },
+  auth:       { pill: 'bg-navy-100 text-navy-700 dark:bg-navy-700 dark:text-navy-300', row: '' },
+  trading:    { pill: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', row: '' },
+  deposit:    { pill: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', row: '' },
+  withdrawal: { pill: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', row: '' },
+  kyc:        { pill: 'bg-navy-50 text-navy-600 dark:bg-navy-700/50 dark:text-navy-300', row: '' },
+  mm:         { pill: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', row: '' },
+  auto_trade: { pill: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', row: '' },
   admin:      { pill: 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-700', row: 'bg-violet-50/30 dark:bg-violet-900/10' },
-  swap:       { pill: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',                   row: '' },
-  system:     { pill: 'bg-navy-50 text-navy-500 dark:bg-navy-700/50 dark:text-navy-400',                           row: '' },
+  swap:       { pill: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400', row: '' },
+  system:     { pill: 'bg-navy-50 text-navy-500 dark:bg-navy-700/50 dark:text-navy-400', row: '' },
 };
 
 // ---------------------------------------------------------------------------
-// Smart detail extraction from payloads
+// Smart extraction helpers: Actor display, Amount, Result
 // ---------------------------------------------------------------------------
-function extractDetail(ticket: TicketLog): string | null {
+/** Returns who the action is FOR (the beneficiary/target) + whether admin initiated it + trade side */
+function getActorDisplay(ticket: TicketLog): { name: string; adminBadge: boolean; tradeSide?: 'BUY' | 'SELL' } {
+  const isAdmin = ticket.userRole === 'ADMIN';
+  const at = ticket.actionType;
+  const req = ticket.requestPayload;
+  const res = ticket.responseData;
+
+  // Extract trade side for trading tickets
+  let tradeSide: 'BUY' | 'SELL' | undefined;
+  if (at === 'ORDER_PLACED' && req) {
+    const side = String(req.side || '').toUpperCase();
+    if (side === 'BUY' || side === 'SELL') tradeSide = side;
+  } else if (at === 'AUTO_TRADE_ORDER_PLACED') {
+    // Check tags first, then response/request
+    if ((ticket.tags || []).includes('buy')) tradeSide = 'BUY';
+    else if ((ticket.tags || []).includes('sell')) tradeSide = 'SELL';
+    else if (req) {
+      const side = String(req.side || '').toUpperCase();
+      if (side === 'BUY' || side === 'SELL') tradeSide = side;
+    }
+  } else if (at === 'ASSET_TRADE_DEBIT') {
+    // Debit = seller (certificates leaving their account)
+    tradeSide = 'SELL';
+  } else if (at === 'ORDER_CANCELLED' || at === 'ORDER_MODIFIED') {
+    // Check tags or response for side
+    if ((ticket.tags || []).includes('buy')) tradeSide = 'BUY';
+    else if ((ticket.tags || []).includes('sell')) tradeSide = 'SELL';
+    else if (res) {
+      const side = String(res.side || '').toUpperCase();
+      if (side === 'BUY' || side === 'SELL') tradeSide = side;
+    }
+  }
+
+  // MM target: action is FOR the market maker
+  if (ticket.mmName) {
+    return { name: ticket.mmName, adminBadge: isAdmin, tradeSide };
+  }
+
+  // Admin acting as themselves (login, entity deposit, etc.)
+  if (isAdmin) {
+    return { name: ticket.userCompany || 'Nihao Group', adminBadge: false, tradeSide };
+  }
+
+  // Regular user
+  return {
+    name: ticket.userCompany || ticket.userFullName || ticket.userEmail || 'Unknown',
+    adminBadge: false,
+    tradeSide,
+  };
+}
+
+function extractAmount(ticket: TicketLog): { text: string; isLarge?: boolean } | null {
   const req = ticket.requestPayload;
   const res = ticket.responseData;
   const at = ticket.actionType;
 
-  // Trading: show side, amount, price, certificate
+  const fmtNum = (n: number | string, decimals = 2) => {
+    const num = typeof n === 'string' ? parseFloat(n) : n;
+    if (isNaN(num)) return '0';
+    return Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
+  // Trading orders
   if (at === 'ORDER_PLACED' && req) {
-    const side = String(req.side || '').toUpperCase();
-    const qty = Number(req.quantity || 0).toLocaleString();
-    const price = `€${Number(req.price || 0).toFixed(2)}`;
+    const qty = fmtNum(req.quantity as number, 0);
+    const price = fmtNum(req.price as number);
     const cert = String(req.certificate_type || req.certificateType || 'CEA');
-    return `${side} ${qty} ${cert} @ ${price}`;
+    const side = String(req.side || '').toUpperCase();
+    return { text: `${side} ${qty} ${cert} @ \u20AC${price}` };
   }
 
-  // Auto trade: show details from response
-  if (at === 'AUTO_TRADE_ORDER_PLACED') {
+  // Auto trade
+  if (at === 'AUTO_TRADE_ORDER_PLACED' && res) {
+    const qty = fmtNum(res.quantity as number, 0);
+    const price = fmtNum(res.price as number);
+    const cert = String(res.certificate_type || res.certificateType || 'CEA');
     const side = (ticket.tags.includes('buy') ? 'BUY' : ticket.tags.includes('sell') ? 'SELL' : '');
-    if (res) {
-      const qty = Number(res.quantity || 0).toLocaleString();
-      const price = `€${Number(res.price || 0).toFixed(2)}`;
-      const cert = String(res.certificate_type || res.certificateType || 'CEA');
-      return `${side} ${qty} ${cert} @ ${price}`;
-    }
-    if (req) {
-      return `${side} · ${String(req.rule_name || req.ruleName || '')}`.trim();
-    }
+    return { text: `${side} ${qty} ${cert} @ \u20AC${price}` };
   }
 
-  // Trade debit: show amount and certificate
+  // Trade debit
   if (at === 'ASSET_TRADE_DEBIT' && req) {
-    const amt = Math.abs(Number(req.amount || 0)).toLocaleString();
+    const amt = fmtNum(req.amount as number, 0);
     const cert = String(req.certificate_type || req.certificateType || '');
-    return `${amt} ${cert}`;
+    return { text: `${amt} ${cert}` };
   }
 
-  // Deposit announced: show amount + currency
+  // Deposit announced
   if (at === 'DEPOSIT_ANNOUNCED' && req) {
-    const amt = Number(req.amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const amt = fmtNum(req.amount as number);
     const cur = String(req.currency || 'EUR');
-    return `€${amt} ${cur}`;
+    const isLarge = parseFloat(String(req.amount || 0)) >= 50000;
+    return { text: `\u20AC${amt} ${cur}`, isLarge };
   }
 
-  // Deposit cleared: show amount
+  // Deposit confirmed
+  if (at === 'DEPOSIT_CONFIRMED' && req) {
+    const amt = fmtNum((req.actual_amount || req.actualAmount || 0) as number);
+    return { text: `\u20AC${amt}` };
+  }
+
+  // Deposit cleared
   if (at === 'DEPOSIT_CLEARED' && res) {
-    const amt = Number(res.amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
-    return `€${amt} cleared`;
+    const amt = fmtNum(res.amount as number);
+    return { text: `\u20AC${amt}` };
   }
 
   // MM EUR deposit/withdrawal
   if ((at === 'MM_EUR_DEPOSIT' || at === 'MM_EUR_WITHDRAWAL') && req) {
-    const amt = Number(req.amount || 0).toLocaleString();
-    return `€${amt}`;
+    const amt = fmtNum(req.amount as number);
+    return { text: `\u20AC${amt}` };
+  }
+
+  // Asset deposit/withdrawal (data is in afterState, not requestPayload)
+  if (at === 'ENTITY_ASSET_DEPOSIT' || at === 'ENTITY_ASSET_WITHDRAWAL') {
+    const src = ticket.afterState || req;
+    if (src) {
+      const amt = fmtNum(src.amount as number, 0);
+      const cert = String(src.asset_type || src.assetType || src.certificate_type || src.certificateType || '');
+      return { text: `${amt} ${cert}` };
+    }
+  }
+
+  // MM created with initial balance
+  if (at === 'MM_CREATED' && req && req.initial_eur_balance) {
+    const amt = fmtNum(req.initial_eur_balance as number);
+    return { text: `\u20AC${amt}` };
+  }
+
+  // Order modified → show price change
+  if (at === 'ORDER_MODIFIED' && res) {
+    const oldP = fmtNum(res.old_price as number);
+    const newP = fmtNum(res.new_price as number);
+    return { text: `\u20AC${oldP} \u2192 \u20AC${newP}` };
+  }
+
+  // KYC upload → file info
+  if (at === 'KYC_DOCUMENT_UPLOADED' && req && req.file_name) {
+    return { text: String(req.file_name) };
   }
 
   return null;
 }
 
+function extractResult(ticket: TicketLog): { text: string; variant: 'success' | 'info' | 'warning' | 'muted' } | null {
+  const res = ticket.responseData;
+  const at = ticket.actionType;
+  const isFailed = ticket.status === 'FAILED';
+
+  if (isFailed) {
+    return { text: 'Failed', variant: 'warning' };
+  }
+
+  // Order placed → show order status
+  if (at === 'ORDER_PLACED' && res) {
+    return { text: String(res.status || 'OPEN'), variant: 'success' };
+  }
+
+  // Order cancelled
+  if (at === 'ORDER_CANCELLED') {
+    return { text: 'Cancelled', variant: 'muted' };
+  }
+
+  // Order modified
+  if (at === 'ORDER_MODIFIED') {
+    return { text: 'Modified', variant: 'info' };
+  }
+
+  // Deposit confirmed → hold type
+  if (at === 'DEPOSIT_CONFIRMED' && res) {
+    const holdType = String(res.hold_type || res.holdType || 'ON_HOLD');
+    return { text: holdType.replace(/_/g, ' '), variant: 'info' };
+  }
+
+  // Deposit cleared
+  if (at === 'DEPOSIT_CLEARED' && res) {
+    const upgraded = Number(res.upgraded_users || res.upgradedUsers || 0);
+    return { text: upgraded > 0 ? `Cleared +${upgraded} upgraded` : 'Cleared', variant: 'success' };
+  }
+
+  // Auto trade
+  if (at === 'AUTO_TRADE_ORDER_PLACED') {
+    return { text: 'Placed', variant: 'success' };
+  }
+
+  // MM created
+  if (at === 'MM_CREATED') return { text: 'Created', variant: 'success' };
+  if (at === 'MM_DELETED') return { text: 'Deleted', variant: 'warning' };
+  if (at === 'MM_UPDATED') return { text: 'Updated', variant: 'info' };
+  if (at === 'MM_RESET_ALL') return { text: 'All Reset', variant: 'warning' };
+
+  // Login
+  if (at === 'USER_LOGIN' || at === 'USER_LOGIN_MAGIC_LINK') return { text: 'OK', variant: 'muted' };
+
+  // KYC
+  if (at === 'KYC_SUBMITTED') return { text: 'Submitted', variant: 'info' };
+  if (at === 'KYC_DOCUMENT_UPLOADED') return { text: 'Uploaded', variant: 'muted' };
+
+  // Trade debit
+  if (at === 'ASSET_TRADE_DEBIT') return { text: 'Debited', variant: 'muted' };
+
+  // Deposits/withdrawals
+  if (at === 'DEPOSIT_ANNOUNCED') return { text: 'Announced', variant: 'info' };
+  if (at === 'MM_EUR_DEPOSIT') return { text: 'Credited', variant: 'success' };
+  if (at === 'MM_EUR_WITHDRAWAL') return { text: 'Withdrawn', variant: 'muted' };
+  if (at === 'ENTITY_ASSET_DEPOSIT') return { text: 'Deposited', variant: 'success' };
+  if (at === 'ENTITY_ASSET_WITHDRAWAL') return { text: 'Withdrawn', variant: 'muted' };
+
+  return null;
+}
+
+const RESULT_STYLES = {
+  success: 'text-emerald-700 dark:text-emerald-400',
+  info:    'text-blue-700 dark:text-blue-400',
+  warning: 'text-red-600 dark:text-red-400 font-semibold',
+  muted:   'text-navy-500 dark:text-navy-500',
+};
+
 // ---------------------------------------------------------------------------
 // Timestamp formatting
 // ---------------------------------------------------------------------------
-function formatTime(iso: string): { short: string; full: string } {
-  // Backend stores naive UTC (no 'Z' suffix) — append it so JS interprets as UTC
+function formatTime(iso: string): { short: string; full: string; relative: string } {
   const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
-  const today = new Date();
-  const isToday = d.toDateString() === today.toDateString();
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const isToday = d.toDateString() === now.toDateString();
 
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const short = isToday ? time : `${d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })} ${time}`;
   const full = d.toLocaleString();
-  return { short, full };
+
+  let relative: string;
+  if (diffMin < 1) relative = 'just now';
+  else if (diffMin < 60) relative = `${diffMin}m ago`;
+  else if (diffMin < 1440) relative = `${Math.floor(diffMin / 60)}h ago`;
+  else relative = `${Math.floor(diffMin / 1440)}d ago`;
+
+  return { short, full, relative };
+}
+
+// ---------------------------------------------------------------------------
+// Visual grouping: detect related tickets
+// ---------------------------------------------------------------------------
+function annotateGroups(tickets: TicketLog[]): TicketLog[] {
+  // Build a map of ticketId → index for quick lookup
+  const idxMap = new Map<string, number>();
+  tickets.forEach((t, i) => idxMap.set(t.ticketId, i));
+
+  // Build groups: sets of tickets that reference each other
+  const visited = new Set<number>();
+  const groups: number[][] = [];
+
+  for (let i = 0; i < tickets.length; i++) {
+    if (visited.has(i)) continue;
+    const related = (tickets[i].relatedTicketIds || [])
+      .map((rid) => idxMap.get(rid))
+      .filter((idx): idx is number => idx !== undefined && !visited.has(idx));
+
+    if (related.length === 0) continue;
+
+    // Group = this ticket + all related that are on this page
+    const group = [i, ...related].sort((a, b) => a - b);
+    // Only form a group if members are consecutive (or nearly so — within 3 rows)
+    const isConsecutive = group[group.length - 1] - group[0] <= group.length + 1;
+    if (!isConsecutive) continue;
+
+    groups.push(group);
+    group.forEach((idx) => visited.add(idx));
+  }
+
+  // Annotate tickets with group metadata
+  const result = tickets.map((t) => ({ ...t }));
+  for (const group of groups) {
+    const groupId = result[group[0]].ticketId;
+    for (let gi = 0; gi < group.length; gi++) {
+      const idx = group[gi];
+      result[idx]._groupId = groupId;
+      result[idx]._isGroupStart = gi === 0;
+      result[idx]._isGroupEnd = gi === group.length - 1;
+      result[idx]._isGroupMiddle = gi > 0 && gi < group.length - 1;
+    }
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,16 +411,15 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: 'admin', label: 'Admin Actions' },
 ];
 
-// Map category filter to backend action_type values
-const CATEGORY_TO_ACTIONS: Record<string, string[]> = {
-  auth:       ['USER_LOGIN', 'USER_LOGIN_MAGIC_LINK'],
-  trading:    ['ORDER_PLACED', 'ORDER_CANCELLED', 'ORDER_MODIFIED', 'ASSET_TRADE_DEBIT'],
-  deposit:    ['ENTITY_ASSET_DEPOSIT', 'DEPOSIT_ANNOUNCED'],
-  withdrawal: ['ENTITY_ASSET_WITHDRAWAL'],
-  kyc:        ['KYC_DOCUMENT_UPLOADED', 'KYC_SUBMITTED'],
-  mm:         ['MM_CREATED', 'MM_UPDATED', 'MM_DELETED', 'MM_RESET_ALL', 'MM_EUR_DEPOSIT', 'MM_EUR_WITHDRAWAL'],
-  auto_trade: ['AUTO_TRADE_ORDER_PLACED'],
-  admin:      ['DEPOSIT_CONFIRMED', 'DEPOSIT_CLEARED'],
+const CATEGORY_TO_TAGS: Record<string, string> = {
+  auth: 'auth',
+  trading: 'order,cash_market',
+  deposit: 'deposit',
+  withdrawal: 'withdrawal',
+  kyc: 'kyc',
+  mm: 'market_maker',
+  auto_trade: 'auto_trade',
+  admin: 'admin',
 };
 
 // ---------------------------------------------------------------------------
@@ -234,18 +448,8 @@ export function AllTicketsTab() {
       const params: Record<string, unknown> = { page, per_page: perPage };
       if (searchQuery) params.search = searchQuery;
       if (statusFilter) params.status = statusFilter;
-
-      // Category filter → map to tag-based filtering
-      if (categoryFilter && categoryFilter in CATEGORY_TO_ACTIONS) {
-        params.tags = categoryFilter === 'admin' ? 'admin'
-          : categoryFilter === 'auth' ? 'auth'
-          : categoryFilter === 'trading' ? 'order,cash_market'
-          : categoryFilter === 'deposit' ? 'deposit'
-          : categoryFilter === 'withdrawal' ? 'withdrawal'
-          : categoryFilter === 'kyc' ? 'kyc'
-          : categoryFilter === 'mm' ? 'market_maker'
-          : categoryFilter === 'auto_trade' ? 'auto_trade'
-          : '';
+      if (categoryFilter && categoryFilter in CATEGORY_TO_TAGS) {
+        params.tags = CATEGORY_TO_TAGS[categoryFilter];
       }
 
       const { data } = await getTickets(params);
@@ -268,121 +472,144 @@ export function AllTicketsTab() {
     return () => clearInterval(interval);
   }, [fetchTickets]);
 
+  // Annotate tickets with group info
+  const annotatedTickets = useMemo(() => annotateGroups(tickets), [tickets]);
+
   const handleRowClick = (ticket: TicketLog) => {
     setSelectedTicket(ticket);
     setIsModalOpen(true);
   };
 
   // ---------------------------------------------------------------------------
-  // Column definitions
+  // Column definitions — 7 columns
   // ---------------------------------------------------------------------------
   const columns: Column<TicketLog>[] = [
-    // 1. STATUS DOT + TIMESTAMP
+    // 1. TIME — status dot + timestamp + relative
     {
       key: 'timestamp',
       header: 'Time',
-      width: '100px',
+      width: '110px',
       render: (_value, row) => {
-        const { short, full } = formatTime(row.timestamp);
-        const isSuccess = row.status === 'SUCCESS';
+        const { short, full, relative } = formatTime(row.timestamp);
+        const isFailed = row.status === 'FAILED';
+        const isGrouped = !!row._groupId;
         return (
           <div className="flex items-center gap-2" title={full}>
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-navy-700 dark:text-navy-300 tabular-nums">{short}</span>
+            <div className="relative flex-shrink-0">
+              {/* Group connector line */}
+              {isGrouped && !row._isGroupStart && (
+                <span className="absolute -top-3 left-[3px] w-px h-3 bg-blue-400/40 dark:bg-blue-500/30" />
+              )}
+              {isGrouped && !row._isGroupEnd && (
+                <span className="absolute -bottom-3 left-[3px] w-px h-3 bg-blue-400/40 dark:bg-blue-500/30" />
+              )}
+              <span className={`block w-[7px] h-[7px] rounded-full ${isFailed ? 'bg-red-500 ring-2 ring-red-500/20' : 'bg-emerald-500'}`} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-navy-700 dark:text-navy-300 tabular-nums leading-tight">{short}</span>
+              <span className="text-[10px] text-navy-400 dark:text-navy-600 leading-tight">{relative}</span>
+            </div>
           </div>
         );
       },
     },
-    // 2. ACTOR (user name + company + role badge)
+    // 2. ACTOR — FOR WHOM the action was initiated + BUY/SELL badge for trades
     {
       key: 'userEmail',
       header: 'Actor',
       width: '200px',
       render: (_value, row) => {
-        const email = row.userEmail;
-        const company = row.userCompany;
-        const role = row.userRole;
-        const mmName = row.mmName;
-        const isAdmin = role === 'ADMIN';
-        const isMM = !!mmName || role === 'MM';
-
-        if (!email && !mmName) {
-          return <span className="text-xs text-navy-400 dark:text-navy-600">System</span>;
-        }
+        const { name, adminBadge, tradeSide } = getActorDisplay(row);
+        const isMM = !!row.mmName || row.userRole === 'MM';
 
         return (
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-              {/* Role badge */}
-              {isAdmin && (
-                <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400">
-                  ADM
-                </span>
-              )}
-              {isMM && !isAdmin && (
-                <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400">
-                  MM
-                </span>
-              )}
-              <span className={`text-xs truncate ${isAdmin ? 'text-violet-700 dark:text-violet-400 font-medium' : isMM ? 'text-orange-700 dark:text-orange-400 font-medium' : 'text-navy-900 dark:text-white'}`}>
-                {email || 'Unknown'}
-              </span>
-            </div>
-            {(company || mmName) && (
-              <span className="text-[10px] text-navy-500 dark:text-navy-500 truncate">
-                {mmName ? `⚡ ${mmName}` : company}
+          <div className={`flex items-center gap-1.5 min-w-0 ${adminBadge ? 'pl-1 py-0.5 rounded bg-violet-50/60 dark:bg-violet-900/15' : ''}`}>
+            {tradeSide && (
+              <span className={`flex-shrink-0 px-1.5 py-px rounded text-[9px] font-bold leading-tight ${
+                tradeSide === 'BUY'
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+              }`}>
+                {tradeSide}
               </span>
             )}
+            {adminBadge && (
+              <span title="Admin initiated" className="flex items-center justify-center w-4 h-4 rounded flex-shrink-0 bg-violet-100 dark:bg-violet-900/40">
+                <Shield className="w-2.5 h-2.5 text-violet-500 dark:text-violet-400" />
+              </span>
+            )}
+            {isMM && !tradeSide && (
+              <span className="flex-shrink-0 px-1 py-px rounded text-[9px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 leading-tight">
+                MM
+              </span>
+            )}
+            <span className={`text-xs font-medium truncate ${isMM ? 'text-orange-700 dark:text-orange-400' : 'text-navy-900 dark:text-white'}`}>
+              {name}
+            </span>
           </div>
         );
       },
     },
-    // 3. ACTION (human-readable pill with category color)
+    // 3. ACTION — colored pill
     {
       key: 'actionType',
       header: 'Action',
-      width: '160px',
+      width: '140px',
       render: (_value, row) => {
         const meta = getActionMeta(row.actionType, row.tags || []);
         const isAdminAction = (row.tags || []).includes('admin');
         const style = CATEGORY_STYLES[isAdminAction ? 'admin' : meta.category];
-
-        // For trading, add BUY/SELL context
-        let label = meta.label;
-        if (row.actionType === 'ORDER_PLACED' && row.requestPayload) {
-          const side = String(row.requestPayload.side || '').toUpperCase();
-          const cert = String(row.requestPayload.certificate_type || row.requestPayload.certificateType || 'CEA');
-          label = `${side} ${cert}`;
-        }
+        const isGroupChild = row._groupId && !row._isGroupStart;
 
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${style.pill}`}>
-            {label}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {isGroupChild && (
+              <span title="Related action"><Link2 className="w-3 h-3 flex-shrink-0 text-blue-400/50 dark:text-blue-500/40" /></span>
+            )}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${style.pill}`}>
+              {meta.label}
+            </span>
+          </div>
         );
       },
     },
-    // 4. DETAILS (context extracted from payload)
+    // 4. DETAILS — monetary / quantity values
     {
       key: 'requestPayload',
       header: 'Details',
+      width: '200px',
       render: (_value, row) => {
-        const detail = extractDetail(row);
-        if (!detail) {
-          return <span className="text-xs text-navy-400 dark:text-navy-600">—</span>;
-        }
+        const amount = extractAmount(row);
+        if (!amount) return <span className="text-[11px] text-navy-400 dark:text-navy-600">&mdash;</span>;
         return (
-          <span className="text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums">
-            {detail}
+          <span className={`text-[11px] font-mono tabular-nums ${amount.isLarge ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-navy-700 dark:text-navy-300'}`}>
+            {amount.text}
           </span>
         );
       },
     },
-    // 5. TICKET REF (small, for traceability)
+    // 5. RESULT — outcome
+    {
+      key: 'status',
+      header: 'Result',
+      width: '110px',
+      align: 'center',
+      render: (_value, row) => {
+        const result = extractResult(row);
+        if (!result) return <span className="text-[11px] text-navy-400 dark:text-navy-600">&mdash;</span>;
+        return (
+          <span className={`text-[11px] font-medium ${RESULT_STYLES[result.variant]}`}>
+            {result.variant === 'warning' && <AlertTriangle className="inline w-3 h-3 mr-0.5 -mt-px" />}
+            {result.text}
+          </span>
+        );
+      },
+    },
+    // 6. TICKET REF
     {
       key: 'ticketId',
       header: 'Ref',
-      width: '90px',
+      width: '80px',
       align: 'right',
       render: (value) => (
         <span className="text-[10px] font-mono text-navy-400 dark:text-navy-600" title={String(value)}>
@@ -392,12 +619,32 @@ export function AllTicketsTab() {
     },
   ];
 
-  // Row styling: admin actions get subtle violet background
+  // Row styling
   const getRowClassName = (row: TicketLog) => {
+    const classes: string[] = [];
+    const isFailed = row.status === 'FAILED';
     const isAdminAction = (row.tags || []).includes('admin');
     const meta = getActionMeta(row.actionType, row.tags || []);
-    if (isAdminAction) return CATEGORY_STYLES.admin.row;
-    return CATEGORY_STYLES[meta.category]?.row || '';
+
+    // Failed rows get red tint
+    if (isFailed) {
+      classes.push('bg-red-50/40 dark:bg-red-900/10 border-l-2 border-l-red-500');
+    }
+    // Admin rows get violet tint
+    else if (isAdminAction) {
+      classes.push(CATEGORY_STYLES.admin.row);
+    }
+    // Category-specific row styling
+    else if (CATEGORY_STYLES[meta.category]?.row) {
+      classes.push(CATEGORY_STYLES[meta.category].row);
+    }
+
+    // Grouped rows get subtle left border
+    if (row._groupId && !isFailed) {
+      classes.push('border-l-2 border-l-blue-400/30 dark:border-l-blue-500/20');
+    }
+
+    return classes.join(' ');
   };
 
   return (
@@ -442,7 +689,7 @@ export function AllTicketsTab() {
             <option value="FAILED">Failed</option>
           </select>
 
-          {/* Refresh */}
+          {/* Refresh + count */}
           <Button onClick={fetchTickets} variant="secondary" size="sm" className="flex items-center gap-1.5 !py-1.5">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="text-xs">{total.toLocaleString()}</span>
@@ -457,7 +704,7 @@ export function AllTicketsTab() {
       <div className="bg-white dark:bg-navy-800 rounded-lg border border-navy-200 dark:border-navy-700 overflow-hidden">
         <DataTable
           columns={columns}
-          data={tickets}
+          data={annotatedTickets}
           loading={loading}
           onRowClick={handleRowClick}
           rowKey="id"
@@ -471,7 +718,7 @@ export function AllTicketsTab() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-navy-500 dark:text-navy-400">
-            Page {page} of {totalPages}
+            Page {page} of {totalPages} &middot; {total.toLocaleString()} total
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -481,7 +728,6 @@ export function AllTicketsTab() {
             >
               <ChevronLeft className="w-4 h-4 text-navy-600 dark:text-navy-400" />
             </button>
-            {/* Page number buttons */}
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum: number;
               if (totalPages <= 5) {

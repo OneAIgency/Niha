@@ -1044,6 +1044,19 @@ async def execute_swap(
         {"type": "balance_updated", "data": {"source": "swap_executed"}},
     ))
 
+    # Swap confirmation email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        await _email_svc.send_swap_match_notification(
+            to_email=current_user.email,
+            from_type="CEA",
+            to_type="EUA",
+            quantity=cea_quantity,
+            rate=round(weighted_avg_ratio, 4),
+        )
+    except Exception:
+        logger.debug("Swap confirmation email failed for user %s", current_user.id)
+
     # Reactive auto-trade: schedule background replenishment with random 5-15s delays
     try:
         from app.api.v1.admin import _delayed_swap_replenishment

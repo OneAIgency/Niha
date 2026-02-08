@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -60,6 +61,8 @@ from ...services.ws_utils import get_entity_user_ids
 
 # Constants for deposit validation
 MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/backoffice", tags=["Backoffice"])
 
@@ -270,6 +273,17 @@ async def reject_user(
             entity.kyc_status = KYCStatus.REJECTED
 
     await db.commit()
+
+    # KYC rejection email (fire-and-forget)
+    try:
+        from ...services.email_service import email_service as _email_svc
+        await _email_svc.send_kyc_rejected(
+            to_email=user.email,
+            first_name=user.first_name or "",
+            reason=rejection.notes or "",
+        )
+    except Exception:
+        logger.debug("KYC rejection email failed for user %s", user.id)
 
     return MessageResponse(message=f"User {user.email} has been rejected")
 

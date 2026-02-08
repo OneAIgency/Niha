@@ -53,6 +53,7 @@ class SettlementProcessor:
                 if SettlementProcessor._should_advance_status(settlement):
                     next_status = SettlementProcessor._get_next_status(settlement)
                     if next_status:
+                        old_status_value = settlement.status.value
                         system_user_id = await SettlementProcessor._get_system_user_id(
                             db
                         )
@@ -65,8 +66,27 @@ class SettlementProcessor:
                             updated_by=system_user_id,
                         )
 
-                        # TODO: Send email notification
-                        # await send_settlement_status_email(settlement, next_status)
+                        # Email notification for auto-advance
+                        try:
+                            _user_result = await db.execute(
+                                select(User).where(User.id == settlement.user_id)
+                            )
+                            _user = _user_result.scalar_one_or_none()
+                            if _user and _user.email:
+                                await email_service.send_settlement_status_update(
+                                    to_email=_user.email,
+                                    first_name=_user.first_name or "Trader",
+                                    batch_reference=settlement.batch_reference,
+                                    old_status=old_status_value,
+                                    new_status=next_status.value,
+                                    certificate_type=settlement.asset_type.value,
+                                    quantity=float(settlement.quantity),
+                                )
+                        except Exception:
+                            logger.debug(
+                                "Settlement status email failed for batch %s",
+                                settlement.batch_reference,
+                            )
 
                         processed_count += 1
                         logger.info(

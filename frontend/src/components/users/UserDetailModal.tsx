@@ -263,6 +263,12 @@ function UserInfoTab({
           <h3 className="font-semibold text-navy-900 dark:text-white">Account Details</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
+              <span className="text-navy-500 dark:text-navy-400">Full Name</span>
+              <span className="text-navy-900 dark:text-white font-medium">
+                {[user.firstName, user.lastName].filter(Boolean).join(' ') || 'Not set'}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-navy-500 dark:text-navy-400">Entity</span>
               <span className="text-navy-900 dark:text-white">{user.entityName || 'None'}</span>
             </div>

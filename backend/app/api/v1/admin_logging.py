@@ -152,10 +152,13 @@ async def list_tickets(
             base["user_role"] = user.role.value if user.role else None
             entity = user.entity
             base["user_company"] = entity.name if entity else None
+            full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+            base["user_full_name"] = full_name or user.email
         else:
             base["user_email"] = None
             base["user_role"] = None
             base["user_company"] = None
+            base["user_full_name"] = None
         # Enrich with market maker info
         mm = ticket.market_maker
         base["mm_name"] = mm.name if mm else None
