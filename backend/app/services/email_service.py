@@ -1508,6 +1508,117 @@ class EmailService:
         """
         return await self._send_email(to_email, subject, html_content)
 
+    async def send_aml_review_started(
+        self, to_email: str, first_name: str = "", amount: float = 0, currency: str = "EUR"
+    ) -> bool:
+        """Notify user that their deposit is under AML review (FUNDING → AML)."""
+        name = first_name or "there"
+        subject = "Deposit Under Review - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><style>
+            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+            .container {{ max-width: 500px; margin: 0 auto; background: white;
+                border-radius: 16px; padding: 40px; }}
+            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+            .logo span {{ color: #10b981; }}
+            h1 {{ color: #0f172a; font-size: 20px; }}
+            p {{ color: #64748b; line-height: 1.6; }}
+            .info {{ background: #fef3c7; border: 1px solid #fde68a;
+                border-radius: 12px; padding: 20px; margin: 20px 0; }}
+            .info-title {{ color: #92400e; font-weight: 600; margin: 0 0 8px 0; }}
+            .info p {{ color: #92400e; margin: 4px 0; }}
+            .detail-row {{ display: flex; justify-content: space-between;
+                padding: 8px 0; border-bottom: 1px solid #fde68a; }}
+            .detail-row:last-child {{ border-bottom: none; }}
+            .label {{ color: #92400e; font-weight: 500; }}
+            .value {{ color: #0f172a; font-weight: 600; }}
+            .footer {{ margin-top: 32px; padding-top: 24px;
+                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+        </style></head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Deposit Under Review</h1>
+                <p>Hello {name},</p>
+                <p>Your wire transfer has been received and is now undergoing a standard
+                Anti-Money Laundering (AML) compliance review.</p>
+                <div class="info">
+                    <p class="info-title">AML Review In Progress</p>
+                    <div class="detail-row">
+                        <span class="label">Amount</span>
+                        <span class="value">{currency} {amount:,.2f}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Status</span>
+                        <span class="value">Under Review</span>
+                    </div>
+                </div>
+                <p>This is a routine process required by regulation. Your funds will be
+                credited to your account once the review is complete. We'll notify you
+                as soon as your account is activated for trading.</p>
+                <p>No action is required on your part.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_trading_activated(
+        self, to_email: str, first_name: str = "", amount: float = 0, currency: str = "EUR"
+    ) -> bool:
+        """Notify user that AML cleared and they can now trade on CEA market (AML → CEA)."""
+        name = first_name or "there"
+        subject = "Account Activated for Trading - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><style>
+            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+            .container {{ max-width: 500px; margin: 0 auto; background: white;
+                border-radius: 16px; padding: 40px; }}
+            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+            .logo span {{ color: #10b981; }}
+            h1 {{ color: #10b981; font-size: 20px; }}
+            p {{ color: #64748b; line-height: 1.6; }}
+            .success-box {{ background: #f0fdf4; border: 1px solid #bbf7d0;
+                border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
+            .amount {{ font-size: 28px; font-weight: 700; color: #0f172a; margin: 8px 0; }}
+            .badge {{ display: inline-block; background: #10b981; color: white;
+                padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }}
+            .button {{ display: inline-block; background: #0f172a;
+                color: white; padding: 14px 32px; border-radius: 8px;
+                text-decoration: none; font-weight: 600; margin: 24px 0; }}
+            .footer {{ margin-top: 32px; padding-top: 24px;
+                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+        </style></head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>You're Ready to Trade!</h1>
+                <p>Hello {name},</p>
+                <p>Great news! Your AML review has been completed and your funds have been
+                credited to your account. You are now active on the CEA Cash Market.</p>
+                <div class="success-box">
+                    <span class="badge">ACCOUNT ACTIVE</span>
+                    <div class="amount">{currency} {amount:,.2f}</div>
+                    <p style="color: #047857; margin: 8px 0 0 0; font-size: 14px;">Available for trading</p>
+                </div>
+                <a href="https://app.nihaogroup.com/cash-market" class="button">Start Trading</a>
+                <p>You can now purchase China Emission Allowances (CEA) on the Cash Market.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
     async def send_test_email(
         self, to_email: str, mail_config: Optional[Dict[str, Any]] = None
     ) -> bool:

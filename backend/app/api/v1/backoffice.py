@@ -859,10 +859,13 @@ async def confirm_pending_deposit(
 
     await db.commit()
 
-    # Send notification emails
+    # Send AML review notification emails (FUNDING → AML)
     for user in users:
         try:
-            await email_service.send_account_funded(user.email, user.first_name)
+            await email_service.send_aml_review_started(
+                user.email, user.first_name or "",
+                amount=float(confirmed_amount), currency=confirmed_currency.value,
+            )
         except Exception:
             pass
 

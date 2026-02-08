@@ -694,22 +694,23 @@ async def clear_deposit(
                 {"type": "role_updated", "data": {"role": "CEA", "entity_id": str(deposit.entity_id)}},
             )
 
-        # Deposit cleared email to entity users (fire-and-forget)
-        try:
-            from ...services.email_service import email_service as _email_svc
-            _entity_users = await db.execute(
-                select(User).where(User.entity_id == deposit.entity_id, User.is_active == True)  # noqa: E712
-            )
-            for _eu in _entity_users.scalars().all():
-                if _eu.email:
-                    await _email_svc.send_deposit_cleared(
-                        to_email=_eu.email,
-                        first_name=_eu.first_name or "Client",
-                        amount=float(deposit.amount) if deposit.amount else 0,
-                        currency=deposit.currency.value if deposit.currency else "EUR",
-                    )
-        except Exception:
-            logger.debug("Deposit cleared email failed for deposit %s", deposit.id)
+        # Trading activated email to upgraded users AML→CEA (fire-and-forget)
+        if upgraded_user_ids:
+            try:
+                from ...services.email_service import email_service as _email_svc
+                _upgraded_users = await db.execute(
+                    select(User).where(User.id.in_(upgraded_user_ids))
+                )
+                for _uu in _upgraded_users.scalars().all():
+                    if _uu.email:
+                        await _email_svc.send_trading_activated(
+                            to_email=_uu.email,
+                            first_name=_uu.first_name or "",
+                            amount=float(deposit.amount) if deposit.amount else 0,
+                            currency=deposit.currency.value if deposit.currency else "EUR",
+                        )
+            except Exception:
+                logger.debug("Trading activated email failed for deposit %s", deposit.id)
 
         return deposit_to_response(deposit)
 

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Check, X, Loader2, XCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
+import { getPostLoginRedirect } from '../utils/redirect';
 import { logger } from '../utils/logger';
 
 export function SetupPasswordPage() {
@@ -82,10 +83,11 @@ export function SetupPasswordPage() {
         timestamp: new Date().toISOString()
       });
 
-      // Store auth - navigation will be handled by LoginRoute guard in App.tsx
+      // Store auth and redirect to the appropriate page based on user role
       setAuth(user, access_token);
-      logger.debug('[SetupPasswordPage] Auth set, navigation will be handled by LoginRoute guard');
-      // Note: Removed navigate('/onboarding') call - LoginRoute will redirect based on user role
+      const target = getPostLoginRedirect(user);
+      logger.debug('[SetupPasswordPage] Auth set, redirecting to', target);
+      navigate(target, { replace: true });
     } catch (err: unknown) {
       logger.error('[SetupPasswordPage] Password setup failed:', err);
       const error = err as { response?: { data?: { detail?: string } } };
