@@ -441,8 +441,12 @@ export function DashboardPage() {
     };
 
     window.addEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
+    window.addEventListener('nihao:depositUpdated', handleBalanceUpdate as EventListener);
+    window.addEventListener('nihao:settlementUpdated', handleBalanceUpdate as EventListener);
     return () => {
       window.removeEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
+      window.removeEventListener('nihao:depositUpdated', handleBalanceUpdate as EventListener);
+      window.removeEventListener('nihao:settlementUpdated', handleBalanceUpdate as EventListener);
     };
   }, [fetchBalance]);
 

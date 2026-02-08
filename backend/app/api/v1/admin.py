@@ -81,6 +81,7 @@ from ...schemas.schemas import (
 from ...services.email_service import email_service
 from ...services.settlement_service import SettlementService, calculate_settlement_progress
 from .backoffice import backoffice_ws_manager
+from .client_ws import client_ws_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -932,6 +933,12 @@ async def change_user_role(
 
     await db.commit()
 
+    # Notify the affected client so their UI updates immediately
+    asyncio.create_task(client_ws_manager.broadcast_to_users(
+        [UUID(user_id)],
+        {"type": "role_updated", "data": {"role": role_update.role.value, "old_role": old_role}},
+    ))
+
     msg = f"User role changed from {old_role} to {role_update.role.value}"
     if batches_settled:
         msg += f" ({batches_settled} settlement batch{'es' if batches_settled > 1 else ''} auto-settled)"
@@ -961,6 +968,12 @@ async def deactivate_user(
 
     user.is_active = False
     await db.commit()
+
+    # Force-logout the deactivated user immediately
+    asyncio.create_task(client_ws_manager.broadcast_to_users(
+        [UUID(user_id)],
+        {"type": "user_deactivated", "data": {}},
+    ))
 
     return MessageResponse(message=f"User {user.email} has been deactivated")
 
@@ -2580,13 +2593,15 @@ async def refresh_swap_market(
 ):
     """
     Refresh SWAP EUA market: cancel all MM swap orders, fetch scraped prices,
-    and recreate ASK orders from the auto-trade market settings.
+    and recreate ASK orders with structured ratio band.
 
     Rules:
-    - base_ratio = scraped_cea / scraped_eua (with mean-reversion deviation)
-    - ASK orders placed from mid_ratio upward (each +0.0001)
+    - base_ratio = scraped_cea / scraped_eua
+    - best_ratio = base_ratio * 1.15 (top of book, most favorable for user)
+    - worst_ratio = best_ratio * 0.75 (25% variation band)
+    - ASK orders placed from best_ratio DOWNWARD to worst_ratio (each -0.0001)
     - Only SELL orders (EUA_OFFER market makers)
-    - Respects avg_order_count, target_liquidity, min/max order volume
+    - Respects target_liquidity (90M EUR cap), min/max order volume
     - Liquidity measured as: remaining_eua_qty * eua_price_eur
     """
     import random
@@ -2623,28 +2638,9 @@ async def refresh_swap_market(
 
         base_ratio = (cea_price / eua_price).quantize(Decimal("0.0001"))
 
-        # 3. Mean-reversion price deviation (same pattern as CEA)
-        from app.core.security import RedisManager
-        DECAY_FACTOR = 0.4
-        NOISE_SIGMA = 0.03
-        MAX_DEVIATION = 0.20
-        REDIS_KEY = "swap:last_deviation"
-
-        try:
-            r = await RedisManager.get_redis()
-            last_raw = await r.get(REDIS_KEY)
-            if last_raw is not None:
-                last_dev = float(last_raw)
-                deviation_pct = last_dev * DECAY_FACTOR + random.gauss(0, NOISE_SIGMA)
-            else:
-                deviation_pct = random.gauss(0, 0.07)
-            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, deviation_pct))
-            await r.set(REDIS_KEY, str(round(deviation_pct, 6)), ex=3600)
-        except Exception:
-            deviation_pct = max(-MAX_DEVIATION, min(MAX_DEVIATION, random.gauss(0, 0.07)))
-
-        mid_ratio = base_ratio * (1 + Decimal(str(round(deviation_pct, 4))))
-        mid_ratio = mid_ratio.quantize(Decimal("0.0001"))
+        # 3. Structured ratio band: best = base +15%, worst = best -25%
+        best_ratio = (base_ratio * Decimal("1.15")).quantize(Decimal("0.0001"))
+        worst_ratio = (best_ratio * Decimal("0.75")).quantize(Decimal("0.0001"))
 
         # 4. Load EUA_SWAP market settings
         settings_result = await db.execute(
@@ -2667,7 +2663,7 @@ async def refresh_swap_market(
         if not eua_mms:
             raise HTTPException(status_code=400, detail="No active EUA_OFFER market makers")
 
-        # 6. Create ASK orders from mid_ratio upward
+        # 6. Create ASK orders from best_ratio DOWNWARD to worst_ratio
         target_liquidity_eur = swap_settings.target_liquidity or Decimal("90000000")
         min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
         max_vol = swap_settings.max_order_volume_eur or Decimal("5000000")
@@ -2682,7 +2678,7 @@ async def refresh_swap_market(
                 hi_f = lo_f * 2
             return Decimal(str(round(random.uniform(lo_f, hi_f), 2)))
 
-        current_ratio = mid_ratio
+        current_ratio = best_ratio
         orders_at_level = 0
         max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
         mm_idx = 0
@@ -2692,9 +2688,11 @@ async def refresh_swap_market(
         for _ in range(max_orders):
             if liquidity_eur >= target_liquidity_eur:
                 break
+            if current_ratio < worst_ratio:
+                break
 
             if orders_at_level >= max_at_this_level:
-                current_ratio += ratio_step
+                current_ratio -= ratio_step
                 current_ratio = current_ratio.quantize(Decimal("0.0001"))
                 orders_at_level = 0
                 max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
@@ -2737,8 +2735,8 @@ async def refresh_swap_market(
             "cea_price_eur": str(cea_price),
             "eua_price_eur": str(eua_price),
             "base_ratio": str(base_ratio),
-            "mid_ratio": str(mid_ratio),
-            "price_deviation_pct": str(round(deviation_pct * 100, 1)),
+            "best_ratio": str(best_ratio),
+            "worst_ratio": str(worst_ratio),
             "orders_created": orders_created,
             "liquidity_eur": str(liquidity_eur.quantize(Decimal("1"))),
             "target_liquidity_eur": str(target_liquidity_eur),
@@ -3124,9 +3122,11 @@ async def place_random_order(
 
 async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
     """
-    Reactive SWAP auto-trade: place one replenishment order if liquidity is below target.
+    Reactive SWAP auto-trade: fill the gap between best_ratio and current top-of-book.
 
     Called after execute_swap to refill consumed ASK liquidity. Also exposed via endpoint.
+    Places orders from best_ratio (base*1.15) DOWN to the current highest offer in the book,
+    using 0.0001 tick steps. Respects 90M EUR liquidity cap.
     Returns dict with result info, or {"skipped": True} if no replenishment needed.
     """
     import random
@@ -3136,6 +3136,7 @@ async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
 
     _MIN_VOL = Decimal("200000")
     _MAX_VOL = Decimal("5000000")
+    _MAX_REPLENISH_ORDERS = 50  # safety cap per call
 
     # 1. Load settings
     settings_r = await db.execute(
@@ -3160,6 +3161,8 @@ async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
         return {"skipped": True, "reason": "Invalid EUA price"}
 
     base_ratio = (cea_price / eua_price).quantize(Decimal("0.0001"))
+    best_ratio = (base_ratio * Decimal("1.15")).quantize(Decimal("0.0001"))
+    worst_ratio = (best_ratio * Decimal("0.75")).quantize(Decimal("0.0001"))
 
     # 3. Calculate current SWAP liquidity in EUR
     liq_r = await db.execute(
@@ -3182,8 +3185,6 @@ async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
             "current_pct": str(round(current_liq_eur / target_eur * 100, 1)),
         }
 
-    deficit_eur = target_eur - current_liq_eur
-
     # 5. Load active EUA_OFFER market makers
     mm_r = await db.execute(
         select(MarketMakerClient).where(
@@ -3197,49 +3198,270 @@ async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
     if not eua_mms:
         return {"skipped": True, "reason": "No active EUA_OFFER market makers"}
 
-    # 6. Calculate order parameters
-    # Fill deficit in a few orders (3-8), but place just 1 per call
-    num_orders_to_fill = random.randint(3, 8)
-    volume_eur = deficit_eur / num_orders_to_fill
-    volume_eur = max(_MIN_VOL, min(_MAX_VOL, volume_eur))
-
-    # Ratio: base + small positive spread (0% to +5% — MM profit margin)
-    spread_offset = Decimal(str(round(random.uniform(0, 0.05), 4)))
-    ratio = base_ratio * (1 + spread_offset)
-    ratio = ratio.quantize(Decimal("0.0001"))
-
-    # EUA quantity from EUR volume
-    eua_quantity = (volume_eur / eua_price).quantize(Decimal("1"))
-    if eua_quantity < 1:
-        eua_quantity = Decimal("1")
-
-    mm = random.choice(eua_mms)
-
-    # 7. Place the order
-    order = Order(
-        market=MarketType.SWAP,
-        market_maker_id=mm.id,
-        certificate_type=CertificateType.EUA,
-        side=OrderSide.SELL,
-        price=ratio,
-        quantity=eua_quantity,
-        filled_quantity=Decimal("0"),
-        status=OrderStatus.OPEN,
+    # 6. Find current best (highest) ratio in the order book
+    best_book_r = await db.execute(
+        select(func.max(Order.price))
+        .where(
+            Order.market == MarketType.SWAP,
+            Order.side == OrderSide.SELL,
+            Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            Order.market_maker_id.isnot(None),
+        )
     )
-    db.add(order)
-    await db.flush()
+    current_best_in_book = best_book_r.scalar()
+    if current_best_in_book is not None:
+        current_best_in_book = Decimal(str(current_best_in_book))
+    else:
+        # Book is empty — fill from best down to worst
+        current_best_in_book = worst_ratio
+
+    # 7. Place orders from best_ratio DOWN to current top-of-book (fill the gap)
+    ratio_step = Decimal("0.0001")
+
+    if best_ratio > current_best_in_book:
+        # Gap exists above current book — fill from best_ratio down to existing top
+        start_ratio = best_ratio
+        stop_ratio = current_best_in_book + ratio_step  # don't duplicate existing top
+    else:
+        # No gap — replenish volume at best_ratio (1-3 orders)
+        start_ratio = best_ratio
+        stop_ratio = best_ratio  # single level
+
+    orders_created = 0
+    liquidity_added_eur = Decimal("0")
+    current_ratio = start_ratio
+    orders_at_level = 0
+    max_at_this_level = random.randint(1, 3)
+
+    for _ in range(_MAX_REPLENISH_ORDERS):
+        if current_liq_eur + liquidity_added_eur >= target_eur:
+            break
+        if current_ratio < stop_ratio and current_ratio < worst_ratio:
+            break
+
+        if orders_at_level >= max_at_this_level:
+            current_ratio -= ratio_step
+            current_ratio = current_ratio.quantize(Decimal("0.0001"))
+            orders_at_level = 0
+            max_at_this_level = random.randint(1, 3)
+            # Re-check after stepping down
+            if current_ratio < stop_ratio and current_ratio < worst_ratio:
+                break
+
+        # Volume: cap by remaining deficit
+        remaining_deficit = target_eur - (current_liq_eur + liquidity_added_eur)
+        volume_eur = Decimal(str(round(random.uniform(float(_MIN_VOL), float(_MAX_VOL)), 2)))
+        volume_eur = min(volume_eur, remaining_deficit)
+        if volume_eur < _MIN_VOL:
+            break
+
+        eua_quantity = (volume_eur / eua_price).quantize(Decimal("1"))
+        if eua_quantity < 1:
+            eua_quantity = Decimal("1")
+
+        mm = random.choice(eua_mms)
+
+        order = Order(
+            market=MarketType.SWAP,
+            market_maker_id=mm.id,
+            certificate_type=CertificateType.EUA,
+            side=OrderSide.SELL,
+            price=current_ratio,
+            quantity=eua_quantity,
+            filled_quantity=Decimal("0"),
+            status=OrderStatus.OPEN,
+        )
+        db.add(order)
+        orders_created += 1
+        orders_at_level += 1
+        liquidity_added_eur += eua_quantity * eua_price
+
+    if orders_created > 0:
+        await db.flush()
 
     return {
         "success": True,
         "action": "swap_replenishment",
-        "ratio": str(ratio),
-        "eua_quantity": str(eua_quantity),
-        "volume_eur": str(volume_eur.quantize(Decimal("1"))),
-        "deficit_eur": str(deficit_eur.quantize(Decimal("1"))),
-        "current_liquidity_pct": str(round(current_liq_eur / target_eur * 100, 1)),
-        "market_maker": mm.name,
-        "order_id": str(order.id),
+        "best_ratio": str(best_ratio),
+        "gap_from": str(start_ratio),
+        "gap_to": str(stop_ratio),
+        "orders_created": orders_created,
+        "liquidity_added_eur": str(liquidity_added_eur.quantize(Decimal("1"))),
+        "total_liquidity_eur": str((current_liq_eur + liquidity_added_eur).quantize(Decimal("1"))),
+        "current_liquidity_pct": str(round((current_liq_eur + liquidity_added_eur) / target_eur * 100, 1)),
     }
+
+
+async def _delayed_swap_replenishment():
+    """
+    Background task: place replenishment orders one at a time with random 5-15s delays.
+    Uses its own DB session (request session is closed by the time this runs).
+    Each order is committed individually so it's immediately visible in the order book.
+    """
+    import asyncio
+    import random
+    from decimal import Decimal
+
+    from sqlalchemy import and_
+    from app.core.database import AsyncSessionLocal
+    from app.services.price_scraper import price_scraper
+
+    _MIN_VOL = Decimal("200000")
+    _MAX_VOL = Decimal("5000000")
+    _MAX_REPLENISH_ORDERS = 50
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # 1. Load settings
+            settings_r = await db.execute(
+                select(AutoTradeMarketSettings).where(
+                    AutoTradeMarketSettings.market_key == "EUA_SWAP"
+                )
+            )
+            swap_settings = settings_r.scalar_one_or_none()
+            if not swap_settings or not swap_settings.enabled:
+                logger.info("Delayed replenishment skipped: EUA_SWAP disabled")
+                return
+
+            target_eur = swap_settings.target_liquidity or Decimal("90000000")
+
+            # 2. Fetch scraped prices
+            try:
+                prices = await price_scraper.get_current_prices()
+                cea_price = Decimal(str(prices["cea"]["price"]))
+                eua_price = Decimal(str(prices["eua"]["price"]))
+            except Exception:
+                cea_price = Decimal("13.0")
+                eua_price = Decimal("75.0")
+
+            if eua_price <= 0:
+                logger.info("Delayed replenishment skipped: invalid EUA price")
+                return
+
+            base_ratio = (cea_price / eua_price).quantize(Decimal("0.0001"))
+            best_ratio = (base_ratio * Decimal("1.15")).quantize(Decimal("0.0001"))
+            worst_ratio = (best_ratio * Decimal("0.75")).quantize(Decimal("0.0001"))
+
+            # 3. Current liquidity
+            liq_r = await db.execute(
+                select(func.sum(Order.quantity - Order.filled_quantity)).where(
+                    Order.market == MarketType.SWAP,
+                    Order.side == OrderSide.SELL,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                    Order.market_maker_id.isnot(None),
+                )
+            )
+            remaining_eua = Decimal(str(liq_r.scalar() or 0))
+            current_liq_eur = remaining_eua * eua_price
+
+            if current_liq_eur >= target_eur * Decimal("0.95"):
+                logger.info("Delayed replenishment skipped: liquidity at target")
+                return
+
+            # 4. Load market makers
+            mm_r = await db.execute(
+                select(MarketMakerClient).where(
+                    and_(
+                        MarketMakerClient.is_active == True,
+                        MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
+                    )
+                )
+            )
+            eua_mms = list(mm_r.scalars().all())
+            if not eua_mms:
+                logger.info("Delayed replenishment skipped: no EUA_OFFER MMs")
+                return
+
+            # 5. Find current best ratio in book
+            best_book_r = await db.execute(
+                select(func.max(Order.price)).where(
+                    Order.market == MarketType.SWAP,
+                    Order.side == OrderSide.SELL,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                    Order.market_maker_id.isnot(None),
+                )
+            )
+            current_best_in_book = best_book_r.scalar()
+            if current_best_in_book is not None:
+                current_best_in_book = Decimal(str(current_best_in_book))
+            else:
+                current_best_in_book = worst_ratio
+
+            # 6. Determine gap range
+            ratio_step = Decimal("0.0001")
+            if best_ratio > current_best_in_book:
+                start_ratio = best_ratio
+                stop_ratio = current_best_in_book + ratio_step
+            else:
+                start_ratio = best_ratio
+                stop_ratio = best_ratio
+
+            # 7. Place orders one at a time with delays
+            orders_created = 0
+            liquidity_added_eur = Decimal("0")
+            current_ratio = start_ratio
+            orders_at_level = 0
+            max_at_this_level = random.randint(1, 3)
+
+            for _ in range(_MAX_REPLENISH_ORDERS):
+                if current_liq_eur + liquidity_added_eur >= target_eur:
+                    break
+                if current_ratio < stop_ratio and current_ratio < worst_ratio:
+                    break
+
+                if orders_at_level >= max_at_this_level:
+                    current_ratio -= ratio_step
+                    current_ratio = current_ratio.quantize(Decimal("0.0001"))
+                    orders_at_level = 0
+                    max_at_this_level = random.randint(1, 3)
+                    if current_ratio < stop_ratio and current_ratio < worst_ratio:
+                        break
+
+                remaining_deficit = target_eur - (current_liq_eur + liquidity_added_eur)
+                volume_eur = Decimal(str(round(random.uniform(float(_MIN_VOL), float(_MAX_VOL)), 2)))
+                volume_eur = min(volume_eur, remaining_deficit)
+                if volume_eur < _MIN_VOL:
+                    break
+
+                eua_quantity = (volume_eur / eua_price).quantize(Decimal("1"))
+                if eua_quantity < 1:
+                    eua_quantity = Decimal("1")
+
+                mm = random.choice(eua_mms)
+
+                order = Order(
+                    market=MarketType.SWAP,
+                    market_maker_id=mm.id,
+                    certificate_type=CertificateType.EUA,
+                    side=OrderSide.SELL,
+                    price=current_ratio,
+                    quantity=eua_quantity,
+                    filled_quantity=Decimal("0"),
+                    status=OrderStatus.OPEN,
+                )
+                db.add(order)
+                await db.commit()
+
+                orders_created += 1
+                orders_at_level += 1
+                liquidity_added_eur += eua_quantity * eua_price
+
+                logger.info(
+                    f"Delayed replenishment: order #{orders_created} at ratio {current_ratio}, "
+                    f"+{eua_quantity * eua_price:.0f} EUR"
+                )
+
+                # Random delay 5-15 seconds between orders
+                delay = random.uniform(5, 15)
+                await asyncio.sleep(delay)
+
+            logger.info(
+                f"Delayed replenishment complete: {orders_created} orders, "
+                f"+{liquidity_added_eur.quantize(Decimal('1'))} EUR"
+            )
+
+    except Exception as e:
+        logger.error(f"Delayed swap replenishment failed: {e}", exc_info=True)
 
 
 @router.post("/auto-trade-market-settings/place-random-swap-order")
@@ -3248,12 +3470,11 @@ async def place_random_swap_order(
     current_user: User = Depends(get_admin_user),
 ):
     """
-    Place a single SWAP replenishment order if liquidity is below target.
+    Reactive SWAP replenishment: fill the gap between best_ratio and current top-of-book.
 
-    Simpler than CEA place_random_order:
     - ASK only (SELL EUA)
-    - No spread correction, no price alignment, no BID side
-    - Places 1 order per call, ratio near base (scraped CEA/EUA) with small MM margin
+    - Orders placed from best_ratio (base*1.15) DOWN to current book top
+    - Tick step 0.0001, respects 90M EUR liquidity cap
     """
     try:
         result = await _place_random_swap_order_internal(db)

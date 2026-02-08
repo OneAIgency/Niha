@@ -49,6 +49,36 @@ export function useClientRealtime() {
         );
         logger.debug('Client realtime: balance_updated received, dispatched nihao:balanceUpdated');
       }
+
+      if (message.type === 'deposit_status_updated') {
+        window.dispatchEvent(new CustomEvent('nihao:depositUpdated', { detail: message.data }));
+        logger.debug('Client realtime: deposit_status_updated', message.data);
+      }
+
+      if (message.type === 'kyc_status_updated') {
+        window.dispatchEvent(new CustomEvent('nihao:kycUpdated', { detail: message.data }));
+        logger.debug('Client realtime: kyc_status_updated', message.data);
+      }
+
+      if (message.type === 'swap_updated') {
+        window.dispatchEvent(new CustomEvent('nihao:swapUpdated', { detail: message.data }));
+        logger.debug('Client realtime: swap_updated', message.data);
+      }
+
+      if (message.type === 'settlement_updated') {
+        window.dispatchEvent(new CustomEvent('nihao:settlementUpdated', { detail: message.data }));
+        logger.debug('Client realtime: settlement_updated', message.data);
+      }
+
+      if (message.type === 'user_deactivated') {
+        logger.info('Client realtime: user_deactivated — forcing logout');
+        useAuthStore.getState().logout();
+      }
+
+      if (message.type === 'notification') {
+        window.dispatchEvent(new CustomEvent('nihao:notification', { detail: message.data }));
+        logger.debug('Client realtime: notification', message.data);
+      }
     },
     [setAuth]
   );

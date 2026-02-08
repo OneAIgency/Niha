@@ -448,7 +448,7 @@ export function UsersPage() {
   return (
     <BackofficeLayout
       subSubHeader={
-        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+        <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Create User
         </Button>

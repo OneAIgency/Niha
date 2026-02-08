@@ -392,6 +392,8 @@ Special shadows for interactive elements and brand colors.
 <div className="shadow-2xl">Modal content</div>
 ```
 
+**Transaction confirmation modals** (e.g. CEA Cash order success): use `Modal` from `components/common`, a single primary CTA (e.g. "Inapoi la Dashboard"), and disable close on backdrop/escape so the user must click the CTA; data comes from the API response only. See CashMarketProPage order success modal.
+
 ---
 
 ## Component Library

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -8,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
@@ -33,6 +35,7 @@ from ...models.models import (
 from ...services.market_maker_service import MarketMakerService
 from ...services.price_scraper import price_scraper
 from ...services.settlement_service import SettlementService
+from .client_ws import client_ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -968,24 +971,40 @@ async def execute_swap(
         hour=0, minute=0, second=0, microsecond=0, tzinfo=None
     ) + timedelta(days=14)
 
-    batch_reference = await SettlementService.generate_batch_reference(
-        db, SettlementType.SWAP_CEA_TO_EUA, CertificateType.EUA
-    )
+    # Retry with savepoint to handle rare batch_reference collisions
+    max_attempts = 3
+    settlement = None
+    for attempt in range(max_attempts):
+        batch_reference = await SettlementService.generate_batch_reference(
+            db, SettlementType.SWAP_CEA_TO_EUA, CertificateType.EUA
+        )
 
-    settlement = SettlementBatch(
-        entity_id=current_user.entity_id,
-        batch_reference=batch_reference,
-        settlement_type=SettlementType.SWAP_CEA_TO_EUA,
-        asset_type=CertificateType.EUA,
-        quantity=Decimal(str(eua_output)),
-        price=Decimal(str(eua_price)),
-        total_value_eur=Decimal(str(eua_output * eua_price)),
-        status=SettlementStatus.PENDING,
-        expected_settlement_date=expected_settlement,
-        notes=f"Swap {cea_quantity:.2f} CEA → {eua_output:.2f} EUA at avg rate {weighted_avg_ratio:.4f}. Matched {len(matched_orders)} orders.",
-    )
-    db.add(settlement)
-    await db.flush()
+        settlement = SettlementBatch(
+            entity_id=current_user.entity_id,
+            batch_reference=batch_reference,
+            settlement_type=SettlementType.SWAP_CEA_TO_EUA,
+            asset_type=CertificateType.EUA,
+            quantity=Decimal(str(eua_output)),
+            price=Decimal(str(eua_price)),
+            total_value_eur=Decimal(str(eua_output * eua_price)),
+            status=SettlementStatus.PENDING,
+            expected_settlement_date=expected_settlement,
+            notes=f"Swap {cea_quantity:.2f} CEA → {eua_output:.2f} EUA at avg rate {weighted_avg_ratio:.4f}. Matched {len(matched_orders)} orders.",
+        )
+
+        try:
+            async with db.begin_nested():
+                db.add(settlement)
+                await db.flush()
+            break  # Success
+        except IntegrityError:
+            if attempt < max_attempts - 1:
+                logger.warning(
+                    f"batch_reference collision on {batch_reference}, "
+                    f"retrying (attempt {attempt + 1}/{max_attempts})"
+                )
+                continue
+            raise
 
     # Add initial status history
     history_entry = SettlementStatusHistory(
@@ -1015,20 +1034,24 @@ async def execute_swap(
 
     await db.commit()
 
-    # Reactive auto-trade: replenish consumed SWAP liquidity (non-critical)
-    try:
-        from app.api.v1.admin import _place_random_swap_order_internal
+    # Notify the user: swap completed + balance changed + role may have changed
+    asyncio.create_task(client_ws_manager.broadcast_to_users(
+        [current_user.id],
+        {"type": "swap_updated", "data": {"swap_id": str(swap.id), "status": "COMPLETED"}},
+    ))
+    asyncio.create_task(client_ws_manager.broadcast_to_users(
+        [current_user.id],
+        {"type": "balance_updated", "data": {"source": "swap_executed"}},
+    ))
 
-        replenish_result = await _place_random_swap_order_internal(db)
-        if replenish_result.get("success"):
-            await db.commit()
-            logger.info(f"Swap auto-trade replenishment: placed {replenish_result.get('eua_quantity')} EUA at ratio {replenish_result.get('ratio')}")
+    # Reactive auto-trade: schedule background replenishment with random 5-15s delays
+    try:
+        from app.api.v1.admin import _delayed_swap_replenishment
+
+        asyncio.create_task(_delayed_swap_replenishment())
+        logger.info("Swap auto-trade replenishment scheduled (background, 5-15s intervals)")
     except Exception as e:
-        logger.warning(f"Swap auto-trade replenishment failed (non-critical): {e}")
-        try:
-            await db.rollback()
-        except Exception:
-            pass
+        logger.warning(f"Failed to schedule swap replenishment: {e}")
 
     return {
         "success": True,

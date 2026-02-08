@@ -8,6 +8,7 @@ Endpoints for deposit lifecycle:
 All deposit management routes with AML hold support.
 """
 
+import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
@@ -27,6 +28,7 @@ from ...services.deposit_service import DepositNotFoundError, InvalidDepositStat
 from ...services.ticket_service import TicketService
 from .backoffice import backoffice_ws_manager
 from .client_ws import client_ws_manager
+from ...services.ws_utils import get_entity_user_ids
 
 router = APIRouter(prefix="/deposits", tags=["Deposits"])
 
@@ -572,6 +574,14 @@ async def confirm_deposit(
             },
         )
 
+        # Notify entity users so their funding page updates
+        entity_user_ids = await get_entity_user_ids(db, deposit.entity_id)
+        if entity_user_ids:
+            asyncio.create_task(client_ws_manager.broadcast_to_users(
+                entity_user_ids,
+                {"type": "deposit_status_updated", "data": {"deposit_id": str(deposit.id), "status": "ON_HOLD"}},
+            ))
+
         # Reload with relationships
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)
         return deposit_to_response(deposit)
@@ -687,6 +697,14 @@ async def reject_deposit(
                 "reason": request.reason.value,
             },
         )
+
+        # Notify entity users so their funding page updates
+        entity_user_ids = await get_entity_user_ids(db, deposit.entity_id)
+        if entity_user_ids:
+            asyncio.create_task(client_ws_manager.broadcast_to_users(
+                entity_user_ids,
+                {"type": "deposit_status_updated", "data": {"deposit_id": str(deposit.id), "status": "REJECTED"}},
+            ))
 
         # Reload with relationships
         deposit = await deposit_service.get_deposit_by_id(db, deposit.id)

@@ -11,7 +11,8 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -57,21 +58,34 @@ class SettlementService:
     async def generate_batch_reference(
         db: AsyncSession, settlement_type: SettlementType, asset_type: CertificateType
     ) -> str:
-        """Generate unique settlement batch reference: SET-YYYY-NNNNNN-TYPE"""
+        """Generate unique settlement batch reference: SET-YYYY-NNNNNN-TYPE
+
+        Uses MAX of existing references (not COUNT) so that gaps from deleted
+        rows don't cause collisions with the unique constraint.
+        """
         year = datetime.now(timezone.utc).year
         asset_suffix = asset_type.value
+        prefix = f"SET-{year}-"
+        suffix = f"-{asset_suffix}"
 
         result = await db.execute(
-            select(SettlementBatch).where(
+            select(func.max(SettlementBatch.batch_reference)).where(
                 and_(
-                    SettlementBatch.batch_reference.like(f"SET-{year}-%"),
+                    SettlementBatch.batch_reference.like(f"{prefix}%{suffix}"),
                     SettlementBatch.asset_type == asset_type,
                 )
             )
         )
-        count = len(result.scalars().all())
-        sequence_num = str(count + 1).zfill(6)
-        return f"SET-{year}-{sequence_num}-{asset_suffix}"
+        max_ref = result.scalar_one_or_none()
+
+        if max_ref:
+            # "SET-2026-000013-CEA" → split("-") → parts[2] = "000013" → 13
+            current_max = int(max_ref.split("-")[2])
+            next_seq = current_max + 1
+        else:
+            next_seq = 1
+
+        return f"{prefix}{str(next_seq).zfill(6)}{suffix}"
 
     @staticmethod
     async def create_cea_purchase_settlement(
@@ -88,28 +102,47 @@ class SettlementService:
         try:
             today = datetime.now(timezone.utc).replace(tzinfo=None)
             expected_date = SettlementService.calculate_business_days(today, 3)
-            batch_reference = await SettlementService.generate_batch_reference(
-                db, SettlementType.CEA_PURCHASE, CertificateType.CEA
-            )
             total_value_eur = quantity * price
 
-            settlement = SettlementBatch(
-                batch_reference=batch_reference,
-                entity_id=entity_id,
-                order_id=order_id,
-                trade_id=trade_id,
-                counterparty_id=seller_id,
-                settlement_type=SettlementType.CEA_PURCHASE,
-                status=SettlementStatus.PENDING,
-                asset_type=CertificateType.CEA,
-                quantity=quantity,
-                price=price,
-                total_value_eur=total_value_eur,
-                expected_settlement_date=expected_date,
-            )
+            # Retry with savepoint to handle rare batch_reference collisions
+            max_attempts = 3
+            settlement = None
+            for attempt in range(max_attempts):
+                batch_reference = await SettlementService.generate_batch_reference(
+                    db, SettlementType.CEA_PURCHASE, CertificateType.CEA
+                )
 
-            db.add(settlement)
-            await db.flush()
+                settlement = SettlementBatch(
+                    batch_reference=batch_reference,
+                    entity_id=entity_id,
+                    order_id=order_id,
+                    trade_id=trade_id,
+                    counterparty_id=seller_id,
+                    settlement_type=SettlementType.CEA_PURCHASE,
+                    status=SettlementStatus.PENDING,
+                    asset_type=CertificateType.CEA,
+                    quantity=quantity,
+                    price=price,
+                    total_value_eur=total_value_eur,
+                    expected_settlement_date=expected_date,
+                )
+
+                try:
+                    async with db.begin_nested():
+                        db.add(settlement)
+                        await db.flush()
+                    break  # Success — exit retry loop
+                except IntegrityError:
+                    if attempt < max_attempts - 1:
+                        logger.warning(
+                            f"batch_reference collision on {batch_reference}, "
+                            f"retrying (attempt {attempt + 1}/{max_attempts})"
+                        )
+                        continue
+                    logger.error(
+                        f"batch_reference collision persisted after {max_attempts} attempts"
+                    )
+                    raise
 
             status_history = SettlementStatusHistory(
                 settlement_batch_id=settlement.id,
@@ -243,6 +276,34 @@ class SettlementService:
                     await transition_eua_settle_to_eua_if_all_swap_settled(db, entity_id)
 
             await db.commit()
+
+            # Notify entity users about settlement status change
+            try:
+                import asyncio
+                from .ws_utils import get_entity_user_ids
+                from ..api.v1.client_ws import client_ws_manager
+
+                user_ids = await get_entity_user_ids(db, settlement.entity_id)
+                if user_ids:
+                    asyncio.create_task(client_ws_manager.broadcast_to_users(
+                        user_ids,
+                        {
+                            "type": "settlement_updated",
+                            "data": {
+                                "batch_id": str(settlement.id),
+                                "status": new_status.value,
+                                "batch_reference": settlement.batch_reference,
+                            },
+                        },
+                    ))
+                    # Also trigger balance refresh when settled
+                    if new_status == SettlementStatus.SETTLED:
+                        asyncio.create_task(client_ws_manager.broadcast_to_users(
+                            user_ids,
+                            {"type": "balance_updated", "data": {"source": "settlement_completed"}},
+                        ))
+            except Exception as ws_err:
+                logger.warning(f"Failed to send settlement WS notification: {ws_err}")
 
             # Refresh settlement with status_history relationship loaded
             result = await db.execute(

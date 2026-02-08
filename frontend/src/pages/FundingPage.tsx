@@ -107,6 +107,13 @@ export function FundingPage() {
     fetchData();
   }, []);
 
+  // Refresh deposits when admin confirms/rejects a deposit via WebSocket
+  useEffect(() => {
+    const handleDepositUpdate = () => { fetchData(); };
+    window.addEventListener('nihao:depositUpdated', handleDepositUpdate);
+    return () => { window.removeEventListener('nihao:depositUpdated', handleDepositUpdate); };
+  }, []);
+
   const fetchData = async () => {
     try {
       setLoading(true);

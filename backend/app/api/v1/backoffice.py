@@ -56,6 +56,7 @@ from ...schemas.schemas import (
 from ...services.email_service import email_service
 from ...services.balance_utils import get_entity_eur_balance, update_entity_balance
 from ...services.ticket_service import TicketService
+from ...services.ws_utils import get_entity_user_ids
 
 # Constants for deposit validation
 MAX_DEPOSIT_AMOUNT = Decimal("100000000")  # 100 million max per deposit
@@ -373,6 +374,14 @@ async def review_kyc_document(
             else None,
         },
     )
+
+    # Notify the document owner so their UI updates
+    from .client_ws import client_ws_manager
+
+    asyncio.create_task(client_ws_manager.broadcast_to_users(
+        [document.user_id],
+        {"type": "kyc_status_updated", "data": {"status": review.status.value, "document_id": str(document.id)}},
+    ))
 
     return MessageResponse(message=f"Document has been {review.status.value}")
 
@@ -1176,6 +1185,16 @@ async def add_asset_to_entity(
             ) + amount_abs
 
     await db.commit()
+
+    # Notify entity users so their dashboard/balance refreshes
+    from .client_ws import client_ws_manager
+
+    user_ids = await get_entity_user_ids(db, UUID(entity_id))
+    if user_ids:
+        asyncio.create_task(client_ws_manager.broadcast_to_users(
+            user_ids,
+            {"type": "balance_updated", "data": {"source": "admin_asset_adjustment"}},
+        ))
 
     asset_label = {
         AssetType.EUR: "EUR",

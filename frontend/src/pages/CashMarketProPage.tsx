@@ -1,14 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   RefreshCw,
   Activity,
   AlertCircle,
   BarChart3,
+  CheckCircle,
+  FileText,
+  TrendingUp,
 } from 'lucide-react';
-import { Subheader } from '../components/common';
+import { Subheader, Modal } from '../components/common';
 import { useCashMarket } from '../hooks/useCashMarket';
-import { cashMarketApi } from '../services/api';
+import { cashMarketApi, usersApi } from '../services/api';
+import { useAuthStore } from '../stores/useStore';
+import { formatCertificateQuantity } from '../utils';
 import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/InlineOrderForm';
 import type {
   OrderBookLevel,
@@ -274,7 +280,24 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
 // MAIN PAGE COMPONENT
 // =============================================================================
 
+/** Shape of the result returned by executeMarketOrder (camelCase from axios transform) */
+interface OrderExecutionResult {
+  success: boolean;
+  orderId: string | null;
+  message: string;
+  totalQuantity: number;
+  totalCostGross: number;
+  platformFee: number;
+  totalCostNet: number;
+  weightedAvgPrice: number;
+  eurBalance: number;
+  certificateBalance: number;
+}
+
 export function CashMarketProPage() {
+  const navigate = useNavigate();
+  const { token, setAuth } = useAuthStore();
+
   // Use real data from API with 5s polling
   const {
     orderBook,
@@ -285,23 +308,60 @@ export function CashMarketProPage() {
     refresh,
   } = useCashMarket('CEA', 5000);
 
+  // State for order success modal
+  const [orderResult, setOrderResult] = useState<OrderExecutionResult | null>(null);
+
   // Real user balances from API (with safe defaults)
   const availableEur = balances?.eur ?? 0;
 
   // Handle market order submission (market only, full balance)
   const handleMarketOrderSubmit = async (order: { orderType: 'MARKET'; amountEur: number }) => {
     try {
-      await cashMarketApi.executeMarketOrder({
+      const result = await cashMarketApi.executeMarketOrder({
         certificate_type: 'CEA',
         side: 'BUY',
         amount_eur: order.amountEur,
       });
+
+      if (result.success) {
+        // Refetch user so auth store has updated role (e.g. CEA → CEA_SETTLE)
+        if (token) {
+          try {
+            const updatedUser = await usersApi.getProfile();
+            setAuth(updatedUser, token);
+          } catch (refetchErr) {
+            console.warn('Refetch user after order success failed; role may sync on next load.', refetchErr);
+          }
+        }
+        // Normalize: API declares snake_case but axios interceptor returns camelCase
+        const r = result as Record<string, unknown>;
+        const normalized: OrderExecutionResult = {
+          success: Boolean(r.success),
+          orderId: (r.orderId ?? r.order_id) as string | null,
+          message: String(r.message ?? ''),
+          totalQuantity: Number(r.totalQuantity ?? r.total_quantity ?? 0),
+          totalCostGross: Number(r.totalCostGross ?? r.total_cost_gross ?? 0),
+          platformFee: Number(r.platformFee ?? r.platform_fee ?? 0),
+          totalCostNet: Number(r.totalCostNet ?? r.total_cost_net ?? 0),
+          weightedAvgPrice: Number(r.weightedAvgPrice ?? r.weighted_avg_price ?? 0),
+          eurBalance: Number(r.eurBalance ?? r.eur_balance ?? 0),
+          certificateBalance: Number(r.certificateBalance ?? r.certificate_balance ?? 0),
+        };
+        setOrderResult(normalized);
+      }
+
       await refresh();
     } catch (err) {
       console.error('Failed to submit order:', err);
       throw err;
     }
   };
+
+  /** Closes the order success modal and navigates to dashboard (single CTA; access to cash market is then restricted by role). */
+  const handleModalClose = useCallback(() => {
+    setOrderResult(null);
+    navigate('/dashboard');
+  }, [navigate]);
 
   // Safe defaults - handle both null orderBook and undefined properties
   const safeOrderBook = {
@@ -436,6 +496,94 @@ export function CashMarketProPage() {
         </div>
       </div>
 
+      {/* Order Success Modal */}
+      <Modal
+        isOpen={!!orderResult}
+        onClose={handleModalClose}
+        size="sm"
+        closeOnBackdrop={false}
+        closeOnEscape={false}
+      >
+        <Modal.Header showClose={false}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/20 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Tranzactie confirmata</h2>
+              <p className="text-sm text-navy-400">Ordinul a fost executat cu succes</p>
+            </div>
+          </div>
+        </Modal.Header>
+
+        <Modal.Body>
+          {orderResult && (
+            <div className="space-y-4">
+              {/* Order ID / Ticket number (safe display if API returns number or null) */}
+              {(() => {
+                const ticket = String(orderResult.orderId ?? '').slice(0, 8).toUpperCase();
+                return ticket ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-navy-900/50 rounded-lg border border-navy-700">
+                    <FileText className="w-4 h-4 text-navy-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-navy-400">Order Ticket</p>
+                      <p className="text-sm font-mono text-white">{ticket}</p>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Key metrics */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-navy-700/50">
+                  <span className="text-sm text-navy-400">Volum CEA cumparat</span>
+                  <span className="text-lg font-bold font-mono text-emerald-400">
+                    {formatCertificateQuantity(orderResult.totalQuantity)} CEA
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-navy-700/50">
+                  <span className="text-sm text-navy-400">Pret mediu per CEA</span>
+                  <span className="text-lg font-bold font-mono text-white">
+                    €{orderResult.weightedAvgPrice.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2 border-b border-navy-700/50">
+                  <span className="text-sm text-navy-400">Cost total (cu comision)</span>
+                  <span className="text-sm font-mono text-navy-300">
+                    €{orderResult.totalCostNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-navy-400">Comision platforma</span>
+                  <span className="text-sm font-mono text-navy-400">
+                    €{orderResult.platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Settlement note */}
+              <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-xs text-amber-300">
+                  Certificatele CEA vor fi livrate in contul tau dupa finalizarea settlement-ului (T+3).
+                </p>
+              </div>
+            </div>
+          )}
+        </Modal.Body>
+
+        <Modal.Footer>
+          <button
+            onClick={handleModalClose}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-semibold transition-colors"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Inapoi la Dashboard
+          </button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

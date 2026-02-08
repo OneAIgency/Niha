@@ -106,6 +106,7 @@ export function MarketMakersPage() {
         <>
           <Button
             variant="primary"
+            size="sm"
             onClick={() => setShowCreateModal(true)}
             icon={<Users className="w-4 h-4" />}
           >

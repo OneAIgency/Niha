@@ -409,8 +409,17 @@ export const pricesApi = {
 
 // Client Realtime Types (role_updated e.g. AML→CEA after clear deposit)
 export interface ClientWebSocketMessage {
-  type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated';
-  data?: { role?: string; entityId?: string; eurBalance?: number; ceaBalance?: number; source?: string };
+  type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated'
+    | 'deposit_status_updated' | 'kyc_status_updated' | 'swap_updated'
+    | 'settlement_updated' | 'user_deactivated' | 'notification';
+  data?: {
+    role?: string; oldRole?: string; entityId?: string;
+    eurBalance?: number; ceaBalance?: number; source?: string;
+    depositId?: string; status?: string;
+    swapId?: string; batchId?: string; batchReference?: string;
+    documentId?: string;
+    message?: string; level?: string;
+  };
   message?: string;
   timestamp: string;
 }

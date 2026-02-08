@@ -131,6 +131,17 @@ export function CeaSwapMarketPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Refresh swap data when swap status changes via WebSocket
+  useEffect(() => {
+    const handleSwapUpdate = () => { fetchData(); };
+    window.addEventListener('nihao:swapUpdated', handleSwapUpdate);
+    window.addEventListener('nihao:balanceUpdated', handleSwapUpdate);
+    return () => {
+      window.removeEventListener('nihao:swapUpdated', handleSwapUpdate);
+      window.removeEventListener('nihao:balanceUpdated', handleSwapUpdate);
+    };
+  }, [fetchData]);
+
   // Calculate swap when balance is loaded
   useEffect(() => {
     if (userBalances?.ceaBalance && userBalances.ceaBalance > 0) {
