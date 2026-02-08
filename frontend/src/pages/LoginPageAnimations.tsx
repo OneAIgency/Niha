@@ -389,7 +389,7 @@ export function NDASuccessAmbient() {
       ))}
 
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage: `linear-gradient(var(--color-text-inverse) 1px, transparent 1px), linear-gradient(90deg, var(--color-text-inverse) 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
@@ -397,7 +397,7 @@ export function NDASuccessAmbient() {
       />
 
       <motion.div
-        className="absolute inset-0 flex items-center justify-center"
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 2 }}
