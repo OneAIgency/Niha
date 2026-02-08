@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   RefreshCw,
@@ -9,7 +9,7 @@ import {
 import { Subheader } from '../components/common';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi } from '../services/api';
-import { InlineOrderForm } from '../components/cash-market/InlineOrderForm';
+import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/InlineOrderForm';
 import type {
   OrderBookLevel,
   CashMarketTrade,
@@ -26,15 +26,17 @@ interface ProfessionalOrderBookProps {
   bestBid: number | null;
   bestAsk: number | null;
   onPriceClick?: (price: number) => void;
+  highlightAskCount?: number;
 }
 
 function ProfessionalOrderBook({
   bids,
   asks,
-  spread,
+  spread: _spread,
   bestBid,
   bestAsk: _bestAsk,
   onPriceClick,
+  highlightAskCount = 0,
 }: ProfessionalOrderBookProps) {
   // Calculate total liquidity for BID and ASK sides
   const { totalBidEur, totalAskEur } = useMemo(() => {
@@ -153,15 +155,25 @@ function ProfessionalOrderBook({
           {asksWithCumulativeValue.map((ask, idx) => {
             const depthPct = askMaxCumQty > 0 ? (ask.cumQtyFromTop / askMaxCumQty) * 100 : 0;
             const isEven = idx % 2 === 0;
+            const isHighlighted = highlightAskCount > 0 && idx < highlightAskCount;
+
+            const rowBg = isHighlighted
+              ? 'bg-yellow-400/50'
+              : isEven ? 'bg-red-500/[0.05]' : 'bg-red-500/[0.10]';
+
+            const depthBg = isHighlighted
+              ? 'bg-yellow-500/10'
+              : 'bg-red-500/15';
+
             return (
               <div
                 key={`ask-${idx}`}
                 onClick={() => onPriceClick?.(ask.price)}
-                className={`flex gap-1 px-2 py-1 text-xs font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 ${isEven ? 'bg-red-500/[0.05]' : 'bg-red-500/[0.10]'}`}
+                className={`flex gap-1 px-2 py-1 text-xs font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 transition-colors ${rowBg}`}
               >
-                <div className="absolute left-0 top-0 bottom-0 bg-red-500/15 transition-all" style={{ width: `${depthPct}%` }} />
-                <div className="relative z-10 flex-1 min-w-0 text-red-400">{formatPrice(ask.price)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white">{formatQuantity(ask.quantity)}</div>
+                <div className={`absolute left-0 top-0 bottom-0 ${depthBg} transition-all`} style={{ width: `${depthPct}%` }} />
+                <div className={`relative z-10 flex-1 min-w-0 ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-red-400'}`}>{formatPrice(ask.price)}</div>
+                <div className={`relative z-10 flex-1 min-w-0 text-right ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-white'}`}>{formatQuantity(ask.quantity)}</div>
                 <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatQuantity(ask.cumulativeQuantity)}</div>
                 <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatEur(ask.cumulativeValue)}</div>
                 <div className="relative z-10 flex-1 min-w-0 text-right text-navy-400">{ask.orderCount}</div>
@@ -305,6 +317,15 @@ export function CashMarketProPage() {
     low24h: orderBook?.low24h ?? null,
   };
 
+  // Track form expanded state + local orderbook calculation for highlighting
+  const [isFormExpanded, setIsFormExpanded] = useState(false);
+  const handleExpandChange = useCallback((expanded: boolean) => setIsFormExpanded(expanded), []);
+  const pageCalc = useMemo(
+    () => calcMarketBuy(safeOrderBook.asks, availableEur),
+    [safeOrderBook.asks, availableEur],
+  );
+  const highlightAskCount = isFormExpanded && pageCalc ? pageCalc.levelsUsed : 0;
+
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
     if (num === null || num === undefined) return '-';
     return num.toLocaleString(undefined, {
@@ -387,8 +408,10 @@ export function CashMarketProPage() {
                 bestBid={safeOrderBook.bestBid}
                 bestAsk={safeOrderBook.bestAsk}
                 spread={safeOrderBook.spread}
+                asks={safeOrderBook.asks}
                 onOrderSubmit={handleMarketOrderSubmit}
                 onRefresh={refresh}
+                onExpandChange={handleExpandChange}
               />
 
               {/* Order Book */}
@@ -402,6 +425,7 @@ export function CashMarketProPage() {
                         spread={safeOrderBook.spread}
                         bestBid={safeOrderBook.bestBid}
                         bestAsk={safeOrderBook.bestAsk}
+                        highlightAskCount={highlightAskCount}
                       />
                     </div>
                   </div>

@@ -2512,119 +2512,339 @@ async def place_random_order(
     current_user: User = Depends(get_admin_user),
 ):
     """
-    Place a single random MM order in the CEA cash market.
-    Randomly picks: BUY or SELL, limit or market-like, price near best bid/ask.
-    Used by the frontend on a 10-180s timer to simulate organic activity.
+    Smart MM order placement with priority-based decisions:
+      Step 0: Gather context (orderbook, liquidity, scraped price)
+      Step 1: Spread correction — pre-step, fills gaps if spread > 0.1
+      Step 2: Price alignment — market-crossing orders if mid deviates from scraped price
+      Step 3: Liquidity bias — limit orders toward the side with largest deficit
+      Step 4: Normal random — fallback, 1 in 10 is market-crossing
     """
     import random
-    from sqlalchemy import and_
+    from sqlalchemy import and_, text
     from app.services.limit_order_matching import LimitOrderMatcher
+    from app.core.security import RedisManager
+    from app.services.price_scraper import price_scraper
+
+    _PS = Decimal("0.1")  # price step
+    _MIN_VOL = Decimal("200000")
+    _MAX_VOL = Decimal("5000000")
+    _PRICE_ALIGN_ABS = Decimal("0.5")   # EUR absolute deviation threshold
+    _PRICE_ALIGN_REL = Decimal("0.05")  # 5% relative deviation threshold
+
+    def _rand_vol(lo=_MIN_VOL, hi=_MAX_VOL):
+        return Decimal(str(round(random.uniform(float(lo), float(hi)), 2)))
+
+    def _qty(vol, price):
+        q = (vol / price).quantize(Decimal("1"))
+        return max(q, Decimal("1"))
+
+    def _pick_mm(mms):
+        return random.choice(mms)
 
     try:
-        # Pick a random side
-        side = random.choice([OrderSide.BUY, OrderSide.SELL])
-
-        # Get the right MM type for this side
-        mm_type = MarketMakerType.CEA_BUYER if side == OrderSide.BUY else MarketMakerType.CEA_SELLER
-        mm_result = await db.execute(
-            select(MarketMakerClient).where(
-                and_(
-                    MarketMakerClient.is_active == True,
-                    MarketMakerClient.mm_type == mm_type,
-                )
-            )
+        # ════════════════════════════════════════════════════════════════
+        # STEP 0: Gather context
+        # ════════════════════════════════════════════════════════════════
+        best_bid_r = await db.execute(
+            select(func.max(Order.price)).where(and_(
+                Order.market == MarketType.CEA_CASH, Order.certificate_type == CertificateType.CEA,
+                Order.side == OrderSide.BUY, Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            ))
         )
-        mms = list(mm_result.scalars().all())
-        if not mms:
-            raise HTTPException(status_code=400, detail=f"No active {mm_type.value} market makers")
-        mm = random.choice(mms)
+        best_bid = best_bid_r.scalar()
 
-        # Get current best bid/ask
-        best_bid_result = await db.execute(
-            select(func.max(Order.price)).where(
-                and_(
-                    Order.market == MarketType.CEA_CASH,
-                    Order.certificate_type == CertificateType.CEA,
-                    Order.side == OrderSide.BUY,
-                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
-                )
-            )
+        best_ask_r = await db.execute(
+            select(func.min(Order.price)).where(and_(
+                Order.market == MarketType.CEA_CASH, Order.certificate_type == CertificateType.CEA,
+                Order.side == OrderSide.SELL, Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+            ))
         )
-        best_bid = best_bid_result.scalar()
-
-        best_ask_result = await db.execute(
-            select(func.min(Order.price)).where(
-                and_(
-                    Order.market == MarketType.CEA_CASH,
-                    Order.certificate_type == CertificateType.CEA,
-                    Order.side == OrderSide.SELL,
-                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
-                )
-            )
-        )
-        best_ask = best_ask_result.scalar()
+        best_ask = best_ask_r.scalar()
 
         if not best_bid or not best_ask:
             raise HTTPException(status_code=400, detail="No orderbook — run Refresh CEA first")
 
-        price_step = Decimal("0.1")
+        # Active market makers (both types)
+        buyers_r = await db.execute(select(MarketMakerClient).where(and_(
+            MarketMakerClient.is_active == True, MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER)))
+        cea_buyers = list(buyers_r.scalars().all())
+        sellers_r = await db.execute(select(MarketMakerClient).where(and_(
+            MarketMakerClient.is_active == True, MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER)))
+        cea_sellers = list(sellers_r.scalars().all())
+        if not cea_buyers or not cea_sellers:
+            raise HTTPException(status_code=400, detail="No active CEA market makers")
 
-        # Decide: limit order (80%) or market-crossing order (20%)
-        is_market_like = random.random() < 0.10
+        # Liquidity per side
+        liq_r = await db.execute(text("""
+            SELECT o.side, COALESCE(SUM(o.price * (o.quantity - o.filled_quantity)), 0) as val
+            FROM orders o
+            WHERE o.market = 'CEA_CASH' AND o.status IN ('OPEN','PARTIALLY_FILLED')
+              AND o.market_maker_id IS NOT NULL
+            GROUP BY o.side
+        """))
+        liq_map = {r.side: Decimal(str(r.val)) for r in liq_r.fetchall()}
+        bid_liq = liq_map.get("BUY", Decimal("0"))
+        ask_liq = liq_map.get("SELL", Decimal("0"))
 
-        if side == OrderSide.BUY:
-            if is_market_like:
-                # Market-like: buy at best_ask (will match immediately)
-                price = best_ask
+        # Targets from AutoTradeMarketSettings
+        settings_r = await db.execute(
+            select(AutoTradeMarketSettings).where(
+                AutoTradeMarketSettings.market_key.in_(["CEA_BID", "CEA_ASK"])
+            )
+        )
+        settings_map = {s.market_key: s for s in settings_r.scalars().all()}
+        bid_target = settings_map.get("CEA_BID")
+        ask_target = settings_map.get("CEA_ASK")
+        bid_target_eur = bid_target.target_liquidity if bid_target else Decimal("50000000")
+        ask_target_eur = ask_target.target_liquidity if ask_target else Decimal("90000000")
+
+        # Scraped CEA price
+        scraped_cea = None
+        try:
+            prices = await price_scraper.get_current_prices()
+            raw = Decimal(str(prices["cea"]["price"]))
+            scraped_cea = (raw / _PS).quantize(Decimal("1")) * _PS  # round to 0.1
+        except Exception:
+            pass  # skip price alignment if scraper fails
+
+        # Redis counter for deterministic 1-in-10 market orders
+        try:
+            redis_conn = await RedisManager.get_redis()
+            order_counter = await redis_conn.incr("random_order_counter")
+        except Exception:
+            order_counter = random.randint(1, 10)
+
+        # Existing price levels for gap detection
+        bid_levels_r = await db.execute(text("""
+            SELECT DISTINCT price FROM orders
+            WHERE market = 'CEA_CASH' AND side = 'BUY'
+              AND status IN ('OPEN','PARTIALLY_FILLED')
+            ORDER BY price DESC
+        """))
+        bid_levels = [Decimal(str(r[0])) for r in bid_levels_r.fetchall()]
+
+        ask_levels_r = await db.execute(text("""
+            SELECT DISTINCT price FROM orders
+            WHERE market = 'CEA_CASH' AND side = 'SELL'
+              AND status IN ('OPEN','PARTIALLY_FILLED')
+            ORDER BY price ASC
+        """))
+        ask_levels = [Decimal(str(r[0])) for r in ask_levels_r.fetchall()]
+
+        bid_levels_set = set(bid_levels)
+        ask_levels_set = set(ask_levels)
+
+        # ════════════════════════════════════════════════════════════════
+        # STEP 1 (pre-step): Spread + gap correction
+        # ════════════════════════════════════════════════════════════════
+        spread_orders_placed = []
+
+        def _add_correction(side_val, price_val, mms):
+            """Place a corrective limit order and track it."""
+            mm = _pick_mm(mms)
+            vol = _rand_vol(_MIN_VOL, Decimal("1000000"))
+            pq = price_val.quantize(_PS)
+            db.add(Order(
+                market=MarketType.CEA_CASH, market_maker_id=mm.id,
+                certificate_type=CertificateType.CEA, side=side_val,
+                price=pq, quantity=_qty(vol, pq),
+                filled_quantity=Decimal("0"), status=OrderStatus.OPEN,
+            ))
+            spread_orders_placed.append(f"{side_val.value}@{pq}")
+            # Track in sets so gap detection skips these
+            if side_val == OrderSide.BUY:
+                bid_levels_set.add(pq)
             else:
-                # Limit: place at or slightly below best_bid (0 to -3 ticks)
-                offset = random.randint(0, 3)
-                price = best_bid - price_step * offset
+                ask_levels_set.add(pq)
+
+        # ── 1a: Spread → scraped price ──
+        # Target: best_bid = scraped_cea, best_ask = scraped_cea + 0.1
+        if scraped_cea and scraped_cea > 0:
+            target_bid = scraped_cea.quantize(_PS)
+            target_ask = (scraped_cea + _PS).quantize(_PS)
         else:
-            if is_market_like:
-                # Market-like: sell at best_bid (will match immediately)
-                price = best_bid
+            mid_fallback = ((best_bid + best_ask) / 2).quantize(_PS)
+            target_bid = mid_fallback
+            target_ask = (mid_fallback + _PS).quantize(_PS)
+
+        # Fill BUY levels upward toward target_bid (but never at/above best_ask)
+        buy_ceiling = min(target_bid, (best_ask - _PS).quantize(_PS))
+        if best_bid < buy_ceiling:
+            p = (best_bid + _PS).quantize(_PS)
+            while p <= buy_ceiling:
+                if p not in bid_levels_set:
+                    _add_correction(OrderSide.BUY, p, cea_buyers)
+                p = (p + _PS).quantize(_PS)
+            best_bid = buy_ceiling
+
+        # Fill SELL levels downward toward target_ask (but never at/below best_bid)
+        sell_floor = max(target_ask, (best_bid + _PS).quantize(_PS))
+        if best_ask > sell_floor:
+            p = (best_ask - _PS).quantize(_PS)
+            while p >= sell_floor:
+                if p not in ask_levels_set:
+                    _add_correction(OrderSide.SELL, p, cea_sellers)
+                p = (p - _PS).quantize(_PS)
+            best_ask = sell_floor
+
+        # ── 1b: Fill BID gaps (walk top→bottom) ──
+        # Refresh bid_levels to include orders added in 1a
+        all_bid = sorted(bid_levels_set, reverse=True)
+        for i in range(len(all_bid) - 1):
+            high = all_bid[i]
+            low = all_bid[i + 1]
+            gap_p = (high - _PS).quantize(_PS)
+            while gap_p > low:
+                if gap_p not in bid_levels_set:
+                    _add_correction(OrderSide.BUY, gap_p, cea_buyers)
+                gap_p = (gap_p - _PS).quantize(_PS)
+
+        # ── 1c: Fill ASK gaps (walk bottom→top) ──
+        all_ask = sorted(ask_levels_set)
+        for i in range(len(all_ask) - 1):
+            low = all_ask[i]
+            high = all_ask[i + 1]
+            gap_p = (low + _PS).quantize(_PS)
+            while gap_p < high:
+                if gap_p not in ask_levels_set:
+                    _add_correction(OrderSide.SELL, gap_p, cea_sellers)
+                gap_p = (gap_p + _PS).quantize(_PS)
+
+        if spread_orders_placed:
+            await db.flush()
+
+        # ════════════════════════════════════════════════════════════════
+        # STEPS 2-4: Decide main order (first match wins)
+        # ════════════════════════════════════════════════════════════════
+        action = "normal_random"
+        side = None
+        is_market_like = False
+        price = None
+        decision_mid = None
+        price_deviation_eur = None
+
+        # ── STEP 2: Price alignment ──
+        if scraped_cea and scraped_cea > 0:
+            mid = (best_bid + best_ask) / 2
+            decision_mid = mid
+            deviation = mid - scraped_cea
+            abs_dev = abs(deviation)
+            rel_dev = abs_dev / scraped_cea
+            price_deviation_eur = deviation
+
+            if abs_dev > _PRICE_ALIGN_ABS or rel_dev > _PRICE_ALIGN_REL:
+                action = "price_alignment"
+                is_market_like = True
+                if deviation > 0:
+                    # Mid too high → SELL at best_bid to push price down
+                    side = OrderSide.SELL
+                    price = best_bid
+                else:
+                    # Mid too low → BUY at best_ask to push price up
+                    side = OrderSide.BUY
+                    price = best_ask
+
+        # ── STEP 2.5: Liquidity reduction ──
+        # When a side exceeds its target, place a market-crossing order to
+        # consume the excess (SELL @ best_bid eats BID liquidity, BUY @ best_ask eats ASK).
+        if action == "normal_random":
+            bid_excess = max(Decimal("0"), bid_liq - bid_target_eur)
+            ask_excess = max(Decimal("0"), ask_liq - ask_target_eur)
+
+            if bid_excess > 0 or ask_excess > 0:
+                action = "liquidity_reduction"
+                is_market_like = True
+                bid_excess_ratio = bid_excess / bid_target_eur if bid_target_eur > 0 else Decimal("0")
+                ask_excess_ratio = ask_excess / ask_target_eur if ask_target_eur > 0 else Decimal("0")
+
+                if bid_excess_ratio >= ask_excess_ratio:
+                    # BID side has more excess → SELL at best_bid to consume BUY orders
+                    side = OrderSide.SELL
+                    price = best_bid
+                else:
+                    # ASK side has more excess → BUY at best_ask to consume SELL orders
+                    side = OrderSide.BUY
+                    price = best_ask
+
+        # ── STEP 3: Liquidity bias ──
+        if action == "normal_random":
+            bid_deficit = max(Decimal("0"), bid_target_eur - bid_liq)
+            ask_deficit = max(Decimal("0"), ask_target_eur - ask_liq)
+
+            if bid_deficit > 0 or ask_deficit > 0:
+                action = "liquidity_bias"
+                bid_ratio = bid_deficit / bid_target_eur if bid_target_eur > 0 else Decimal("0")
+                ask_ratio = ask_deficit / ask_target_eur if ask_target_eur > 0 else Decimal("0")
+
+                if bid_ratio >= ask_ratio:
+                    side = OrderSide.BUY
+                    offset = random.randint(0, 2)
+                    price = (best_bid - _PS * offset).quantize(_PS)
+                else:
+                    side = OrderSide.SELL
+                    offset = random.randint(0, 2)
+                    price = (best_ask + _PS * offset).quantize(_PS)
+
+        # ── STEP 4: Normal random ──
+        if action == "normal_random":
+            is_market_like = (order_counter % 10 == 0)
+            side = random.choice([OrderSide.BUY, OrderSide.SELL])
+            if side == OrderSide.BUY:
+                if is_market_like:
+                    price = best_ask
+                else:
+                    price = (best_bid - _PS * random.randint(0, 3)).quantize(_PS)
             else:
-                # Limit: place at or slightly above best_ask (0 to +3 ticks)
-                offset = random.randint(0, 3)
-                price = best_ask + price_step * offset
+                if is_market_like:
+                    price = best_bid
+                else:
+                    price = (best_ask + _PS * random.randint(0, 3)).quantize(_PS)
 
-        price = max(price, price_step)  # floor at 0.1
-        price = price.quantize(Decimal("0.1"))
+        # ════════════════════════════════════════════════════════════════
+        # Place the main order
+        # ════════════════════════════════════════════════════════════════
+        price = max(price, _PS).quantize(_PS)
+        mm = _pick_mm(cea_buyers if side == OrderSide.BUY else cea_sellers)
 
-        # Random volume: 10K - 500K EUR equivalent
-        volume_eur = Decimal(str(round(random.uniform(200_000, 5_000_000), 2)))
-        quantity = (volume_eur / price).quantize(Decimal("1"))
-        if quantity < 1:
-            quantity = Decimal("1")
+        # Volume — cap at deficit/excess to avoid overshooting
+        if action == "liquidity_reduction":
+            excess = bid_excess if side == OrderSide.SELL else ask_excess
+            vol_hi = min(_MAX_VOL, max(_MIN_VOL, excess))
+            volume_eur = _rand_vol(_MIN_VOL, vol_hi)
+        elif action == "liquidity_bias":
+            deficit = bid_deficit if side == OrderSide.BUY else ask_deficit
+            vol_hi = min(_MAX_VOL, max(_MIN_VOL, deficit))
+            volume_eur = _rand_vol(_MIN_VOL, vol_hi)
+        else:
+            volume_eur = _rand_vol()
+
+        quantity = _qty(volume_eur, price)
 
         order = Order(
-            market=MarketType.CEA_CASH,
-            market_maker_id=mm.id,
-            certificate_type=CertificateType.CEA,
-            side=side,
-            price=price,
-            quantity=quantity,
-            filled_quantity=Decimal("0"),
-            status=OrderStatus.OPEN,
+            market=MarketType.CEA_CASH, market_maker_id=mm.id,
+            certificate_type=CertificateType.CEA, side=side,
+            price=price, quantity=quantity,
+            filled_quantity=Decimal("0"), status=OrderStatus.OPEN,
         )
         db.add(order)
         await db.flush()
 
-        # Try to match if it crosses the spread
+        # Match if market-crossing
         trades_matched = 0
         if is_market_like:
             result = await LimitOrderMatcher.match_incoming_order(
-                db=db,
-                incoming_order=order,
-                user_id=current_user.id,
+                db=db, incoming_order=order, user_id=current_user.id,
             )
             trades_matched = result.trades_created if result else 0
 
         await db.commit()
 
+        # ════════════════════════════════════════════════════════════════
+        # Response (backward-compatible + new fields)
+        # ════════════════════════════════════════════════════════════════
         return {
             "success": True,
+            "action": action,
             "side": side.value,
             "price": str(price),
             "quantity": str(quantity),
@@ -2633,6 +2853,13 @@ async def place_random_order(
             "trades_matched": trades_matched,
             "market_maker": mm.name,
             "status": order.status.value,
+            "spread_corrected": bool(spread_orders_placed),
+            "spread_orders": spread_orders_placed,
+            "scraped_price": str(scraped_cea) if scraped_cea else None,
+            "mid_orderbook": str(decision_mid.quantize(_PS)) if decision_mid else str(((best_bid + best_ask) / 2).quantize(_PS)),
+            "price_deviation_eur": str(price_deviation_eur.quantize(Decimal("0.01"))) if price_deviation_eur is not None else None,
+            "bid_liquidity_pct": str(round(bid_liq / bid_target_eur * 100, 1)) if bid_target_eur > 0 else None,
+            "ask_liquidity_pct": str(round(ask_liq / ask_target_eur * 100, 1)) if ask_target_eur > 0 else None,
         }
 
     except HTTPException:

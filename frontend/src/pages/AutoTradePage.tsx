@@ -11,6 +11,7 @@ import {
 import { Card, Button, formatNumberWithSeparators, AlertBanner } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { adminApi } from '../services/api';
+import { useAutoOrdersStore, startAutoOrders, stopAutoOrders } from '../stores/useAutoOrdersStore';
 import type { AutoTradeMarketSettings } from '../types';
 
 // ============================================================================
@@ -18,8 +19,6 @@ import type { AutoTradeMarketSettings } from '../types';
 // ============================================================================
 
 const REFRESH_INTERVAL_MS = 10_000;
-const ORDER_INTERVAL_MIN_S = 10;
-const ORDER_INTERVAL_MAX_S = 180;
 
 interface MarketConfig {
   title: string;
@@ -78,10 +77,6 @@ function getApiErrorMessage(err: unknown): string {
     if (typeof m === 'string') return m;
   }
   return (err as Error)?.message ?? 'Something went wrong.';
-}
-
-function randomInterval(): number {
-  return (ORDER_INTERVAL_MIN_S + Math.random() * (ORDER_INTERVAL_MAX_S - ORDER_INTERVAL_MIN_S)) * 1000;
 }
 
 // ============================================================================
@@ -217,12 +212,8 @@ export function AutoTradePage() {
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Random order timer state
-  const [autoOrdering, setAutoOrdering] = useState(false);
-  const [nextOrderIn, setNextOrderIn] = useState<number | null>(null);
-  const [orderCount, setOrderCount] = useState(0);
-  const orderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Auto-orders — global background service (runs even when not on this page)
+  const { isRunning: autoOrdering, nextOrderIn, orderCount } = useAutoOrdersStore();
 
   const loadMarkets = useCallback(async (silent = false) => {
     try {
@@ -285,121 +276,63 @@ export function AutoTradePage() {
     }
   }, [refreshResult]);
 
-  // Place one random order and schedule next
-  const placeOneOrder = useCallback(async () => {
-    try {
-      await adminApi.placeRandomOrder();
-      setOrderCount(c => c + 1);
-      await loadMarkets(true);
-    } catch {
-      // silent — don't break the timer
-    }
-  }, [loadMarkets]);
-
-  const scheduleNextOrder = useCallback(() => {
-    const delay = randomInterval();
-    setNextOrderIn(Math.round(delay / 1000));
-
-    // Countdown ticker
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = setInterval(() => {
-      setNextOrderIn(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
-    }, 1000);
-
-    orderTimerRef.current = setTimeout(async () => {
-      await placeOneOrder();
-      // Only schedule next if still running (check via ref)
-      scheduleNextOrder();
-    }, delay);
-  }, [placeOneOrder]);
-
-  // Start/stop auto-ordering
-  const startAutoOrdering = useCallback(() => {
-    setAutoOrdering(true);
-    setOrderCount(0);
-    scheduleNextOrder();
-  }, [scheduleNextOrder]);
-
-  const stopAutoOrdering = useCallback(() => {
-    setAutoOrdering(false);
-    setNextOrderIn(null);
-    if (orderTimerRef.current) clearTimeout(orderTimerRef.current);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-  }, []);
-
-  // Cleanup on unmount
+  // Auto-refresh market data when an order is placed in the background
+  const prevOrderCount = useRef(orderCount);
   useEffect(() => {
-    return () => {
-      if (orderTimerRef.current) clearTimeout(orderTimerRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, []);
+    if (orderCount > prevOrderCount.current) {
+      loadMarkets(true);
+    }
+    prevOrderCount.current = orderCount;
+  }, [orderCount, loadMarkets]);
+
+  const subSubHeader = (
+    <div className="flex items-center gap-3">
+      {autoOrdering ? (
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={stopAutoOrders}
+          icon={<Square className="w-3.5 h-3.5" />}
+        >
+          Stop ({orderCount})
+          {nextOrderIn !== null && (
+            <span className="opacity-80 text-xs ml-1">{nextOrderIn}s</span>
+          )}
+        </Button>
+      ) : (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={startAutoOrders}
+          icon={<Play className="w-3.5 h-3.5" />}
+        >
+          Auto Orders
+        </Button>
+      )}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleRefreshCea}
+        disabled={refreshing}
+        icon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+      >
+        Refresh CEA
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => loadMarkets()}
+        disabled={loading}
+        icon={<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />}
+        title="Refresh data"
+        aria-label="Refresh data"
+      />
+    </div>
+  );
 
   return (
-    <BackofficeLayout>
-      <div className="min-h-screen bg-navy-900">
-        {/* Header */}
-        <div className="border-b border-navy-800/50 bg-navy-900/30">
-          <div className="page-container py-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/20">
-                  <Zap className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Liquidity Engine</h1>
-                  <p className="text-sm text-navy-400">Automated market making</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Auto-order toggle */}
-                {autoOrdering ? (
-                  <Button
-                    onClick={stopAutoOrdering}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors text-sm font-medium"
-                  >
-                    <Square className="w-3.5 h-3.5" />
-                    Stop ({orderCount})
-                    {nextOrderIn !== null && (
-                      <span className="text-red-400/60 text-xs">{nextOrderIn}s</span>
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={startAutoOrdering}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-colors text-sm font-medium"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    Auto Orders
-                  </Button>
-                )}
-
-                <Button
-                  onClick={handleRefreshCea}
-                  disabled={refreshing}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-colors text-sm font-medium"
-                >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh CEA
-                </Button>
-
-                <button
-                  onClick={() => loadMarkets()}
-                  disabled={loading}
-                  className="p-2.5 rounded-lg bg-navy-800/50 border border-navy-700/30 text-navy-400 hover:text-white hover:border-navy-600 transition-colors disabled:opacity-50"
-                  title="Refresh data"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="page-container py-6">
-          {error && (
+    <BackofficeLayout subSubHeader={subSubHeader}>
+      {error && (
             <AlertBanner
               variant="error"
               message={error}
@@ -432,8 +365,6 @@ export function AutoTradePage() {
               ))}
             </div>
           )}
-        </div>
-      </div>
     </BackofficeLayout>
   );
 }
