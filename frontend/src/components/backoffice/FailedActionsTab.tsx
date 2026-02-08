@@ -87,7 +87,7 @@ export function FailedActionsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs text-red-900 dark:text-red-100">
-          {new Date(String(value)).toLocaleString()}
+          {new Date(String(value).endsWith('Z') ? String(value) : String(value) + 'Z').toLocaleString()}
         </span>
       ),
     },

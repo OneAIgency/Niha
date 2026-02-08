@@ -8,10 +8,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...core.database import get_db
 from ...core.security import get_admin_user
-from ...models.models import Entity, TicketLog, TicketStatus, User
+from ...models.models import Entity, MarketMakerClient, TicketLog, TicketStatus, User
 from ...schemas.schemas import TicketLogResponse, TicketLogStats
 
 logger = logging.getLogger(__name__)
@@ -70,8 +71,11 @@ async def list_tickets(
 
     Returns paginated results with total count.
     """
-    # Build base query
-    query = select(TicketLog)
+    # Build base query with eager loading for user/entity/MM enrichment
+    query = select(TicketLog).options(
+        selectinload(TicketLog.user).selectinload(User.entity),
+        selectinload(TicketLog.market_maker),
+    )
     filters = []
 
     # Date range filters
@@ -137,8 +141,25 @@ async def list_tickets(
     result = await db.execute(query)
     tickets = result.scalars().all()
 
-    # Convert to response format
-    tickets_data = [TicketLogResponse.model_validate(ticket) for ticket in tickets]
+    # Build enriched response with user/entity/MM info
+    tickets_data = []
+    for ticket in tickets:
+        base = TicketLogResponse.model_validate(ticket).model_dump()
+        # Enrich with user info
+        user = ticket.user
+        if user:
+            base["user_email"] = user.email
+            base["user_role"] = user.role.value if user.role else None
+            entity = user.entity
+            base["user_company"] = entity.name if entity else None
+        else:
+            base["user_email"] = None
+            base["user_role"] = None
+            base["user_company"] = None
+        # Enrich with market maker info
+        mm = ticket.market_maker
+        base["mm_name"] = mm.name if mm else None
+        tickets_data.append(base)
 
     return {
         "tickets": tickets_data,

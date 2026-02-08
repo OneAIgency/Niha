@@ -80,6 +80,7 @@ from ...schemas.schemas import (
 )
 from ...services.email_service import email_service
 from ...services.settlement_service import SettlementService, calculate_settlement_progress
+from ...services.ws_utils import get_entity_user_ids
 from .backoffice import backoffice_ws_manager
 from .client_ws import client_ws_manager
 
@@ -4181,6 +4182,38 @@ async def settle_batch_now(
             )
 
         await db.commit()
+
+        # Notify entity users via WebSocket
+        try:
+            user_ids = await get_entity_user_ids(db, entity_id)
+            if user_ids:
+                asyncio.create_task(client_ws_manager.broadcast_to_users(
+                    user_ids,
+                    {
+                        "type": "settlement_updated",
+                        "data": {
+                            "batch_id": str(batch.id),
+                            "status": "SETTLED",
+                            "batch_reference": batch.batch_reference,
+                        },
+                    },
+                ))
+                asyncio.create_task(client_ws_manager.broadcast_to_users(
+                    user_ids,
+                    {"type": "balance_updated", "data": {"source": "settlement_completed"}},
+                ))
+            # Notify backoffice admins
+            asyncio.create_task(backoffice_ws_manager.broadcast(
+                "settlement_settled",
+                {
+                    "batch_id": str(batch.id),
+                    "batch_reference": batch.batch_reference,
+                    "entity_id": str(entity_id),
+                    "settled_by": str(current_user.id),
+                },
+            ))
+        except Exception as ws_err:
+            logger.warning(f"Failed to send settlement WS notification: {ws_err}")
 
         msg = f"Settlement {batch.batch_reference} settled instantly ({old_status} → SETTLED)"
         if roles_changed:

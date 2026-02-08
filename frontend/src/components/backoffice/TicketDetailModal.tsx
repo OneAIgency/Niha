@@ -96,7 +96,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
                   Timestamp
                 </label>
                 <div className="text-sm text-navy-900 dark:text-white">
-                  {new Date(ticket.timestamp).toLocaleString()}
+                  {new Date(ticket.timestamp.endsWith('Z') ? ticket.timestamp : ticket.timestamp + 'Z').toLocaleString()}
                 </div>
               </div>
               <div>

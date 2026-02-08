@@ -324,29 +324,25 @@ async def reset_all_market_makers(
     if not mm_ids:
         return {"message": "No market makers to reset", "reset_count": 0}
 
-    # Get all MM order IDs (needed to delete trades that reference these orders)
-    mm_orders_result = await db.execute(
-        select(Order.id).where(Order.market_maker_id.in_(mm_ids))
-    )
-    mm_order_ids = [row[0] for row in mm_orders_result.fetchall()]
+    # Use subquery instead of explicit ID list to avoid PostgreSQL's
+    # 32,767 parameter limit (auto-trade creates tens of thousands of orders)
+    mm_orders_subq = select(Order.id).where(Order.market_maker_id.in_(mm_ids))
 
     # 1. Delete cash market trades where MM is directly involved
     #    OR where the trade references an MM order
-    if mm_order_ids:
-        await db.execute(
-            CashMarketTrade.__table__.delete().where(
-                CashMarketTrade.market_maker_id.in_(mm_ids)
-                | CashMarketTrade.buy_order_id.in_(mm_order_ids)
-                | CashMarketTrade.sell_order_id.in_(mm_order_ids)
-            )
+    await db.execute(
+        CashMarketTrade.__table__.delete().where(
+            CashMarketTrade.market_maker_id.in_(mm_ids)
+            | CashMarketTrade.buy_order_id.in_(mm_orders_subq)
+            | CashMarketTrade.sell_order_id.in_(mm_orders_subq)
         )
-    else:
-        # If no MM orders, just delete trades with MM market_maker_id
-        await db.execute(
-            CashMarketTrade.__table__.delete().where(
-                CashMarketTrade.market_maker_id.in_(mm_ids)
-            )
-        )
+    )
+
+    # Count orders before deleting (for response)
+    orders_count_result = await db.execute(
+        select(func.count()).select_from(Order).where(Order.market_maker_id.in_(mm_ids))
+    )
+    orders_deleted = orders_count_result.scalar() or 0
 
     # 2. Delete all orders placed by MMs
     await db.execute(
@@ -385,25 +381,25 @@ async def reset_all_market_makers(
         request_payload={
             "action": "reset_all_market_makers",
             "mm_count": len(mm_ids),
-            "orders_deleted": len(mm_order_ids),
+            "orders_deleted": orders_deleted,
         },
         tags=["market_maker", "reset", "admin"],
     )
 
     message = (
         f"Successfully reset {len(mm_ids)} market makers. "
-        f"Deleted {len(mm_order_ids)} orders and associated trades."
+        f"Deleted {orders_deleted} orders and associated trades."
     )
 
     logger.info(
         f"Admin {admin_user.email} reset all Market Makers "
-        f"({len(mm_ids)} MMs, {len(mm_order_ids)} orders deleted)"
+        f"({len(mm_ids)} MMs, {orders_deleted} orders deleted)"
     )
 
     return {
         "message": message,
         "reset_count": len(mm_ids),
-        "orders_deleted": len(mm_order_ids),
+        "orders_deleted": orders_deleted,
         "ticket_id": ticket.ticket_id,
     }
 

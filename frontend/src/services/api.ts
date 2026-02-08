@@ -2167,18 +2167,18 @@ export const getAutoTradeMonitor = async (): Promise<AutoTradeMonitorResponse> =
 
 // Logging/Audit API
 export const getTickets = (params?: {
-  date_from?: string;
-  date_to?: string;
-  action_type?: string[];
+  start_date?: string;
+  end_date?: string;
+  action_type?: string;
   user_id?: string;
   market_maker_id?: string;
   status?: string;
   entity_type?: string;
   entity_id?: string;
   search?: string;
-  tags?: string[];
-  limit?: number;
-  offset?: number;
+  tags?: string;
+  page?: number;
+  per_page?: number;
 }) => api.get('/admin/logging/tickets', { params });
 
 export const getLoggingStats = (params?: {

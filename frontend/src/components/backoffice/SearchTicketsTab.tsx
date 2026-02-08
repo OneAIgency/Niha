@@ -115,7 +115,7 @@ export function SearchTicketsTab() {
       width: '160px',
       render: (value) => (
         <span className="text-xs">
-          {new Date(String(value)).toLocaleString()}
+          {new Date(String(value).endsWith('Z') ? String(value) : String(value) + 'Z').toLocaleString()}
         </span>
       ),
     },
