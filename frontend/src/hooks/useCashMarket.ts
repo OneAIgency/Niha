@@ -84,7 +84,7 @@ export function useCashMarket(
     // Initial fetch
     fetchData();
 
-    // Set up polling
+    // Set up polling (fallback — WS is the primary update mechanism)
     const interval = setInterval(fetchData, pollingInterval);
 
     return () => {
@@ -92,6 +92,17 @@ export function useCashMarket(
       clearInterval(interval);
     };
   }, [fetchData, pollingInterval]);
+
+  // Listen for WebSocket-driven order book and balance updates
+  useEffect(() => {
+    const handler = () => { fetchData(); };
+    window.addEventListener('nihao:orderbookUpdated', handler);
+    window.addEventListener('nihao:balanceUpdated', handler);
+    return () => {
+      window.removeEventListener('nihao:orderbookUpdated', handler);
+      window.removeEventListener('nihao:balanceUpdated', handler);
+    };
+  }, [fetchData]);
 
   return {
     orderBook,

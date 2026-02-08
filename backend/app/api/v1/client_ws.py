@@ -41,6 +41,20 @@ class ClientConnectionManager:
             if not conns:
                 del self._connections[user_id]
 
+    async def broadcast_to_all(self, message: dict) -> None:
+        """Send a JSON message to ALL connected client WebSocket connections."""
+        payload = {**message, "timestamp": datetime.now(timezone.utc).isoformat()}
+        disconnected: List[tuple] = []
+        for uid, conns in self._connections.items():
+            for conn in conns:
+                try:
+                    await conn.send_json(payload)
+                except Exception as e:
+                    logger.debug("Client WS broadcast_to_all failed for user %s: %s", uid, e)
+                    disconnected.append((uid, conn))
+        for uid, conn in disconnected:
+            self.disconnect(conn, uid)
+
     async def broadcast_to_users(self, user_ids: List[UUID], message: dict) -> None:
         """Send a JSON message to all connections for the given user IDs."""
         payload = {

@@ -70,6 +70,11 @@ export function useClientRealtime() {
         logger.debug('Client realtime: settlement_updated', message.data);
       }
 
+      if (message.type === 'orderbook_updated') {
+        window.dispatchEvent(new CustomEvent('nihao:orderbookUpdated', { detail: message.data }));
+        logger.debug('Client realtime: orderbook_updated', message.data);
+      }
+
       if (message.type === 'user_deactivated') {
         logger.info('Client realtime: user_deactivated — forcing logout');
         useAuthStore.getState().logout();

@@ -314,6 +314,11 @@ async def place_order(
         await db.commit()
         await db.refresh(new_order)
 
+        # Notify all connected clients that the order book changed
+        asyncio.create_task(client_ws_manager.broadcast_to_all(
+            {"type": "orderbook_updated", "data": {"certificate_type": new_order.certificate_type.value}},
+        ))
+
         return OrderResponse(
             id=new_order.id,
             entity_id=new_order.entity_id,
@@ -475,6 +480,11 @@ async def cancel_order(
 
     await db.commit()
 
+    # Notify all connected clients that the order book changed
+    asyncio.create_task(client_ws_manager.broadcast_to_all(
+        {"type": "orderbook_updated", "data": {"certificate_type": order.certificate_type.value}},
+    ))
+
     return MessageResponse(
         message=f"Order {order_id} cancelled. Ticket: {ticket.ticket_id}", success=True
     )
@@ -562,6 +572,11 @@ async def modify_order_price(
 
     await db.commit()
     await db.refresh(order)
+
+    # Notify all connected clients that the order book changed
+    asyncio.create_task(client_ws_manager.broadcast_to_all(
+        {"type": "orderbook_updated", "data": {"certificate_type": order.certificate_type.value}},
+    ))
 
     return OrderResponse(
         id=order.id,
@@ -1017,6 +1032,11 @@ async def execute_market_order(
                 },
             )
         asyncio.create_task(_send_balance_update())
+
+    # Notify all connected clients that the order book changed (after any trade execution)
+    asyncio.create_task(client_ws_manager.broadcast_to_all(
+        {"type": "orderbook_updated", "data": {"certificate_type": request.certificate_type.value}},
+    ))
 
     return OrderExecutionResponse(
         success=result.success,

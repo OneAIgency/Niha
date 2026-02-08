@@ -411,7 +411,8 @@ export const pricesApi = {
 export interface ClientWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated'
     | 'deposit_status_updated' | 'kyc_status_updated' | 'swap_updated'
-    | 'settlement_updated' | 'user_deactivated' | 'notification';
+    | 'settlement_updated' | 'user_deactivated' | 'notification'
+    | 'orderbook_updated';
   data?: {
     role?: string; oldRole?: string; entityId?: string;
     eurBalance?: number; ceaBalance?: number; source?: string;
@@ -419,6 +420,7 @@ export interface ClientWebSocketMessage {
     swapId?: string; batchId?: string; batchReference?: string;
     documentId?: string;
     message?: string; level?: string;
+    certificateType?: string;
   };
   message?: string;
   timestamp: string;

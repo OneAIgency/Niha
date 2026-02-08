@@ -306,7 +306,7 @@ export function CashMarketProPage() {
     loading,
     error,
     refresh,
-  } = useCashMarket('CEA', 5000);
+  } = useCashMarket('CEA', 30000);
 
   // State for order success modal
   const [orderResult, setOrderResult] = useState<OrderExecutionResult | null>(null);
