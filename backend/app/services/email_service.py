@@ -331,6 +331,303 @@ class EmailService:
 
         return await self._send_email(to_email, subject, html_content)
 
+    async def send_kyc_rejected(
+        self, to_email: str, first_name: str, reason: str = ""
+    ) -> bool:
+        """Notify user their KYC application was rejected."""
+        name = first_name or "there"
+        subject = "Account Verification Update - Nihao Group"
+        reason_html = (
+            f'<p style="color:#64748b;line-height:1.6;margin:8px 0 0 0;"><strong>Details:</strong> {reason}</p>'
+            if reason
+            else ""
+        )
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; }}
+                p {{ color: #64748b; line-height: 1.6; }}
+                .alert {{ background: #fef2f2; border: 1px solid #fecaca;
+                    border-radius: 12px; padding: 16px; margin: 20px 0; }}
+                .alert-title {{ color: #dc2626; font-weight: 600; margin: 0 0 4px 0; }}
+                .button {{ display: inline-block; background: #0f172a;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Verification Update</h1>
+                <p>Hello {name},</p>
+                <div class="alert">
+                    <p class="alert-title">We were unable to verify your account at this time.</p>
+                    {reason_html}
+                </div>
+                <p>If you believe this is an error or would like to provide additional documentation,
+                please contact our compliance team.</p>
+                <a href="mailto:info@nihaogroup.com" class="button">Contact Support</a>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_deposit_announced(
+        self, to_email: str, first_name: str, amount: float, currency: str, reference: str
+    ) -> bool:
+        """Confirm deposit announcement receipt to user."""
+        name = first_name or "there"
+        subject = f"Deposit Received - {currency} {amount:,.2f} - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; }}
+                p {{ color: #64748b; line-height: 1.6; }}
+                .details {{ background: #eff6ff; border: 1px solid #bfdbfe;
+                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; border-bottom: 1px solid #dbeafe; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #3b82f6; font-weight: 500; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Deposit Announcement Received</h1>
+                <p>Hello {name},</p>
+                <p>We've received your deposit announcement. Our team will verify the wire transfer.</p>
+                <div class="details">
+                    <div class="detail-row">
+                        <span class="label">Amount</span>
+                        <span class="value">{currency} {amount:,.2f}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Reference</span>
+                        <span class="value">{reference or 'Pending'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Status</span>
+                        <span class="value">Awaiting Verification</span>
+                    </div>
+                </div>
+                <p>Typical processing time: <strong>1-3 business days</strong>.
+                You'll be notified once your funds are confirmed.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_deposit_on_hold(
+        self, to_email: str, first_name: str, amount: float, currency: str, hold_until: str
+    ) -> bool:
+        """Notify user their deposit is on AML compliance hold."""
+        name = first_name or "there"
+        subject = "Deposit Under Review - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; }}
+                p {{ color: #64748b; line-height: 1.6; }}
+                .info {{ background: #fffbeb; border: 1px solid #fde68a;
+                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .info-title {{ color: #d97706; font-weight: 600; margin: 0 0 8px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; border-bottom: 1px solid #fde68a; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #92400e; font-weight: 500; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Deposit Under Review</h1>
+                <p>Hello {name},</p>
+                <p>Your deposit has been received and is undergoing standard compliance review.</p>
+                <div class="info">
+                    <p class="info-title">Compliance Hold</p>
+                    <div class="detail-row">
+                        <span class="label">Amount</span>
+                        <span class="value">{currency} {amount:,.2f}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Expected Clearance</span>
+                        <span class="value">{hold_until}</span>
+                    </div>
+                </div>
+                <p>This is a standard regulatory procedure. You'll be notified as soon as your
+                funds are cleared and available for trading.</p>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_deposit_cleared(
+        self, to_email: str, first_name: str, amount: float, currency: str
+    ) -> bool:
+        """Notify user their deposit cleared AML and funds are available."""
+        name = first_name or "there"
+        subject = f"Funds Available - {currency} {amount:,.2f} Cleared - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; }}
+                .success {{ color: #10b981; }}
+                p {{ color: #64748b; line-height: 1.6; }}
+                .success-box {{ background: #f0fdf4; border: 1px solid #bbf7d0;
+                    border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
+                .amount {{ font-size: 28px; font-weight: 700; color: #0f172a; margin: 8px 0; }}
+                .badge {{ display: inline-block; background: #10b981; color: white;
+                    padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }}
+                .button {{ display: inline-block; background: #10b981;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1 class="success">Funds Available</h1>
+                <p>Hello {name},</p>
+                <p>Great news! Your deposit has cleared compliance review and funds are now available.</p>
+                <div class="success-box">
+                    <span class="badge">CLEARED</span>
+                    <div class="amount">{currency} {amount:,.2f}</div>
+                    <p style="color:#16a34a;margin:0;">Ready for trading</p>
+                </div>
+                <p>You can now buy CEA certificates on the Cash Market or execute CEA-to-EUA swaps.</p>
+                <a href="http://localhost:5173/cash-market" class="button">Start Trading</a>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
+    async def send_deposit_rejected(
+        self, to_email: str, first_name: str, amount: float, currency: str, reason: str
+    ) -> bool:
+        """Notify user their deposit was rejected."""
+        name = first_name or "there"
+        # Map internal reason codes to user-friendly messages
+        reason_map = {
+            "WIRE_NOT_RECEIVED": "Wire transfer not received within expected timeframe",
+            "AMOUNT_MISMATCH": "Deposit amount does not match the announced amount",
+            "SOURCE_VERIFICATION_FAILED": "Unable to verify the source of funds",
+            "AML_FLAG": "Additional compliance documentation required",
+            "SANCTIONS_HIT": "Unable to process due to regulatory restrictions",
+            "SUSPICIOUS_ACTIVITY": "Additional verification required",
+            "OTHER": "Please contact support for details",
+        }
+        display_reason = reason_map.get(reason, reason or "Please contact support for details")
+        subject = "Deposit Update - Action Required - Nihao Group"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
+                .container {{ max-width: 500px; margin: 0 auto; background: white;
+                    border-radius: 16px; padding: 40px; }}
+                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
+                .logo span {{ color: #10b981; }}
+                h1 {{ color: #0f172a; font-size: 20px; }}
+                p {{ color: #64748b; line-height: 1.6; }}
+                .alert {{ background: #fef2f2; border: 1px solid #fecaca;
+                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
+                .alert-title {{ color: #dc2626; font-weight: 600; margin: 0 0 8px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between;
+                    padding: 8px 0; border-bottom: 1px solid #fecaca; }}
+                .detail-row:last-child {{ border-bottom: none; }}
+                .label {{ color: #991b1b; font-weight: 500; }}
+                .value {{ color: #0f172a; font-weight: 600; }}
+                .button {{ display: inline-block; background: #0f172a;
+                    color: white; padding: 14px 32px; border-radius: 8px;
+                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
+                .footer {{ margin-top: 32px; padding-top: 24px;
+                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <h1>Deposit Update</h1>
+                <p>Hello {name},</p>
+                <div class="alert">
+                    <p class="alert-title">We were unable to process your deposit.</p>
+                    <div class="detail-row">
+                        <span class="label">Amount</span>
+                        <span class="value">{currency} {amount:,.2f}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Reason</span>
+                        <span class="value">{display_reason}</span>
+                    </div>
+                </div>
+                <p>If you have questions or would like to discuss next steps,
+                please contact our compliance team.</p>
+                <a href="mailto:info@nihaogroup.com" class="button">Contact Support</a>
+                <div class="footer">
+                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content)
+
     async def send_account_funded(self, to_email: str, first_name: str) -> bool:
         """Send email when user account is funded and ready for trading"""
         name = first_name or "there"
@@ -934,6 +1231,49 @@ class EmailService:
         """
 
         return await self._send_email(to_email, subject, html_content)
+
+    async def send_test_email(
+        self, to_email: str, mail_config: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Send a test email to verify mail configuration."""
+        subject = "Test Email - Nihao Group Mail Configuration"
+        html_content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+                .container { max-width: 500px; margin: 0 auto;
+                    background: white; border-radius: 16px; padding: 40px; }
+                .logo { font-size: 24px; font-weight: 700; color: #0f172a; }
+                .logo span { color: #10b981; }
+                h1 { color: #0f172a; font-size: 20px; }
+                p { color: #64748b; line-height: 1.6; }
+                .success-icon { font-size: 48px; text-align: center; color: #10b981; }
+                .highlight { background: #ecfdf5; border-radius: 12px;
+                    padding: 20px; margin: 20px 0; }
+                .highlight p { color: #047857; margin: 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="logo">NIHAO<span>GROUP</span></div>
+                <div class="success-icon">&#10004;</div>
+                <h1>Mail Configuration Working</h1>
+                <p>This is a test email from the Nihao Group platform.
+                If you received this, your mail delivery configuration
+                is working correctly.</p>
+                <div class="highlight">
+                    <p><strong>Provider:</strong> """ + (mail_config.get("provider", "env") if mail_config else "env") + """</p>
+                </div>
+                <p style="color:#94a3b8; font-size:12px;">
+                    Sent from Settings &rarr; Mail Settings &rarr; Test Email
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        return await self._send_email(to_email, subject, html_content, mail_config=mail_config)
 
     async def _send_email(
         self,

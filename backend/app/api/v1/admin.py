@@ -2004,6 +2004,49 @@ async def update_mail_settings(
         raise handle_database_error(e, "update mail settings", logger) from e
 
 
+@router.post("/settings/mail/test-email")
+async def send_test_email(
+    request: dict,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Send a test email to verify mail delivery configuration. Admin only."""
+    test_email = request.get("test_email", "").strip()
+    if not test_email or "@" not in test_email:
+        raise HTTPException(status_code=422, detail="Valid email address required")
+
+    # Load current mail config from DB
+    result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = result.scalar_one_or_none()
+
+    mail_cfg = None
+    if mail_row:
+        mail_cfg = {
+            "provider": mail_row.provider.value,
+            "use_env_credentials": mail_row.use_env_credentials,
+            "from_email": mail_row.from_email,
+            "resend_api_key": (
+                mail_row.resend_api_key
+                if not mail_row.use_env_credentials
+                and mail_row.provider == MailProvider.RESEND
+                else None
+            ),
+            "smtp_host": mail_row.smtp_host,
+            "smtp_port": mail_row.smtp_port,
+            "smtp_use_tls": mail_row.smtp_use_tls,
+            "smtp_username": mail_row.smtp_username,
+            "smtp_password": mail_row.smtp_password,
+        }
+
+    success = await email_service.send_test_email(test_email, mail_config=mail_cfg)
+    if success:
+        return {"success": True, "message": f"Test email sent to {test_email}"}
+    else:
+        return {"success": False, "message": "Failed to send test email. Check server logs for details."}
+
+
 # ==================== Market Overview ====================
 
 

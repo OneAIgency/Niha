@@ -13,8 +13,9 @@ import {
   Mail,
   Save,
   DollarSign,
+  Send,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, AlertBanner, NumberInput } from '../components/common';
+import { Button, Card, Badge, Subheader, SubSubHeader, AlertBanner, NumberInput } from '../components/common';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
@@ -48,7 +49,15 @@ const SCRAPE_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: '1h' },
 ];
 
+type SettingsTab = 'scraping' | 'exchange' | 'mail';
+const SETTINGS_TABS: { key: SettingsTab; label: string; icon: typeof Database }[] = [
+  { key: 'scraping', label: 'Price Scraping', icon: Database },
+  { key: 'exchange', label: 'Exchange Rate', icon: DollarSign },
+  { key: 'mail', label: 'Mail Settings', icon: Mail },
+];
+
 export function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('scraping');
   const [sources, setSources] = useState<ScrapingSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +102,11 @@ export function SettingsPage() {
     invitationLinkBaseUrl: '',
     invitationTokenExpiryDays: 7,
   });
+
+  // Test email
+  const [testEmail, setTestEmail] = useState('');
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -349,6 +363,20 @@ export function SettingsPage() {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    if (!testEmail.trim()) return;
+    setTestEmailLoading(true);
+    setTestEmailResult(null);
+    try {
+      const result = await adminApi.sendTestEmail(testEmail.trim());
+      setTestEmailResult(result);
+    } catch (e) {
+      setTestEmailResult({ success: false, message: getApiErrorMessage(e) });
+    } finally {
+      setTestEmailLoading(false);
+    }
+  };
+
   const getStatusIcon = (status?: string) => {
     switch (status) {
       case 'success':
@@ -402,12 +430,35 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-navy-900">
-      <Subheader
-        icon={<Database className="w-5 h-5 text-blue-500" />}
-        title="Platform Settings"
-        description="Configure scraping sources, view market data, and monitor user activity"
-        iconBg="bg-blue-500/20"
-      />
+      <div className="page-section-header-sticky">
+        <Subheader
+          icon={<Database className="w-5 h-5 text-blue-500" />}
+          title="Platform Settings"
+          description="Configure scraping sources, exchange rates, and mail delivery"
+          iconBg="bg-blue-500/20"
+        />
+        <SubSubHeader
+          left={
+            <nav className="flex items-center gap-2" aria-label="Settings sections">
+              {SETTINGS_TABS.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`subsubheader-nav-btn ${
+                    activeTab === key
+                      ? 'subsubheader-nav-btn-active'
+                      : 'subsubheader-nav-btn-inactive'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{label}</span>
+                </button>
+              ))}
+            </nav>
+          }
+        />
+      </div>
+
       <div className="page-container py-8">
 
         {error && (
@@ -421,7 +472,7 @@ export function SettingsPage() {
 
         <div className="space-y-8">
           {/* Scraping Sources */}
-          <motion.div
+          {activeTab === 'scraping' && <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -604,13 +655,12 @@ export function SettingsPage() {
                 </table>
               </div>
             </Card>
-          </motion.div>
+          </motion.div>}
 
           {/* Exchange Rate Sources */}
-          <motion.div
+          {activeTab === 'exchange' && <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.025 }}
           >
             <Card data-testid="exchange-rate-sources-card">
               <div className="flex items-center justify-between mb-6">
@@ -733,13 +783,12 @@ export function SettingsPage() {
                 </table>
               </div>
             </Card>
-          </motion.div>
+          </motion.div>}
 
           {/* Mail & Auth: admin-only config for invitation emails (provider, from, subject/body, link base URL, token expiry). GET/PUT /admin/settings/mail. */}
-          <motion.div
+          {activeTab === 'mail' && <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
           >
             <Card
               data-testid="mail-auth-settings-card"
@@ -941,8 +990,41 @@ export function SettingsPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Test Email Delivery */}
+              <div className="border-t border-navy-200 dark:border-navy-600 pt-6 mt-6">
+                <SubSubHeader>Test Email Delivery</SubSubHeader>
+                <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+                  Send a test email to verify your mail configuration is working.
+                </p>
+                <div className="flex gap-3 items-start">
+                  <input
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => { setTestEmail(e.target.value); setTestEmailResult(null); }}
+                    placeholder="recipient@example.com"
+                    className="flex-1 form-input"
+                  />
+                  <Button
+                    onClick={handleSendTestEmail}
+                    loading={testEmailLoading}
+                    disabled={!testEmail.trim() || testEmailLoading}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    <Send className="w-4 h-4 mr-1" />
+                    Send Test Email
+                  </Button>
+                </div>
+                {testEmailResult && (
+                  <div className={`mt-3 flex items-center gap-2 text-sm ${testEmailResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {testEmailResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {testEmailResult.message}
+                  </div>
+                )}
+              </div>
             </Card>
-          </motion.div>
+          </motion.div>}
 
         </div>
       </div>

@@ -1143,6 +1143,11 @@ export const adminApi = {
     return data;
   },
 
+  sendTestEmail: async (testEmail: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post('/admin/settings/mail/test-email', { test_email: testEmail });
+    return data;
+  },
+
   // Get all entities for admin purposes (for fee override dropdown)
   getEntities: async (): Promise<Entity[]> => {
     const { data } = await api.get('/admin/entities');
