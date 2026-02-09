@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F389;</div>
+<h1>Full Access Activated!</h1>
+<p>Hello {{ name }},</p>
+<p>Congratulations! All your swap settlements have been completed and your
+EUA certificates are now in your account. You have full platform access.</p>
+<div class="amount-display">
+    <span class="badge success">Fully Active</span>
+    <div class="amount">EUA</div>
+    <p class="amount-sub">Certificates available</p>
+</div>
+<p>You can now manage your EUA holdings, view your portfolio, and access all
+platform features from your dashboard.</p>
+<a href="http://localhost:5173/dashboard" class="btn btn-primary">Go to Dashboard</a>
+{% endblock %}

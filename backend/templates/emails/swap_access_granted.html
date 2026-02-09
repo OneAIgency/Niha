@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F504;</div>
+<h1>Swap Market Unlocked!</h1>
+<p>Hello {{ name }},</p>
+<p>All your CEA purchases have been settled and your certificates are in your
+account. You now have access to the Swap Market.</p>
+<div class="amount-display">
+    <span class="badge success">Swap Access Active</span>
+    <div class="amount">CEA &rarr; EUA</div>
+    <p class="amount-sub">Convert your certificates</p>
+</div>
+<p>On the Swap Market, you can convert your China Emission Allowances (CEA)
+into EU Emission Allowances (EUA) at the current market ratio.</p>
+<a href="http://localhost:5173/swap" class="btn btn-primary">Open Swap Market</a>
+{% endblock %}

@@ -127,6 +127,8 @@ async def get_contact_requests(
                 "entity_name": r.entity_name,
                 "contact_email": r.contact_email,
                 "contact_name": r.contact_name,
+                "contact_first_name": r.contact_first_name,
+                "contact_last_name": r.contact_last_name,
                 "position": r.position,
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,

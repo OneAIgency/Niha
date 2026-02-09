@@ -502,6 +502,34 @@ class EmailService:
         )
         return await self._send_email(to_email, subject, html)
 
+    async def send_cea_settlement_pending(self, to_email: str, first_name: str = "") -> bool:
+        """Notify user that CEA settlement is in progress (CEA -> CEA_SETTLE)."""
+        name = first_name or "there"
+        subject = "CEA Settlement in Progress - Nihao Group"
+        html = self._render_template("cea_settlement_pending.html", name=name)
+        return await self._send_email(to_email, subject, html)
+
+    async def send_swap_access_granted(self, to_email: str, first_name: str = "") -> bool:
+        """Notify user that swap market is unlocked (CEA_SETTLE -> SWAP)."""
+        name = first_name or "there"
+        subject = "Swap Market Unlocked - Nihao Group"
+        html = self._render_template("swap_access_granted.html", name=name)
+        return await self._send_email(to_email, subject, html)
+
+    async def send_eua_settlement_pending(self, to_email: str, first_name: str = "") -> bool:
+        """Notify user that EUA settlement is in progress (SWAP -> EUA_SETTLE)."""
+        name = first_name or "there"
+        subject = "EUA Settlement in Progress - Nihao Group"
+        html = self._render_template("eua_settlement_pending.html", name=name)
+        return await self._send_email(to_email, subject, html)
+
+    async def send_eua_access_granted(self, to_email: str, first_name: str = "") -> bool:
+        """Notify user that full access is activated (EUA_SETTLE -> EUA)."""
+        name = first_name or "there"
+        subject = "Full Access Activated - Nihao Group"
+        html = self._render_template("eua_access_granted.html", name=name)
+        return await self._send_email(to_email, subject, html)
+
     async def send_test_email(
         self, to_email: str, mail_config: Optional[Dict[str, Any]] = None
     ) -> bool:

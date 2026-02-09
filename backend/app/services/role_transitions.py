@@ -59,6 +59,36 @@ async def _notify_role_updated(user_ids: List[UUID], new_role: str, entity_id: U
     asyncio.create_task(_send())
 
 
+async def _send_transition_emails(users: list, method_name: str) -> None:
+    """
+    Fire-and-forget email notifications for role transitions.
+    Uses lazy import to avoid circular dependency with email_service.
+    """
+    if not users:
+        return
+
+    import asyncio
+
+    async def _send():
+        await asyncio.sleep(0.3)  # wait for commit
+        try:
+            from .email_service import email_service
+
+            send_fn = getattr(email_service, method_name, None)
+            if not send_fn:
+                logger.warning("Email method %s not found", method_name)
+                return
+            for u in users:
+                try:
+                    await send_fn(u.email, first_name=u.first_name or "")
+                except Exception as e:
+                    logger.warning("Failed to send %s email to %s: %s", method_name, u.email, e)
+        except Exception as e:
+            logger.warning("Failed to send transition emails (%s): %s", method_name, e)
+
+    asyncio.create_task(_send())
+
+
 async def transition_cea_to_cea_settle_if_eur_zero(
     db: AsyncSession, entity_id: UUID, eur_balance_after: Decimal
 ) -> int:
@@ -85,6 +115,7 @@ async def transition_cea_to_cea_settle_if_eur_zero(
             len(users),
         )
         await _notify_role_updated([u.id for u in users], "CEA_SETTLE", entity_id)
+        await _send_transition_emails(users, "send_cea_settlement_pending")
     return len(users)
 
 
@@ -137,6 +168,7 @@ async def transition_cea_settle_to_swap_if_all_cea_settled(
             len(users),
         )
         await _notify_role_updated([u.id for u in users], "SWAP", entity_id)
+        await _send_transition_emails(users, "send_swap_access_granted")
     return len(users)
 
 
@@ -167,6 +199,7 @@ async def transition_swap_to_eua_settle_if_cea_zero(
             len(users),
         )
         await _notify_role_updated([u.id for u in users], "EUA_SETTLE", entity_id)
+        await _send_transition_emails(users, "send_eua_settlement_pending")
     return len(users)
 
 
@@ -217,4 +250,5 @@ async def transition_eua_settle_to_eua_if_all_swap_settled(
             len(users),
         )
         await _notify_role_updated([u.id for u in users], "EUA", entity_id)
+        await _send_transition_emails(users, "send_eua_access_granted")
     return len(users)
