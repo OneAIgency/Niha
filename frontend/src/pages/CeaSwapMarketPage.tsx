@@ -209,7 +209,6 @@ export function CeaSwapMarketPage() {
   const platformFeeEua = estimatedEuaGross * platformFeePct / 100;
   const netEua = estimatedEuaGross - platformFeeEua;
   const euaPriceEur = swapRate?.euaPriceEur ?? 80;
-  const euaValueEur = swapCalculation?.output.valueEur ?? (netEua * euaPriceEur);
   const platformFeeEur = platformFeeEua * euaPriceEur;
 
   // Format helpers

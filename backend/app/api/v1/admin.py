@@ -50,6 +50,7 @@ from ...models.models import (
     SettlementType,
     SwapRequest,
     SwapStatus,
+    TicketStatus,
     User,
     UserRole,
     UserSession,
@@ -80,6 +81,7 @@ from ...schemas.schemas import (
 )
 from ...services.email_service import TEMPLATE_SAMPLE_DATA, email_service
 from ...services.settlement_service import SettlementService, calculate_settlement_progress
+from ...services.ticket_service import TicketService
 from ...services.ws_utils import get_entity_user_ids
 from .backoffice import backoffice_ws_manager
 from .client_ws import client_ws_manager
@@ -3138,6 +3140,30 @@ async def place_random_order(
         )
         db.add(order)
         await db.flush()
+
+        # Create audit ticket for the order
+        order_ticket = await TicketService.create_ticket(
+            db=db,
+            action_type="AUTO_TRADE_ORDER_PLACED",
+            entity_type="Order",
+            entity_id=order.id,
+            status=TicketStatus.SUCCESS,
+            user_id=current_user.id,
+            market_maker_id=mm.id,
+            request_payload={
+                "action": action,
+                "side": side.value,
+                "is_market_like": is_market_like,
+            },
+            response_data={
+                "order_id": str(order.id),
+                "price": str(price),
+                "quantity": str(quantity),
+                "certificate_type": "CEA",
+            },
+            tags=["auto_trade", "order", side.value.lower()],
+        )
+        order.ticket_id = order_ticket.ticket_id
 
         # Match if market-crossing
         trades_matched = 0

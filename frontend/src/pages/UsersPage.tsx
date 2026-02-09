@@ -23,20 +23,9 @@ import {
 import { cn, formatRelativeTime } from '../utils';
 import { buildDepositAndWithdrawalHistory } from '../utils/depositHistory';
 import { adminApi, backofficeApi } from '../services/api';
-import { useAuthStore } from '../stores/useStore';
 import type { User, UserRole, AdminUserFull, Deposit, EntityBalance, DepositHistoryItem } from '../types';
 
 /** Order for admin "advance role" click (flow roles only). */
-const ROLE_ADVANCE_ORDER: UserRole[] = [
-  'NDA', 'KYC', 'APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA',
-];
-
-function getNextRole(current: UserRole): UserRole | null {
-  const i = ROLE_ADVANCE_ORDER.indexOf(current);
-  if (i < 0 || i >= ROLE_ADVANCE_ORDER.length - 1) return null;
-  return ROLE_ADVANCE_ORDER[i + 1];
-}
-
 // Simple interface for entity assets display (subset of full EntityAssets)
 interface EntityAssetsDisplay {
   entityId: string;
@@ -53,10 +42,8 @@ interface UserWithEntity extends User {
 }
 
 export function UsersPage() {
-  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState<UserWithEntity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [advancingUserId, setAdvancingUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all' | 'DISABLED'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -271,26 +258,6 @@ export function UsersPage() {
       role: user.role,
       isActive: user.isActive !== false,
     });
-  };
-
-  const handleAdvanceRole = async (user: UserWithEntity, nextRole: UserRole) => {
-    if (advancingUserId) return;
-    setAdvancingUserId(user.id);
-    try {
-      await adminApi.changeUserRole(user.id, nextRole);
-      setUsers(users.map(u => u.id === user.id ? { ...u, role: nextRole } : u));
-      if (detailUser?.id === user.id) {
-        setDetailUser(prev => prev ? { ...prev, role: nextRole } : null);
-      }
-      if (editingUser?.id === user.id) {
-        setEditForm(prev => ({ ...prev, role: nextRole }));
-        setEditingUser(prev => prev ? { ...prev, role: nextRole } : null);
-      }
-    } catch (err) {
-      console.error('Failed to advance role', err);
-    } finally {
-      setAdvancingUserId(null);
-    }
   };
 
   const openDetailModal = async (userId: string) => {

@@ -444,7 +444,7 @@ function DepositsTab({
   depositsError,
   entityBalance,
   entityAssets,
-  deposits,
+  deposits: _deposits,
   depositAndWithdrawalHistory,
   onRetry,
   onEditAsset,

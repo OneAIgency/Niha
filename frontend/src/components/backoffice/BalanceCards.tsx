@@ -95,7 +95,7 @@ export function BalanceCards({ balances, loading = false, variant = 'simple', sh
                 <span className="text-xs uppercase tracking-wider font-medium">EUR Balance</span>
               </div>
               <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
-                {loading ? '...' : formatCurrency(eurBalance, 'EUR')}
+                {loading ? '...' : formatCurrency(eurBalance ?? 0, 'EUR')}
               </div>
             </>
           )}
