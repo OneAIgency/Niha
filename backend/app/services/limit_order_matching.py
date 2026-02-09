@@ -125,6 +125,18 @@ class LimitOrderMatcher:
             if contra_remaining <= 0:
                 continue
 
+            # Auto-cancel zombie orders: fractional remainder < 1 that can never
+            # match (integer-only certificates). These block the orderbook.
+            if contra_remaining < 1:
+                contra_order.filled_quantity = contra_order.quantity
+                contra_order.status = OrderStatus.FILLED
+                contra_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                logger.info(
+                    f"Auto-filled zombie order {contra_order.id} "
+                    f"(remainder {contra_remaining} < 1 certificate)"
+                )
+                continue
+
             # Calculate match quantity (integer only)
             match_qty = min(remaining, contra_remaining)
             match_qty = match_qty.quantize(Decimal("1"), rounding=ROUND_DOWN)
@@ -274,7 +286,7 @@ class LimitOrderMatcher:
             price_filter = Order.price >= incoming_price
             order_by = [Order.price.desc(), Order.created_at.asc()]  # Highest first
 
-        # Build query
+        # Build query — also exclude orders with <1 remaining (zombie fractional leftovers)
         query = (
             select(Order)
             .where(
@@ -284,6 +296,7 @@ class LimitOrderMatcher:
                     Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
                     price_filter,
                     Order.id != incoming_order_id,  # Not the same order
+                    (Order.quantity - Order.filled_quantity) >= 1,  # Skip zombie remainders
                 )
             )
             .order_by(*order_by)
