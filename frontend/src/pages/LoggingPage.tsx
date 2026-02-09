@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Activity, Bot, AlertTriangle, Search } from 'lucide-react';
 import { BackofficeLayout } from '../components/layout';
+import { cn } from '../utils';
 import { LoggingOverview } from '../components/backoffice/LoggingOverview';
 import { AllTicketsTab } from '../components/backoffice/AllTicketsTab';
 import { MarketMakerActionsTab } from '../components/backoffice/MarketMakerActionsTab';
@@ -23,43 +24,54 @@ const tabs: Tab[] = [
   { id: 'search', label: 'Search', icon: Search },
 ];
 
+function LoggingTabNav({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: TabValue;
+  onTabChange: (tab: TabValue) => void;
+}) {
+  return (
+    <nav className="flex items-center gap-2 overflow-x-auto" aria-label="Logging tabs">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onTabChange(tab.id)}
+            aria-label={tab.label}
+            aria-current={isActive ? 'page' : undefined}
+            title={tab.label}
+            className={cn(
+              'group subsubheader-nav-btn flex items-center gap-2 whitespace-nowrap',
+              isActive ? 'subsubheader-nav-btn-active' : 'subsubheader-nav-btn-inactive'
+            )}
+          >
+            <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            <span className="whitespace-nowrap">{tab.label}</span>
+            {tab.id === 'failed' && (
+              <span className="subsubheader-nav-badge" aria-label="Failed actions">
+                !
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 export default function LoggingPage() {
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
 
-  return (
-    <BackofficeLayout>
-      {/* Tab Navigation */}
-      <div className="content_wrapper_last mb-6">
-          <div className="flex overflow-x-auto">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors
-                    ${
-                      isActive
-                        ? 'bg-blue-50 dark:bg-navy-700 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                        : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-750'
-                    }
-                  `}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                  {tab.id === 'failed' && (
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                      !
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+  const subSubHeaderLeft = (
+    <LoggingTabNav activeTab={activeTab} onTabChange={setActiveTab} />
+  );
 
+  return (
+    <BackofficeLayout subSubHeaderLeft={subSubHeaderLeft}>
       {/* Tab Content */}
       <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 p-6">
         {activeTab === 'overview' && <LoggingOverview />}

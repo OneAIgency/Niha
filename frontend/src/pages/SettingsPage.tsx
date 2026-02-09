@@ -971,26 +971,6 @@ export function SettingsPage() {
                     decimals={0}
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation subject</label>
-                  <input
-                    type="text"
-                    value={mailForm.invitationSubject ?? ''}
-                    onChange={(e) => setMailForm({ ...mailForm, invitationSubject: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
-                    placeholder="Welcome to Nihao Carbon Trading Platform"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation body (HTML, optional)</label>
-                  <textarea
-                    rows={4}
-                    value={mailForm.invitationBodyHtml ?? ''}
-                    onChange={(e) => setMailForm({ ...mailForm, invitationBodyHtml: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
-                    placeholder="Use {{first_name}} and {{setup_url}} as placeholders. Leave blank for default template."
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Verification method</label>
                   <select
@@ -1016,87 +996,87 @@ export function SettingsPage() {
                   </select>
                 </div>
               </div>
+            </Card>
 
-              {/* Test Email Delivery */}
-              <div className="border-t border-navy-200 dark:border-navy-600 pt-6 mt-6">
-                <SubSubHeader>Test Email Delivery</SubSubHeader>
-                <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
-                  Send a test email to verify your mail configuration is working.
-                </p>
-                <div className="flex gap-3 items-start">
-                  <input
-                    type="email"
-                    value={testEmail}
-                    onChange={(e) => { setTestEmail(e.target.value); setTestEmailResult(null); }}
-                    placeholder="recipient@example.com"
-                    className="flex-1 form-input"
-                  />
-                  <Button
-                    onClick={handleSendTestEmail}
-                    loading={testEmailLoading}
-                    disabled={!testEmail.trim() || testEmailLoading}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    <Send className="w-4 h-4 mr-1" />
-                    Send Test Email
-                  </Button>
-                </div>
-                {testEmailResult && (
-                  <div className={`mt-3 flex items-center gap-2 text-sm ${testEmailResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {testEmailResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                    {testEmailResult.message}
-                  </div>
-                )}
+            {/* Test Email Delivery — second wrapper: settings verification */}
+            <Card className="bg-navy-800/50 border-navy-700 mt-6" data-testid="mail-test-email-card">
+              <SubSubHeader>Test Email Delivery</SubSubHeader>
+              <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+                Send a test email to verify your mail configuration is working.
+              </p>
+              <div className="flex gap-3 items-start">
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => { setTestEmail(e.target.value); setTestEmailResult(null); }}
+                  placeholder="recipient@example.com"
+                  className="flex-1 form-input"
+                />
+                <Button
+                  onClick={handleSendTestEmail}
+                  loading={testEmailLoading}
+                  disabled={!testEmail.trim() || testEmailLoading}
+                  variant="secondary"
+                  size="sm"
+                >
+                  <Send className="w-4 h-4 mr-1" />
+                  Send Test Email
+                </Button>
               </div>
-
-              {/* Email Templates Preview */}
-              {emailTemplates.length > 0 && (
-                <div className="border-t border-navy-200 dark:border-navy-600 pt-4 mt-4">
-                  <SubSubHeader>Email Templates</SubSubHeader>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
-                    Preview email templates with sample data
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={selectedTemplate}
-                      onChange={(e) => {
-                        setSelectedTemplate(e.target.value);
-                        setTemplatePreviewHtml('');
-                      }}
-                      className="flex-1 form-input"
-                    >
-                      {emailTemplates.map((t) => (
-                        <option key={t} value={t}>
-                          {t.replace(/_/g, ' ').replace('.html', '')}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      onClick={handlePreviewTemplate}
-                      loading={templatePreviewLoading}
-                      disabled={!selectedTemplate || templatePreviewLoading}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Preview
-                    </Button>
-                  </div>
-                  {templatePreviewHtml && (
-                    <div className="mt-4 border border-navy-200 dark:border-navy-600 rounded-lg overflow-hidden">
-                      <iframe
-                        srcDoc={templatePreviewHtml}
-                        title="Email Template Preview"
-                        className="w-full bg-white"
-                        style={{ height: '600px', border: 'none' }}
-                        sandbox="allow-same-origin"
-                      />
-                    </div>
-                  )}
+              {testEmailResult && (
+                <div className={`mt-3 flex items-center gap-2 text-sm ${testEmailResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {testEmailResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  {testEmailResult.message}
                 </div>
               )}
             </Card>
+
+            {/* Email Templates — separate wrapper */}
+            {emailTemplates.length > 0 && (
+              <Card className="bg-navy-800/50 border-navy-700 mt-6" data-testid="mail-templates-card">
+                <SubSubHeader>Email Templates</SubSubHeader>
+                <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                  Preview email templates with sample data
+                </p>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => {
+                      setSelectedTemplate(e.target.value);
+                      setTemplatePreviewHtml('');
+                    }}
+                    className="flex-1 form-input"
+                  >
+                    {emailTemplates.map((t) => (
+                      <option key={t} value={t}>
+                        {t.replace(/_/g, ' ').replace('.html', '')}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={handlePreviewTemplate}
+                    loading={templatePreviewLoading}
+                    disabled={!selectedTemplate || templatePreviewLoading}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Preview
+                  </Button>
+                </div>
+                {templatePreviewHtml && (
+                  <div className="mt-4 border border-navy-200 dark:border-navy-600 rounded-lg overflow-hidden">
+                    <iframe
+                      srcDoc={templatePreviewHtml}
+                      title="Email Template Preview"
+                      className="w-full bg-white"
+                      style={{ height: '600px', border: 'none' }}
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
+                )}
+              </Card>
+            )}
           </motion.div>}
 
         </div>

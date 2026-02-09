@@ -162,6 +162,26 @@ async def list_tickets(
         # Enrich with market maker info
         mm = ticket.market_maker
         base["mm_name"] = mm.name if mm else None
+
+        # For TRADE_EXECUTED tickets, resolve buyer/seller MM names
+        if ticket.action_type == "TRADE_EXECUTED" and ticket.response_data:
+            buyer_mm_id = ticket.response_data.get("buyer_mm_id")
+            seller_mm_id = ticket.response_data.get("seller_mm_id")
+            if buyer_mm_id:
+                bmm = await db.execute(
+                    select(MarketMakerClient.name).where(
+                        MarketMakerClient.id == buyer_mm_id
+                    )
+                )
+                base["buyer_mm_name"] = bmm.scalar()
+            if seller_mm_id:
+                smm = await db.execute(
+                    select(MarketMakerClient.name).where(
+                        MarketMakerClient.id == seller_mm_id
+                    )
+                )
+                base["seller_mm_name"] = smm.scalar()
+
         tickets_data.append(base)
 
     return {

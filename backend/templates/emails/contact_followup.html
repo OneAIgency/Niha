@@ -1,17 +1,23 @@
 {% extends "_base.html" %}
 
 {% block content %}
-<div class="icon-header info">&#x1F4E8;</div>
-<h1>Thank you, {{ entity_name }}!</h1>
-<p>We have received your inquiry about our carbon certificate
-trading platform. Our team will review your request and
-contact you within 24-48 hours.</p>
+<div class="icon-header info">&#x1F4C4;</div>
+<h1>Application Received, {{ entity_name }}</h1>
+<p>Thank you for submitting your account application and signed NDA.
+Our compliance team will review your request and respond within
+<strong>48 hours</strong>.</p>
 <div class="callout info">
     <p class="callout-title">What happens next?</p>
-    <p>One of our carbon trading specialists will reach out
-    to discuss your needs and guide you through the
-    onboarding process.</p>
+    <p><strong>If approved</strong> — you will receive an email with a secure
+    link to activate your account. The next step will be submitting
+    your KYC documents and accessing the full platform documentation.</p>
+    <p style="margin-top: 8px;"><strong>If we need more information</strong> — we will
+    contact you directly at this email address.</p>
 </div>
-<p>In the meantime, feel free to explore our platform to
-learn more about EUA-CEA swaps and OTC trading benefits.</p>
+<div class="callout neutral">
+    <p class="callout-title">All communication via email</p>
+    <p>Every status update regarding your application will be sent
+    to this email address. Please check your inbox (and spam folder)
+    for messages from Nihao Group.</p>
+</div>
 {% endblock %}
