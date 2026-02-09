@@ -14,6 +14,7 @@ import {
   Save,
   DollarSign,
   Send,
+  ExternalLink,
 } from 'lucide-react';
 import { Button, Card, Badge, Subheader, SubSubHeader, AlertBanner, NumberInput } from '../components/common';
 import { adminApi } from '../services/api';
@@ -108,6 +109,12 @@ export function SettingsPage() {
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Email template preview
+  const [emailTemplates, setEmailTemplates] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [templatePreviewHtml, setTemplatePreviewHtml] = useState('');
+  const [templatePreviewLoading, setTemplatePreviewLoading] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -116,14 +123,19 @@ export function SettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const [sourcesData, mailData, exchangeData] = await Promise.all([
+      const [sourcesData, mailData, exchangeData, templatesData] = await Promise.all([
         adminApi.getScrapingSources(),
         adminApi.getMailSettings(),
         adminApi.getExchangeRateSources(),
+        adminApi.getEmailTemplates().catch(() => [] as string[]),
       ]);
       setSources(sourcesData);
       setMailSettings(mailData);
       setExchangeRateSources(exchangeData);
+      setEmailTemplates(templatesData);
+      if (templatesData.length > 0 && !selectedTemplate) {
+        setSelectedTemplate(templatesData[0]);
+      }
 
       setMailForm({
         provider: mailData.provider,
@@ -374,6 +386,20 @@ export function SettingsPage() {
       setTestEmailResult({ success: false, message: getApiErrorMessage(e) });
     } finally {
       setTestEmailLoading(false);
+    }
+  };
+
+  const handlePreviewTemplate = async () => {
+    if (!selectedTemplate) return;
+    setTemplatePreviewLoading(true);
+    setTemplatePreviewHtml('');
+    try {
+      const html = await adminApi.getEmailTemplatePreview(selectedTemplate);
+      setTemplatePreviewHtml(html);
+    } catch (e) {
+      setTemplatePreviewHtml(`<html><body style="font-family:sans-serif;padding:2rem;color:#ef4444"><h2>Error loading template</h2><p>${getApiErrorMessage(e)}</p></body></html>`);
+    } finally {
+      setTemplatePreviewLoading(false);
     }
   };
 
@@ -1023,6 +1049,53 @@ export function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Email Templates Preview */}
+              {emailTemplates.length > 0 && (
+                <div className="border-t border-navy-200 dark:border-navy-600 pt-4 mt-4">
+                  <SubSubHeader>Email Templates</SubSubHeader>
+                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                    Preview email templates with sample data
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={selectedTemplate}
+                      onChange={(e) => {
+                        setSelectedTemplate(e.target.value);
+                        setTemplatePreviewHtml('');
+                      }}
+                      className="flex-1 form-input"
+                    >
+                      {emailTemplates.map((t) => (
+                        <option key={t} value={t}>
+                          {t.replace(/_/g, ' ').replace('.html', '')}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      onClick={handlePreviewTemplate}
+                      loading={templatePreviewLoading}
+                      disabled={!selectedTemplate || templatePreviewLoading}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Preview
+                    </Button>
+                  </div>
+                  {templatePreviewHtml && (
+                    <div className="mt-4 border border-navy-200 dark:border-navy-600 rounded-lg overflow-hidden">
+                      <iframe
+                        srcDoc={templatePreviewHtml}
+                        title="Email Template Preview"
+                        className="w-full bg-white"
+                        style={{ height: '600px', border: 'none' }}
+                        sandbox="allow-same-origin"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           </motion.div>}
 

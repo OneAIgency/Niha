@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, RefreshCw, ChevronLeft, ChevronRight, Filter, Shield, Link2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Search, RefreshCw, ChevronLeft, ChevronRight, Filter, Shield, Link2, AlertTriangle, WifiOff } from 'lucide-react';
 import { DataTable, type Column } from '../common/DataTable';
 import { Button, AlertBanner } from '../common';
-import { getTickets } from '../../services/api';
+import { getTickets, backofficeRealtimeApi } from '../../services/api';
 import { TicketDetailModal } from './TicketDetailModal';
 
 // ---------------------------------------------------------------------------
@@ -72,6 +72,7 @@ const ACTION_MAP: Record<string, ActionMeta> = {
   MM_EUR_DEPOSIT:            { label: 'MM Deposit',         category: 'mm' },
   MM_EUR_WITHDRAWAL:         { label: 'MM Withdrawal',      category: 'mm' },
   SWAP_CREATED:              { label: 'Swap',               category: 'swap' },
+  TRADE_EXECUTED:            { label: 'Trade',              category: 'trading' },
 };
 
 function getActionMeta(actionType: string, tags: string[]): ActionMeta {
@@ -132,6 +133,9 @@ function getActorDisplay(ticket: TicketLog): { name: string; adminBadge: boolean
   } else if (at === 'ASSET_TRADE_DEBIT') {
     // Debit = seller (certificates leaving their account)
     tradeSide = 'SELL';
+  } else if (at === 'TRADE_EXECUTED') {
+    // Trades don't have a single side — show as a trade
+    tradeSide = undefined;
   } else if (at === 'ORDER_CANCELLED' || at === 'ORDER_MODIFIED') {
     // Check tags or response for side
     if ((ticket.tags || []).includes('buy')) tradeSide = 'BUY';
@@ -187,6 +191,14 @@ function extractAmount(ticket: TicketLog): { text: string; isLarge?: boolean } |
     const cert = String(res.certificate_type || res.certificateType || 'CEA');
     const side = (ticket.tags.includes('buy') ? 'BUY' : ticket.tags.includes('sell') ? 'SELL' : '');
     return { text: `${side} ${qty} ${cert} @ \u20AC${price}` };
+  }
+
+  // Trade executed — show quantity, cert, price
+  if (at === 'TRADE_EXECUTED' && res) {
+    const qty = fmtNum(res.quantity as number, 0);
+    const price = fmtNum(res.price as number);
+    const cert = String(res.certificate_type || res.certificateType || 'CEA');
+    return { text: `${qty} ${cert} @ \u20AC${price}` };
   }
 
   // Trade debit
@@ -306,6 +318,9 @@ function extractResult(ticket: TicketLog): { text: string; variant: 'success' | 
   // KYC
   if (at === 'KYC_SUBMITTED') return { text: 'Submitted', variant: 'info' };
   if (at === 'KYC_DOCUMENT_UPLOADED') return { text: 'Uploaded', variant: 'muted' };
+
+  // Trade executed
+  if (at === 'TRADE_EXECUTED') return { text: 'Filled', variant: 'success' };
 
   // Trade debit
   if (at === 'ASSET_TRADE_DEBIT') return { text: 'Debited', variant: 'muted' };
@@ -433,6 +448,7 @@ export function AllTicketsTab() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<TicketLog | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -440,6 +456,12 @@ export function AllTicketsTab() {
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const perPage = 50;
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -464,13 +486,74 @@ export function AllTicketsTab() {
     }
   }, [page, searchQuery, statusFilter, categoryFilter]);
 
+  // Stable ref for fetchTickets so WS handler doesn't cause reconnections
+  const fetchTicketsRef = useRef(fetchTickets);
+  fetchTicketsRef.current = fetchTickets;
+
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
-  // Auto-refresh every 15 seconds
+  // WebSocket connection for live streaming updates
   useEffect(() => {
-    const interval = setInterval(fetchTickets, 15000);
-    return () => clearInterval(interval);
-  }, [fetchTickets]);
+    mountedRef.current = true;
+    const RECONNECT_DELAY = 3000;
+
+    const connect = () => {
+      if (!mountedRef.current) return;
+      if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+      wsRef.current = backofficeRealtimeApi.connectWebSocket(
+        (message) => {
+          if (!mountedRef.current) return;
+          if (message.type === 'newTicket' || message.type === 'new_ticket') {
+            // On page 1 with no filters, immediately re-fetch to show new ticket
+            if (pageRef.current === 1) {
+              fetchTicketsRef.current();
+            } else {
+              // Update total count indicator so user knows there are new tickets
+              setTotal((prev) => prev + 1);
+            }
+          }
+        },
+        () => {
+          if (mountedRef.current) {
+            setWsConnected(true);
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = null;
+            }
+          }
+        },
+        () => {
+          if (mountedRef.current) {
+            setWsConnected(false);
+            reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_DELAY);
+          }
+        },
+        () => {
+          if (mountedRef.current) setWsConnected(false);
+        },
+      );
+    };
+
+    connect();
+
+    return () => {
+      mountedRef.current = false;
+      if (wsRef.current) {
+        wsRef.current.onerror = null;
+        wsRef.current.onclose = null;
+        wsRef.current.onmessage = null;
+        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+          wsRef.current.close();
+        }
+        wsRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Annotate tickets with group info
   const annotatedTickets = useMemo(() => annotateGroups(tickets), [tickets]);
@@ -519,6 +602,27 @@ export function AllTicketsTab() {
       header: 'Actor',
       width: '200px',
       render: (_value, row) => {
+        // Special display for TRADE_EXECUTED — show both counterparties
+        if (row.actionType === 'TRADE_EXECUTED') {
+          const req = row.requestPayload;
+          const aggressorSide = req?.aggressor_side || req?.aggressorSide || '';
+          return (
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="flex-shrink-0 px-1.5 py-px rounded text-[9px] font-bold leading-tight bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                TRADE
+              </span>
+              <span className="text-xs font-medium text-navy-700 dark:text-navy-300 truncate" title={`Aggressor: ${aggressorSide}`}>
+                {row.mmName || row.userCompany || 'Market'}
+              </span>
+              {aggressorSide && (
+                <span className="text-[9px] text-navy-400 dark:text-navy-500 flex-shrink-0" title={`${aggressorSide} was the aggressor (taker)`}>
+                  ({aggressorSide === 'BUY' ? 'buyer took' : 'seller took'})
+                </span>
+              )}
+            </div>
+          );
+        }
+
         const { name, adminBadge, tradeSide } = getActorDisplay(row);
         const isMM = !!row.mmName || row.userRole === 'MM';
 
@@ -689,11 +793,26 @@ export function AllTicketsTab() {
             <option value="FAILED">Failed</option>
           </select>
 
-          {/* Refresh + count */}
-          <Button onClick={fetchTickets} variant="secondary" size="sm" className="flex items-center gap-1.5 !py-1.5">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="text-xs">{total.toLocaleString()}</span>
-          </Button>
+          {/* Live indicator + Refresh + count */}
+          <div className="flex items-center gap-2">
+            {wsConnected ? (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400" title="Live streaming via WebSocket">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                LIVE
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] text-navy-400 dark:text-navy-500" title="WebSocket disconnected — reconnecting...">
+                <WifiOff className="w-3 h-3" />
+              </span>
+            )}
+            <Button onClick={fetchTickets} variant="secondary" size="sm" className="flex items-center gap-1.5 !py-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="text-xs">{total.toLocaleString()}</span>
+            </Button>
+          </div>
         </div>
       </div>
 

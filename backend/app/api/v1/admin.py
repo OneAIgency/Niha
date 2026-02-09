@@ -9,7 +9,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,7 +78,7 @@ from ...schemas.schemas import (
     UserRoleUpdate,
     UserSessionResponse,
 )
-from ...services.email_service import email_service
+from ...services.email_service import TEMPLATE_SAMPLE_DATA, email_service
 from ...services.settlement_service import SettlementService, calculate_settlement_progress
 from ...services.ws_utils import get_entity_user_ids
 from .backoffice import backoffice_ws_manager
@@ -2045,6 +2045,28 @@ async def send_test_email(
         return {"success": True, "message": f"Test email sent to {test_email}"}
     else:
         return {"success": False, "message": "Failed to send test email. Check server logs for details."}
+
+
+@router.get("/settings/mail/templates")
+async def list_email_templates(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+):
+    """List all available email template names. Admin only."""
+    return {"templates": email_service.list_templates()}
+
+
+@router.get("/settings/mail/preview/{template_name}")
+async def preview_email_template(
+    template_name: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+):
+    """Render email template with sample data and return HTML. Admin only."""
+    available = email_service.list_templates()
+    if template_name not in available:
+        raise HTTPException(status_code=404, detail=f"Template '{template_name}' not found")
+    sample_data = TEMPLATE_SAMPLE_DATA.get(template_name, {})
+    html = email_service.render_template(template_name, **sample_data)
+    return HTMLResponse(content=html)
 
 
 # ==================== Market Overview ====================

@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x2705;</div>
+<h1>Congratulations, {{ name }}!</h1>
+<p>Your account has been verified and approved. You can now
+access the Nihao Carbon Trading Platform.</p>
+<div class="callout success">
+    <p class="callout-title">What's next?</p>
+    <p>To start trading, please fund your account. Contact
+    our support team for funding instructions.</p>
+</div>
+<a href="http://localhost:5173/dashboard" class="btn btn-primary">Go to Dashboard</a>
+{% endblock %}

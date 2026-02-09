@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Nihao Group{% endblock %}</title>
+    <style>
+        /* ── Reset & Base ──────────────────────────── */
+        body {
+            margin: 0; padding: 40px 16px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f1f5f9;
+            -webkit-font-smoothing: antialiased;
+        }
+        * { box-sizing: border-box; }
+
+        /* ── Container ─────────────────────────────── */
+        .email-wrapper {
+            max-width: 520px; margin: 0 auto;
+        }
+        .email-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px 36px 32px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* ── Logo ──────────────────────────────────── */
+        .logo {
+            font-size: 22px; font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .logo span { color: #10b981; }
+
+        /* ── Typography ────────────────────────────── */
+        h1 {
+            color: #0f172a;
+            font-size: 21px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin: 0 0 12px 0;
+        }
+        p {
+            color: #475569;
+            font-size: 14.5px;
+            line-height: 1.65;
+            margin: 0 0 14px 0;
+        }
+        .text-muted { color: #94a3b8; font-size: 13px; }
+        .text-center { text-align: center; }
+
+        /* ── Icon Header ───────────────────────────── */
+        .icon-header {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .icon-header.success { background: #ecfdf5; }
+        .icon-header.info    { background: #eff6ff; }
+        .icon-header.warning { background: #fffbeb; }
+        .icon-header.error   { background: #fef2f2; }
+        .icon-header.neutral { background: #f1f5f9; }
+
+        /* ── Badge ─────────────────────────────────── */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .badge.success { background: #ecfdf5; color: #047857; }
+        .badge.info    { background: #eff6ff; color: #1d4ed8; }
+        .badge.warning { background: #fffbeb; color: #92400e; }
+        .badge.error   { background: #fef2f2; color: #b91c1c; }
+        .badge.neutral { background: #f1f5f9; color: #475569; }
+
+        /* ── Callout Cards ─────────────────────────── */
+        .callout {
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin: 20px 0;
+            border: 1px solid;
+        }
+        .callout-title {
+            font-weight: 600;
+            font-size: 13.5px;
+            margin: 0 0 6px 0;
+        }
+        .callout p { margin: 0; font-size: 13.5px; }
+        .callout.success {
+            background: #f0fdf4; border-color: #bbf7d0;
+        }
+        .callout.success .callout-title { color: #047857; }
+        .callout.success p { color: #15803d; }
+        .callout.info {
+            background: #eff6ff; border-color: #bfdbfe;
+        }
+        .callout.info .callout-title { color: #1d4ed8; }
+        .callout.info p { color: #1e40af; }
+        .callout.warning {
+            background: #fffbeb; border-color: #fde68a;
+        }
+        .callout.warning .callout-title { color: #92400e; }
+        .callout.warning p { color: #78350f; }
+        .callout.error {
+            background: #fef2f2; border-color: #fecaca;
+        }
+        .callout.error .callout-title { color: #b91c1c; }
+        .callout.error p { color: #991b1b; }
+        .callout.neutral {
+            background: #f8fafc; border-color: #e2e8f0;
+        }
+        .callout.neutral .callout-title { color: #334155; }
+        .callout.neutral p { color: #475569; }
+
+        /* ── Detail Rows ───────────────────────────── */
+        .details {
+            border-radius: 12px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .detail-row {
+            display: flex; justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row:nth-child(odd) { background: #ffffff; }
+        .detail-row:nth-child(even) { background: #f8fafc; }
+        .detail-label {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #0f172a;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        /* ── Amount Display ────────────────────────── */
+        .amount-display {
+            text-align: center;
+            padding: 24px 20px;
+            margin: 20px 0;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .amount-display .amount {
+            font-size: 28px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            margin: 8px 0 4px;
+        }
+        .amount-display .amount-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* ── Feature List ──────────────────────────── */
+        .feature-list {
+            margin: 20px 0;
+            padding: 0;
+        }
+        .feature-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            background: #f8fafc;
+        }
+        .feature-item:last-child { margin-bottom: 0; }
+        .feature-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: #ecfdf5;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .feature-text {
+            color: #1e293b;
+            font-size: 13.5px;
+            font-weight: 500;
+        }
+
+        /* ── Swap Visual ───────────────────────────── */
+        .swap-visual {
+            display: flex; justify-content: center;
+            align-items: center; gap: 16px;
+            margin: 24px 0;
+        }
+        .swap-cert {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 18px 12px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .swap-cert-type {
+            font-size: 20px; font-weight: 800;
+            color: #0f172a; letter-spacing: -0.02em;
+        }
+        .swap-cert-qty {
+            font-size: 12.5px; color: #64748b;
+            margin-top: 4px;
+        }
+        .swap-arrow {
+            font-size: 20px; color: #10b981;
+            font-weight: 700; flex-shrink: 0;
+        }
+
+        /* ── Button ────────────────────────────────── */
+        .btn {
+            display: block;
+            text-align: center;
+            padding: 14px 28px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 24px 0 0;
+            letter-spacing: -0.01em;
+        }
+        .btn-primary {
+            background: #10b981; color: #ffffff;
+        }
+        .btn-dark {
+            background: #0f172a; color: #ffffff;
+        }
+        .btn-danger {
+            background: #dc2626; color: #ffffff;
+        }
+        .btn-outline {
+            background: #ffffff; color: #0f172a;
+            border: 1.5px solid #cbd5e1;
+        }
+
+        /* ── Divider ───────────────────────────────── */
+        .divider {
+            height: 1px;
+            background: #f1f5f9;
+            margin: 24px 0;
+            border: none;
+        }
+
+        /* ── Timeline ──────────────────────────────── */
+        .timeline {
+            margin: 20px 0;
+            padding: 0 0 0 20px;
+            border-left: 2px solid #d1fae5;
+        }
+        .timeline-step {
+            padding: 0 0 16px 16px;
+            position: relative;
+        }
+        .timeline-step:last-child { padding-bottom: 0; }
+        .timeline-step::before {
+            content: '';
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            position: absolute;
+            left: -26px; top: 4px;
+        }
+        .timeline-step strong {
+            color: #0f172a; font-size: 13px;
+        }
+        .timeline-step span {
+            color: #64748b; font-size: 12.5px;
+            margin-left: 6px;
+        }
+
+        /* ── Alert Header (admin) ──────────────────── */
+        .alert-banner {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            border-radius: 0 12px 12px 0;
+            padding: 18px 20px;
+            margin: 0 0 24px;
+        }
+        .alert-banner h1 { color: #991b1b; margin: 0 0 4px; }
+        .alert-banner p { color: #dc2626; margin: 0; font-size: 13px; }
+
+        /* ── Actions List (admin) ──────────────────── */
+        .actions-list {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin: 20px 0;
+        }
+        .actions-list h3 {
+            color: #92400e; font-size: 14px;
+            font-weight: 600; margin: 0 0 10px;
+        }
+        .actions-list ul {
+            color: #78350f; padding-left: 18px;
+            margin: 0; font-size: 13.5px;
+        }
+        .actions-list li { margin: 5px 0; line-height: 1.5; }
+
+        /* ── Footer ────────────────────────────────── */
+        .email-footer {
+            text-align: center;
+            padding: 24px 0 0;
+            margin-top: 8px;
+        }
+        .email-footer p {
+            color: #94a3b8;
+            font-size: 12px;
+            margin: 0 0 4px;
+            line-height: 1.5;
+        }
+        .email-footer .footer-brand {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 12.5px;
+        }
+
+        /* ── Overdue Highlight ─────────────────────── */
+        .text-danger {
+            color: #dc2626; font-weight: 700;
+        }
+        .text-success {
+            color: #047857; font-weight: 600;
+        }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-card">
+            <div class="logo">NIHAO<span>GROUP</span></div>
+            {% block content %}{% endblock %}
+        </div>
+        {% block footer %}
+        <div class="email-footer">
+            <p class="footer-brand">Nihao Group Ltd</p>
+            <p>Carbon Certificate Trading</p>
+            <p>Hong Kong &middot; Italy</p>
+        </div>
+        {% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header warning">&#x23F1;&#xFE0F;</div>
+<h1>Settlement Created</h1>
+<span class="badge warning">Pending</span>
+<p style="margin-top: 14px;">Hello {{ name }},
+your {{ certificate_type }} purchase settlement has been initiated.</p>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Settlement ID</span>
+        <span class="detail-value">{{ batch_reference }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Certificate Type</span>
+        <span class="detail-value">{{ certificate_type }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Quantity</span>
+        <span class="detail-value">{{ quantity }} tCO2e</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Expected Delivery</span>
+        <span class="detail-value">{{ expected_date }}</span>
+    </div>
+</div>
+<div class="callout success">
+    <p class="callout-title">Settlement Timeline (T+3)</p>
+</div>
+<div class="timeline">
+    <div class="timeline-step">
+        <strong>T+1</strong><span>Transfer Initiated</span>
+    </div>
+    <div class="timeline-step">
+        <strong>T+2</strong><span>In Transit</span>
+    </div>
+    <div class="timeline-step">
+        <strong>T+3</strong><span>At Custody &amp; Settled</span>
+    </div>
+</div>
+<p class="text-muted">You will receive updates as your settlement progresses
+through each stage. Your {{ certificate_type }} certificates will be available
+in your account on the expected delivery date.</p>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header error">&#x26A0;&#xFE0F;</div>
+<h1 class="text-center">Settlement Failed</h1>
+<div class="text-center" style="margin-bottom: 16px;">
+    <span class="badge error">Failed</span>
+</div>
+<p class="text-center">Hello {{ name }},
+we encountered an issue processing your settlement.</p>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Settlement ID</span>
+        <span class="detail-value">{{ batch_reference }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Certificate Type</span>
+        <span class="detail-value">{{ certificate_type }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Quantity</span>
+        <span class="detail-value">{{ quantity }} tCO2e</span>
+    </div>
+</div>
+<div class="callout error">
+    <p class="callout-title">Failure Reason</p>
+    <p>{{ reason }}</p>
+</div>
+<div class="callout info">
+    <p class="callout-title">What happens next?</p>
+    <p>Our support team has been notified and will contact
+    you within 24 hours to resolve this issue. Your
+    funds remain safe in your account.</p>
+</div>
+<p class="text-muted text-center">Contact: support@nihaogroup.com</p>
+{% endblock %}

@@ -645,6 +645,40 @@ class AutoTradeExecutor:
                 executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
             db.add(trade)
+            await db.flush()
+
+            # Create audit ticket for internal trade
+            buy_ticket_id = getattr(buy_order, 'ticket_id', None)
+            sell_ticket_id = getattr(sell_order, 'ticket_id', None)
+            related = [tid for tid in [buy_ticket_id, sell_ticket_id] if tid]
+
+            trade_ticket = await TicketService.create_ticket(
+                db=db,
+                action_type="TRADE_EXECUTED",
+                entity_type="Trade",
+                entity_id=trade.id,
+                status=TicketStatus.SUCCESS,
+                user_id=admin_user_id,
+                market_maker_id=buy_order.market_maker_id,
+                request_payload={
+                    "match_type": "internal_trade",
+                    "buy_order_id": str(buy_order.id),
+                    "sell_order_id": str(sell_order.id),
+                },
+                response_data={
+                    "trade_id": str(trade.id),
+                    "buy_order_id": str(buy_order.id),
+                    "sell_order_id": str(sell_order.id),
+                    "buyer_mm_id": str(buy_order.market_maker_id) if buy_order.market_maker_id else None,
+                    "seller_mm_id": str(sell_order.market_maker_id) if sell_order.market_maker_id else None,
+                    "certificate_type": certificate_type.value,
+                    "price": str(trade_price),
+                    "quantity": str(match_qty),
+                },
+                related_ticket_ids=related,
+                tags=["trade", "internal_trade", certificate_type.value.lower()],
+            )
+            trade.ticket_id = trade_ticket.ticket_id
 
             # Update buy order
             buy_order.filled_quantity = buy_order.filled_quantity + match_qty
@@ -1111,6 +1145,41 @@ class AutoTradeExecutor:
                     executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 db.add(trade)
+                await db.flush()
+
+                # Create audit ticket for trade execution
+                buy_ticket_id = getattr(buy_order, 'ticket_id', None)
+                sell_ticket_id = getattr(sell_order, 'ticket_id', None)
+                related = [tid for tid in [buy_ticket_id, sell_ticket_id] if tid]
+
+                trade_ticket = await TicketService.create_ticket(
+                    db=db,
+                    action_type="TRADE_EXECUTED",
+                    entity_type="Trade",
+                    entity_id=trade.id,
+                    status=TicketStatus.SUCCESS,
+                    user_id=admin_user_id,
+                    market_maker_id=buy_order.market_maker_id,
+                    request_payload={
+                        "match_type": "auto_trade",
+                        "aggressor_side": "BUY",
+                        "buy_order_id": str(buy_order.id),
+                        "sell_order_id": str(sell_order.id),
+                    },
+                    response_data={
+                        "trade_id": str(trade.id),
+                        "buy_order_id": str(buy_order.id),
+                        "sell_order_id": str(sell_order.id),
+                        "buyer_mm_id": str(buy_order.market_maker_id) if buy_order.market_maker_id else None,
+                        "seller_mm_id": str(sell_order.market_maker_id) if sell_order.market_maker_id else None,
+                        "certificate_type": certificate_type.value,
+                        "price": str(trade_price),
+                        "quantity": str(match_qty),
+                    },
+                    related_ticket_ids=related,
+                    tags=["trade", "auto_trade", certificate_type.value.lower()],
+                )
+                trade.ticket_id = trade_ticket.ticket_id
 
                 # Update buy order
                 buy_order.filled_quantity = buy_order.filled_quantity + match_qty

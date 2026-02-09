@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x2705;</div>
+<h1>Withdrawal Approved</h1>
+<p>Hello {{ name }},</p>
+<p>Your withdrawal request has been approved and is now being processed.</p>
+<div class="callout info">
+    <p class="callout-title">Processing</p>
+</div>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Amount</span>
+        <span class="detail-value">{{ currency }} {{ amount }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value"><span class="badge info">Wire Transfer Pending</span></span>
+    </div>
+</div>
+<p>You'll receive a confirmation once the wire transfer has been sent.</p>
+{% endblock %}

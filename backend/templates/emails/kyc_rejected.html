@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header error">&#x1F6AB;</div>
+<h1>Verification Update</h1>
+<p>Hello {{ name }},</p>
+<div class="callout error">
+    <p class="callout-title">We were unable to verify your account at this time.</p>
+    {% if reason %}
+    <p>{{ reason }}</p>
+    {% endif %}
+</div>
+<p>If you believe this is an error or would like to provide additional documentation,
+please contact our compliance team.</p>
+<a href="mailto:info@nihaogroup.com" class="btn btn-dark">Contact Support</a>
+{% endblock %}

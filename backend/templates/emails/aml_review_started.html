@@ -1,0 +1,26 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header warning">&#x1F50D;</div>
+<h1>Deposit Under Review</h1>
+<p>Hello {{ name }},</p>
+<p>Your wire transfer has been received and is now undergoing a standard
+Anti-Money Laundering (AML) compliance review.</p>
+<div class="callout warning">
+    <p class="callout-title">AML Review In Progress</p>
+</div>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Amount</span>
+        <span class="detail-value">{{ currency }} {{ amount }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value"><span class="badge warning">Under Review</span></span>
+    </div>
+</div>
+<p>This is a routine process required by regulation. Your funds will be
+credited to your account once the review is complete. We'll notify you
+as soon as your account is activated for trading.</p>
+<p class="text-muted">No action is required on your part.</p>
+{% endblock %}

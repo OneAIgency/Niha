@@ -1,13 +1,105 @@
 import asyncio
 import logging
+import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
+
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "templates", "emails")
+
+# Sample data for admin preview — one entry per template
+TEMPLATE_SAMPLE_DATA: Dict[str, Dict[str, Any]] = {
+    "magic_link.html": {"magic_link_url": "https://app.nihaogroup.com/auth/verify?token=abc123"},
+    "trade_confirmation.html": {
+        "trade_type": "BUY",
+        "certificate_type": "CEA",
+        "quantity": "1,500.00",
+        "price": "8.50",
+        "total": "12,750.00",
+    },
+    "swap_match.html": {
+        "from_type": "CEA",
+        "to_type": "EUA",
+        "quantity": "1,000",
+        "to_quantity": "118",
+        "rate": "0.1177",
+    },
+    "invitation.html": {"name": "John Doe", "setup_url": "https://app.nihaogroup.com/setup-password?token=abc123"},
+    "account_approved.html": {"name": "John Doe"},
+    "kyc_rejected.html": {"name": "John Doe", "reason": "Documents were not legible. Please re-upload."},
+    "deposit_announced.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR", "reference": "NIHA-DEP-20260101"},
+    "deposit_on_hold.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR", "hold_until": "2026-02-15"},
+    "deposit_cleared.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR"},
+    "deposit_rejected.html": {
+        "name": "John Doe",
+        "amount": "50,000.00",
+        "currency": "EUR",
+        "reason": "Wire transfer not received within expected timeframe",
+    },
+    "account_funded.html": {"name": "John Doe"},
+    "contact_followup.html": {"entity_name": "Acme Corp"},
+    "settlement_created.html": {
+        "name": "John Doe",
+        "batch_reference": "STL-20260101-001",
+        "certificate_type": "CEA",
+        "quantity": "2,000.00",
+        "expected_date": "2026-02-04",
+    },
+    "settlement_status_update.html": {
+        "name": "John Doe",
+        "batch_reference": "STL-20260101-001",
+        "certificate_type": "CEA",
+        "quantity": "2,000.00",
+        "old_status": "Pending",
+        "status_emoji": "\U0001F680",
+        "status_color": "#3b82f6",
+        "status_bg": "#dbeafe",
+        "status_label": "Transfer Initiated",
+    },
+    "settlement_completed.html": {
+        "name": "John Doe",
+        "batch_reference": "STL-20260101-001",
+        "certificate_type": "CEA",
+        "quantity": "2,000.00",
+        "new_balance": "5,000.00",
+    },
+    "settlement_failed.html": {
+        "name": "John Doe",
+        "batch_reference": "STL-20260101-001",
+        "certificate_type": "CEA",
+        "quantity": "2,000.00",
+        "reason": "Registry timeout during transfer",
+    },
+    "admin_overdue_settlement.html": {
+        "batch_reference": "STL-20260101-001",
+        "entity_name": "Acme Corp",
+        "certificate_type": "CEA",
+        "quantity": "2,000.00",
+        "expected_date": "2026-01-28",
+        "days_overdue": 5,
+        "current_status": "In Transit",
+    },
+    "withdrawal_requested.html": {"name": "John Doe", "amount": "10,000.00", "currency": "EUR"},
+    "withdrawal_approved.html": {"name": "John Doe", "amount": "10,000.00", "currency": "EUR"},
+    "withdrawal_completed.html": {"name": "John Doe", "amount": "10,000.00", "currency": "EUR", "wire_reference": "WIRE-2026-00123"},
+    "withdrawal_rejected.html": {"name": "John Doe", "amount": "10,000.00", "currency": "EUR", "reason": "Insufficient verified funds"},
+    "welcome_activated.html": {"name": "John Doe"},
+    "aml_review_started.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR"},
+    "trading_activated.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR"},
+    "test_email.html": {"provider": "SMTP"},
+}
+
+
+def _fmt(value: float) -> str:
+    """Format a number with commas and 2 decimals (e.g. 1,234.56)."""
+    return f"{value:,.2f}"
 
 
 class EmailService:
@@ -20,53 +112,36 @@ class EmailService:
         self.api_key = settings.RESEND_API_KEY
         self.from_email = settings.FROM_EMAIL
         self.enabled = bool(self.api_key)
+        self._jinja_env = Environment(
+            loader=FileSystemLoader(TEMPLATE_DIR),
+            autoescape=select_autoescape(["html"]),
+        )
+
+    def _render_template(self, template_name: str, **kwargs: Any) -> str:
+        template = self._jinja_env.get_template(template_name)
+        return template.render(**kwargs)
+
+    def render_template(self, template_name: str, **kwargs: Any) -> str:
+        """Public render for admin preview endpoint."""
+        return self._render_template(template_name, **kwargs)
+
+    def list_templates(self) -> List[str]:
+        """Return available template filenames (excluding _base.html)."""
+        templates = []
+        if os.path.isdir(TEMPLATE_DIR):
+            for f in sorted(os.listdir(TEMPLATE_DIR)):
+                if f.endswith(".html") and not f.startswith("_"):
+                    templates.append(f)
+        return templates
+
+    # ── send_* methods ─────────────────────────────────────────────
 
     async def send_magic_link(self, to_email: str, token: str) -> bool:
         """Send magic link authentication email"""
         magic_link_url = f"http://localhost:5173/auth/verify?token={token}"
-
         subject = "Sign in to Nihao Carbon Trading Platform"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .button {{ display: inline-block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-                .warning {{ background: #fef3c7; border-radius: 8px;
-                    padding: 12px; margin-top: 20px; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Sign in to your account</h1>
-                <p>Click the button below to securely sign in to the Nihao
-                Carbon Trading Platform. This link will expire in 15 minutes.</p>
-                <a href="{magic_link_url}" class="button">Sign In to Platform</a>
-                <div class="warning">
-                    If you didn't request this email, you can safely ignore it.
-                </div>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("magic_link.html", magic_link_url=magic_link_url)
+        return await self._send_email(to_email, subject, html)
 
     async def send_trade_confirmation(
         self,
@@ -78,117 +153,31 @@ class EmailService:
         total: float,
     ) -> bool:
         """Send trade confirmation email"""
-        subject = (
-            f"Trade Confirmation - {trade_type.upper()} {quantity} {certificate_type}"
+        subject = f"Trade Confirmation - {trade_type.upper()} {quantity} {certificate_type}"
+        html = self._render_template(
+            "trade_confirmation.html",
+            trade_type=trade_type.upper(),
+            certificate_type=certificate_type,
+            quantity=_fmt(quantity),
+            price=_fmt(price),
+            total=_fmt(total),
         )
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
-                .success {{ color: #10b981; }}
-                .details {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .total {{ font-size: 24px; color: #0f172a; font-weight: 700;
-                    text-align: center; margin-top: 20px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1 class="success">Trade Confirmed</h1>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Type</span>
-                        <span class="value">{trade_type.upper()}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificate</span>
-                        <span class="value">{certificate_type}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Quantity</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Price</span>
-                        <span class="value">${price:,.2f} / unit</span>
-                    </div>
-                </div>
-                <div class="total">Total: ${total:,.2f}</div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        return await self._send_email(to_email, subject, html)
 
     async def send_swap_match_notification(
         self, to_email: str, from_type: str, to_type: str, quantity: float, rate: float
     ) -> bool:
         """Send swap match notification"""
         subject = f"Swap Match Found - {from_type} to {to_type}"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                .match-icon {{ font-size: 48px; text-align: center; }}
-                h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
-                .swap-visual {{ display: flex; justify-content: center;
-                    align-items: center; gap: 20px; margin: 30px 0; }}
-                .cert {{ background: #f8fafc; padding: 20px;
-                    border-radius: 12px; text-align: center; }}
-                .cert-type {{ font-size: 24px; font-weight: 700; }}
-                .cert-qty {{ color: #64748b; margin-top: 8px; }}
-                .arrow {{ font-size: 32px; color: #10b981; }}
-                .rate {{ text-align: center; color: #64748b; }}
-                .button {{ display: block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; margin: 24px auto; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="match-icon">Match Found</div>
-                <h1>Swap Match Found!</h1>
-                <div class="swap-visual">
-                    <div class="cert">
-                        <div class="cert-type">{from_type}</div>
-                        <div class="cert-qty">{quantity:,.0f} units</div>
-                    </div>
-                    <div class="arrow">-&gt;</div>
-                    <div class="cert">
-                        <div class="cert-type">{to_type}</div>
-                        <div class="cert-qty">{quantity * rate:,.0f} units</div>
-                    </div>
-                </div>
-                <div class="rate">Exchange Rate: 1 {from_type} =
-                    {rate:.2f} {to_type}</div>
-                <a href="http://localhost:5173/swap" class="button">View Swap</a>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "swap_match.html",
+            from_type=from_type,
+            to_type=to_type,
+            quantity=f"{quantity:,.0f}",
+            to_quantity=f"{quantity * rate:,.0f}",
+            rate=f"{rate:.2f}",
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_invitation(
         self,
@@ -215,121 +204,27 @@ class EmailService:
             )
             body_html = mail_config.get("invitation_body_html")
             if body_html:
+                # DB custom body — use simple string replacement (legacy)
                 html_content = body_html.replace("{{setup_url}}", setup_url).replace(
                     "{{first_name}}", name
                 )
             else:
-                html_content = self._default_invitation_html(name, setup_url)
+                html_content = self._render_template("invitation.html", name=name, setup_url=setup_url)
             from_email = mail_config.get("from_email") or settings.FROM_EMAIL
             return await self._send_email(
-                to_email,
-                subject,
-                html_content,
-                from_email=from_email,
-                mail_config=mail_config,
+                to_email, subject, html_content, from_email=from_email, mail_config=mail_config,
             )
         setup_url = f"http://localhost:5173/setup-password?token={invitation_token}"
         subject = "Welcome to Nihao Carbon Trading Platform"
-        html_content = self._default_invitation_html(name, setup_url)
-        return await self._send_email(to_email, subject, html_content)
-
-    def _default_invitation_html(self, name: str, setup_url: str) -> str:
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .button {{ display: block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; margin: 24px auto; }}
-                .highlight {{ background: #ecfdf5; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .highlight p {{ color: #047857; margin: 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-                .warning {{ background: #fef3c7; border-radius: 8px;
-                    padding: 12px; margin-top: 20px; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Welcome, {name}!</h1>
-                <p>You've been invited to join the Nihao Carbon Trading
-                Platform. Click the button below to set up your password
-                and activate your account.</p>
-                <a href="{setup_url}" class="button">Set Up Your Password</a>
-                <div class="highlight">
-                    <p><strong>What is Nihao Group?</strong></p>
-                    <p>We're a professional OTC carbon credit trading platform
-                    enabling swap trading between EU ETS (EUA) and China ETS
-                    (CEA) emission certificates.</p>
-                </div>
-                <div class="warning">
-                    This invitation link will expire in 7 days. If you didn't
-                    expect this invitation, please ignore this email.
-                </div>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        html = self._render_template("invitation.html", name=name, setup_url=setup_url)
+        return await self._send_email(to_email, subject, html)
 
     async def send_account_approved(self, to_email: str, first_name: str) -> bool:
         """Send email when user account is approved"""
         name = first_name or "there"
         subject = "Your account has been verified - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .success-icon {{ font-size: 48px; text-align: center; }}
-                .highlight {{ background: #ecfdf5; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .highlight p {{ color: #047857; margin: 0; }}
-                .button {{ display: block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; margin: 24px auto; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">Verified</div>
-                <h1>Congratulations, {name}!</h1>
-                <p>Your account has been verified and approved. You can now
-                access the Nihao Carbon Trading Platform.</p>
-                <div class="highlight">
-                    <p><strong>What's next?</strong></p>
-                    <p>To start trading, please fund your account. Contact
-                    our support team for funding instructions.</p>
-                </div>
-                <a href="http://localhost:5173/dashboard"
-                    class="button">Go to Dashboard</a>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("account_approved.html", name=name)
+        return await self._send_email(to_email, subject, html)
 
     async def send_kyc_rejected(
         self, to_email: str, first_name: str, reason: str = ""
@@ -337,113 +232,20 @@ class EmailService:
         """Notify user their KYC application was rejected."""
         name = first_name or "there"
         subject = "Account Verification Update - Nihao Group"
-        reason_html = (
-            f'<p style="color:#64748b;line-height:1.6;margin:8px 0 0 0;"><strong>Details:</strong> {reason}</p>'
-            if reason
-            else ""
-        )
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .alert {{ background: #fef2f2; border: 1px solid #fecaca;
-                    border-radius: 12px; padding: 16px; margin: 20px 0; }}
-                .alert-title {{ color: #dc2626; font-weight: 600; margin: 0 0 4px 0; }}
-                .button {{ display: inline-block; background: #0f172a;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Verification Update</h1>
-                <p>Hello {name},</p>
-                <div class="alert">
-                    <p class="alert-title">We were unable to verify your account at this time.</p>
-                    {reason_html}
-                </div>
-                <p>If you believe this is an error or would like to provide additional documentation,
-                please contact our compliance team.</p>
-                <a href="mailto:info@nihaogroup.com" class="button">Contact Support</a>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("kyc_rejected.html", name=name, reason=reason)
+        return await self._send_email(to_email, subject, html)
 
     async def send_deposit_announced(
         self, to_email: str, first_name: str, amount: float, currency: str, reference: str
     ) -> bool:
         """Confirm deposit announcement receipt to user."""
         name = first_name or "there"
-        subject = f"Deposit Received - {currency} {amount:,.2f} - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .details {{ background: #eff6ff; border: 1px solid #bfdbfe;
-                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; border-bottom: 1px solid #dbeafe; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #3b82f6; font-weight: 500; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Deposit Announcement Received</h1>
-                <p>Hello {name},</p>
-                <p>We've received your deposit announcement. Our team will verify the wire transfer.</p>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Reference</span>
-                        <span class="value">{reference or 'Pending'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Status</span>
-                        <span class="value">Awaiting Verification</span>
-                    </div>
-                </div>
-                <p>Typical processing time: <strong>1-3 business days</strong>.
-                You'll be notified once your funds are confirmed.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Deposit Received - {currency} {_fmt(amount)} - Nihao Group"
+        html = self._render_template(
+            "deposit_announced.html",
+            name=name, amount=_fmt(amount), currency=currency, reference=reference,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_deposit_on_hold(
         self, to_email: str, first_name: str, amount: float, currency: str, hold_until: str
@@ -451,117 +253,28 @@ class EmailService:
         """Notify user their deposit is on AML compliance hold."""
         name = first_name or "there"
         subject = "Deposit Under Review - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .info {{ background: #fffbeb; border: 1px solid #fde68a;
-                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .info-title {{ color: #d97706; font-weight: 600; margin: 0 0 8px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; border-bottom: 1px solid #fde68a; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #92400e; font-weight: 500; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Deposit Under Review</h1>
-                <p>Hello {name},</p>
-                <p>Your deposit has been received and is undergoing standard compliance review.</p>
-                <div class="info">
-                    <p class="info-title">Compliance Hold</p>
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Expected Clearance</span>
-                        <span class="value">{hold_until}</span>
-                    </div>
-                </div>
-                <p>This is a standard regulatory procedure. You'll be notified as soon as your
-                funds are cleared and available for trading.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "deposit_on_hold.html",
+            name=name, amount=_fmt(amount), currency=currency, hold_until=hold_until,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_deposit_cleared(
         self, to_email: str, first_name: str, amount: float, currency: str
     ) -> bool:
         """Notify user their deposit cleared AML and funds are available."""
         name = first_name or "there"
-        subject = f"Funds Available - {currency} {amount:,.2f} Cleared - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                .success {{ color: #10b981; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .success-box {{ background: #f0fdf4; border: 1px solid #bbf7d0;
-                    border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
-                .amount {{ font-size: 28px; font-weight: 700; color: #0f172a; margin: 8px 0; }}
-                .badge {{ display: inline-block; background: #10b981; color: white;
-                    padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }}
-                .button {{ display: inline-block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1 class="success">Funds Available</h1>
-                <p>Hello {name},</p>
-                <p>Great news! Your deposit has cleared compliance review and funds are now available.</p>
-                <div class="success-box">
-                    <span class="badge">CLEARED</span>
-                    <div class="amount">{currency} {amount:,.2f}</div>
-                    <p style="color:#16a34a;margin:0;">Ready for trading</p>
-                </div>
-                <p>You can now buy CEA certificates on the Cash Market or execute CEA-to-EUA swaps.</p>
-                <a href="http://localhost:5173/cash-market" class="button">Start Trading</a>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Funds Available - {currency} {_fmt(amount)} Cleared - Nihao Group"
+        html = self._render_template(
+            "deposit_cleared.html", name=name, amount=_fmt(amount), currency=currency,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_deposit_rejected(
         self, to_email: str, first_name: str, amount: float, currency: str, reason: str
     ) -> bool:
         """Notify user their deposit was rejected."""
         name = first_name or "there"
-        # Map internal reason codes to user-friendly messages
         reason_map = {
             "WIRE_NOT_RECEIVED": "Wire transfer not received within expected timeframe",
             "AMOUNT_MISMATCH": "Deposit amount does not match the announced amount",
@@ -573,159 +286,24 @@ class EmailService:
         }
         display_reason = reason_map.get(reason, reason or "Please contact support for details")
         subject = "Deposit Update - Action Required - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto; background: white;
-                    border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .alert {{ background: #fef2f2; border: 1px solid #fecaca;
-                    border-radius: 12px; padding: 20px; margin: 20px 0; }}
-                .alert-title {{ color: #dc2626; font-weight: 600; margin: 0 0 8px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; border-bottom: 1px solid #fecaca; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #991b1b; font-weight: 500; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .button {{ display: inline-block; background: #0f172a;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; font-weight: 600; margin: 24px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Deposit Update</h1>
-                <p>Hello {name},</p>
-                <div class="alert">
-                    <p class="alert-title">We were unable to process your deposit.</p>
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Reason</span>
-                        <span class="value">{display_reason}</span>
-                    </div>
-                </div>
-                <p>If you have questions or would like to discuss next steps,
-                please contact our compliance team.</p>
-                <a href="mailto:info@nihaogroup.com" class="button">Contact Support</a>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "deposit_rejected.html",
+            name=name, amount=_fmt(amount), currency=currency, reason=display_reason,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_account_funded(self, to_email: str, first_name: str) -> bool:
         """Send email when user account is funded and ready for trading"""
         name = first_name or "there"
         subject = "Your account is now active - Start Trading!"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .success-icon {{ font-size: 48px; text-align: center; }}
-                .features {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .feature {{ display: flex; align-items: center; }}
-                .feature-icon {{ font-size: 20px; margin-right: 12px; }}
-                .feature-text {{ color: #0f172a; }}
-                .button {{ display: block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; margin: 24px auto; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">Active</div>
-                <h1>Welcome to Trading, {name}!</h1>
-                <p>Your account has been funded and you now have full access
-                to our carbon trading platform.</p>
-                <div class="features">
-                    <div class="feature">
-                        <span class="feature-icon">📊</span>
-                        <span class="feature-text">Browse the CEA Marketplace</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">🔄</span>
-                        <span class="feature-text">Create EUA-CEA Swap Requests</span>
-                    </div>
-                    <div class="feature">
-                        <span class="feature-icon">💰</span>
-                        <span class="feature-text">Execute OTC Trades</span>
-                    </div>
-                </div>
-                <a href="http://localhost:5173/marketplace"
-                    class="button">Start Trading</a>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("account_funded.html", name=name)
+        return await self._send_email(to_email, subject, html)
 
     async def send_contact_followup(self, to_email: str, entity_name: str) -> bool:
         """Send follow-up email after contact request"""
         subject = "Thank you for your interest - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; }}
-                p {{ color: #64748b; line-height: 1.6; }}
-                .highlight {{ background: #ecfdf5; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .highlight p {{ color: #047857; margin: 0; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Thank you, {entity_name}!</h1>
-                <p>We have received your inquiry about our carbon certificate
-                trading platform. Our team will review your request and
-                contact you within 24-48 hours.</p>
-                <div class="highlight">
-                    <p><strong>What happens next?</strong></p>
-                    <p>One of our carbon trading specialists will reach out
-                    to discuss your needs and guide you through the
-                    onboarding process.</p>
-                </div>
-                <p>In the meantime, feel free to explore our platform to
-                learn more about EUA-CEA swaps and OTC trading benefits.</p>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("contact_followup.html", entity_name=entity_name)
+        return await self._send_email(to_email, subject, html)
 
     async def send_settlement_created(
         self,
@@ -739,81 +317,13 @@ class EmailService:
         """Send settlement created confirmation email"""
         name = first_name or "there"
         subject = f"Settlement Initiated - {batch_reference}"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                h1 {{ color: #0f172a; font-size: 20px; margin-bottom: 16px; }}
-                .status-badge {{ display: inline-block; background: #fef3c7;
-                    color: #92400e; padding: 6px 12px; border-radius: 6px;
-                    font-size: 13px; margin-bottom: 20px; }}
-                .details {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; border-bottom: 1px solid #e2e8f0; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .timeline {{ background: #ecfdf5; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .timeline h3 {{ color: #047857; margin: 0 0 12px 0; }}
-                .timeline p {{ color: #065f46; margin: 4px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Settlement Created</h1>
-                <div class="status-badge">⏱️ PENDING</div>
-                <p style="color: #64748b; margin-bottom: 20px;">Hello {name},
-                your {certificate_type} purchase settlement has been
-                initiated.</p>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Settlement ID</span>
-                        <span class="value">{batch_reference}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificate Type</span>
-                        <span class="value">{certificate_type}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Quantity</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Expected Delivery</span>
-                        <span class="value">{expected_date}</span>
-                    </div>
-                </div>
-                <div class="timeline">
-                    <h3>📅 Settlement Timeline (T+3)</h3>
-                    <p><strong>T+1:</strong> Transfer Initiated</p>
-                    <p><strong>T+2:</strong> In Transit</p>
-                    <p><strong>T+3:</strong> At Custody & Settled</p>
-                </div>
-                <p style="color: #64748b; font-size: 14px;">You will receive
-                updates as your settlement progresses through each stage.
-                Your {certificate_type} certificates will be available in
-                your account on the expected delivery date.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "settlement_created.html",
+            name=name, batch_reference=batch_reference,
+            certificate_type=certificate_type, quantity=_fmt(quantity),
+            expected_date=expected_date,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_settlement_status_update(
         self,
@@ -828,119 +338,28 @@ class EmailService:
         """Send settlement status update email"""
         name = first_name or "there"
 
-        # Status display configuration
         status_config = {
-            "TRANSFER_INITIATED": {
-                "emoji": "🚀",
-                "color": "#3b82f6",
-                "bg": "#dbeafe",
-                "label": "Transfer Initiated",
-            },
-            "IN_TRANSIT": {
-                "emoji": "🔄",
-                "color": "#8b5cf6",
-                "bg": "#ede9fe",
-                "label": "In Transit",
-            },
-            "AT_CUSTODY": {
-                "emoji": "🏦",
-                "color": "#06b6d4",
-                "bg": "#cffafe",
-                "label": "At Custody",
-            },
-            "SETTLED": {
-                "emoji": "✅",
-                "color": "#10b981",
-                "bg": "#d1fae5",
-                "label": "Settled",
-            },
-            "FAILED": {
-                "emoji": "❌",
-                "color": "#ef4444",
-                "bg": "#fee2e2",
-                "label": "Failed",
-            },
+            "TRANSFER_INITIATED": {"emoji": "\U0001F680", "color": "#3b82f6", "bg": "#dbeafe", "label": "Transfer Initiated"},
+            "IN_TRANSIT": {"emoji": "\U0001F504", "color": "#8b5cf6", "bg": "#ede9fe", "label": "In Transit"},
+            "AT_CUSTODY": {"emoji": "\U0001F3E6", "color": "#06b6d4", "bg": "#cffafe", "label": "At Custody"},
+            "SETTLED": {"emoji": "\u2705", "color": "#10b981", "bg": "#d1fae5", "label": "Settled"},
+            "FAILED": {"emoji": "\u274C", "color": "#ef4444", "bg": "#fee2e2", "label": "Failed"},
         }
-
         config = status_config.get(
             new_status,
-            {"emoji": "⏱️", "color": "#f59e0b", "bg": "#fef3c7", "label": new_status},
+            {"emoji": "\u23F1\uFE0F", "color": "#f59e0b", "bg": "#fef3c7", "label": new_status},
         )
 
         subject = f"Settlement Update - {batch_reference} is now {config['label']}"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                .status-icon {{ font-size: 48px; text-align: center; }}
-                h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
-                .status-badge {{ display: inline-block;
-                    background: {config["bg"]}; color: {config["color"]};
-                    padding: 8px 16px; border-radius: 8px; }}
-                .progress {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .progress-label {{ color: #64748b; font-size: 13px; }}
-                .details {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 8px 0; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="status-icon">{config["emoji"]}</div>
-                <h1>Settlement Status Updated</h1>
-                <div style="text-align: center;">
-                    <span class="status-badge">
-                        {config["label"].upper()}</span>
-                </div>
-                <p style="color: #64748b; text-align: center;">Hello {name},
-                    your settlement has progressed to the next stage.</p>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Settlement ID</span>
-                        <span class="value">{batch_reference}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificate</span>
-                        <span class="value">{certificate_type}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Quantity</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Previous Status</span>
-                        <span class="value">
-                            {old_status.replace("_", " ").title()}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">New Status</span>
-                        <span class="value" style="color: {config["color"]};">
-                            {config["label"]}</span>
-                    </div>
-                </div>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "settlement_status_update.html",
+            name=name, batch_reference=batch_reference,
+            certificate_type=certificate_type, quantity=_fmt(quantity),
+            old_status=old_status.replace("_", " ").title(),
+            status_emoji=config["emoji"], status_color=config["color"],
+            status_bg=config["bg"], status_label=config["label"],
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_settlement_completed(
         self,
@@ -953,83 +372,14 @@ class EmailService:
     ) -> bool:
         """Send settlement completion email"""
         name = first_name or "there"
-        subject = f"Settlement Complete - {quantity:,.2f} {certificate_type} Delivered"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                .success-icon {{ font-size: 64px; text-align: center; }}
-                h1 {{ color: #0f172a; font-size: 22px; text-align: center; }}
-                .success-badge {{ display: inline-block; background: #d1fae5;
-                    color: #047857; padding: 8px 16px; border-radius: 8px; }}
-                .highlight {{ background: #ecfdf5; border-radius: 12px;
-                    padding: 24px; margin: 24px 0; text-align: center; }}
-                .highlight .big-number {{ font-size: 36px; font-weight: 700;
-                    color: #047857; margin-bottom: 8px; }}
-                .highlight .label {{ color: #065f46; font-size: 14px; }}
-                .details {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .button {{ display: block; background: #10b981;
-                    color: white; padding: 14px 32px; border-radius: 8px;
-                    text-decoration: none; margin: 24px auto; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">🎉</div>
-                <h1>Settlement Complete!</h1>
-                <div style="text-align: center;">
-                    <span class="success-badge">✅ SETTLED</span>
-                </div>
-                <p style="color: #64748b; text-align: center;">Hello {name},
-                    your certificates have been successfully delivered to
-                    your account.</p>
-                <div class="highlight">
-                    <div class="big-number">+{quantity:,.2f}</div>
-                    <div class="label">{certificate_type} certificates added</div>
-                </div>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Settlement ID</span>
-                        <span class="value">{batch_reference}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificates Delivered</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">New {certificate_type} Balance</span>
-                        <span class="value">{new_balance:,.2f} tCO2e</span>
-                    </div>
-                </div>
-                <a href="http://localhost:5173/dashboard"
-                    class="button">View Dashboard</a>
-                <p style="color: #64748b; font-size: 13px; text-align: center;">
-                    Your certificates are now available for trading.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Settlement Complete - {_fmt(quantity)} {certificate_type} Delivered"
+        html = self._render_template(
+            "settlement_completed.html",
+            name=name, batch_reference=batch_reference,
+            certificate_type=certificate_type, quantity=_fmt(quantity),
+            new_balance=_fmt(new_balance),
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_settlement_failed(
         self,
@@ -1043,86 +393,13 @@ class EmailService:
         """Send settlement failure notification email"""
         name = first_name or "there"
         subject = f"Settlement Failed - {batch_reference}"
-        failure_reason = reason or "Technical issue during settlement processing"
-
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                .error-icon {{ font-size: 48px; text-align: center; }}
-                h1 {{ color: #0f172a; font-size: 20px; text-align: center; }}
-                .error-badge {{ display: inline-block; background: #fee2e2;
-                    color: #991b1b; padding: 8px 16px; border-radius: 8px; }}
-                .details {{ background: #f8fafc; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between;
-                    padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .error-box {{ background: #fef2f2;
-                    border-left: 4px solid #ef4444; border-radius: 8px;
-                    padding: 16px; margin: 20px 0; }}
-                .error-box p {{ color: #991b1b; margin: 0; }}
-                .support {{ background: #dbeafe; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }}
-                .support h3 {{ color: #1e40af; margin: 0 0 8px 0; }}
-                .support p {{ color: #1e3a8a; margin: 0; }}
-                .footer {{ margin-top: 32px; padding-top: 24px;
-                    border-top: 1px solid #e2e8f0; font-size: 13px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="error-icon">Warning</div>
-                <h1>Settlement Failed</h1>
-                <div style="text-align: center;">
-                    <span class="error-badge">FAILED</span>
-                </div>
-                <p style="color: #64748b; text-align: center;">Hello {name},
-                    we encountered an issue processing your settlement.</p>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Settlement ID</span>
-                        <span class="value">{batch_reference}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificate Type</span>
-                        <span class="value">{certificate_type}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Quantity</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                </div>
-                <div class="error-box">
-                    <p><strong>Failure Reason:</strong> {failure_reason}</p>
-                </div>
-                <div class="support">
-                    <h3>What happens next?</h3>
-                    <p>Our support team has been notified and will contact
-                        you within 24 hours to resolve this issue. Your
-                        funds remain safe in your account.</p>
-                </div>
-                <p style="color: #64748b; font-size: 13px; text-align: center;">
-                    Contact: support@nihaogroup.com</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>Hong Kong | Italy</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "settlement_failed.html",
+            name=name, batch_reference=batch_reference,
+            certificate_type=certificate_type, quantity=_fmt(quantity),
+            reason=reason or "Technical issue during settlement processing",
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_admin_overdue_settlement_alert(
         self,
@@ -1136,209 +413,37 @@ class EmailService:
         current_status: str,
     ) -> bool:
         """Send admin alert for overdue settlement"""
-        subject = (
-            f"⚠️ ALERT: Settlement {batch_reference} is {days_overdue} days overdue"
+        subject = f"\u26A0\uFE0F ALERT: Settlement {batch_reference} is {days_overdue} days overdue"
+        html = self._render_template(
+            "admin_overdue_settlement.html",
+            batch_reference=batch_reference, entity_name=entity_name,
+            certificate_type=certificate_type, quantity=_fmt(quantity),
+            expected_date=expected_date, days_overdue=days_overdue,
+            current_status=current_status.replace("_", " ").title(),
         )
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-                .container {{ max-width: 600px; margin: 0 auto; background: white; }}
-                .container {{ border-radius: 16px; padding: 40px; }}
-                .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-                .logo span {{ color: #10b981; }}
-                .alert-header {{ background: #fef2f2; padding: 20px; }}
-                .alert-header {{ border-left: 4px solid #ef4444; }}
-                .alert-header h1 {{ color: #991b1b; font-size: 20px; }}
-                .alert-header p {{ color: #dc2626; font-size: 14px; }}
-                .details {{ background: #f8fafc; padding: 20px; margin: 20px 0; }}
-                .detail-row {{ padding: 10px 0; border-bottom: 1px solid #e2e8f0; }}
-                .detail-row:last-child {{ border-bottom: none; }}
-                .label {{ color: #64748b; }}
-                .value {{ color: #0f172a; font-weight: 600; }}
-                .overdue {{ color: #ef4444; font-weight: 700; font-size: 18px; }}
-                .actions {{ background: #fef3c7; padding: 20px; margin: 20px 0; }}
-                .actions h3 {{ color: #92400e; font-size: 15px; }}
-                .actions ul {{ color: #78350f; padding-left: 20px; }}
-                .actions li {{ margin: 6px 0; }}
-                .button {{ display: block; background: #ef4444; color: white; }}
-                .button {{ padding: 14px 32px; text-decoration: none; }}
-                .footer {{ margin-top: 32px; padding-top: 24px; color: #94a3b8; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="alert-header">
-                    <h1>⚠️ Overdue Settlement Alert</h1>
-                    <p>Immediate action required for settlement {batch_reference}</p>
-                </div>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Settlement ID</span>
-                        <span class="value">{batch_reference}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Entity</span>
-                        <span class="value">{entity_name}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Certificate Type</span>
-                        <span class="value">{certificate_type}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Quantity</span>
-                        <span class="value">{quantity:,.2f} tCO2e</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Expected Date</span>
-                        <span class="value">{expected_date}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Current Status</span>
-                        <span class="value">
-                            {current_status.replace("_", " ").title()}
-                        </span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Days Overdue</span>
-                        <span class="overdue">{days_overdue} DAYS</span>
-                    </div>
-                </div>
-                <div class="actions">
-                    <h3>📋 Required Actions:</h3>
-                    <ul>
-                        <li>Review settlement status with registry</li>
-                        <li>Contact counterparty if applicable</li>
-                        <li>Update client on delay</li>
-                        <li>Determine root cause and resolution timeline</li>
-                    </ul>
-                </div>
-                <a href="http://localhost:5173/backoffice/settlements"
-                   class="button">Review in Backoffice</a>
-                <p style="color: #64748b; font-size: 13px; text-align: center;">
-                    This is an automated alert from the Settlement Processor
-                </p>
-                <div class="footer">
-                    <p>Nihao Group Ltd - Carbon Certificate Trading</p>
-                    <p>System Administration</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-
-        return await self._send_email(to_email, subject, html_content)
+        return await self._send_email(to_email, subject, html)
 
     async def send_withdrawal_requested(
         self, to_email: str, first_name: str, amount: float, currency: str = "EUR"
     ) -> bool:
         """Confirm withdrawal request receipt to user."""
         name = first_name or "there"
-        subject = f"Withdrawal Request Received - {currency} {amount:,.2f} - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #0f172a; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .details {{ background: #eff6ff; border: 1px solid #bfdbfe;
-                border-radius: 12px; padding: 20px; margin: 20px 0; }}
-            .detail-row {{ display: flex; justify-content: space-between;
-                padding: 8px 0; border-bottom: 1px solid #dbeafe; }}
-            .detail-row:last-child {{ border-bottom: none; }}
-            .label {{ color: #3b82f6; font-weight: 500; }}
-            .value {{ color: #0f172a; font-weight: 600; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Withdrawal Request Received</h1>
-                <p>Hello {name},</p>
-                <p>We've received your withdrawal request. Our team will review and process it.</p>
-                <div class="details">
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Status</span>
-                        <span class="value">Pending Review</span>
-                    </div>
-                </div>
-                <p>Typical processing time: <strong>1-3 business days</strong>.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Withdrawal Request Received - {currency} {_fmt(amount)} - Nihao Group"
+        html = self._render_template(
+            "withdrawal_requested.html", name=name, amount=_fmt(amount), currency=currency,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_withdrawal_approved(
         self, to_email: str, first_name: str, amount: float, currency: str = "EUR"
     ) -> bool:
         """Notify user their withdrawal was approved and is being processed."""
         name = first_name or "there"
-        subject = f"Withdrawal Approved - {currency} {amount:,.2f} - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #0f172a; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .info {{ background: #eff6ff; border: 1px solid #bfdbfe;
-                border-radius: 12px; padding: 20px; margin: 20px 0; }}
-            .info-title {{ color: #2563eb; font-weight: 600; margin: 0 0 8px 0; }}
-            .detail-row {{ display: flex; justify-content: space-between;
-                padding: 8px 0; border-bottom: 1px solid #dbeafe; }}
-            .detail-row:last-child {{ border-bottom: none; }}
-            .label {{ color: #3b82f6; font-weight: 500; }}
-            .value {{ color: #0f172a; font-weight: 600; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Withdrawal Approved</h1>
-                <p>Hello {name},</p>
-                <p>Your withdrawal request has been approved and is now being processed.</p>
-                <div class="info">
-                    <p class="info-title">Processing</p>
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Status</span>
-                        <span class="value">Wire Transfer Pending</span>
-                    </div>
-                </div>
-                <p>You'll receive a confirmation once the wire transfer has been sent.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Withdrawal Approved - {currency} {_fmt(amount)} - Nihao Group"
+        html = self._render_template(
+            "withdrawal_approved.html", name=name, amount=_fmt(amount), currency=currency,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_withdrawal_completed(
         self, to_email: str, first_name: str, amount: float, currency: str = "EUR",
@@ -1346,55 +451,13 @@ class EmailService:
     ) -> bool:
         """Notify user their withdrawal wire transfer has been sent."""
         name = first_name or "there"
-        ref_display = wire_reference or "See your bank statement"
-        subject = f"Funds Transferred - {currency} {amount:,.2f} - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #10b981; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .success-box {{ background: #f0fdf4; border: 1px solid #bbf7d0;
-                border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
-            .amount {{ font-size: 28px; font-weight: 700; color: #0f172a; margin: 8px 0; }}
-            .badge {{ display: inline-block; background: #10b981; color: white;
-                padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }}
-            .detail-row {{ display: flex; justify-content: space-between;
-                padding: 8px 0; border-bottom: 1px solid #bbf7d0; }}
-            .detail-row:last-child {{ border-bottom: none; }}
-            .label {{ color: #16a34a; font-weight: 500; }}
-            .value {{ color: #0f172a; font-weight: 600; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Funds Transferred</h1>
-                <p>Hello {name},</p>
-                <p>Your withdrawal has been completed. The wire transfer has been sent.</p>
-                <div class="success-box">
-                    <span class="badge">TRANSFERRED</span>
-                    <div class="amount">{currency} {amount:,.2f}</div>
-                    <div class="detail-row">
-                        <span class="label">Reference</span>
-                        <span class="value">{ref_display}</span>
-                    </div>
-                </div>
-                <p>Funds typically arrive within 1-2 business days depending on your bank.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        subject = f"Funds Transferred - {currency} {_fmt(amount)} - Nihao Group"
+        html = self._render_template(
+            "withdrawal_completed.html",
+            name=name, amount=_fmt(amount), currency=currency,
+            wire_reference=wire_reference or "See your bank statement",
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_withdrawal_rejected(
         self, to_email: str, first_name: str, amount: float, currency: str = "EUR",
@@ -1402,265 +465,53 @@ class EmailService:
     ) -> bool:
         """Notify user their withdrawal was rejected and funds refunded to balance."""
         name = first_name or "there"
-        display_reason = reason or "Please contact support for details"
         subject = "Withdrawal Update - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #0f172a; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .alert {{ background: #fef2f2; border: 1px solid #fecaca;
-                border-radius: 12px; padding: 20px; margin: 20px 0; }}
-            .alert-title {{ color: #dc2626; font-weight: 600; margin: 0 0 8px 0; }}
-            .detail-row {{ display: flex; justify-content: space-between;
-                padding: 8px 0; border-bottom: 1px solid #fecaca; }}
-            .detail-row:last-child {{ border-bottom: none; }}
-            .label {{ color: #991b1b; font-weight: 500; }}
-            .value {{ color: #0f172a; font-weight: 600; }}
-            .refund-note {{ background: #ecfdf5; border-radius: 8px;
-                padding: 12px; margin: 16px 0; }}
-            .refund-note p {{ color: #047857; margin: 0; font-size: 14px; }}
-            .button {{ display: inline-block; background: #0f172a;
-                color: white; padding: 14px 32px; border-radius: 8px;
-                text-decoration: none; font-weight: 600; margin: 24px 0; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Withdrawal Update</h1>
-                <p>Hello {name},</p>
-                <div class="alert">
-                    <p class="alert-title">Your withdrawal could not be processed.</p>
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Reason</span>
-                        <span class="value">{display_reason}</span>
-                    </div>
-                </div>
-                <div class="refund-note">
-                    <p>The reserved funds have been returned to your account balance.</p>
-                </div>
-                <p>If you have questions, please contact our support team.</p>
-                <a href="mailto:info@nihaogroup.com" class="button">Contact Support</a>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "withdrawal_rejected.html",
+            name=name, amount=_fmt(amount), currency=currency,
+            reason=reason or "Please contact support for details",
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_welcome_activated(self, to_email: str, first_name: str = "") -> bool:
         """Welcome email sent after user sets their password from invitation."""
         name = first_name or "there"
         subject = "Welcome to Nihao Group - Account Activated"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #10b981; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .highlight {{ background: #ecfdf5; border-radius: 12px;
-                padding: 20px; margin: 20px 0; text-align: center; }}
-            .highlight p {{ color: #047857; margin: 0; }}
-            .button {{ display: inline-block; background: #0f172a;
-                color: white; padding: 14px 32px; border-radius: 8px;
-                text-decoration: none; font-weight: 600; margin: 24px 0; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Welcome Aboard!</h1>
-                <p>Hello {name},</p>
-                <p>Your account has been activated successfully. You now have full access
-                to the Nihao Group carbon trading platform.</p>
-                <div class="highlight">
-                    <p><strong>Your account is ready.</strong> Log in anytime to manage
-                    your portfolio, request deposits, and trade carbon credits.</p>
-                </div>
-                <a href="https://app.nihaogroup.com" class="button">Go to Dashboard</a>
-                <p>If you have any questions, our team is here to help.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template("welcome_activated.html", name=name)
+        return await self._send_email(to_email, subject, html)
 
     async def send_aml_review_started(
         self, to_email: str, first_name: str = "", amount: float = 0, currency: str = "EUR"
     ) -> bool:
-        """Notify user that their deposit is under AML review (FUNDING → AML)."""
+        """Notify user that their deposit is under AML review (FUNDING -> AML)."""
         name = first_name or "there"
         subject = "Deposit Under Review - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #0f172a; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .info {{ background: #fef3c7; border: 1px solid #fde68a;
-                border-radius: 12px; padding: 20px; margin: 20px 0; }}
-            .info-title {{ color: #92400e; font-weight: 600; margin: 0 0 8px 0; }}
-            .info p {{ color: #92400e; margin: 4px 0; }}
-            .detail-row {{ display: flex; justify-content: space-between;
-                padding: 8px 0; border-bottom: 1px solid #fde68a; }}
-            .detail-row:last-child {{ border-bottom: none; }}
-            .label {{ color: #92400e; font-weight: 500; }}
-            .value {{ color: #0f172a; font-weight: 600; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>Deposit Under Review</h1>
-                <p>Hello {name},</p>
-                <p>Your wire transfer has been received and is now undergoing a standard
-                Anti-Money Laundering (AML) compliance review.</p>
-                <div class="info">
-                    <p class="info-title">AML Review In Progress</p>
-                    <div class="detail-row">
-                        <span class="label">Amount</span>
-                        <span class="value">{currency} {amount:,.2f}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Status</span>
-                        <span class="value">Under Review</span>
-                    </div>
-                </div>
-                <p>This is a routine process required by regulation. Your funds will be
-                credited to your account once the review is complete. We'll notify you
-                as soon as your account is activated for trading.</p>
-                <p>No action is required on your part.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "aml_review_started.html", name=name, amount=_fmt(amount), currency=currency,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_trading_activated(
         self, to_email: str, first_name: str = "", amount: float = 0, currency: str = "EUR"
     ) -> bool:
-        """Notify user that AML cleared and they can now trade on CEA market (AML → CEA)."""
+        """Notify user that AML cleared and they can now trade on CEA market (AML -> CEA)."""
         name = first_name or "there"
         subject = "Account Activated for Trading - Nihao Group"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head><style>
-            body {{ font-family: 'Inter', sans-serif; background: #f8fafc; }}
-            .container {{ max-width: 500px; margin: 0 auto; background: white;
-                border-radius: 16px; padding: 40px; }}
-            .logo {{ font-size: 24px; font-weight: 700; color: #0f172a; }}
-            .logo span {{ color: #10b981; }}
-            h1 {{ color: #10b981; font-size: 20px; }}
-            p {{ color: #64748b; line-height: 1.6; }}
-            .success-box {{ background: #f0fdf4; border: 1px solid #bbf7d0;
-                border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }}
-            .amount {{ font-size: 28px; font-weight: 700; color: #0f172a; margin: 8px 0; }}
-            .badge {{ display: inline-block; background: #10b981; color: white;
-                padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }}
-            .button {{ display: inline-block; background: #0f172a;
-                color: white; padding: 14px 32px; border-radius: 8px;
-                text-decoration: none; font-weight: 600; margin: 24px 0; }}
-            .footer {{ margin-top: 32px; padding-top: 24px;
-                border-top: 1px solid #e2e8f0; font-size: 13px; color: #94a3b8; }}
-        </style></head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <h1>You're Ready to Trade!</h1>
-                <p>Hello {name},</p>
-                <p>Great news! Your AML review has been completed and your funds have been
-                credited to your account. You are now active on the CEA Cash Market.</p>
-                <div class="success-box">
-                    <span class="badge">ACCOUNT ACTIVE</span>
-                    <div class="amount">{currency} {amount:,.2f}</div>
-                    <p style="color: #047857; margin: 8px 0 0 0; font-size: 14px;">Available for trading</p>
-                </div>
-                <a href="https://app.nihaogroup.com/cash-market" class="button">Start Trading</a>
-                <p>You can now purchase China Emission Allowances (CEA) on the Cash Market.</p>
-                <div class="footer">
-                    <p>Nihao Group Ltd | Professional Carbon Trading</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content)
+        html = self._render_template(
+            "trading_activated.html", name=name, amount=_fmt(amount), currency=currency,
+        )
+        return await self._send_email(to_email, subject, html)
 
     async def send_test_email(
         self, to_email: str, mail_config: Optional[Dict[str, Any]] = None
     ) -> bool:
         """Send a test email to verify mail configuration."""
         subject = "Test Email - Nihao Group Mail Configuration"
-        html_content = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: 'Inter', sans-serif; background: #f8fafc; }
-                .container { max-width: 500px; margin: 0 auto;
-                    background: white; border-radius: 16px; padding: 40px; }
-                .logo { font-size: 24px; font-weight: 700; color: #0f172a; }
-                .logo span { color: #10b981; }
-                h1 { color: #0f172a; font-size: 20px; }
-                p { color: #64748b; line-height: 1.6; }
-                .success-icon { font-size: 48px; text-align: center; color: #10b981; }
-                .highlight { background: #ecfdf5; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; }
-                .highlight p { color: #047857; margin: 0; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="logo">NIHAO<span>GROUP</span></div>
-                <div class="success-icon">&#10004;</div>
-                <h1>Mail Configuration Working</h1>
-                <p>This is a test email from the Nihao Group platform.
-                If you received this, your mail delivery configuration
-                is working correctly.</p>
-                <div class="highlight">
-                    <p><strong>Provider:</strong> """ + (mail_config.get("provider", "env") if mail_config else "env") + """</p>
-                </div>
-                <p style="color:#94a3b8; font-size:12px;">
-                    Sent from Settings &rarr; Mail Settings &rarr; Test Email
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        return await self._send_email(to_email, subject, html_content, mail_config=mail_config)
+        provider = (mail_config.get("provider", "env") if mail_config else "env")
+        html = self._render_template("test_email.html", provider=provider)
+        return await self._send_email(to_email, subject, html, mail_config=mail_config)
+
+    # ── internal plumbing (unchanged) ──────────────────────────────
 
     async def _get_db_mail_config(self) -> Optional[Dict[str, Any]]:
         """Load current mail config from DB. Returns None if not configured."""

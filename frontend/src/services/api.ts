@@ -428,7 +428,7 @@ export interface ClientWebSocketMessage {
 
 // Backoffice Realtime Types
 export interface BackofficeWebSocketMessage {
-  type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted';
+  type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted' | 'new_ticket' | 'newTicket';
   data?: Record<string, unknown>;
   message?: string;
   timestamp: string;
@@ -1145,6 +1145,19 @@ export const adminApi = {
 
   sendTestEmail: async (testEmail: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post('/admin/settings/mail/test-email', { test_email: testEmail });
+    return data;
+  },
+
+  getEmailTemplates: async (): Promise<string[]> => {
+    const { data } = await api.get('/admin/settings/mail/templates');
+    return data.templates;
+  },
+
+  getEmailTemplatePreview: async (templateName: string): Promise<string> => {
+    const { data } = await api.get(`/admin/settings/mail/preview/${templateName}`, {
+      responseType: 'text',
+      transformResponse: [(data: string) => data],
+    });
     return data;
   },
 

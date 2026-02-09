@@ -1,0 +1,19 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F504;</div>
+<h1 class="text-center">Swap Match Found!</h1>
+<div class="swap-visual">
+    <div class="swap-cert">
+        <div class="swap-cert-type">{{ from_type }}</div>
+        <div class="swap-cert-qty">{{ quantity }} units</div>
+    </div>
+    <div class="swap-arrow">&#x2192;</div>
+    <div class="swap-cert">
+        <div class="swap-cert-type">{{ to_type }}</div>
+        <div class="swap-cert-qty">{{ to_quantity }} units</div>
+    </div>
+</div>
+<p class="text-center text-muted">Exchange Rate: 1 {{ from_type }} = {{ rate }} {{ to_type }}</p>
+<a href="http://localhost:5173/swap" class="btn btn-primary">View Swap</a>
+{% endblock %}

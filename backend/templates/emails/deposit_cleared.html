@@ -1,0 +1,15 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F4B0;</div>
+<h1>Funds Available</h1>
+<p>Hello {{ name }},</p>
+<p>Great news! Your deposit has cleared compliance review and funds are now available.</p>
+<div class="amount-display">
+    <span class="badge success">Cleared</span>
+    <div class="amount">{{ currency }} {{ amount }}</div>
+    <p class="amount-sub">Ready for trading</p>
+</div>
+<p>You can now buy CEA certificates on the Cash Market or execute CEA-to-EUA swaps.</p>
+<a href="http://localhost:5173/cash-market" class="btn btn-primary">Start Trading</a>
+{% endblock %}

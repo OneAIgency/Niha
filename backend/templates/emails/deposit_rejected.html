@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header error">&#x26D4;</div>
+<h1>Deposit Update</h1>
+<p>Hello {{ name }},</p>
+<div class="callout error">
+    <p class="callout-title">We were unable to process your deposit.</p>
+</div>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Amount</span>
+        <span class="detail-value">{{ currency }} {{ amount }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Reason</span>
+        <span class="detail-value">{{ reason }}</span>
+    </div>
+</div>
+<p>If you have questions or would like to discuss next steps,
+please contact our compliance team.</p>
+<a href="mailto:info@nihaogroup.com" class="btn btn-dark">Contact Support</a>
+{% endblock %}

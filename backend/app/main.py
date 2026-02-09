@@ -319,6 +319,12 @@ async def lifespan(app: FastAPI):
         "exchange rate scraping, and auto-trade schedulers started"
     )
 
+    # Register ticket broadcast to backoffice WebSocket
+    from app.api.v1.backoffice import backoffice_ws_manager
+    from app.services.ticket_service import TicketService
+    TicketService.register_broadcast(backoffice_ws_manager.broadcast)
+    logger.info("Ticket broadcast registered to backoffice WebSocket")
+
     yield
 
     # Shutdown

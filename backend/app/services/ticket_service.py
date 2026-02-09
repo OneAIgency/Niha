@@ -1,9 +1,10 @@
 """Ticket generation and audit logging service"""
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +14,20 @@ from app.models.models import TicketLog, TicketStatus
 
 logger = logging.getLogger(__name__)
 
+# Type for async broadcast callback: (event_type: str, data: dict) -> None
+BroadcastCallback = Callable[[str, dict], Coroutine[Any, Any, None]]
+
 
 class TicketService:
     """Service for generating ticket IDs and managing audit logs"""
+
+    # Registered broadcast callback for pushing new tickets via WebSocket
+    _broadcast_callback: Optional[BroadcastCallback] = None
+
+    @classmethod
+    def register_broadcast(cls, callback: BroadcastCallback) -> None:
+        """Register a callback to broadcast new tickets (e.g., to backoffice WS)"""
+        cls._broadcast_callback = callback
 
     @staticmethod
     async def generate_ticket_id() -> str:
@@ -85,6 +97,27 @@ class TicketService:
         await db.refresh(ticket)
 
         logger.info(f"Created ticket {ticket_id} for {action_type} on {entity_type}")
+
+        # Broadcast to backoffice WebSocket (fire-and-forget)
+        if TicketService._broadcast_callback:
+            try:
+                asyncio.create_task(TicketService._broadcast_callback(
+                    "new_ticket",
+                    {
+                        "ticket_id": ticket_id,
+                        "action_type": action_type,
+                        "entity_type": entity_type,
+                        "entity_id": str(entity_id) if entity_id else None,
+                        "status": status.value,
+                        "user_id": str(user_id) if user_id else None,
+                        "market_maker_id": str(market_maker_id) if market_maker_id else None,
+                        "tags": tags or [],
+                        "timestamp": ticket.timestamp.isoformat(),
+                    },
+                ))
+            except Exception:
+                pass  # Never let broadcast failure affect ticket creation
+
         return ticket
 
     @staticmethod

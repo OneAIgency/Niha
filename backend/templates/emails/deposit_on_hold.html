@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header warning">&#x23F3;</div>
+<h1>Deposit Under Review</h1>
+<p>Hello {{ name }},</p>
+<p>Your deposit has been received and is undergoing standard compliance review.</p>
+<div class="callout warning">
+    <p class="callout-title">Compliance Hold</p>
+</div>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Amount</span>
+        <span class="detail-value">{{ currency }} {{ amount }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Expected Clearance</span>
+        <span class="detail-value">{{ hold_until }}</span>
+    </div>
+</div>
+<p>This is a standard regulatory procedure. You'll be notified as soon as your
+funds are cleared and available for trading.</p>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x2705;</div>
+<h1>Trade Confirmed</h1>
+<div class="details">
+    <div class="detail-row">
+        <span class="detail-label">Type</span>
+        <span class="detail-value">{{ trade_type }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Certificate</span>
+        <span class="detail-value">{{ certificate_type }}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Quantity</span>
+        <span class="detail-value">{{ quantity }} tCO2e</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Price</span>
+        <span class="detail-value">${{ price }} / unit</span>
+    </div>
+</div>
+<div class="amount-display">
+    <p class="amount-sub">Total</p>
+    <div class="amount">${{ total }}</div>
+</div>
+{% endblock %}

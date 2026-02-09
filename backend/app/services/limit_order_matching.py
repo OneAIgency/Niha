@@ -158,6 +158,44 @@ class LimitOrderMatcher:
             db.add(trade)
             await db.flush()  # Get trade ID
 
+            # Create audit ticket for trade execution
+            buy_ticket_id = getattr(buy_order, 'ticket_id', None)
+            sell_ticket_id = getattr(sell_order, 'ticket_id', None)
+            related = [tid for tid in [buy_ticket_id, sell_ticket_id] if tid]
+
+            trade_ticket = await TicketService.create_ticket(
+                db=db,
+                action_type="TRADE_EXECUTED",
+                entity_type="Trade",
+                entity_id=trade.id,
+                status=TicketStatus.SUCCESS,
+                user_id=user_id,
+                market_maker_id=buy_order.market_maker_id or sell_order.market_maker_id,
+                request_payload={
+                    "aggressor_order_id": str(incoming_order.id),
+                    "aggressor_side": incoming_order.side.value,
+                    "maker_order_id": str(contra_order.id),
+                    "maker_side": contra_order.side.value,
+                },
+                response_data={
+                    "trade_id": str(trade.id),
+                    "buy_order_id": str(buy_order.id),
+                    "sell_order_id": str(sell_order.id),
+                    "buyer_mm_id": str(buy_order.market_maker_id) if buy_order.market_maker_id else None,
+                    "seller_mm_id": str(sell_order.market_maker_id) if sell_order.market_maker_id else None,
+                    "buyer_entity_id": str(buy_order.entity_id) if buy_order.entity_id else None,
+                    "seller_entity_id": str(sell_order.entity_id) if sell_order.entity_id else None,
+                    "certificate_type": incoming_order.certificate_type.value,
+                    "price": str(trade_price),
+                    "quantity": str(match_qty),
+                },
+                related_ticket_ids=related,
+                tags=["trade", "cash_market", incoming_order.certificate_type.value.lower()],
+            )
+
+            # Link ticket to trade
+            trade.ticket_id = trade_ticket.ticket_id
+
             # Update incoming order
             incoming_order.filled_quantity = incoming_order.filled_quantity + match_qty
             incoming_order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)

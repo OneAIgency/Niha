@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F680;</div>
+<h1>You're Ready to Trade!</h1>
+<p>Hello {{ name }},</p>
+<p>Great news! Your AML review has been completed and your funds have been
+credited to your account. You are now active on the CEA Cash Market.</p>
+<div class="amount-display">
+    <span class="badge success">Account Active</span>
+    <div class="amount">{{ currency }} {{ amount }}</div>
+    <p class="amount-sub">Available for trading</p>
+</div>
+<p>You can now purchase China Emission Allowances (CEA) on the Cash Market.</p>
+<a href="http://localhost:5173/cash-market" class="btn btn-primary">Start Trading</a>
+{% endblock %}

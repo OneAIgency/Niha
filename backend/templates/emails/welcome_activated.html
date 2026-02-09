@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x1F389;</div>
+<h1>Welcome Aboard!</h1>
+<p>Hello {{ name }},</p>
+<p>Your account has been activated successfully. You now have full access
+to the Nihao Group carbon trading platform.</p>
+<div class="callout success">
+    <p class="callout-title">Your account is ready</p>
+    <p>Log in anytime to manage your portfolio, request deposits,
+    and trade carbon credits.</p>
+</div>
+<a href="http://localhost:5173/dashboard" class="btn btn-primary">Go to Dashboard</a>
+<p>If you have any questions, our team is here to help.</p>
+{% endblock %}
