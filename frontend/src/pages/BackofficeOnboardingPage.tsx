@@ -87,6 +87,8 @@ export function BackofficeOnboardingPage() {
     entityName: r.entityName,
     contactEmail: r.contactEmail,
     contactName: r.contactName,
+    contactFirstName: r.contactFirstName,
+    contactLastName: r.contactLastName,
     position: r.position || '',
     ndaFileName: r.ndaFileName,
     submitterIp: r.submitterIp,

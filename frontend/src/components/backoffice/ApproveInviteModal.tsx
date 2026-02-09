@@ -15,12 +15,18 @@ interface ApproveInviteModalProps {
 type CreateMode = 'invitation' | 'manual';
 
 function initialFromRequest(r: ContactRequestResponse) {
-  const name = (r.contactName ?? '').trim();
-  const parts = name ? name.split(/\s+/) : [];
+  // Prefer separate first/last fields; fall back to splitting legacy contactName
+  let firstName = (r.contactFirstName ?? '').trim();
+  let lastName = (r.contactLastName ?? '').trim();
+  if (!firstName && !lastName && r.contactName) {
+    const parts = r.contactName.trim().split(/\s+/);
+    firstName = parts[0] ?? '';
+    lastName = parts.slice(1).join(' ') ?? '';
+  }
   return {
     email: r.contactEmail ?? '',
-    firstName: parts[0] ?? '',
-    lastName: parts.slice(1).join(' ') ?? '',
+    firstName,
+    lastName,
     position: r.position ?? '',
   };
 }

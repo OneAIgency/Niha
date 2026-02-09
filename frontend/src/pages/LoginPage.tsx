@@ -43,7 +43,8 @@ export function LoginPage() {
 
   // NDA form fields
   const [entity, setEntity] = useState('');
-  const [contactName, setContactName] = useState('');
+  const [contactFirstName, setContactFirstName] = useState('');
+  const [contactLastName, setContactLastName] = useState('');
   const [position, setPosition] = useState('');
   const [ndaFile, setNdaFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +163,8 @@ export function LoginPage() {
     // Sanitize all inputs
     const sanitizedEntity = sanitizeString(entity);
     const sanitizedEmail = sanitizeEmail(email);
-    const sanitizedContactName = sanitizeString(contactName);
+    const sanitizedFirstName = sanitizeString(contactFirstName);
+    const sanitizedLastName = sanitizeString(contactLastName);
     const sanitizedPosition = sanitizeString(position);
 
     if (!sanitizedEntity.trim()) {
@@ -175,8 +177,13 @@ export function LoginPage() {
       return;
     }
 
-    if (!sanitizedContactName.trim()) {
-      setError('Your name is required');
+    if (!sanitizedFirstName.trim()) {
+      setError('First name is required');
+      return;
+    }
+
+    if (!sanitizedLastName.trim()) {
+      setError('Last name is required');
       return;
     }
 
@@ -200,7 +207,8 @@ export function LoginPage() {
       await contactApi.submitNDARequest({
         entity_name: sanitizedEntity,
         contact_email: sanitizedEmail,
-        contact_name: sanitizedContactName,
+        contact_first_name: sanitizedFirstName,
+        contact_last_name: sanitizedLastName,
         position: sanitizedPosition,
         nda_file: ndaFile,
       });
@@ -246,7 +254,8 @@ export function LoginPage() {
       setMode('initial');
       setEntity('');
       setEmail('');
-      setContactName('');
+      setContactFirstName('');
+      setContactLastName('');
       setPosition('');
       setNdaFile(null);
     };
@@ -472,15 +481,27 @@ export function LoginPage() {
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
                   />
                 </div>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type="text"
-                    placeholder="Your Name"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={contactFirstName}
+                      onChange={(e) => setContactFirstName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
+                    />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={contactLastName}
+                      onChange={(e) => setContactLastName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
+                    />
+                  </div>
                 </div>
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />

@@ -14,7 +14,9 @@ export interface ContactRequest {
   id: string;
   entityName: string;
   contactEmail: string;
-  contactName?: string;
+  contactName?: string;  // Deprecated — use contactFirstName/contactLastName
+  contactFirstName?: string;
+  contactLastName?: string;
   position: string;
   ndaFileName?: string;
   submitterIp?: string;

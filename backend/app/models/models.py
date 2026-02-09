@@ -382,7 +382,9 @@ class ContactRequest(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     entity_name = Column(String(255), nullable=False)
     contact_email = Column(String(255), nullable=False)
-    contact_name = Column(String(255), nullable=True)  # Person's name
+    contact_name = Column(String(255), nullable=True)  # Deprecated — use first/last
+    contact_first_name = Column(String(128), nullable=True)
+    contact_last_name = Column(String(128), nullable=True)
     position = Column(String(100))
     nda_file_path = Column(
         String(500), nullable=True

@@ -126,7 +126,7 @@ export function ContactRequestsTab({
                         Name:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary">
-                        {request.contactName || '—'}
+                        {[request.contactFirstName, request.contactLastName].filter(Boolean).join(' ') || request.contactName || '—'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -206,6 +206,8 @@ export function ContactRequestsTab({
             entityName: approveModalRequest.entityName,
             contactEmail: approveModalRequest.contactEmail,
             contactName: approveModalRequest.contactName,
+            contactFirstName: approveModalRequest.contactFirstName,
+            contactLastName: approveModalRequest.contactLastName,
             position: approveModalRequest.position,
             ndaFileName: approveModalRequest.ndaFileName,
             submitterIp: approveModalRequest.submitterIp,

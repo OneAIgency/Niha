@@ -136,10 +136,15 @@ class ScrapeLibrary(str, Enum):
 class ContactRequestCreate(BaseModel):
     entity_name: str = Field(..., min_length=2, max_length=255)
     contact_email: EmailStr
-    contact_name: Optional[str] = Field(None, max_length=255)
+    contact_name: Optional[str] = Field(None, max_length=255)  # Deprecated
+    contact_first_name: Optional[str] = Field(None, max_length=128)
+    contact_last_name: Optional[str] = Field(None, max_length=128)
     position: Optional[str] = Field(None, max_length=100)
 
-    @field_validator("entity_name", "contact_name", "position", mode="before")
+    @field_validator(
+        "entity_name", "contact_name", "contact_first_name", "contact_last_name", "position",
+        mode="before",
+    )
     @classmethod
     def sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
         """Sanitize text fields to prevent XSS attacks"""
@@ -152,7 +157,9 @@ class ContactRequestResponse(BaseModel):
     id: UUID
     entity_name: str
     contact_email: str
-    contact_name: Optional[str]
+    contact_name: Optional[str] = None  # Deprecated
+    contact_first_name: Optional[str] = None
+    contact_last_name: Optional[str] = None
     position: Optional[str]
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None

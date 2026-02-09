@@ -328,14 +328,16 @@ export const contactApi = {
   submitNDARequest: async (request: {
     entity_name: string;
     contact_email: string;
-    contact_name: string;
+    contact_first_name: string;
+    contact_last_name: string;
     position: string;
     nda_file: File;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
     formData.append('contact_email', request.contact_email);
-    formData.append('contact_name', request.contact_name);
+    formData.append('contact_first_name', request.contact_first_name);
+    formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
     formData.append('file', request.nda_file);
 

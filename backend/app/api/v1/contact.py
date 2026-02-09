@@ -55,6 +55,8 @@ async def create_contact_request(
         entity_name=request.entity_name,
         contact_email=request.contact_email.lower(),
         contact_name=request.contact_name,
+        contact_first_name=request.contact_first_name,
+        contact_last_name=request.contact_last_name,
         position=request.position,
         user_role=ContactStatus.NDA,
     )
@@ -77,6 +79,8 @@ async def create_contact_request(
                 "entity_name": contact.entity_name,
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
+                "contact_first_name": contact.contact_first_name,
+                "contact_last_name": contact.contact_last_name,
                 "position": contact.position,
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
@@ -102,7 +106,8 @@ async def create_nda_request(
     request: Request,
     entity_name: str = Form(...),  # noqa: B008
     contact_email: str = Form(...),  # noqa: B008
-    contact_name: str = Form(...),  # noqa: B008
+    contact_first_name: str = Form(...),  # noqa: B008
+    contact_last_name: str = Form(...),  # noqa: B008
     position: str = Form(...),  # noqa: B008
     file: UploadFile = File(...),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
@@ -134,7 +139,8 @@ async def create_nda_request(
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
-        contact_name=contact_name,
+        contact_first_name=contact_first_name,
+        contact_last_name=contact_last_name,
         position=position,
         nda_file_name=file.filename,
         nda_file_data=content,  # Store binary in database
@@ -161,6 +167,8 @@ async def create_nda_request(
                 "entity_name": contact.entity_name,
                 "contact_email": contact.contact_email,
                 "contact_name": contact.contact_name,
+                "contact_first_name": contact.contact_first_name,
+                "contact_last_name": contact.contact_last_name,
                 "position": contact.position,
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,

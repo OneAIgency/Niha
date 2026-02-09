@@ -257,7 +257,8 @@ export interface ContactRequest {
 export interface NDARequest {
   entityName: string;
   contactEmail: string;
-  contactName: string;
+  contactFirstName: string;
+  contactLastName: string;
   position: string;
   ndaFile: File;
 }
@@ -267,7 +268,9 @@ export interface ContactRequestResponse {
   id: string;
   entityName: string;
   contactEmail: string;
-  contactName?: string;
+  contactName?: string;  // Deprecated — use contactFirstName/contactLastName
+  contactFirstName?: string;
+  contactLastName?: string;
   position?: string;
   ndaFileName?: string;
   submitterIp?: string;

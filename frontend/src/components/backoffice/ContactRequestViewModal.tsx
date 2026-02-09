@@ -169,7 +169,8 @@ export function ContactRequestViewModal({
         <div className="p-4 overflow-y-auto space-y-4">
           <DataRow label="ID" value={showingRequest.id} showEmpty />
           <DataRow label="Entity" value={showingRequest.entityName} showEmpty />
-          <DataRow label="Name" value={showingRequest.contactName} showEmpty />
+          <DataRow label="First Name" value={showingRequest.contactFirstName ?? showingRequest.contactName?.split(' ')[0]} showEmpty />
+          <DataRow label="Last Name" value={showingRequest.contactLastName ?? showingRequest.contactName?.split(' ').slice(1).join(' ')} showEmpty />
           <DataRow label="Email" value={showingRequest.contactEmail} showEmpty />
           <DataRow label="Position" value={showingRequest.position} showEmpty />
           <DataRow label="User role" value={showingRequest.userRole} showEmpty />

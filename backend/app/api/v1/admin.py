@@ -409,6 +409,8 @@ async def create_user_from_contact_request(
                 "entity_name": contact_request.entity_name,
                 "contact_email": contact_request.contact_email,
                 "contact_name": contact_request.contact_name,
+                "contact_first_name": contact_request.contact_first_name,
+                "contact_last_name": contact_request.contact_last_name,
                 "position": contact_request.position,
                 "nda_file_name": contact_request.nda_file_name,
                 "submitter_ip": contact_request.submitter_ip,
@@ -2857,10 +2859,13 @@ async def place_random_order(
         # ════════════════════════════════════════════════════════════════
         # STEP 0: Gather context
         # ════════════════════════════════════════════════════════════════
+        # Exclude zombie orders (remainder < 1) from best bid/ask calculation
+        _MIN_CERT = Decimal("1")
         best_bid_r = await db.execute(
             select(func.max(Order.price)).where(and_(
                 Order.market == MarketType.CEA_CASH, Order.certificate_type == CertificateType.CEA,
                 Order.side == OrderSide.BUY, Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                (Order.quantity - Order.filled_quantity) >= _MIN_CERT,
             ))
         )
         best_bid = best_bid_r.scalar()
@@ -2869,6 +2874,7 @@ async def place_random_order(
             select(func.min(Order.price)).where(and_(
                 Order.market == MarketType.CEA_CASH, Order.certificate_type == CertificateType.CEA,
                 Order.side == OrderSide.SELL, Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                (Order.quantity - Order.filled_quantity) >= _MIN_CERT,
             ))
         )
         best_ask = best_ask_r.scalar()
@@ -2886,12 +2892,13 @@ async def place_random_order(
         if not cea_buyers or not cea_sellers:
             raise HTTPException(status_code=400, detail="No active CEA market makers")
 
-        # Liquidity per side
+        # Liquidity per side (exclude zombie orders with < 1 remaining)
         liq_r = await db.execute(text("""
             SELECT o.side, COALESCE(SUM(o.price * (o.quantity - o.filled_quantity)), 0) as val
             FROM orders o
             WHERE o.market = 'CEA_CASH' AND o.status IN ('OPEN','PARTIALLY_FILLED')
               AND o.market_maker_id IS NOT NULL
+              AND (o.quantity - o.filled_quantity) >= 1
             GROUP BY o.side
         """))
         liq_map = {r.side: Decimal(str(r.val)) for r in liq_r.fetchall()}
@@ -2926,11 +2933,12 @@ async def place_random_order(
         except Exception:
             order_counter = random.randint(1, 10)
 
-        # Existing price levels for gap detection
+        # Existing price levels for gap detection (exclude zombie orders)
         bid_levels_r = await db.execute(text("""
             SELECT DISTINCT price FROM orders
             WHERE market = 'CEA_CASH' AND side = 'BUY'
               AND status IN ('OPEN','PARTIALLY_FILLED')
+              AND (quantity - filled_quantity) >= 1
             ORDER BY price DESC
         """))
         bid_levels = [Decimal(str(r[0])) for r in bid_levels_r.fetchall()]
@@ -2939,6 +2947,7 @@ async def place_random_order(
             SELECT DISTINCT price FROM orders
             WHERE market = 'CEA_CASH' AND side = 'SELL'
               AND status IN ('OPEN','PARTIALLY_FILLED')
+              AND (quantity - filled_quantity) >= 1
             ORDER BY price ASC
         """))
         ask_levels = [Decimal(str(r[0])) for r in ask_levels_r.fetchall()]
