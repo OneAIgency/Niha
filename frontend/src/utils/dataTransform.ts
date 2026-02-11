@@ -11,9 +11,11 @@ function snakeToCamel(str: string): string {
 }
 
 /**
- * Converts a string from camelCase to snake_case
+ * Converts a string from camelCase to snake_case.
+ * Preserves all-uppercase strings (acronyms like CEA, EUA, EUR).
  */
 function camelToSnake(str: string): string {
+  if (/^[A-Z][A-Z0-9_]*$/.test(str)) return str;
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 

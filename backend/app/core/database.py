@@ -1,5 +1,7 @@
 import logging
 
+from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -44,6 +46,9 @@ async def init_db():
 
     # Create seed users for development
     await create_seed_users()
+
+    # Create seed config data (fees, auto-trade settings)
+    await create_seed_config()
 
 
 async def create_seed_users():
@@ -193,5 +198,64 @@ async def create_seed_users():
             )
             db.add(contact)
             logger.info("Created seed contact request: test@test.ro (NDA)")
+
+        await db.commit()
+
+
+async def create_seed_config():
+    """Seed trading fee configs, auto-trade settings, and market settings."""
+    from ..models.models import (
+        AutoTradeMarketSettings,
+        AutoTradeSettings,
+        CertificateType,
+        MarketType,
+        TradingFeeConfig,
+    )
+
+    async with AsyncSessionLocal() as db:
+        # Trading fee configs: default 0.5% for both markets
+        for market in [MarketType.CEA_CASH, MarketType.SWAP]:
+            result = await db.execute(
+                select(TradingFeeConfig).where(TradingFeeConfig.market == market)
+            )
+            if result.scalar_one_or_none() is None:
+                db.add(TradingFeeConfig(
+                    market=market,
+                    bid_fee_rate=Decimal("0.005"),
+                    ask_fee_rate=Decimal("0.005"),
+                    is_active=True,
+                ))
+                logger.info(f"Created seed trading fee config: {market.value}")
+
+        # Auto-trade settings: one per certificate type
+        for cert_type in [CertificateType.CEA, CertificateType.EUA]:
+            result = await db.execute(
+                select(AutoTradeSettings).where(
+                    AutoTradeSettings.certificate_type == cert_type
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                db.add(AutoTradeSettings(
+                    certificate_type=cert_type,
+                    target_ask_liquidity=None,
+                    target_bid_liquidity=None,
+                    liquidity_limit_enabled=True,
+                ))
+                logger.info(f"Created seed auto-trade settings: {cert_type.value}")
+
+        # Auto-trade market settings: one per market side
+        for market_key in ["CEA_BID", "CEA_ASK", "EUA_SWAP"]:
+            result = await db.execute(
+                select(AutoTradeMarketSettings).where(
+                    AutoTradeMarketSettings.market_key == market_key
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                db.add(AutoTradeMarketSettings(
+                    market_key=market_key,
+                    enabled=True,
+                    target_liquidity=None,
+                ))
+                logger.info(f"Created seed auto-trade market settings: {market_key}")
 
         await db.commit()
