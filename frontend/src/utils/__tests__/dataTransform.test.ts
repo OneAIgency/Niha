@@ -100,6 +100,24 @@ describe('transformKeysToSnakeCase', () => {
     ]);
   });
 
+  it('should preserve all-uppercase dictionary keys (acronyms)', () => {
+    const input = {
+      initialBalances: { CEA: 104493207, EUA: 500000 },
+      mmType: 'CEA_SELLER',
+    };
+    const result = transformKeysToSnakeCase(input);
+    expect(result).toEqual({
+      initial_balances: { CEA: 104493207, EUA: 500000 },
+      mm_type: 'CEA_SELLER',
+    });
+  });
+
+  it('should preserve keys like EUR, UUID, CEA_BUYER', () => {
+    const input = { EUR: 100, UUID: 'abc', CEA_BUYER: true };
+    const result = transformKeysToSnakeCase(input);
+    expect(result).toEqual({ EUR: 100, UUID: 'abc', CEA_BUYER: true });
+  });
+
   it('should normalize contact-request payload (camelCase from API/WS) to snake_case for backoffice', () => {
     const contactRequestCamelCase = {
       id: 'contact-1',

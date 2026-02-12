@@ -98,8 +98,7 @@ export function FundingPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Check if there's a pending deposit - form should be disabled for non-admin users
-  // Status can be 'pending' or 'PENDING' depending on API
-  const pendingDeposit = deposits.find((d) => d.status.toLowerCase() === 'pending');
+  const pendingDeposit = deposits.find((d) => d.status === 'PENDING');
   // Only disable for non-admin users
   const hasPendingDeposit = !isAdmin && !!pendingDeposit;
 
@@ -167,18 +166,18 @@ export function FundingPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusLower = status.toLowerCase();
-    switch (statusLower) {
-      case 'pending':
+    const s = status.toUpperCase();
+    switch (s) {
+      case 'PENDING':
         return <Badge variant="warning">PENDING</Badge>;
-      case 'confirmed':
-      case 'on_hold':
-      case 'cleared':
-        return <Badge variant="success">{status.toUpperCase()}</Badge>;
-      case 'rejected':
+      case 'CONFIRMED':
+      case 'ON_HOLD':
+      case 'CLEARED':
+        return <Badge variant="success">{s}</Badge>;
+      case 'REJECTED':
         return <Badge variant="danger">REJECTED</Badge>;
       default:
-        return <Badge>{status.toUpperCase()}</Badge>;
+        return <Badge>{s}</Badge>;
     }
   };
 
@@ -287,7 +286,7 @@ export function FundingPage() {
                   </h2>
 
                   <div className="space-y-4">
-                    {deposits.filter(d => d.status.toLowerCase() === 'pending').map((deposit) => (
+                    {deposits.filter(d => d.status === 'PENDING').map((deposit) => (
                       <div
                         key={deposit.id}
                         className="p-6 rounded-xl bg-navy-900/50 border border-blue-500/30"
@@ -570,23 +569,23 @@ export function FundingPage() {
                         <div
                           key={deposit.id}
                           className={`p-4 rounded-xl border ${
-                            deposit.status.toLowerCase() === 'pending'
+                            deposit.status === 'PENDING'
                               ? 'bg-amber-900/20 border-amber-500/30'
                               : 'bg-navy-800/50 border-navy-700'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                              {['confirmed', 'on_hold', 'cleared'].includes(deposit.status.toLowerCase()) ? (
+                              {['CONFIRMED', 'ON_HOLD', 'CLEARED'].includes(deposit.status) ? (
                                 <CheckCircle className="w-5 h-5 text-emerald-400" />
-                              ) : deposit.status.toLowerCase() === 'pending' ? (
+                              ) : deposit.status === 'PENDING' ? (
                                 <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
                               ) : (
                                 <XCircle className="w-5 h-5 text-red-400" />
                               )}
                               <div>
                                 <p className="text-white font-medium">
-                                  {['confirmed', 'on_hold', 'cleared'].includes(deposit.status.toLowerCase()) && deposit.amount
+                                  {['CONFIRMED', 'ON_HOLD', 'CLEARED'].includes(deposit.status) && deposit.amount
                                     ? `${formatCurrency(deposit.amount)} ${deposit.currency}`
                                     : deposit.reportedAmount
                                       ? `${formatCurrency(deposit.reportedAmount)} ${deposit.reportedCurrency}`
@@ -606,7 +605,7 @@ export function FundingPage() {
                           </div>
 
                           {/* Pending deposit message */}
-                          {deposit.status.toLowerCase() === 'pending' && (
+                          {deposit.status === 'PENDING' && (
                             <div className="mt-3 p-3 bg-amber-900/30 border border-amber-500/20 rounded-lg flex items-center gap-2">
                               <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0" />
                               <p className="text-amber-200 text-sm">

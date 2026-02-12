@@ -470,7 +470,7 @@ export interface AdminPasswordReset {
 }
 
 // Deposit Types
-export type DepositStatus = 'pending' | 'confirmed' | 'on_hold' | 'cleared' | 'rejected';
+export type DepositStatus = 'PENDING' | 'CONFIRMED' | 'ON_HOLD' | 'CLEARED' | 'REJECTED';
 export type Currency = 'EUR' | 'USD' | 'CNY' | 'HKD';
 export type HoldType = 'FIRST_DEPOSIT' | 'SUBSEQUENT' | 'LARGE_AMOUNT';
 export type AMLStatus = 'PENDING' | 'ON_HOLD' | 'CLEARED' | 'REJECTED';

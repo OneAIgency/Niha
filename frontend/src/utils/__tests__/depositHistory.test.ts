@@ -12,7 +12,7 @@ function wireItem(id: string, createdAt: string, amount = 100): DepositHistoryIt
     id,
     amount,
     currency: 'EUR',
-    status: 'confirmed',
+    status: 'CONFIRMED',
     createdAt,
   };
 }

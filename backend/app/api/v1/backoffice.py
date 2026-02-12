@@ -686,10 +686,12 @@ async def create_deposit(
         currency=deposit_currency,
         wire_reference=deposit_data.wire_reference,
         bank_reference=bank_ref,
-        status=DepositStatus.CONFIRMED,
+        status=DepositStatus.CLEARED,
         # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
         confirmed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         confirmed_by=admin_user.id,
+        cleared_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        cleared_by_admin_id=admin_user.id,
         notes=deposit_data.notes,
     )
     db.add(deposit)
@@ -1016,7 +1018,8 @@ async def get_entity_balance(
         select(func.count())
         .select_from(Deposit)
         .where(
-            Deposit.entity_id == entity.id, Deposit.status == DepositStatus.CONFIRMED
+            Deposit.entity_id == entity.id,
+            Deposit.status == DepositStatus.CLEARED,
         )
     )
     deposit_count = deposit_count_result.scalar()

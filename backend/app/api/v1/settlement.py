@@ -154,7 +154,6 @@ async def get_settlement_details(
       "actual_settlement_date": null,
       "registry_reference": "REG-CN-2026-12345",
       "counterparty_id": null,
-      "counterparty_type": null,
       "notes": "Standard T+3 CEA purchase settlement",
       "progress_percent": 50,
       "timeline": [

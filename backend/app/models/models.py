@@ -142,7 +142,7 @@ class OrderStatus(str, enum.Enum):
 
 class DepositStatus(str, enum.Enum):
     PENDING = "PENDING"  # User announced wire transfer
-    CONFIRMED = "CONFIRMED"  # Backoffice confirmed receipt, now ON_HOLD
+    CONFIRMED = "CONFIRMED"  # Legacy: direct backoffice confirm (use CLEARED instead)
     ON_HOLD = "ON_HOLD"  # AML hold period active
     CLEARED = "CLEARED"  # AML hold passed, funds available
     REJECTED = "REJECTED"  # Wire not received or AML rejected
@@ -749,13 +749,13 @@ class Deposit(Base):
 
     # AML Hold fields
     hold_type = Column(
-        String(50), nullable=True
-    )  # FIRST_DEPOSIT, SUBSEQUENT, LARGE_AMOUNT
+        SQLEnum(HoldType), nullable=True
+    )
     hold_days_required = Column(Integer, nullable=True)
     hold_expires_at = Column(DateTime, nullable=True)
     aml_status = Column(
-        String(50), nullable=True, default="PENDING"
-    )  # PENDING, ON_HOLD, CLEARED, REJECTED
+        SQLEnum(AMLStatus), nullable=True, default=AMLStatus.PENDING
+    )
 
     # Timestamps
     reported_at = Column(
@@ -836,7 +836,7 @@ class EntityHolding(Base):
     entity = relationship("Entity", back_populates="holdings")
 
     __table_args__ = (
-        # One record per entity per asset type
+        UniqueConstraint("entity_id", "asset_type", name="uq_entity_holding_asset"),
         {"sqlite_autoincrement": True},
     )
 
@@ -1265,7 +1265,7 @@ class AutoTradeSettings(Base):
     __tablename__ = "auto_trade_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    certificate_type = Column(String(10), nullable=False, unique=True)  # 'CEA' or 'EUA'
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False, unique=True)
 
     # Target liquidity in EUR (total value = price * quantity for all open orders)
     target_ask_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on SELL side

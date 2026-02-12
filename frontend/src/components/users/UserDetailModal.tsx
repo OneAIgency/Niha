@@ -643,17 +643,17 @@ function DepositsTab({
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         'p-2 rounded-lg',
-                        item.status === 'confirmed'
+                        item.status === 'CONFIRMED' || item.status === 'CLEARED'
                           ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                          : item.status === 'rejected'
+                          : item.status === 'REJECTED'
                           ? 'bg-red-100 dark:bg-red-900/30'
                           : 'bg-amber-100 dark:bg-amber-900/30'
                       )}>
                         <DollarSign className={cn(
                           'w-5 h-5',
-                          item.status === 'confirmed'
+                          item.status === 'CONFIRMED' || item.status === 'CLEARED'
                             ? 'text-emerald-600'
-                            : item.status === 'rejected'
+                            : item.status === 'REJECTED'
                             ? 'text-red-600'
                             : 'text-amber-600'
                         )} />
@@ -678,8 +678,8 @@ function DepositsTab({
                       </div>
                     </div>
                     <Badge variant={
-                      item.status === 'confirmed' ? 'success' :
-                      item.status === 'rejected' ? 'danger' : 'warning'
+                      item.status === 'CONFIRMED' || item.status === 'CLEARED' ? 'success' :
+                      item.status === 'REJECTED' ? 'danger' : 'warning'
                     }>
                       {item.status}
                     </Badge>

@@ -42,7 +42,7 @@ describe('Backoffice API', () => {
       expect(response.ok).toBe(true);
 
       const data = await response.json();
-      expect(data.status).toBe('rejected');
+      expect(data.status).toBe('REJECTED');
       expect(data.rejection_reason).toBe('Incomplete documentation');
     });
   });
@@ -86,7 +86,7 @@ describe('Backoffice API', () => {
       expect(response.ok).toBe(true);
 
       const data = await response.json();
-      expect(data.status).toBe('rejected');
+      expect(data.status).toBe('REJECTED');
       expect(data.review_notes).toBe('Document is not legible');
     });
   });
@@ -114,7 +114,7 @@ describe('Backoffice API', () => {
       expect(response.ok).toBe(true);
 
       const data = await response.json();
-      expect(data.status).toBe('confirmed');
+      expect(data.status).toBe('CONFIRMED');
       expect(data.confirmed_amount).toBe(10000.0);
     });
 
@@ -126,7 +126,7 @@ describe('Backoffice API', () => {
       expect(response.ok).toBe(true);
 
       const data = await response.json();
-      expect(data.status).toBe('rejected');
+      expect(data.status).toBe('REJECTED');
     });
   });
 

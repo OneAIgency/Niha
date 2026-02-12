@@ -948,11 +948,11 @@ class AdminPasswordReset(BaseModel):
 
 # Deposit Schemas
 class DepositStatus(str, Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    ON_HOLD = "on_hold"
-    CLEARED = "cleared"
-    REJECTED = "rejected"
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    ON_HOLD = "ON_HOLD"
+    CLEARED = "CLEARED"
+    REJECTED = "REJECTED"
 
 
 class HoldType(str, Enum):
