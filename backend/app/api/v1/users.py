@@ -403,12 +403,13 @@ async def get_my_entity_balance(
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
-    # Count confirmed deposits
+    # Count confirmed/cleared deposits
     deposit_count_result = await db.execute(
         select(func.count())
         .select_from(Deposit)
         .where(
-            Deposit.entity_id == entity.id, Deposit.status == DepositStatus.CONFIRMED
+            Deposit.entity_id == entity.id,
+            Deposit.status == DepositStatus.CLEARED,
         )
     )
     deposit_count = deposit_count_result.scalar()

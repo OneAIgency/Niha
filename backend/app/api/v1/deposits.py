@@ -61,11 +61,11 @@ class AMLStatusEnum(str, Enum):
 
 
 class DepositStatusEnum(str, Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    ON_HOLD = "on_hold"
-    CLEARED = "cleared"
-    REJECTED = "rejected"
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    ON_HOLD = "ON_HOLD"
+    CLEARED = "CLEARED"
+    REJECTED = "REJECTED"
 
 
 class RejectionReasonEnum(str, Enum):

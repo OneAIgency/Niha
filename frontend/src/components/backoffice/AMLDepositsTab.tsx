@@ -776,11 +776,11 @@ export function AMLDepositsTab() {
               <div>
                 <p className="text-sm text-navy-500">Status</p>
                 <Badge variant={
-                  detailModal.status === 'cleared' ? 'success' :
-                  detailModal.status === 'rejected' ? 'danger' :
-                  detailModal.status === 'on_hold' ? 'info' : 'warning'
+                  detailModal.status === 'CLEARED' ? 'success' :
+                  detailModal.status === 'REJECTED' ? 'danger' :
+                  detailModal.status === 'ON_HOLD' ? 'info' : 'warning'
                 }>
-                  {detailModal.status.toUpperCase()}
+                  {detailModal.status}
                 </Badge>
               </div>
               <div>
