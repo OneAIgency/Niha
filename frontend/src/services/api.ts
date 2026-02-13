@@ -803,30 +803,6 @@ export const usersApi = {
     return data;
   },
 
-  getMyEntityAssets: async (): Promise<{
-    entity_id: string;
-    entity_name: string;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
-  }> => {
-    const { data } = await api.get('/users/me/entity/assets');
-    return data;
-  },
-
-  getMyHoldings: async (): Promise<{
-    eur: number;
-    cea: number;
-    eua: number;
-  }> => {
-    const { data } = await api.get('/users/me/entity/assets');
-    return {
-      eur: data.eur_balance || 0,
-      cea: data.cea_balance || 0,
-      eua: data.eua_balance || 0,
-    };
-  },
-
   getFundingInstructions: async (): Promise<FundingInstructions> => {
     const { data } = await api.get('/users/me/funding-instructions');
     return data;
@@ -1030,17 +1006,6 @@ export const adminApi = {
     per_page?: number;
   }): Promise<PaginatedResponse<ActivityLog>> => {
     const { data } = await api.get('/admin/activity-logs', { params });
-    return data;
-  },
-
-  getActivityStats: async (): Promise<{
-    total_users: number;
-    users_by_role: Record<UserRole, number>;
-    active_sessions: number;
-    logins_today: number;
-    avg_session_duration: number;
-  }> => {
-    const { data } = await api.get('/admin/activity-logs/stats');
     return data;
   },
 

@@ -4,9 +4,11 @@
  */
 
 /**
- * Converts a string from snake_case to camelCase
+ * Converts a string from snake_case to camelCase.
+ * Preserves all-uppercase strings (acronyms like CEA, EUA, EUR, CEA_BID).
  */
 function snakeToCamel(str: string): string {
+  if (/^[A-Z][A-Z0-9_]*$/.test(str)) return str;
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
