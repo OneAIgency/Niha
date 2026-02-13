@@ -152,6 +152,7 @@ export interface ScrapingSource {
   certificateType: CertificateType;
   scrapeLibrary?: ScrapeLibrary;
   isActive: boolean;
+  isPrimary: boolean;
   scrapeIntervalMinutes: number;
   lastScrapeAt?: string;
   lastScrapeStatus?: 'success' | 'failed' | 'timeout';
@@ -1058,6 +1059,8 @@ export interface AutoTradeMarketSettings {
   internalTradeInterval: number | null;  // Interval for internal trades when at target (seconds)
   internalTradeVolumeMin: number | null;  // Min volume per internal trade (EUR)
   internalTradeVolumeMax: number | null;  // Max volume per internal trade (EUR)
+  avgSpread: number | null;  // Average bid-ask spread
+  tickSize: number | null;  // Minimum price increment
   createdAt: string;
   updatedAt: string;
   marketMakers: MarketMakerSummary[];
@@ -1084,4 +1087,24 @@ export interface AutoTradeMarketSettingsUpdate {
   internalTradeInterval?: number | null;
   internalTradeVolumeMin?: number | null;
   internalTradeVolumeMax?: number | null;
+  avgSpread?: number | null;
+  tickSize?: number | null;
+}
+
+export interface AutoTradeStatus {
+  executorRunning: boolean;
+  cycleIntervalSeconds: number;
+  lastCycleAt: string | null;
+  lastCycleResults: {
+    rulesChecked: number;
+    ordersPlaced: number;
+    internalTrades: number;
+    errors: number;
+  };
+  nextCycleAt: string | null;
+  rulesSummary: {
+    total: number;
+    enabled: number;
+    readyToExecute: number;
+  };
 }

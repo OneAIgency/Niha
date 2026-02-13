@@ -1,29 +1,22 @@
 import { create } from 'zustand';
 import { adminApi } from '../services/api';
 import { logger } from '../utils/logger';
+import type { AutoTradeStatus } from '../types';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const ORDER_INTERVAL_MIN_S = 20;
-const ORDER_INTERVAL_MAX_S = 20;
-const STORAGE_KEY = 'niha_auto_orders_enabled';
-
-function randomInterval(): number {
-  return (ORDER_INTERVAL_MIN_S + Math.random() * (ORDER_INTERVAL_MAX_S - ORDER_INTERVAL_MIN_S)) * 1000;
-}
+const STATUS_POLL_INTERVAL_MS = 5_000; // Poll executor status every 5s
 
 // ============================================================================
 // MODULE-LEVEL TIMER STATE (survives React component lifecycle)
 // ============================================================================
 
-let orderTimer: ReturnType<typeof setTimeout> | null = null;
-let countdownTimer: ReturnType<typeof setInterval> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 function clearTimers() {
-  if (orderTimer) { clearTimeout(orderTimer); orderTimer = null; }
-  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
 // ============================================================================
@@ -31,90 +24,66 @@ function clearTimers() {
 // ============================================================================
 
 interface AutoOrdersState {
+  /** Whether the backend executor is running */
   isRunning: boolean;
+  /** Seconds until next executor cycle (countdown derived from nextCycleAt) */
   nextOrderIn: number | null;
+  /** Total orders placed in last cycle */
   orderCount: number;
+  /** Full status from backend */
+  status: AutoTradeStatus | null;
 }
 
 export const useAutoOrdersStore = create<AutoOrdersState>(() => ({
-  isRunning: getPersistedEnabled(),
+  isRunning: false,
   nextOrderIn: null,
   orderCount: 0,
+  status: null,
 }));
 
 // ============================================================================
-// PURE FUNCTIONS (not React hooks — callable from anywhere)
+// STATUS POLLING (read-only — backend is the execution engine)
 // ============================================================================
 
-function getPersistedEnabled(): boolean {
+async function fetchStatus() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved === null ? true : saved === 'true';
+    const status = await adminApi.getAutoTradeStatus();
+    const nextCycleAt = status.nextCycleAt ? new Date(status.nextCycleAt).getTime() : null;
+    const now = Date.now();
+    const secondsUntilNext = nextCycleAt ? Math.max(0, Math.round((nextCycleAt - now) / 1000)) : null;
+
+    useAutoOrdersStore.setState({
+      isRunning: status.executorRunning,
+      nextOrderIn: secondsUntilNext,
+      orderCount: status.lastCycleResults?.ordersPlaced ?? 0,
+      status,
+    });
   } catch {
-    return true;
+    // Silent — don't break the polling loop on transient errors
+    logger.debug('[AutoOrders] Status fetch failed (silent)');
   }
 }
 
-async function placeOneOrder() {
-  try {
-    await adminApi.placeRandomOrder();
-    useAutoOrdersStore.setState(s => ({ orderCount: s.orderCount + 1 }));
-    logger.debug('[AutoOrders] Order placed successfully');
-  } catch {
-    // Silent — don't break the timer loop
-    logger.debug('[AutoOrders] Order failed (silent)');
-  }
-}
-
-function scheduleNext() {
-  clearTimers();
-
-  const delay = randomInterval();
-  const seconds = Math.round(delay / 1000);
-  useAutoOrdersStore.setState({ nextOrderIn: seconds });
-
-  // Countdown ticker (1s)
-  countdownTimer = setInterval(() => {
-    useAutoOrdersStore.setState(s => ({
-      nextOrderIn: s.nextOrderIn !== null && s.nextOrderIn > 0 ? s.nextOrderIn - 1 : s.nextOrderIn,
-    }));
-  }, 1000);
-
-  // Main order timer
-  orderTimer = setTimeout(async () => {
-    await placeOneOrder();
-    // Only continue if still running
-    if (useAutoOrdersStore.getState().isRunning) {
-      scheduleNext();
-    }
-  }, delay);
-}
-
-/** Start the auto-orders background loop. */
+/** Start polling the backend executor status. */
 export function startAutoOrders() {
   clearTimers();
-  localStorage.setItem(STORAGE_KEY, 'true');
-  useAutoOrdersStore.setState({ isRunning: true, orderCount: 0 });
-  scheduleNext();
-  logger.debug('[AutoOrders] Started');
+  fetchStatus(); // Immediate first fetch
+  pollTimer = setInterval(fetchStatus, STATUS_POLL_INTERVAL_MS);
+  logger.debug('[AutoOrders] Status polling started');
 }
 
-/** Stop the auto-orders background loop. */
+/** Stop polling. */
 export function stopAutoOrders() {
   clearTimers();
-  localStorage.setItem(STORAGE_KEY, 'false');
   useAutoOrdersStore.setState({ isRunning: false, nextOrderIn: null });
-  logger.debug('[AutoOrders] Stopped');
+  logger.debug('[AutoOrders] Status polling stopped');
 }
 
 /**
  * Boot the service — call once at app startup.
- * If localStorage says enabled (or first visit → default true), auto-starts.
+ * Always starts polling (the backend executor runs independently).
  */
 export function bootAutoOrders() {
-  if (getPersistedEnabled()) {
-    useAutoOrdersStore.setState({ isRunning: true, orderCount: 0 });
-    scheduleNext();
-    logger.debug('[AutoOrders] Booted (auto-start)');
-  }
+  startAutoOrders();
+  logger.debug('[AutoOrders] Booted (status polling)');
 }

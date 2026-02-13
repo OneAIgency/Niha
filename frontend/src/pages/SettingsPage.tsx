@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Database,
@@ -15,6 +15,9 @@ import {
   DollarSign,
   Send,
   ExternalLink,
+  Pencil,
+  MoreHorizontal,
+  TrendingUp,
 } from 'lucide-react';
 import { Button, Card, Badge, Subheader, SubSubHeader, AlertBanner, NumberInput } from '../components/common';
 import { adminApi } from '../services/api';
@@ -34,6 +37,182 @@ function getApiErrorMessage(err: unknown): string {
     if (typeof m === 'string') return m;
   }
   return (err as Error)?.message ?? 'Something went wrong.';
+}
+
+interface ActionItem {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
+  loading?: boolean;
+  danger?: boolean;
+  separator?: boolean;
+}
+
+function ActionsDropdown({ actions }: { actions: ActionItem[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-40 backdrop-blur-sm bg-black/10" onClick={() => setOpen(false)} />
+      )}
+      <div ref={ref} className="relative inline-block">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="p-1.5 rounded hover:bg-navy-700 transition-colors text-navy-400 hover:text-white"
+          aria-label="Actions"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+        {open && (
+          <div className="absolute right-0 bottom-full mb-1 w-36 bg-navy-800 border border-navy-600 rounded-lg shadow-xl z-50 py-1">
+            {actions.map((a, i) => (
+              <div key={i}>
+                {a.separator && <div className="border-t border-navy-600 my-1" />}
+                <button
+                  onClick={() => { a.onClick(); setOpen(false); }}
+                  disabled={a.loading}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
+                    ${a.danger
+                      ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                      : 'text-navy-200 hover:bg-navy-700 hover:text-white'}
+                    ${a.loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {a.loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : a.icon}
+                  {a.label}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ============================================================================
+// Price History Chart (SVG)
+// ============================================================================
+
+interface ChartPoint { price: number; recordedAt: string }
+
+function PriceHistoryChart({ sourceName, currency, points }: {
+  sourceName: string; currency: string; points: ChartPoint[];
+}) {
+  const [hover, setHover] = useState<{ x: number; y: number; point: ChartPoint } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  if (points.length < 2) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span className="font-medium text-navy-700 dark:text-navy-200">{sourceName}</span>
+          <span>— Not enough data points</span>
+        </div>
+      </Card>
+    );
+  }
+
+  const W = 600, H = 140, PX = 40, PY = 16;
+  const prices = points.map(p => p.price);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const range = maxP - minP || 1;
+
+  const toX = (i: number) => PX + (i / (points.length - 1)) * (W - PX * 2);
+  const toY = (p: number) => PY + (1 - (p - minP) / range) * (H - PY * 2);
+
+  const pathD = points.map((pt, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(pt.price).toFixed(1)}`).join(' ');
+  const areaD = pathD + ` L${toX(points.length - 1).toFixed(1)},${(H - PY).toFixed(1)} L${PX.toFixed(1)},${(H - PY).toFixed(1)} Z`;
+
+  // Y-axis labels (3 ticks)
+  const yTicks = [minP, minP + range / 2, maxP];
+
+  // X-axis labels (first, mid, last)
+  const xIndices = [0, Math.floor(points.length / 2), points.length - 1];
+  const fmtTime = (iso: string) => {
+    const d = new Date(iso.endsWith('Z') ? iso : `${iso}Z`);
+    return d.toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
+    const idx = Math.round(((mouseX - PX) / (W - PX * 2)) * (points.length - 1));
+    if (idx >= 0 && idx < points.length) {
+      setHover({ x: toX(idx), y: toY(points[idx].price), point: points[idx] });
+    }
+  };
+
+  // Color: green if last >= first, red if down
+  const trending = prices[prices.length - 1] >= prices[0];
+  const lineColor = trending ? '#10b981' : '#ef4444';
+  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)';
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className={`w-3.5 h-3.5 ${trending ? 'text-emerald-400' : 'text-red-400'}`} />
+        <span className="text-xs font-medium text-navy-700 dark:text-navy-200">{sourceName}</span>
+        <span className="text-[10px] text-navy-500">{currency}</span>
+        <span className="ml-auto text-[10px] text-navy-500">{points.length} pts</span>
+      </div>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-36"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        {/* Grid lines */}
+        {yTicks.map((t, i) => (
+          <line key={i} x1={PX} x2={W - PX} y1={toY(t)} y2={toY(t)}
+            stroke="currentColor" className="text-navy-200 dark:text-navy-700" strokeWidth="0.5" strokeDasharray="4 2" />
+        ))}
+
+        {/* Area fill */}
+        <path d={areaD} fill={fillColor} />
+
+        {/* Line */}
+        <path d={pathD} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Y-axis labels */}
+        {yTicks.map((t, i) => (
+          <text key={i} x={PX - 4} y={toY(t) + 3} textAnchor="end" className="fill-navy-500 dark:fill-navy-400" fontSize="9">{t.toFixed(2)}</text>
+        ))}
+
+        {/* X-axis labels */}
+        {xIndices.map((idx) => (
+          <text key={idx} x={toX(idx)} y={H - 2} textAnchor="middle" className="fill-navy-500 dark:fill-navy-400" fontSize="8">{fmtTime(points[idx].recordedAt)}</text>
+        ))}
+
+        {/* Hover crosshair + tooltip */}
+        {hover && (
+          <>
+            <line x1={hover.x} x2={hover.x} y1={PY} y2={H - PY} stroke={lineColor} strokeWidth="0.5" opacity="0.5" />
+            <circle cx={hover.x} cy={hover.y} r="3" fill={lineColor} />
+            <rect x={hover.x - 45} y={hover.y - 28} width="90" height="20" rx="4"
+              className="fill-navy-900 dark:fill-navy-700" opacity="0.9" />
+            <text x={hover.x} y={hover.y - 15} textAnchor="middle" className="fill-white" fontSize="9" fontWeight="600">
+              {hover.point.price.toFixed(4)} {currency}
+            </text>
+          </>
+        )}
+      </svg>
+    </Card>
+  );
 }
 
 const SCRAPE_LIBRARY_OPTIONS: { value: ScrapeLibrary; label: string }[] = [
@@ -75,6 +254,18 @@ export function SettingsPage() {
     scrape_interval_minutes: 5,
   });
 
+  // Price Scraping edit state
+  const [editingSource, setEditingSource] = useState<ScrapingSource | null>(null);
+  const [editSourceForm, setEditSourceForm] = useState<{
+    name: string; url: string; certificate_type: 'EUA' | 'CEA';
+    scrape_library: ScrapeLibrary; scrape_interval_minutes: number;
+    is_primary: boolean; is_active: boolean;
+  }>({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5, is_primary: false, is_active: true });
+
+  // Price history charts
+  const [priceHistories, setPriceHistories] = useState<Record<string, { points: Array<{ price: number; recordedAt: string }>; currency: string }>>({});
+  const [historyHours, setHistoryHours] = useState(24);
+
   // Exchange Rate Sources state
   const [exchangeRateSources, setExchangeRateSources] = useState<ExchangeRateSource[]>([]);
   const [testingExchangeSource, setTestingExchangeSource] = useState<string | null>(null);
@@ -82,6 +273,11 @@ export function SettingsPage() {
   const [deletingExchangeSource, setDeletingExchangeSource] = useState<string | null>(null);
   const [exchangeTestResult, setExchangeTestResult] = useState<{ sourceId: string; rate?: number; success: boolean } | null>(null);
   const [showAddExchangeModal, setShowAddExchangeModal] = useState(false);
+  const [editingExchangeSource, setEditingExchangeSource] = useState<ExchangeRateSource | null>(null);
+  const [editExchangeForm, setEditExchangeForm] = useState<{
+    name: string; url: string; scrape_library: ScrapeLibrary;
+    scrape_interval_minutes: number; is_primary: boolean; is_active: boolean;
+  }>({ name: '', url: '', scrape_library: 'HTTPX', scrape_interval_minutes: 60, is_primary: false, is_active: true });
   const [newExchangeSource, setNewExchangeSource] = useState({
     name: '',
     from_currency: 'EUR',
@@ -161,6 +357,24 @@ export function SettingsPage() {
       setLoading(false);
     }
   };
+
+  const loadHistories = useCallback(async (srcs: ScrapingSource[], hours: number) => {
+    const results: Record<string, { points: Array<{ price: number; recordedAt: string }>; currency: string }> = {};
+    await Promise.all(
+      srcs.map(async (s) => {
+        try {
+          const data = await adminApi.getScrapingSourceHistory(s.id, hours);
+          results[s.id] = { points: data.points, currency: data.currency };
+        } catch { /* silent */ }
+      })
+    );
+    setPriceHistories(results);
+  }, []);
+
+  // Load price histories when sources load or hours change
+  useEffect(() => {
+    if (sources.length > 0) loadHistories(sources, historyHours);
+  }, [sources, historyHours, loadHistories]);
 
   const handleTestSource = async (sourceId: string) => {
     setTestingSource(sourceId);
@@ -254,6 +468,72 @@ export function SettingsPage() {
     }
   };
 
+  const handleOpenEditSource = (source: ScrapingSource) => {
+    setEditingSource(source);
+    setEditSourceForm({
+      name: source.name,
+      url: source.url,
+      certificate_type: source.certificateType as 'EUA' | 'CEA',
+      scrape_library: source.scrapeLibrary || 'HTTPX',
+      scrape_interval_minutes: source.scrapeIntervalMinutes,
+      is_primary: source.isPrimary ?? false,
+      is_active: source.isActive,
+    });
+  };
+
+  const handleToggleSourceEnabled = async (source: ScrapingSource) => {
+    const newPrimary = !source.isPrimary;
+    setError(null);
+    try {
+      await adminApi.updateScrapingSource(source.id, { isPrimary: newPrimary } as Partial<ScrapingSource>);
+      setSources(prev => prev.map(s =>
+        s.id === source.id
+          ? { ...s, isPrimary: newPrimary }
+          : newPrimary && s.certificateType === source.certificateType
+            ? { ...s, isPrimary: false }
+            : s
+      ));
+    } catch (e) {
+      console.error('Failed to toggle source:', e);
+      setError(getApiErrorMessage(e));
+    }
+  };
+
+  const handleSaveEditSource = async () => {
+    if (!editingSource) return;
+    setError(null);
+    try {
+      await adminApi.updateScrapingSource(editingSource.id, {
+        name: editSourceForm.name,
+        url: editSourceForm.url,
+        scrapeLibrary: editSourceForm.scrape_library,
+        scrapeIntervalMinutes: editSourceForm.scrape_interval_minutes,
+        isPrimary: editSourceForm.is_primary,
+        isActive: editSourceForm.is_active,
+      } as Partial<ScrapingSource>);
+      setSources(prev => prev.map(s =>
+        s.id === editingSource.id
+          ? {
+              ...s,
+              name: editSourceForm.name,
+              url: editSourceForm.url,
+              certificateType: editSourceForm.certificate_type as 'EUA' | 'CEA',
+              scrapeLibrary: editSourceForm.scrape_library,
+              scrapeIntervalMinutes: editSourceForm.scrape_interval_minutes,
+              isPrimary: editSourceForm.is_primary,
+              isActive: editSourceForm.is_active,
+            }
+          : editSourceForm.is_primary && s.certificateType === editSourceForm.certificate_type
+            ? { ...s, isPrimary: false }
+            : s
+      ));
+      setEditingSource(null);
+    } catch (e) {
+      console.error('Failed to update source:', e);
+      setError(getApiErrorMessage(e));
+    }
+  };
+
   // Exchange Rate Source handlers
   const handleTestExchangeSource = async (sourceId: string) => {
     setTestingExchangeSource(sourceId);
@@ -320,6 +600,37 @@ export function SettingsPage() {
       });
     } catch (e) {
       console.error('Failed to create exchange source:', e);
+      setError(getApiErrorMessage(e));
+    }
+  };
+
+  const handleOpenEditExchange = (source: ExchangeRateSource) => {
+    setEditingExchangeSource(source);
+    setEditExchangeForm({
+      name: source.name,
+      url: source.url,
+      scrape_library: source.scrapeLibrary || 'HTTPX',
+      scrape_interval_minutes: source.scrapeIntervalMinutes,
+      is_primary: source.isPrimary,
+      is_active: source.isActive,
+    });
+  };
+
+  const handleSaveEditExchange = async () => {
+    if (!editingExchangeSource) return;
+    setError(null);
+    try {
+      await adminApi.updateExchangeRateSource(editingExchangeSource.id, editExchangeForm);
+      setExchangeRateSources(prev => prev.map(s =>
+        s.id === editingExchangeSource.id
+          ? { ...s, name: editExchangeForm.name, url: editExchangeForm.url, scrapeLibrary: editExchangeForm.scrape_library, scrapeIntervalMinutes: editExchangeForm.scrape_interval_minutes, isPrimary: editExchangeForm.is_primary, isActive: editExchangeForm.is_active }
+          : editExchangeForm.is_primary && s.fromCurrency === editingExchangeSource.fromCurrency && s.toCurrency === editingExchangeSource.toCurrency
+            ? { ...s, isPrimary: false }
+            : s
+      ));
+      setEditingExchangeSource(null);
+    } catch (e) {
+      console.error('Failed to update exchange source:', e);
       setError(getApiErrorMessage(e));
     }
   };
@@ -538,7 +849,10 @@ export function SettingsPage() {
                       <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
                         Status
                       </th>
-                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[16%]">
+                      <th className="text-center py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[6%]">
+                        Enable
+                      </th>
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[5%]">
                         Actions
                       </th>
                     </tr>
@@ -546,7 +860,7 @@ export function SettingsPage() {
                   <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
                     {sources.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-navy-500 dark:text-navy-400">
+                        <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
                           No scraping sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
@@ -555,10 +869,14 @@ export function SettingsPage() {
                         <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
                           <td className="py-2 px-2 align-middle">
                             <div className="min-w-0">
-                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-1.5">
+                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-2.5 flex-wrap">
+                                <span className="truncate">{source.name}</span>
                                 <Badge variant={source.certificateType === 'EUA' ? 'info' : 'warning'} className="text-[10px] px-1.5 py-0.5 shrink-0">
                                   {source.certificateType}
                                 </Badge>
+                                {source.isPrimary && (
+                                  <Badge variant="success" className="text-[10px] px-1.5 py-0.5">Primary</Badge>
+                                )}
                               </p>
                               <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate" title={source.url}>
                                 {source.url}
@@ -575,7 +893,7 @@ export function SettingsPage() {
                                   })()
                                 }
                                 onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
-                                className="w-full min-w-[6.5rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800"
+                                className="w-full min-w-[6.5rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800 pl-2 pr-7"
                                 aria-label={`Library for ${source.certificateType} source`}
                               >
                                 {SCRAPE_LIBRARY_OPTIONS.map((opt) => (
@@ -595,7 +913,7 @@ export function SettingsPage() {
                                     : 5
                                 )}
                                 onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value, 10))}
-                                className="w-full min-w-[4rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800"
+                                className="w-full min-w-[4rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800 pl-2 pr-7"
                                 aria-label={`Interval for ${source.certificateType} source`}
                               >
                                 {SCRAPE_INTERVAL_OPTIONS.map((opt) => (
@@ -640,38 +958,23 @@ export function SettingsPage() {
                               </span>
                             </div>
                           </td>
+                          <td className="py-2 px-2 align-middle text-center">
+                            <input
+                              type="checkbox"
+                              checked={source.isPrimary}
+                              onChange={() => handleToggleSourceEnabled(source)}
+                              className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              title={source.isPrimary ? `Enabled for ${source.certificateType}` : `Click to enable for ${source.certificateType}`}
+                            />
+                          </td>
                           <td className="py-2 px-2 align-middle">
-                            <div className="flex justify-end gap-1 flex-wrap">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleTestSource(source.id)}
-                                loading={testingSource === source.id}
-                                icon={testingSource === source.id ? undefined : <Play className="w-3 h-3" />}
-                                className="text-xs px-2 py-1"
-                              >
-                                Test
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRefreshSource(source.id)}
-                                loading={refreshingSource === source.id}
-                                icon={refreshingSource === source.id ? undefined : <RefreshCw className="w-3 h-3" />}
-                                className="text-xs px-2 py-1"
-                              >
-                                Refresh
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteSource(source.id)}
-                                loading={deletingSource === source.id}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 py-1"
-                                icon={<Trash2 className="w-3 h-3" />}
-                              >
-                                Delete
-                              </Button>
+                            <div className="flex justify-end">
+                              <ActionsDropdown actions={[
+                                { label: 'Edit', icon: <Pencil className="w-3 h-3" />, onClick: () => handleOpenEditSource(source) },
+                                { label: 'Test', icon: <Play className="w-3 h-3" />, onClick: () => handleTestSource(source.id), loading: testingSource === source.id },
+                                { label: 'Refresh', icon: <RefreshCw className="w-3 h-3" />, onClick: () => handleRefreshSource(source.id), loading: refreshingSource === source.id },
+                                { label: 'Delete', icon: <Trash2 className="w-3 h-3" />, onClick: () => handleDeleteSource(source.id), loading: deletingSource === source.id, danger: true, separator: true },
+                              ]} />
                             </div>
                           </td>
                         </tr>
@@ -681,6 +984,43 @@ export function SettingsPage() {
                 </table>
               </div>
             </Card>
+
+            {/* Price History Charts */}
+            {sources.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-navy-700 dark:text-navy-200 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-blue-500" />
+                    Price History
+                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    {[6, 12, 24, 48, 72, 168].map(h => (
+                      <button
+                        key={h}
+                        onClick={() => setHistoryHours(h)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                          historyHours === h
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300 hover:bg-navy-200 dark:hover:bg-navy-600'
+                        }`}
+                      >
+                        {h < 24 ? `${h}h` : `${h / 24}d`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-4">
+                  {sources.map(s => (
+                    <PriceHistoryChart
+                      key={s.id}
+                      sourceName={s.name}
+                      currency={priceHistories[s.id]?.currency ?? (s.certificateType === 'EUA' ? 'EUR' : 'CNY')}
+                      points={priceHistories[s.id]?.points ?? []}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>}
 
           {/* Exchange Rate Sources */}
@@ -707,19 +1047,20 @@ export function SettingsPage() {
                 <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[25%]">Source</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Pair</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Interval</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[22%]">Source</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Pair</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Method</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[7%]">Interval</th>
                       <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Last Scrape</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Rate</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Status</th>
-                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[27%]">Actions</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Rate</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Status</th>
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[6%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
                     {exchangeRateSources.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-navy-500 dark:text-navy-400">
+                        <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
                           No exchange rate sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
@@ -739,6 +1080,9 @@ export function SettingsPage() {
                           </td>
                           <td className="py-2 px-2">
                             <Badge variant="info" className="text-[10px] px-1.5 py-0.5">{source.fromCurrency}/{source.toCurrency}</Badge>
+                          </td>
+                          <td className="py-2 px-2">
+                            <span className="text-[10px] font-mono text-navy-600 dark:text-navy-300">{source.scrapeLibrary || 'HTTPX'}</span>
                           </td>
                           <td className="py-2 px-2">
                             <span className="text-xs text-navy-600 dark:text-navy-300">{source.scrapeIntervalMinutes}m</span>
@@ -769,37 +1113,13 @@ export function SettingsPage() {
                             </div>
                           </td>
                           <td className="py-2 px-2">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleTestExchangeSource(source.id)}
-                                loading={testingExchangeSource === source.id}
-                                icon={testingExchangeSource === source.id ? undefined : <Play className="w-3 h-3" />}
-                                className="text-xs px-2 py-1"
-                              >
-                                Test
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRefreshExchangeSource(source.id)}
-                                loading={refreshingExchangeSource === source.id}
-                                icon={refreshingExchangeSource === source.id ? undefined : <RefreshCw className="w-3 h-3" />}
-                                className="text-xs px-2 py-1"
-                              >
-                                Refresh
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteExchangeSource(source.id)}
-                                loading={deletingExchangeSource === source.id}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 py-1"
-                                icon={<Trash2 className="w-3 h-3" />}
-                              >
-                                Delete
-                              </Button>
+                            <div className="flex justify-end">
+                              <ActionsDropdown actions={[
+                                { label: 'Edit', icon: <Pencil className="w-3 h-3" />, onClick: () => handleOpenEditExchange(source) },
+                                { label: 'Test', icon: <Play className="w-3 h-3" />, onClick: () => handleTestExchangeSource(source.id), loading: testingExchangeSource === source.id },
+                                { label: 'Refresh', icon: <RefreshCw className="w-3 h-3" />, onClick: () => handleRefreshExchangeSource(source.id), loading: refreshingExchangeSource === source.id },
+                                { label: 'Delete', icon: <Trash2 className="w-3 h-3" />, onClick: () => handleDeleteExchangeSource(source.id), loading: deletingExchangeSource === source.id, danger: true, separator: true },
+                              ]} />
                             </div>
                           </td>
                         </tr>
@@ -1082,6 +1402,98 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {/* Edit Scraping Source Modal */}
+      {editingSource && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Edit Scraping Source</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editSourceForm.name}
+                  onChange={(e) => setEditSourceForm({ ...editSourceForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <input
+                  type="url"
+                  value={editSourceForm.url}
+                  onChange={(e) => setEditSourceForm({ ...editSourceForm, url: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Certificate Type</label>
+                <div className="px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-100 dark:bg-navy-900 text-navy-500 dark:text-navy-400 text-sm">
+                  {editSourceForm.certificate_type}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <select
+                  value={editSourceForm.scrape_library}
+                  onChange={(e) => setEditSourceForm({ ...editSourceForm, scrape_library: e.target.value as ScrapeLibrary })}
+                  className="w-full form-select"
+                >
+                  <option value="HTTPX">HTTPX (Fast, async HTTP)</option>
+                  <option value="BEAUTIFULSOUP">BeautifulSoup (HTML parsing)</option>
+                  <option value="SELENIUM">Selenium (Browser automation)</option>
+                  <option value="PLAYWRIGHT">Playwright (Modern browser automation)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <select
+                  value={editSourceForm.scrape_interval_minutes}
+                  onChange={(e) => setEditSourceForm({ ...editSourceForm, scrape_interval_minutes: parseInt(e.target.value) })}
+                  className="w-full form-select"
+                >
+                  <option value={5}>5 minutes</option>
+                  <option value={10}>10 minutes</option>
+                  <option value={15}>15 minutes</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={60}>1 hour</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="edit_source_is_primary"
+                    checked={editSourceForm.is_primary}
+                    onChange={(e) => setEditSourceForm({ ...editSourceForm, is_primary: e.target.checked })}
+                    className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="edit_source_is_primary" className="text-sm text-navy-700 dark:text-navy-300">Primary</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="edit_source_is_active"
+                    checked={editSourceForm.is_active}
+                    onChange={(e) => setEditSourceForm({ ...editSourceForm, is_active: e.target.checked })}
+                    className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="edit_source_is_active" className="text-sm text-navy-700 dark:text-navy-300">Active</label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setEditingSource(null)} className="flex-1">
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSaveEditSource} className="flex-1">
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Source Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1159,6 +1571,94 @@ export function SettingsPage() {
         </div>
       )}
 
+      {/* Edit Exchange Rate Source Modal */}
+      {editingExchangeSource && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Edit Exchange Rate Source</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editExchangeForm.name}
+                  onChange={(e) => setEditExchangeForm({ ...editExchangeForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <input
+                  type="url"
+                  value={editExchangeForm.url}
+                  onChange={(e) => setEditExchangeForm({ ...editExchangeForm, url: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <select
+                  value={editExchangeForm.scrape_library}
+                  onChange={(e) => setEditExchangeForm({ ...editExchangeForm, scrape_library: e.target.value as ScrapeLibrary })}
+                  className="w-full form-select"
+                >
+                  <option value="HTTPX">HTTPX (Fast, async HTTP)</option>
+                  <option value="BEAUTIFULSOUP">BeautifulSoup (HTML parsing)</option>
+                  <option value="SELENIUM">Selenium (Browser automation)</option>
+                  <option value="PLAYWRIGHT">Playwright (Modern browser automation)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <select
+                  value={editExchangeForm.scrape_interval_minutes}
+                  onChange={(e) => setEditExchangeForm({ ...editExchangeForm, scrape_interval_minutes: parseInt(e.target.value) })}
+                  className="w-full form-select"
+                >
+                  <option value={15}>15 minutes</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={60}>1 hour</option>
+                  <option value={120}>2 hours</option>
+                  <option value={360}>6 hours</option>
+                  <option value={720}>12 hours</option>
+                  <option value={1440}>24 hours</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="edit_is_primary"
+                    checked={editExchangeForm.is_primary}
+                    onChange={(e) => setEditExchangeForm({ ...editExchangeForm, is_primary: e.target.checked })}
+                    className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="edit_is_primary" className="text-sm text-navy-700 dark:text-navy-300">Primary</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="edit_is_active"
+                    checked={editExchangeForm.is_active}
+                    onChange={(e) => setEditExchangeForm({ ...editExchangeForm, is_active: e.target.checked })}
+                    className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="edit_is_active" className="text-sm text-navy-700 dark:text-navy-300">Active</label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setEditingExchangeSource(null)} className="flex-1">
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSaveEditExchange} className="flex-1">
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Exchange Rate Source Modal */}
       {showAddExchangeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1208,6 +1708,19 @@ export function SettingsPage() {
                   className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
                   placeholder="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <select
+                  value={newExchangeSource.scrape_library}
+                  onChange={(e) => setNewExchangeSource({ ...newExchangeSource, scrape_library: e.target.value as ScrapeLibrary })}
+                  className="w-full form-select"
+                >
+                  <option value="HTTPX">HTTPX (Fast, async HTTP)</option>
+                  <option value="BEAUTIFULSOUP">BeautifulSoup (HTML parsing)</option>
+                  <option value="SELENIUM">Selenium (Browser automation)</option>
+                  <option value="PLAYWRIGHT">Playwright (Modern browser automation)</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>

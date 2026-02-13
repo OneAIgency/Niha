@@ -7,6 +7,7 @@ Validates balances before placing orders to ensure orders are always covered.
 
 import asyncio
 import logging
+import math
 import random
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -54,6 +55,149 @@ class AutoTradeExecutor:
     - Validate sufficient balance before placing orders
     - Place orders with proper audit trail
     """
+
+    # Market key → (MM types, order side, rule name prefix)
+    MARKET_KEY_MAP = {
+        "CEA_BID": ([MarketMakerType.CEA_BUYER], OrderSide.BUY, "Liquidity Engine BID"),
+        "CEA_ASK": ([MarketMakerType.CEA_SELLER], OrderSide.SELL, "Liquidity Engine ASK"),
+        "EUA_SWAP": ([MarketMakerType.EUA_OFFER], OrderSide.SELL, "Liquidity Engine SWAP"),
+    }
+
+    # Default market settings based on OTC carbon market research
+    DEFAULT_MARKET_SETTINGS = {
+        "CEA_BID": {
+            "target_liquidity": Decimal("500000"),
+            "price_deviation_pct": Decimal("3.0"),
+            "avg_order_count": 10,
+            "min_order_volume_eur": Decimal("5000"),
+            "max_order_volume_eur": Decimal("250000"),
+            "volume_variety": 7,
+            "max_orders_per_price_level": 4,
+            "interval_seconds": 60,
+            "internal_trade_interval": 120,
+            "internal_trade_volume_min": Decimal("10000"),
+            "internal_trade_volume_max": Decimal("100000"),
+            "avg_spread": Decimal("0.20"),
+            "tick_size": Decimal("0.10"),
+        },
+        "CEA_ASK": {
+            "target_liquidity": Decimal("500000"),
+            "price_deviation_pct": Decimal("3.0"),
+            "avg_order_count": 10,
+            "min_order_volume_eur": Decimal("5000"),
+            "max_order_volume_eur": Decimal("250000"),
+            "volume_variety": 7,
+            "max_orders_per_price_level": 4,
+            "interval_seconds": 60,
+            "internal_trade_interval": 120,
+            "internal_trade_volume_min": Decimal("10000"),
+            "internal_trade_volume_max": Decimal("100000"),
+            "avg_spread": Decimal("0.20"),
+            "tick_size": Decimal("0.10"),
+        },
+        "EUA_SWAP": {
+            "target_liquidity": Decimal("1000000"),
+            "price_deviation_pct": Decimal("2.0"),
+            "avg_order_count": 8,
+            "min_order_volume_eur": Decimal("10000"),
+            "max_order_volume_eur": Decimal("500000"),
+            "volume_variety": 5,
+            "max_orders_per_price_level": 3,
+            "interval_seconds": 90,
+            "internal_trade_interval": 300,
+            "internal_trade_volume_min": Decimal("25000"),
+            "internal_trade_volume_max": Decimal("200000"),
+            "avg_spread": Decimal("0.0050"),
+            "tick_size": Decimal("0.0010"),
+        },
+    }
+
+    @staticmethod
+    async def bootstrap_rules(db: AsyncSession) -> int:
+        """
+        Bootstrap AutoTradeMarketSettings and AutoTradeRule records.
+
+        Called once at executor startup so that settings and rules exist even if the admin
+        has never saved market settings via PUT endpoint.
+
+        Returns the number of rules created.
+        """
+        created = 0
+
+        for market_key, (mm_types, side, prefix) in AutoTradeExecutor.MARKET_KEY_MAP.items():
+            # Ensure market settings exist (create with defaults if missing)
+            settings_result = await db.execute(
+                select(AutoTradeMarketSettings).where(
+                    AutoTradeMarketSettings.market_key == market_key
+                )
+            )
+            settings = settings_result.scalar_one_or_none()
+            if not settings:
+                defaults = AutoTradeExecutor.DEFAULT_MARKET_SETTINGS.get(market_key, {})
+                settings = AutoTradeMarketSettings(
+                    market_key=market_key,
+                    enabled=True,
+                    **defaults,
+                )
+                db.add(settings)
+                await db.flush()
+                logger.info(f"Bootstrapped AutoTradeMarketSettings for {market_key}")
+
+            # Get active market makers of matching types
+            mm_result = await db.execute(
+                select(MarketMakerClient).where(
+                    MarketMakerClient.mm_type.in_(mm_types),
+                    MarketMakerClient.is_active == True,
+                )
+            )
+            market_makers = list(mm_result.scalars().all())
+
+            for mm in market_makers:
+                # Check if rule already exists
+                existing = await db.execute(
+                    select(AutoTradeRule).where(
+                        AutoTradeRule.market_maker_id == mm.id,
+                        AutoTradeRule.side == side,
+                        AutoTradeRule.name.like("Liquidity Engine%"),
+                    )
+                )
+                if existing.scalar_one_or_none() is not None:
+                    continue
+
+                # Calculate min quantity from settings
+                min_quantity = Decimal("1")
+                if settings.target_liquidity and settings.avg_order_count:
+                    avg_order_value = settings.target_liquidity / Decimal(str(settings.avg_order_count))
+                    min_quantity = max(Decimal("1"), avg_order_value / Decimal("70"))
+
+                rule = AutoTradeRule(
+                    market_maker_id=mm.id,
+                    name=f"{prefix} - {mm.name}",
+                    enabled=settings.enabled,
+                    side=side,
+                    order_type="LIMIT",
+                    price_mode=AutoTradePriceMode.RANDOM_SPREAD,
+                    spread_min=settings.price_deviation_pct or Decimal("0.01"),
+                    spread_max=(settings.price_deviation_pct or Decimal("0.01")) * Decimal("3"),
+                    max_price_deviation=settings.price_deviation_pct,
+                    quantity_mode=AutoTradeQuantityMode.RANDOM_RANGE,
+                    min_quantity=min_quantity,
+                    max_quantity=min_quantity * Decimal(str(1 + (settings.volume_variety or 5) * 0.1)),
+                    interval_mode="fixed",
+                    interval_seconds=settings.interval_seconds,
+                    next_execution_at=datetime.now(timezone.utc).replace(tzinfo=None) if settings.enabled else None,
+                )
+                db.add(rule)
+                created += 1
+                logger.info(f"Bootstrapped rule: {rule.name} ({market_key}, {side.value})")
+
+        if created:
+            await db.flush()
+            logger.info(f"Bootstrapped {created} auto-trade rules")
+        else:
+            logger.info("No new auto-trade rules needed (all exist or no MMs)")
+
+        return created
 
     @staticmethod
     async def get_rules_ready_for_execution(
@@ -288,59 +432,46 @@ class AutoTradeExecutor:
         max_volume_eur: Optional[Decimal] = None,
     ) -> Decimal:
         """
-        Calculate order volume based on variety setting and liquidity needs.
+        Calculate order volume using log-normal distribution for realistic market feel.
 
-        If variation_pct is provided, uses percentage-based variation (±pct% of min_volume_eur).
-        Otherwise falls back to the legacy 1-10 volume_variety scale.
+        volume_variety (1-10) maps to log-normal sigma:
+          1 → sigma=0.05 (orders cluster near midpoint, very uniform)
+          5 → sigma=0.35 (moderate spread)
+          10 → sigma=0.80 (very diverse — some large, many small)
 
         Args:
             min_volume_eur: Minimum order volume in EUR
-            volume_variety: 1-10 scale (1=uniform, 10=very diverse) — legacy
+            volume_variety: 1-10 scale controlling distribution width
             target_liquidity: Target liquidity in EUR
             current_liquidity: Current liquidity in EUR
             avg_order_count: Target number of orders
-            variation_pct: ±% variation on min_order_value (new, takes precedence)
-            max_volume_eur: Maximum order volume in EUR (new, optional cap)
+            variation_pct: ±% variation (legacy, ignored when variety is set)
+            max_volume_eur: Maximum order volume in EUR (cap)
 
         Returns:
             Order volume in EUR
         """
-        # Calculate how much liquidity we need to add
-        if target_liquidity and target_liquidity > current_liquidity:
-            needed_liquidity = target_liquidity - current_liquidity
-            # Estimate order size based on target order count
-            base_volume = needed_liquidity / Decimal(str(max(avg_order_count, 1)))
-        else:
-            # No target or at/above target, use minimum
-            base_volume = min_volume_eur
+        min_vol = float(min_volume_eur)
+        max_vol = float(max_volume_eur) if max_volume_eur and max_volume_eur > 0 else min_vol * 10
 
-        # Ensure we're at least at minimum volume
-        base_volume = max(base_volume, min_volume_eur)
+        # Ensure sensible range
+        if max_vol <= min_vol:
+            max_vol = min_vol * 2
 
-        # New percentage-based variation (takes precedence over legacy scale)
-        if variation_pct is not None and variation_pct > 0:
-            pct = float(variation_pct)
-            factor = Decimal(str(1.0 + random.uniform(-pct / 100, pct / 100)))
-            varied_volume = base_volume * factor
-            varied_volume = max(varied_volume, min_volume_eur)
-            if max_volume_eur is not None and max_volume_eur > 0:
-                varied_volume = min(varied_volume, max_volume_eur)
-            return varied_volume
+        # Map variety (1-10) to log-normal sigma
+        sigma = 0.05 + (max(1, min(10, volume_variety)) - 1) * 0.083
 
-        # Legacy variety factor (1-10 scale)
-        if volume_variety <= 1:
-            result = base_volume
-        else:
-            variation_factor = (volume_variety - 1) / 9.0
-            min_multiplier = Decimal(str(1.0 - 0.5 * variation_factor))
-            max_multiplier = Decimal(str(1.0 + 2.0 * variation_factor))
-            random_factor = Decimal(str(random.random()))
-            multiplier = min_multiplier + random_factor * (max_multiplier - min_multiplier)
-            result = max(base_volume * multiplier, min_volume_eur)
+        # Generate log-normal sample (median=1.0)
+        raw = random.lognormvariate(0.0, sigma)
 
-        if max_volume_eur is not None and max_volume_eur > 0:
-            result = min(result, max_volume_eur)
-        return result
+        # Scale: median maps to midpoint of [min_vol, max_vol]
+        midpoint = (min_vol + max_vol) / 2.0
+        volume = raw * midpoint
+
+        # Clamp to [min_vol, max_vol]
+        volume = max(min_vol, min(max_vol, volume))
+
+        return Decimal(str(round(volume, 2)))
 
     @staticmethod
     def calculate_price_with_deviation(
@@ -348,6 +479,7 @@ class AutoTradeExecutor:
         price_deviation_pct: Decimal,
         side: OrderSide,
         is_swap_market: bool = False,
+        tick_size: Optional[Decimal] = None,
     ) -> Decimal:
         """
         Calculate order price with deviation from best price.
@@ -356,9 +488,7 @@ class AutoTradeExecutor:
         For SELL orders: price is above best bid (or best ask if no bids)
 
         The deviation is applied to create spread in the order book.
-
-        For SWAP market, the price is a ratio (CEA/EUA), not EUR,
-        so we round to 4 decimals instead of 0.1 EUR steps.
+        Prices are rounded to the configured tick_size.
         """
         # Calculate deviation as percentage
         deviation = best_price * (price_deviation_pct / Decimal("100"))
@@ -374,13 +504,206 @@ class AutoTradeExecutor:
             price = best_price + random_deviation
 
         if is_swap_market:
-            # For swap market, ratio is typically 0.1xxx - round to 4 decimals
-            price = price.quantize(Decimal("0.0001"))
-            return max(price, Decimal("0.0001"))
+            tick = tick_size or Decimal("0.0001")
+            price = (price / tick).quantize(Decimal("1")) * tick
+            return max(price, tick)
         else:
-            # For cash market, round to 0.1 EUR step
-            price = (price / Decimal("0.1")).quantize(Decimal("1")) * Decimal("0.1")
-            return max(price, Decimal("0.10"))
+            tick = tick_size or Decimal("0.1")
+            price = (price / tick).quantize(Decimal("1")) * tick
+            return max(price, tick)
+
+    # ------------------------------------------------------------------
+    # Priority chain helpers (gap fill, price align, level rebalance)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def find_price_gaps(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        tick_size: Decimal = Decimal("0.1"),
+    ) -> List[Tuple[Decimal, Decimal]]:
+        """
+        Priority 1: Find price gaps in the orderbook.
+
+        A gap is any interval > tick_size between adjacent active order prices
+        on the same side.  Returns list of (gap_start, gap_end) tuples.
+        """
+        result = await db.execute(
+            select(Order.price)
+            .where(
+                and_(
+                    Order.certificate_type == certificate_type,
+                    Order.side == side,
+                    Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                    Order.market_maker_id.isnot(None),
+                )
+            )
+            .distinct()
+            .order_by(Order.price.asc())
+        )
+        prices = [row[0] for row in result.all()]
+
+        gaps: List[Tuple[Decimal, Decimal]] = []
+        for i in range(len(prices) - 1):
+            if prices[i + 1] - prices[i] > tick_size + Decimal("0.001"):
+                gaps.append((prices[i] + tick_size, prices[i + 1] - tick_size))
+        return gaps
+
+    @staticmethod
+    def pick_gap_fill_price(
+        gaps: List[Tuple[Decimal, Decimal]],
+        tick_size: Decimal = Decimal("0.1"),
+    ) -> Optional[Decimal]:
+        """Pick a random price inside the first (closest-to-best) gap."""
+        if not gaps:
+            return None
+        gap_start, gap_end = gaps[0]
+        if gap_end < gap_start:
+            return gap_start
+        steps = int((gap_end - gap_start) / tick_size) + 1
+        chosen_step = random.randint(0, max(0, steps - 1))
+        return gap_start + tick_size * chosen_step
+
+    @staticmethod
+    def calculate_alignment_price(
+        scraped_price: Optional[Decimal],
+        best_price: Optional[Decimal],
+        side: OrderSide,
+        tick_size: Decimal = Decimal("0.1"),
+        threshold: Decimal = Decimal("0.2"),
+    ) -> Optional[Decimal]:
+        """
+        Priority 2: Price alignment toward scraped reference price.
+
+        If best_bid/ask deviates more than `threshold` EUR from scraped price,
+        return a price closer to scraped (applying 60 % mean-reversion).
+        """
+        if scraped_price is None or best_price is None:
+            return None
+
+        if side == OrderSide.BUY:
+            # Best bid should be just below scraped; check deviation
+            target_best = scraped_price - tick_size  # ideal best bid
+            deviation = target_best - best_price
+        else:
+            target_best = scraped_price + tick_size  # ideal best ask
+            deviation = best_price - target_best
+
+        if abs(deviation) <= threshold:
+            return None  # Close enough — no alignment needed
+
+        # 60 % correction toward ideal
+        adjustment = deviation * Decimal("0.6")
+        new_price = best_price + adjustment
+
+        # Round to tick
+        new_price = (new_price / tick_size).quantize(Decimal("1")) * tick_size
+        return max(new_price, tick_size)
+
+    @staticmethod
+    async def find_thin_levels_near_best(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        best_price: Decimal,
+        max_orders_per_level: int,
+        depth_levels: int = 5,
+        tick_size: Decimal = Decimal("0.1"),
+    ) -> Optional[Decimal]:
+        """
+        Priority 3: Level rebalancing.
+
+        Scan the first `depth_levels` price ticks from best and return the
+        price level with the fewest orders (below max), or None.
+        """
+        thinnest_price: Optional[Decimal] = None
+        thinnest_count = max_orders_per_level  # start high
+
+        for i in range(depth_levels):
+            if side == OrderSide.BUY:
+                level_price = best_price - tick_size * i
+            else:
+                level_price = best_price + tick_size * i
+
+            if level_price <= Decimal("0"):
+                continue
+
+            count_result = await db.execute(
+                select(func.count()).select_from(Order).where(
+                    and_(
+                        Order.certificate_type == certificate_type,
+                        Order.side == side,
+                        Order.price == level_price,
+                        Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
+                    )
+                )
+            )
+            count = count_result.scalar() or 0
+
+            if count < thinnest_count:
+                thinnest_count = count
+                thinnest_price = level_price
+
+        # Only return if there's actually room
+        if thinnest_count < max_orders_per_level:
+            return thinnest_price
+        return None
+
+    @staticmethod
+    async def determine_priority_price(
+        db: AsyncSession,
+        certificate_type: CertificateType,
+        side: OrderSide,
+        market_settings: Optional[AutoTradeMarketSettings],
+        scraped_price: Optional[Decimal],
+        best_bid: Optional[Decimal],
+        best_ask: Optional[Decimal],
+        is_swap: bool = False,
+    ) -> Tuple[Optional[Decimal], str]:
+        """
+        Run the 4-priority chain and return (price, reason).
+
+        Priority 1: Gap filling
+        Priority 2: Price alignment toward scraped price
+        Priority 3: Level rebalancing near best
+        Priority 4: Normal (returns None — caller uses default logic)
+        """
+        default_tick = Decimal("0.0001") if is_swap else Decimal("0.1")
+        raw_tick = Decimal(str(market_settings.tick_size)) if (market_settings and market_settings.tick_size) else default_tick
+        tick = max(raw_tick, Decimal("0.0001"))  # guard against zero/negative
+        best_price = best_bid if side == OrderSide.BUY else best_ask
+        max_per_level = (market_settings.max_orders_per_price_level if market_settings else 3) or 3
+
+        # Priority 1 — gap filling
+        gaps = await AutoTradeExecutor.find_price_gaps(
+            db, certificate_type, side, tick
+        )
+        if gaps:
+            gap_price = AutoTradeExecutor.pick_gap_fill_price(gaps, tick)
+            if gap_price is not None:
+                return gap_price, "priority1_gap_fill"
+
+        # Priority 2 — price alignment toward scraped
+        if scraped_price and best_price:
+            align_price = AutoTradeExecutor.calculate_alignment_price(
+                scraped_price, best_price, side, tick,
+                threshold=tick * 2,  # align when > 2 ticks away
+            )
+            if align_price is not None:
+                return align_price, "priority2_price_alignment"
+
+        # Priority 3 — level rebalancing
+        if best_price and market_settings:
+            thin_price = await AutoTradeExecutor.find_thin_levels_near_best(
+                db, certificate_type, side, best_price,
+                max_per_level, depth_levels=5, tick_size=tick,
+            )
+            if thin_price is not None:
+                return thin_price, "priority3_level_rebalance"
+
+        # Priority 4 — normal (caller handles)
+        return None, "priority4_normal"
 
     @staticmethod
     async def calculate_current_liquidity(
@@ -530,15 +853,22 @@ class AutoTradeExecutor:
         db: AsyncSession,
         certificate_type: CertificateType,
         admin_user_id: uuid.UUID,
+        market_settings: Optional[AutoTradeMarketSettings] = None,
+        market_key: Optional[str] = None,
     ) -> Dict:
         """
         Execute an internal trade between market makers.
         Used when liquidity limit is reached - consumes existing orders.
 
-        1. Find best bid and best ask
-        2. Calculate random price within spread
-        3. Match a BUY order with a SELL order
-        4. Create trade record
+        1. Check internal_trade_interval cooldown (if market_settings provided)
+        2. Find best bid and best ask
+        3. Calculate random price within spread
+        4. Match a BUY order with a SELL order, applying volume limits
+        5. Create trade record
+
+        Volume limits: if market_settings has internal_trade_volume_min/max,
+        the match quantity is capped using log-normal distribution between
+        those bounds. Otherwise, matches the full remaining qty.
 
         Returns: dict with trade details or error
         """
@@ -551,6 +881,19 @@ class AutoTradeExecutor:
         }
 
         try:
+            # Check internal trade interval cooldown
+            if market_key and market_settings and market_settings.internal_trade_interval:
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
+                last_at = _last_internal_trade_at.get(market_key)
+                if last_at:
+                    elapsed = (now - last_at).total_seconds()
+                    if elapsed < market_settings.internal_trade_interval:
+                        result["reason"] = (
+                            f"internal_trade_cooldown ({int(elapsed)}s / "
+                            f"{market_settings.internal_trade_interval}s)"
+                        )
+                        return result
+
             # Get best prices
             best_bid, best_ask = await AutoTradeExecutor.get_best_prices(
                 db, certificate_type
@@ -625,7 +968,29 @@ class AutoTradeExecutor:
             # Calculate match quantity (smaller of remaining quantities)
             sell_remaining = sell_order.quantity - sell_order.filled_quantity
             buy_remaining = buy_order.quantity - buy_order.filled_quantity
-            match_qty = min(sell_remaining, buy_remaining)
+            max_available_qty = min(sell_remaining, buy_remaining)
+
+            # Apply internal trade volume limits from market_settings
+            if (
+                market_settings
+                and market_settings.internal_trade_volume_min is not None
+                and market_settings.internal_trade_volume_max is not None
+                and trade_price > 0
+            ):
+                vol_min = float(market_settings.internal_trade_volume_min)
+                vol_max = float(market_settings.internal_trade_volume_max)
+                if vol_max <= vol_min:
+                    vol_max = vol_min * 2
+                variety = market_settings.volume_variety or 5
+                sigma = 0.05 + (max(1, min(10, variety)) - 1) * 0.083
+                raw = random.lognormvariate(0.0, sigma)
+                midpoint = (vol_min + vol_max) / 2.0
+                volume_eur = max(vol_min, min(vol_max, raw * midpoint))
+                # Convert EUR volume to quantity using trade price
+                target_qty = Decimal(str(round(volume_eur, 2))) / trade_price
+                match_qty = min(max_available_qty, target_qty)
+            else:
+                match_qty = max_available_qty
 
             # Round to integer
             match_qty = match_qty.quantize(Decimal("1"), rounding=ROUND_DOWN)
@@ -709,6 +1074,10 @@ class AutoTradeExecutor:
             result["quantity"] = str(match_qty)
             result["buy_order_id"] = str(buy_order.id)
             result["sell_order_id"] = str(sell_order.id)
+
+            # Update interval tracker
+            if market_key:
+                _last_internal_trade_at[market_key] = datetime.now(timezone.utc).replace(tzinfo=None)
 
             return result
 
@@ -1290,7 +1659,9 @@ class AutoTradeExecutor:
 
                 while trades_executed < max_trades:
                     internal_result = await AutoTradeExecutor.execute_internal_trade(
-                        db, certificate_type, admin_user_id
+                        db, certificate_type, admin_user_id,
+                        market_settings=market_settings,
+                        market_key=market_key,
                     )
 
                     if not internal_result["success"]:
@@ -1323,14 +1694,37 @@ class AutoTradeExecutor:
                 return result
 
             if status == "at_target":
-                # Liquidity is at target level - skip this execution
-                logger.debug(
-                    f"Rule {rule.name}: Liquidity at target ({current_liq}/{target_liq} EUR) - skipping"
-                )
-                result["reason"] = "liquidity_at_target"
-                result["action"] = "skipped"
+                # Liquidity is at target level — try periodic internal trade if interval allows
+                if (
+                    market_settings
+                    and market_settings.internal_trade_interval
+                    and market_settings.internal_trade_volume_min is not None
+                ):
+                    internal_result = await AutoTradeExecutor.execute_internal_trade(
+                        db, certificate_type, admin_user_id,
+                        market_settings=market_settings,
+                        market_key=market_key,
+                    )
+                    if internal_result["success"]:
+                        logger.info(
+                            f"Rule {rule.name}: At-target periodic internal trade: "
+                            f"{internal_result['quantity']} @ {internal_result['price']}"
+                        )
+                        result["success"] = True
+                        result["action"] = "internal_trade_periodic"
+                        result["internal_trade"] = internal_result
+                    else:
+                        # Cooldown or no matching orders — just skip
+                        result["reason"] = f"at_target_internal_skipped: {internal_result['reason']}"
+                        result["action"] = "skipped"
+                else:
+                    result["reason"] = "liquidity_at_target"
+                    result["action"] = "skipped"
+
                 # Schedule next execution
+                rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
+                rule.execution_count = (rule.execution_count or 0) + 1
                 await db.commit()
                 return result
 
@@ -1342,7 +1736,9 @@ class AutoTradeExecutor:
                 )
 
                 internal_result = await AutoTradeExecutor.execute_internal_trade(
-                    db, certificate_type, admin_user_id
+                    db, certificate_type, admin_user_id,
+                    market_settings=market_settings,
+                    market_key=market_key,
                 )
 
                 # Update rule execution tracking
@@ -1391,8 +1787,22 @@ class AutoTradeExecutor:
             # Get best prices for price calculation
             best_bid, best_ask = await AutoTradeExecutor.get_best_prices(db, certificate_type)
 
-            # Calculate price - use market settings if available
-            if market_settings and best_bid and rule.order_type == "LIMIT":
+            # --- 4-PRIORITY ORDER PLACEMENT CHAIN ---
+            # Try priorities 1-3 before falling back to normal (priority 4)
+            priority_price, priority_reason = await AutoTradeExecutor.determine_priority_price(
+                db, certificate_type, rule.side, market_settings,
+                scraped_price=market_price,
+                best_bid=best_bid, best_ask=best_ask,
+                is_swap=(market_type == MarketType.SWAP),
+            )
+
+            if priority_price is not None:
+                # Priorities 1-3 provided a price — use it directly
+                price = priority_price
+                price_reason = priority_reason
+                logger.info(f"Rule {rule.name}: {priority_reason} → price={price}")
+            # Priority 4: normal price calculation (existing logic)
+            elif market_settings and best_bid and rule.order_type == "LIMIT":
                 # Use new price deviation setting
                 # For BUY: use best_ask as reference (we want to buy below it)
                 # For SELL: use best_bid as reference (we want to sell above it)
@@ -1407,6 +1817,7 @@ class AutoTradeExecutor:
                         market_settings.price_deviation_pct,
                         rule.side,
                         is_swap_market=(market_type == MarketType.SWAP),
+                        tick_size=market_settings.tick_size,
                     )
                     price_reason = f"market_settings_deviation ({market_settings.price_deviation_pct}%)"
                 else:
@@ -1546,6 +1957,7 @@ class AutoTradeExecutor:
                 result["ticket_id"] = ticket_id
                 result["price"] = str(price) if price else None
                 result["quantity"] = str(quantity)
+                result["price_reason"] = price_reason
 
                 # Try to match crossing orders after placement
                 trades_matched = await AutoTradeExecutor.try_match_orders(
@@ -1598,6 +2010,50 @@ class AutoTradeExecutor:
 # Background task for running auto-trade execution
 _executor_task: Optional[asyncio.Task] = None
 _executor_running = False
+
+# Module-level internal trade interval tracking (per market_key)
+_last_internal_trade_at: Dict[str, datetime] = {}
+
+# Module-level status tracking (read by GET /admin/auto-trade-status)
+_executor_status: Dict = {
+    "executor_running": False,
+    "cycle_interval_seconds": 5,
+    "last_cycle_at": None,
+    "last_cycle_results": {
+        "rules_checked": 0,
+        "orders_placed": 0,
+        "internal_trades": 0,
+        "errors": 0,
+    },
+    "next_cycle_at": None,
+}
+
+
+def get_executor_status() -> Dict:
+    """Return a snapshot of the executor status for the status endpoint."""
+    return dict(_executor_status)
+
+
+def update_executor_status(
+    results: List[Dict],
+    cycle_interval: int = 5,
+) -> None:
+    """Update module-level status after an executor cycle."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    orders_placed = sum(1 for r in results if r.get("success") and r.get("order_id"))
+    internal = sum(1 for r in results if r.get("action") in ("internal_trade", "threshold_reduction"))
+    errors = sum(1 for r in results if not r.get("success") and r.get("reason"))
+
+    _executor_status["executor_running"] = True
+    _executor_status["cycle_interval_seconds"] = cycle_interval
+    _executor_status["last_cycle_at"] = now.isoformat()
+    _executor_status["last_cycle_results"] = {
+        "rules_checked": len(results),
+        "orders_placed": orders_placed,
+        "internal_trades": internal,
+        "errors": errors,
+    }
+    _executor_status["next_cycle_at"] = (now + timedelta(seconds=cycle_interval)).isoformat()
 
 
 async def start_auto_trade_executor(

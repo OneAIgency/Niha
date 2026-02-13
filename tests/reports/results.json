@@ -1,0 +1,1227 @@
+{
+  "config": {
+    "configFile": "/Users/victorsafta/work/Niha/tests/playwright.config.ts",
+    "rootDir": "/Users/victorsafta/work/Niha/tests",
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "api-health",
+        "name": "api-health",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "api/health.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "api-auth",
+        "name": "api-auth",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "api/auth.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "api-flows",
+        "name": "api-flows",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "api/flows.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "api-market-makers",
+        "name": "api-market-makers",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "api/market-makers.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "api-backoffice",
+        "name": "api-backoffice",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "api/backoffice.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "ui-smoke",
+        "name": "ui-smoke",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "e2e/smoke.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "ui-admin",
+        "name": "ui-admin",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "e2e/admin.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "ui-onboarding",
+        "name": "ui-onboarding",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "e2e/onboarding.spec.ts"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/victorsafta/work/Niha/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "ui-trading",
+        "name": "ui-trading",
+        "testDir": "/Users/victorsafta/work/Niha/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "e2e/trading.spec.ts"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "open": "never",
+          "outputFolder": "reports/html"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "reports/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "e2e/admin.spec.ts",
+      "file": "e2e/admin.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Admin Dashboard",
+          "file": "e2e/admin.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Dashboard page loads after login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1483,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:34.377Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-37f77a6dc37e1d65989a",
+              "file": "e2e/admin.spec.ts",
+              "line": 12,
+              "column": 7
+            },
+            {
+              "title": "Profile page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1157,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:36.339Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-6034f4fd693fd76171fe",
+              "file": "e2e/admin.spec.ts",
+              "line": 20,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Backoffice Pages",
+          "file": "e2e/admin.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Backoffice onboarding page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1299,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:37.501Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-cde97dc4291e4c5f54e9",
+              "file": "e2e/admin.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "Backoffice KYC review page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1178,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:38.804Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-5d737c92945b4ae6a9bf",
+              "file": "e2e/admin.spec.ts",
+              "line": 38,
+              "column": 7
+            },
+            {
+              "title": "Backoffice deposits page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1181,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:39.986Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-658aa7ed6bfeeb6defb4",
+              "file": "e2e/admin.spec.ts",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "Backoffice AML page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1116,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:41.171Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-c7a0df7c843ac5e22ac6",
+              "file": "e2e/admin.spec.ts",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "Backoffice settlements page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1222,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:42.291Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-9a598cfb3417e04cfc9f",
+              "file": "e2e/admin.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "Market Makers page loads",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1183,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/market maker|CEA|EUA|Swapper/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/market maker|CEA|EUA|Swapper/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /Users/victorsafta/work/Niha/tests/e2e/admin.spec.ts:72:21",
+                        "location": {
+                          "file": "/Users/victorsafta/work/Niha/tests/e2e/admin.spec.ts",
+                          "column": 21,
+                          "line": 72
+                        },
+                        "snippet": "  70 |     expect(content).toBeTruthy();\n  71 |     // Should show market maker content (case-insensitive)\n> 72 |     expect(content).toMatch(/market maker|CEA|EUA|Swapper/i);\n     |                     ^\n  73 |   });\n  74 | });\n  75 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/victorsafta/work/Niha/tests/e2e/admin.spec.ts",
+                            "column": 21,
+                            "line": 72
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/market maker|CEA|EUA|Swapper/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m\n\n  70 |     expect(content).toBeTruthy();\n  71 |     // Should show market maker content (case-insensitive)\n> 72 |     expect(content).toMatch(/market maker|CEA|EUA|Swapper/i);\n     |                     ^\n  73 |   });\n  74 | });\n  75 |\n    at /Users/victorsafta/work/Niha/tests/e2e/admin.spec.ts:72:21"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:43.517Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-admin-Backoffice-Pages-Market-Makers-page-loads-ui-admin/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-admin-Backoffice-Pages-Market-Makers-page-loads-ui-admin/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-admin-Backoffice-Pages-Market-Makers-page-loads-ui-admin/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/victorsafta/work/Niha/tests/e2e/admin.spec.ts",
+                        "column": 21,
+                        "line": 72
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-eb748b5fe8f376a8235b",
+              "file": "e2e/admin.spec.ts",
+              "line": 66,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Settings Pages",
+          "file": "e2e/admin.spec.ts",
+          "line": 76,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Settings page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1271,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:45.207Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-d99b083e0b1fce536cfd",
+              "file": "e2e/admin.spec.ts",
+              "line": 77,
+              "column": 7
+            },
+            {
+              "title": "Auto-trade page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1156,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:46.800Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-88e8c8ea8be3b91b1f00",
+              "file": "e2e/admin.spec.ts",
+              "line": 84,
+              "column": 7
+            },
+            {
+              "title": "Fee settings page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1314,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:47.961Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-4890d6de25bba55c05cd",
+              "file": "e2e/admin.spec.ts",
+              "line": 91,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Trading Pages (Admin Access)",
+          "file": "e2e/admin.spec.ts",
+          "line": 99,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Cash market page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1193,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:49.280Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-308840accdbee91236b4",
+              "file": "e2e/admin.spec.ts",
+              "line": 100,
+              "column": 7
+            },
+            {
+              "title": "Swap page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1163,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:50.477Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-52e387f862776a0d512c",
+              "file": "e2e/admin.spec.ts",
+              "line": 108,
+              "column": 7
+            },
+            {
+              "title": "Funding page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1296,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:51.644Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-4f4e3f876a5b36339e20",
+              "file": "e2e/admin.spec.ts",
+              "line": 115,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Users Page",
+          "file": "e2e/admin.spec.ts",
+          "line": 123,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Users page loads and shows users",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-admin",
+                  "projectName": "ui-admin",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1159,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:52.944Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "983b657bd7deb1473d24-ae3fb403f7e7b55f6046",
+              "file": "e2e/admin.spec.ts",
+              "line": 124,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "e2e/trading.spec.ts",
+      "file": "e2e/trading.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Cash Market Page",
+          "file": "e2e/trading.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Orderbook is displayed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3268,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:54.587Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-54309869f3847fa39745",
+              "file": "e2e/trading.spec.ts",
+              "line": 12,
+              "column": 7
+            },
+            {
+              "title": "Page has trading-related content",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 3190,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/CEA|price|order|buy|sell|market/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/CEA|price|order|buy|sell|market/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /Users/victorsafta/work/Niha/tests/e2e/trading.spec.ts:30:21",
+                        "location": {
+                          "file": "/Users/victorsafta/work/Niha/tests/e2e/trading.spec.ts",
+                          "column": 21,
+                          "line": 30
+                        },
+                        "snippet": "  28 |     expect(content).toBeTruthy();\n  29 |     // Should show trading-related content (CEA, price, order, etc.)\n> 30 |     expect(content).toMatch(/CEA|price|order|buy|sell|market/i);\n     |                     ^\n  31 |   });\n  32 |\n  33 |   test('Market data loads without errors', async ({ authedPage: page }) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/victorsafta/work/Niha/tests/e2e/trading.spec.ts",
+                            "column": 21,
+                            "line": 30
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/CEA|price|order|buy|sell|market/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    NEUR/USD1.0847+0.12%GBP/USD1.2691-0.08%BRENT78.42+1.24%GOLD2,041+0.31%DAX17,892+0.67%S&P5005,123+0.45%NIHAOENTERNDAEXCLUSIVE ACCESS·········\u001b[39m\n\u001b[31m\"\u001b[39m\n\n  28 |     expect(content).toBeTruthy();\n  29 |     // Should show trading-related content (CEA, price, order, etc.)\n> 30 |     expect(content).toMatch(/CEA|price|order|buy|sell|market/i);\n     |                     ^\n  31 |   });\n  32 |\n  33 |   test('Market data loads without errors', async ({ authedPage: page }) => {\n    at /Users/victorsafta/work/Niha/tests/e2e/trading.spec.ts:30:21"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:45:58.097Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-trading-Cash-Market-Pa-b5ac8-has-trading-related-content-ui-trading/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-trading-Cash-Market-Pa-b5ac8-has-trading-related-content-ui-trading/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/victorsafta/work/Niha/tests/test-results/e2e-trading-Cash-Market-Pa-b5ac8-has-trading-related-content-ui-trading/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/victorsafta/work/Niha/tests/e2e/trading.spec.ts",
+                        "column": 21,
+                        "line": 30
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-3a41c9313564a6c8f2ab",
+              "file": "e2e/trading.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "Market data loads without errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4210,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:01.775Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-b73329ddce98334d6bc8",
+              "file": "e2e/trading.spec.ts",
+              "line": 33,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Swap Page",
+          "file": "e2e/trading.spec.ts",
+          "line": 48,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Swap page displays rate information",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3191,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:06.261Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-be08ae83510548e02155",
+              "file": "e2e/trading.spec.ts",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "Swap page loads without critical errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4315,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:09.456Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-14066ea3699789424249",
+              "file": "e2e/trading.spec.ts",
+              "line": 59,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Funding Page",
+          "file": "e2e/trading.spec.ts",
+          "line": 74,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Funding page displays content",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3190,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:13.775Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-bd7683a351c45ec12762",
+              "file": "e2e/trading.spec.ts",
+              "line": 75,
+              "column": 7
+            },
+            {
+              "title": "Funding page shows balance info",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3185,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:16.971Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-8eefb478f552567df38d",
+              "file": "e2e/trading.spec.ts",
+              "line": 85,
+              "column": 7
+            },
+            {
+              "title": "Funding page loads without critical errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4245,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:20.161Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-9bfd5425f4adf5ff33b1",
+              "file": "e2e/trading.spec.ts",
+              "line": 95,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Dashboard Data",
+          "file": "e2e/trading.spec.ts",
+          "line": 110,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Dashboard shows portfolio data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3174,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:24.410Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-3d666c73298cebcfb2ab",
+              "file": "e2e/trading.spec.ts",
+              "line": 111,
+              "column": 7
+            },
+            {
+              "title": "Dashboard loads without critical errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "ui-trading",
+                  "projectName": "ui-trading",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4210,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-10T00:46:27.589Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f5785d477305cd9c803e-08bc9af9ef4e4b413119",
+              "file": "e2e/trading.spec.ts",
+              "line": 121,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-10T00:45:33.901Z",
+    "duration": 57938.102,
+    "expected": 23,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

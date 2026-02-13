@@ -532,6 +532,7 @@ class ScrapingSource(Base):
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     scrape_library = Column(SQLEnum(ScrapeLibrary), default=ScrapeLibrary.HTTPX)
     is_active = Column(Boolean, default=True)
+    is_primary = Column(Boolean, default=False)
     scrape_interval_minutes = Column(Integer, default=5)
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
@@ -1344,6 +1345,11 @@ class AutoTradeMarketSettings(Base):
 
     # Max liquidity threshold in EUR - if exceeded, execute internal trades to reduce
     max_liquidity_threshold = Column(Numeric(18, 2), nullable=True)
+
+    # Average spread (EUR for cash, ratio for swap) — used by algorithm for order placement
+    avg_spread = Column(Numeric(10, 4), nullable=True)
+    # Tick size / minimum price increment (EUR for cash, ratio for swap) — used for price rounding
+    tick_size = Column(Numeric(10, 4), nullable=True)
 
     # Internal trade settings (when liquidity is at target)
     # Interval in seconds for internal trades

@@ -506,10 +506,13 @@ class ScrapingSourceResponse(BaseModel):
     certificate_type: str
     scrape_library: Optional[str] = "HTTPX"
     is_active: bool
+    is_primary: bool = False
     scrape_interval_minutes: int
     last_scrape_at: Optional[datetime]
     last_scrape_status: Optional[str]
     last_price: Optional[float]
+    last_price_eur: Optional[float] = None
+    last_exchange_rate: Optional[float] = None
     config: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
@@ -523,6 +526,7 @@ class ScrapingSourceUpdate(BaseModel):
     url: Optional[str] = None
     scrape_library: Optional[ScrapeLibrary] = None
     is_active: Optional[bool] = None
+    is_primary: Optional[bool] = None
     scrape_interval_minutes: Optional[int] = None
     config: Optional[Dict[str, Any]] = None
 
@@ -533,6 +537,7 @@ class ScrapingSourceCreate(BaseModel):
     certificate_type: CertificateType
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
     scrape_interval_minutes: int = Field(5, ge=1, le=60)
+    is_primary: bool = False
     config: Optional[Dict[str, Any]] = None
 
 
@@ -1663,6 +1668,8 @@ class AutoTradeMarketSettingsResponse(BaseModel):
     internal_trade_interval: Optional[int] = None  # Interval for internal trades when at target
     internal_trade_volume_min: Optional[Decimal] = None  # Min volume per internal trade (EUR)
     internal_trade_volume_max: Optional[Decimal] = None  # Max volume per internal trade (EUR)
+    avg_spread: Optional[Decimal] = None  # Average spread (EUR for cash, ratio for swap)
+    tick_size: Optional[Decimal] = None  # Tick size / price increment (EUR for cash, ratio for swap)
     created_at: datetime
     updated_at: datetime
 
@@ -1699,6 +1706,8 @@ class AutoTradeMarketSettingsUpdate(BaseModel):
     internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600)  # 10 sec to 1 hour
     internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0)
     internal_trade_volume_max: Optional[Decimal] = Field(None, ge=0)
+    avg_spread: Optional[Decimal] = Field(None, ge=0)
+    tick_size: Optional[Decimal] = Field(None, gt=0)
 
 
 # Market Order (Admin) Schemas

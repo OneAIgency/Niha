@@ -107,7 +107,7 @@ The EUR balance shown to users (Dashboard Cash (EUR), Backoffice User Assets, Ca
 - **Rebuild**: `./rebuild.sh` (Stops, cleans, builds, starts)
 - **Restart**: `./restart.sh` (Restart only, no clean build)
 - **Run Backend Tests**: `docker compose exec backend pytest`
-- **Run Migrations**: `docker compose exec backend alembic upgrade head` — Current head is `2026_01_30_add_mm` (chain: `2026_01_29_baseline` → `mail_config` → `onboarding` → `simplify` → `nda_only` → `full_flow` → `2026_01_30_request_type` → `2026_01_30_user_role` → `2026_01_30_add_mm`). Schema is also created at app startup via `init_db()` / `Base.metadata.create_all`; migrations alter schema over time. New migrations should set `down_revision = "2026_01_30_add_mm"` (or current head). Old migrations are archived under `backend/alembic/versions/archive/` and are not run.
+- **Run Migrations**: `docker compose exec backend alembic upgrade head` — Current head is `2026_02_13_spread_and_tick_size`. Schema is also created at app startup via `init_db()` / `Base.metadata.create_all`; migrations alter schema over time. New migrations should set `down_revision = "2026_02_13_spread_and_tick_size"` (or current head). Old migrations are archived under `backend/alembic/versions/archive/` and are not run.
 
 ## 8. Frontend Routing (Backoffice & Role-Based Access)
 - **NDA/KYC onboarding** — Authenticated users with role **NDA** or **KYC** can access only: `/onboarding`, its sub-routes (`/onboarding/market-overview`, `/onboarding/about-nihao`, etc.), `/onboarding1`, `/learn-more`, and public routes (`/contact`, `/setup-password`, `/login`). Any attempt to access `/profile`, `/dashboard`, `/funding`, `/cash-market`, `/settings`, `/users`, `/components`, `/design-system`, or backoffice routes redirects them to `/onboarding`. Post-login redirect for NDA/KYC is `/onboarding` (centralized in `frontend/src/utils/redirect.ts` via `getPostLoginRedirect`). **REJECTED** users redirect to `/login`. There is no `PENDING` role; onboarding flow is NDA → KYC → … → EUA (see `frontend/src/types/index.ts` `UserRole`).
@@ -132,7 +132,72 @@ The EUR balance shown to users (Dashboard Cash (EUR), Backoffice User Assets, Ca
 - **Client WebSocket** — Authenticated users (especially AML) can receive realtime events when their role changes on the backend. Endpoint: **WS /api/v1/client/ws** with query param `token=<jwt>`. When admin clears a deposit (AML→CEA), the backend broadcasts `role_updated` to affected user IDs; the frontend hook **`useClientRealtime`** (mounted in Layout) refetches **GET /users/me** and updates the auth store with `setAuth(user, token)`. **User.role** remains SSOT; the WebSocket only notifies the client to refetch and refresh the UI.
 - **Role / status transitions** — Platforma folosește DOAR regulile din `docs/ROLE_TRANSITIONS.md` (tabel De la → La). Starea contact request se citește/actualizează prin `user_role`. User role se schimbă doar prin create-from-request, approve_user, reject_user, announce_deposit, confirm_deposit, clear_deposit, reject_deposit și `role_transitions`. APPROVED→FUNDING doar la primul announce_deposit reușit (nu există „fund user” manual).
 - **Client status (user_role)** — Deposit UIs (Onboarding Deposits tab, AML tab, Backoffice Deposits page) show **client status** from a single source: **`user_role`** (reporting user’s role). When the client announces a transfer, the backend sets `user.role = FUNDING`; the API returns `user_role` and UIs display it consistently in cards and tables. Both the deposits API (`deposit_to_response`) and **`GET /api/v1/backoffice/deposits`** include `user_role` (optional when no reporting user; backoffice falls back to first entity user). The backoffice list uses `selectinload` and a single batch query for fallback users to avoid N+1. Frontend uses **`ClientStatusBadge`** (`frontend/src/components/common/ClientStatusBadge.tsx`) and **`clientStatusVariant`** (`frontend/src/utils/roleBadge.ts`); consumers support both `user_role` and `userRole` (camelCase) from the API. See `frontend/docs/DESIGN_SYSTEM.md` § Badges → Client status badge.
-- **Backoffice deposits API** — **`GET /api/v1/backoffice/deposits`** (Admin). Query: `status` (optional, e.g. `pending`|`on_hold`), `entity_id` (optional UUID). Response: list of `{ id, entity_id, entity_name, user_email, user_role, reported_amount, reported_currency, amount, currency, wire_reference, bank_reference, status, reported_at, confirmed_at, confirmed_by, notes, created_at }`. `user_role` is the reporting user’s role (or first entity user when no `user_id`); omitted if none.
+- **Backoffice deposits API** — **`GET /api/v1/backoffice/deposits`** (Admin). Query: `status` (optional, e.g. `pending`|`on_hold`), `entity_id` (optional UUID). Response: list of `{ id, entity_id, entity_name, user_email, user_role, reported_amount, reported_currency, amount, currency, wire_reference, bank_reference, status, reported_at, confirmed_at, confirmed_by, notes, created_at }`. `user_role` is the reporting user's role (or first entity user when no `user_id`); omitted if none.
+
+### Auto Trade & Liquidity Engine
+
+The auto trade system maintains market liquidity by programmatically placing and matching orders on behalf of market maker entities. Admin configures per-market-side settings; a background executor runs on a cycle and places/matches orders according to a four-priority algorithm.
+
+**Market sides (market_key):** `CEA_BID`, `CEA_ASK`, `EUA_SWAP`. Each has its own row in the `auto_trade_market_settings` table.
+
+**DB model: `AutoTradeMarketSettings`** (`backend/app/models/models.py`)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `market_key` | String | `CEA_BID`, `CEA_ASK`, or `EUA_SWAP` |
+| `enabled` | Boolean | Master on/off |
+| `target_liquidity` | Numeric(18,2) | Target EUR value of open orders |
+| `avg_spread` | Numeric(10,4) | Average bid-ask spread (EUR for cash, ratio for swap) |
+| `tick_size` | Numeric(10,4) | Minimum price increment (EUR for cash, ratio for swap) |
+| `price_deviation_pct` | Numeric(5,2) | Max price depth from best price (%) |
+| `avg_order_count` | Integer | Average number of orders to maintain |
+| `min_order_volume_eur` | Numeric(18,2) | Floor for single order EUR value |
+| `max_order_volume_eur` | Numeric(18,2) | Cap for single order EUR value |
+| `volume_variety` | Integer | 1-10 scale for order size diversity |
+| `max_orders_per_price_level` | Integer | Cap orders at one price level |
+| `interval_seconds` | Integer | Order placement cycle interval |
+| `max_liquidity_threshold` | Numeric(18,2) | If exceeded, execute internal trades to reduce |
+| `internal_trade_interval` | Integer | Interval (sec) for internal trades when at target |
+| `internal_trade_volume_min` | Numeric(18,2) | Min EUR per internal trade |
+| `internal_trade_volume_max` | Numeric(18,2) | Max EUR per internal trade |
+| `avg_order_count_variation_pct` | Numeric(5,2) | Randomness on order count (%) |
+| `max_orders_per_level_variation_pct` | Numeric(5,2) | Randomness on max per level (%) |
+| `min_order_value_variation_pct` | Numeric(5,2) | Randomness on min order value (%) |
+| `order_interval_variation_pct` | Numeric(5,2) | Randomness on interval (%) |
+
+**`tick_size` in the algorithm:** The executor (`backend/app/services/auto_trade_executor.py`) uses `tick_size` as the minimum price increment across four priority helpers: (1) `find_price_gaps` -- detects gaps > `tick_size` between adjacent prices; (2) `pick_gap_fill_price` -- chooses a tick-aligned price inside a gap; (3) `calculate_alignment_price` -- aligns best price to scraped price, rounded to tick; (4) `find_thin_levels_near_best` -- scans levels at tick increments from best. Fallback when `tick_size` is NULL: `Decimal("0.1")` for CEA cash, `Decimal("0.0001")` for swap.
+
+**`avg_spread` in the algorithm:** Stored for reference and used by the order placement logic when calculating spread between bid and ask sides. Units are EUR for CEA cash markets and ratio for swap.
+
+**Bootstrap defaults** (`AutoTradeExecutor.DEFAULT_MARKET_SETTINGS`): When the executor starts and a market_key has no DB row, it bootstraps with sensible defaults. Key defaults:
+
+| Parameter | CEA (BID/ASK) | EUA_SWAP |
+|-----------|--------------|----------|
+| `target_liquidity` | 500,000 EUR | 1,000,000 EUR |
+| `avg_spread` | 0.20 EUR | 0.0050 (ratio) |
+| `tick_size` | 0.10 EUR | 0.0010 (ratio) |
+| `interval_seconds` | 60 | 90 |
+| `price_deviation_pct` | 3% | 2% |
+
+**API endpoints (Admin-only):**
+- **`GET /api/v1/admin/auto-trade-market-settings`** -- Returns all three market-side settings with current liquidity, percentage, associated market makers, and online status.
+- **`GET /api/v1/admin/auto-trade-market-settings/{market_key}`** -- Returns settings for one market side.
+- **`PUT /api/v1/admin/auto-trade-market-settings/{market_key}`** -- Updates settings. Request body: `AutoTradeMarketSettingsUpdate` (all fields optional). Syncs auto-trade rules for associated market makers after update.
+- **`GET /api/v1/admin/auto-trade-status`** -- Executor status: running state, last/next cycle, results summary, rules overview (polled by frontend timer).
+
+All three serialization endpoints use `_build_market_settings_response()` helper (in `backend/app/api/v1/admin.py`) to construct the `AutoTradeMarketSettingsResponse`, eliminating field duplication.
+
+**Pydantic validation (`AutoTradeMarketSettingsUpdate`):** `tick_size` enforces `gt=0` (must be positive; zero would cause division errors). `avg_spread` enforces `ge=0`. `interval_seconds` range: 5-3600. `price_deviation_pct` range: 0-100.
+
+**Frontend page:** `/backoffice/auto-trade` (`frontend/src/pages/AutoTradePage.tsx`). Admin-only. Renders inside `BackofficeLayout`. Features:
+- Per-market cards showing enabled toggle, liquidity bar, market maker list, and online status.
+- Expandable **Liquidity & Auto Trade Settings** panel with a two-column layout: CEA Cash (left) | Swap (right).
+- CEA Cash BID-to-ASK sync: All shared parameters (spread, tick size, interval, volume, etc.) are synced from BID to ASK on change; only `targetLiquidity` is independent per side.
+- **Advanced Settings** nested expand within each column for variation percentage fields.
+- All numeric inputs use thousands-separator formatting (raw on focus, formatted on blur) via `SettingsInput` component.
+- Research-based recommended values displayed as hints ("Rec: ...") below each input. Constants: `RECOMMENDED.CEA_CASH` and `RECOMMENDED.SWAP`.
+
+**TypeScript interfaces:** `AutoTradeMarketSettings` and `AutoTradeMarketSettingsUpdate` in `frontend/src/types/index.ts`. Include `avgSpread: number | null` and `tickSize: number | null`.
 
 ## 9. UI/UX & Design System (Interface Standards)
 All UI changes must follow the established interface standards. Reference these files when implementing or reviewing frontend code:

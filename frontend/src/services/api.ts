@@ -1081,6 +1081,17 @@ export const adminApi = {
     return data;
   },
 
+  getScrapingSourceHistory: async (id: string, hours = 24): Promise<{
+    sourceId: string;
+    sourceName: string;
+    certificateType: string;
+    currency: string;
+    points: Array<{ price: number; recordedAt: string }>;
+  }> => {
+    const { data } = await api.get(`/admin/scraping-sources/${id}/history?hours=${hours}`);
+    return data;
+  },
+
   // Exchange Rate Sources
   getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
     const { data } = await api.get('/admin/exchange-rate-sources');
@@ -1194,6 +1205,11 @@ export const adminApi = {
 
   getLiquidityStatus: async (certificateType: string): Promise<LiquidityStatus> => {
     const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}/liquidity`);
+    return data;
+  },
+
+  getAutoTradeStatus: async (): Promise<import('../types').AutoTradeStatus> => {
+    const { data } = await api.get('/admin/auto-trade-status');
     return data;
   },
 
