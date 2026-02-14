@@ -93,7 +93,7 @@ export function useCashMarket(
     };
   }, [fetchData, pollingInterval]);
 
-  // Listen for WebSocket-driven order book and balance updates
+  // Listen for WebSocket-driven order book and balance updates (same source for ticker + ACTIVITY)
   useEffect(() => {
     const handler = () => { fetchData(); };
     window.addEventListener('nihao:orderbookUpdated', handler);
@@ -103,6 +103,20 @@ export function useCashMarket(
       window.removeEventListener('nihao:balanceUpdated', handler);
     };
   }, [fetchData]);
+
+  // Prepend new trade from WS so ticker and ACTIVITY update in sync (no delay vs refetch)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ trade: import('../types').CashMarketTrade }>).detail;
+      if (!detail?.trade) return;
+      setRecentTrades((prev) => {
+        const next = [detail.trade, ...prev];
+        return next.slice(0, 20);
+      });
+    };
+    window.addEventListener('nihao:tradeExecuted', handler);
+    return () => window.removeEventListener('nihao:tradeExecuted', handler);
+  }, []);
 
   return {
     orderBook,

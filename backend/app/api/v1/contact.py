@@ -50,7 +50,7 @@ async def create_contact_request(
     Submit a contact request to join the platform.
     An agent will follow up with the entity.
     """
-    # Create contact request (user_role = NDA = first step in onboarding flow)
+    # Create contact request (user_role = NDA = first step in onboarding flow, request_flow = buyer)
     contact = ContactRequest(
         entity_name=request.entity_name,
         contact_email=request.contact_email.lower(),
@@ -59,6 +59,7 @@ async def create_contact_request(
         contact_last_name=request.contact_last_name,
         position=request.position,
         user_role=ContactStatus.NDA,
+        request_flow="buyer",
     )
 
     try:
@@ -70,7 +71,6 @@ async def create_contact_request(
         raise handle_database_error(e, "creating contact request", logger) from e
 
     # Broadcast new contact request to backoffice
-    # (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
         backoffice_ws_manager.broadcast(
             "new_request",
@@ -85,6 +85,7 @@ async def create_contact_request(
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "user_role": contact.user_role.value if contact.user_role else "new",
+                "request_flow": getattr(contact, "request_flow", "buyer"),
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -135,7 +136,7 @@ async def create_nda_request(
     if len(content) > MAX_NDA_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-    # Create contact request with NDA - store PDF binary in database (user_role = NDA)
+    # Create contact request with NDA - store PDF binary in database (user_role = NDA, request_flow = buyer)
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
@@ -147,6 +148,7 @@ async def create_nda_request(
         nda_file_mime_type="application/pdf",
         submitter_ip=submitter_ip,
         user_role=ContactStatus.NDA,
+        request_flow="buyer",
     )
 
     try:
@@ -173,6 +175,7 @@ async def create_nda_request(
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "user_role": contact.user_role.value if contact.user_role else "new",
+                "request_flow": contact.request_flow,
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -186,6 +189,87 @@ async def create_nda_request(
         await email_service.send_contact_followup(contact_email, entity_name)
     except Exception:
         pass  # Don't fail if email fails
+
+    return contact
+
+
+@router.post("/introducer-nda-request", response_model=ContactRequestResponse)
+async def create_introducer_nda_request(
+    request: Request,
+    entity_name: str = Form(...),  # noqa: B008
+    contact_email: str = Form(...),  # noqa: B008
+    contact_first_name: str = Form(...),  # noqa: B008
+    contact_last_name: str = Form(...),  # noqa: B008
+    position: str = Form(...),  # noqa: B008
+    file: UploadFile = File(...),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """
+    Submit an NDA request for the Introducer flow.
+    Same payload as nda-request; creates ContactRequest with request_flow='introducer'.
+    """
+    submitter_ip = get_client_ip(request)
+
+    if "@" not in contact_email or "." not in contact_email:
+        raise HTTPException(status_code=400, detail="Invalid email format")
+
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in ALLOWED_NDA_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    content = await file.read()
+    if len(content) > MAX_NDA_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+
+    contact = ContactRequest(
+        entity_name=entity_name,
+        contact_email=contact_email.lower(),
+        contact_first_name=contact_first_name,
+        contact_last_name=contact_last_name,
+        position=position,
+        nda_file_name=file.filename,
+        nda_file_data=content,
+        nda_file_mime_type="application/pdf",
+        submitter_ip=submitter_ip,
+        user_role=ContactStatus.NDA,
+        request_flow="introducer",
+    )
+
+    try:
+        db.add(contact)
+        await db.commit()
+        await db.refresh(contact)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating Introducer NDA contact request", logger) from e
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast(
+            "new_request",
+            {
+                "id": str(contact.id),
+                "entity_name": contact.entity_name,
+                "contact_email": contact.contact_email,
+                "contact_name": contact.contact_name,
+                "contact_first_name": contact.contact_first_name,
+                "contact_last_name": contact.contact_last_name,
+                "position": contact.position,
+                "nda_file_name": contact.nda_file_name,
+                "submitter_ip": contact.submitter_ip,
+                "user_role": contact.user_role.value if contact.user_role else "new",
+                "request_flow": contact.request_flow,
+                "notes": contact.notes,
+                "created_at": (contact.created_at.isoformat() + "Z")
+                if contact.created_at
+                else None,
+            },
+        )
+    )
+
+    try:
+        await email_service.send_contact_followup(contact_email, entity_name)
+    except Exception:
+        pass
 
     return contact
 

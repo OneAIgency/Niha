@@ -51,10 +51,11 @@ interface IPLookupResult {
   as: string;
 }
 
-type OnboardingSubpage = 'requests' | 'kyc' | 'deposits' | 'aml' | 'settlements';
+type OnboardingSubpage = 'requests' | 'introducer' | 'kyc' | 'deposits' | 'aml' | 'settlements';
 
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
+  { path: 'introducer', label: 'Introducer', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
   { path: 'deposits', label: 'Deposits', icon: Banknote },
   { path: 'aml', label: 'AML', icon: Shield },
@@ -63,6 +64,7 @@ const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
   if (pathname.endsWith('/kyc') || pathname.includes('/onboarding/kyc')) return 'kyc';
+  if (pathname.endsWith('/introducer') || pathname.includes('/onboarding/introducer')) return 'introducer';
   if (pathname.endsWith('/deposits') || pathname.includes('/onboarding/deposits')) return 'deposits';
   if (pathname.endsWith('/aml') || pathname.includes('/onboarding/aml')) return 'aml';
   if (pathname.endsWith('/settlements') || pathname.includes('/onboarding/settlements')) return 'settlements';
@@ -93,6 +95,7 @@ export function BackofficeOnboardingPage() {
     ndaFileName: r.ndaFileName,
     submitterIp: r.submitterIp,
     userRole: ('userRole' in r ? r.userRole : (r as { status?: string }).status) ?? 'new',
+    requestFlow: (r as { requestFlow?: string }).requestFlow ?? 'buyer',
     notes: r.notes,
     createdAt: r.createdAt,
   }));
@@ -100,6 +103,8 @@ export function BackofficeOnboardingPage() {
   const contactRequests: ContactRequest[] = allMapped.filter(r =>
     isPendingContactRequest(r.userRole)
   );
+  const introducerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow === 'introducer');
+  const buyerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow !== 'introducer');
   const contactRequestsCount = contactRequests.length;
 
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
@@ -414,7 +419,7 @@ export function BackofficeOnboardingPage() {
       {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
         const to = `/backoffice/onboarding/${path}`;
         const isActive = activeSubpage === path;
-        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : path === 'settlements' ? settlementBatches.length : pendingDeposits.length;
+        const count = path === 'requests' ? buyerRequests.length : path === 'introducer' ? introducerRequests.length : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : path === 'settlements' ? settlementBatches.length : pendingDeposits.length;
         return (
           <Link
             key={path}
@@ -490,7 +495,22 @@ export function BackofficeOnboardingPage() {
 
       {activeSubpage === 'requests' && (
         <ContactRequestsTab
-          contactRequests={contactRequests}
+          contactRequests={buyerRequests}
+          loading={loading}
+          connectionStatus={connectionStatus}
+          onRefresh={handleRefresh}
+          onApprove={handleApproveRequest}
+          onReject={handleRejectRequest}
+          onDelete={handleDeleteRequest}
+          onOpenNDA={handleOpenNDA}
+          onIpLookup={handleIpLookup}
+          actionLoading={actionLoading}
+        />
+      )}
+
+      {activeSubpage === 'introducer' && (
+        <ContactRequestsTab
+          contactRequests={introducerRequests}
           loading={loading}
           connectionStatus={connectionStatus}
           onRefresh={handleRefresh}

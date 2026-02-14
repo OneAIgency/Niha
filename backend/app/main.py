@@ -29,7 +29,7 @@ from .core.config import settings
 from .core.database import AsyncSessionLocal, init_db
 from .core.security import RedisManager
 from .services import deposit_service
-from .services.auto_trade_executor import AutoTradeExecutor
+from .services.auto_trade_executor import AutoTradeExecutor, update_executor_status
 from .services.settlement_monitoring import SettlementMonitoring
 from .services.settlement_processor import SettlementProcessor
 
@@ -280,6 +280,16 @@ async def lifespan(app: FastAPI):
         # Wait 10 seconds on startup before first check
         await asyncio.sleep(10)
 
+        # Bootstrap: ensure rules exist for all active market makers
+        try:
+            async with AsyncSessionLocal() as db:
+                created = await AutoTradeExecutor.bootstrap_rules(db)
+                await db.commit()
+                if created:
+                    logger.info(f"Auto-trade bootstrap: created {created} rules")
+        except Exception as e:
+            logger.error(f"Auto-trade bootstrap error: {e}", exc_info=True)
+
         while True:
             try:
                 async with AsyncSessionLocal() as db:
@@ -293,6 +303,7 @@ async def lifespan(app: FastAPI):
                         results = await AutoTradeExecutor.execute_all_ready_rules(
                             db=db, admin_user_id=admin.id
                         )
+                        update_executor_status(results, cycle_interval=5)
                         successes = sum(1 for r in results if r.get("success"))
                         if results:
                             logger.info(

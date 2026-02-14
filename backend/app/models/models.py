@@ -37,9 +37,10 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity)."""
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -394,6 +395,7 @@ class ContactRequest(Base):
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
     user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
+    request_flow = Column(String(32), default="buyer", nullable=False)  # 'buyer' | 'introducer'
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -532,6 +534,7 @@ class ScrapingSource(Base):
     certificate_type = Column(SQLEnum(CertificateType), nullable=False)
     scrape_library = Column(SQLEnum(ScrapeLibrary), default=ScrapeLibrary.HTTPX)
     is_active = Column(Boolean, default=True)
+    is_primary = Column(Boolean, default=False)
     scrape_interval_minutes = Column(Integer, default=5)
     last_scrape_at = Column(DateTime, nullable=True)
     last_scrape_status = Column(SQLEnum(ScrapeStatus), nullable=True)
@@ -1265,7 +1268,7 @@ class AutoTradeSettings(Base):
     __tablename__ = "auto_trade_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    certificate_type = Column(String(10), nullable=False, unique=True)  # 'CEA' or 'EUA'
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False, unique=True)
 
     # Target liquidity in EUR (total value = price * quantity for all open orders)
     target_ask_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on SELL side
@@ -1344,6 +1347,11 @@ class AutoTradeMarketSettings(Base):
 
     # Max liquidity threshold in EUR - if exceeded, execute internal trades to reduce
     max_liquidity_threshold = Column(Numeric(18, 2), nullable=True)
+
+    # Average spread (EUR for cash, ratio for swap) — used by algorithm for order placement
+    avg_spread = Column(Numeric(10, 4), nullable=True)
+    # Tick size / minimum price increment (EUR for cash, ratio for swap) — used for price rounding
+    tick_size = Column(Numeric(10, 4), nullable=True)
 
     # Internal trade settings (when liquidity is at target)
     # Interval in seconds for internal trades

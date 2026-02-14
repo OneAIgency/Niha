@@ -30,6 +30,7 @@ def validate_price_step(price: Decimal) -> bool:
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, select
+from sqlalchemy.orm import joinedload
 
 from ...core.database import get_db
 from ...core.exceptions import handle_database_error
@@ -149,7 +150,8 @@ async def get_recent_trades(
     db=Depends(get_db),  # noqa: B008
 ):
     """
-    Get REAL recent executed trades for a certificate type from database.
+    Get recent executed trades for a certificate type. Response includes real `side`
+    (aggressor: BUY if buy order was created at or after sell order, else SELL).
     """
     cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
 
@@ -158,8 +160,18 @@ async def get_recent_trades(
         .where(CashMarketTrade.certificate_type == cert_enum)
         .order_by(CashMarketTrade.executed_at.desc())
         .limit(limit)
+        .options(
+            joinedload(CashMarketTrade.buy_order),
+            joinedload(CashMarketTrade.sell_order),
+        )
     )
-    trades = result.scalars().all()
+    trades = result.unique().scalars().all()
+
+    def _aggressor_side(t):
+        """Side of the taker: BUY if buy order was placed at or after sell order, else SELL."""
+        if t.buy_order and t.sell_order:
+            return "BUY" if t.buy_order.created_at >= t.sell_order.created_at else "SELL"
+        return "BUY"
 
     return [
         CashMarketTradeResponse(
@@ -167,7 +179,7 @@ async def get_recent_trades(
             certificate_type=t.certificate_type.value,
             price=float(t.price),
             quantity=int(round(float(t.quantity))),
-            side="BUY",  # All trades from client perspective are buys
+            side=_aggressor_side(t),
             executed_at=t.executed_at,
         )
         for t in trades
@@ -305,7 +317,7 @@ async def place_order(
 
         # Try to match the order against the book immediately
         # This ensures we never have crossing orders (negative spread)
-        await LimitOrderMatcher.match_incoming_order(
+        matching_result = await LimitOrderMatcher.match_incoming_order(
             db=db,
             incoming_order=new_order,
             user_id=current_user.id,
@@ -318,6 +330,20 @@ async def place_order(
         asyncio.create_task(client_ws_manager.broadcast_to_all(
             {"type": "orderbook_updated", "data": {"certificate_type": new_order.certificate_type.value}},
         ))
+        # Push each new trade so ticker and ACTIVITY update in sync (same source, streaming)
+        for m in matching_result.matches:
+            exec_at = m.executed_at
+            asyncio.create_task(client_ws_manager.broadcast_to_all({
+                "type": "trade_executed",
+                "data": {
+                    "id": str(m.trade_id),
+                    "certificate_type": new_order.certificate_type.value,
+                    "price": float(m.price),
+                    "quantity": int(round(float(m.quantity))),
+                    "side": new_order.side.value,
+                    "executed_at": exec_at.isoformat() if hasattr(exec_at, "isoformat") else str(exec_at),
+                },
+            }))
 
         return OrderResponse(
             id=new_order.id,

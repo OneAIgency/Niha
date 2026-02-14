@@ -38,6 +38,7 @@ from ...models.models import (
     MarketMakerClient,
     MarketMakerType,
     MarketType,
+    PriceHistory,
     Order,
     OrderSide,
     OrderStatus,
@@ -93,23 +94,28 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/contact-requests")
 async def get_contact_requests(
     status: Optional[str] = None,
+    request_flow: Optional[str] = Query(None, description="Filter by request_flow: 'buyer' or 'introducer'"),  # noqa: B008
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=100),  # noqa: B008
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all contact requests with optional status filter.
+    Get all contact requests with optional status and request_flow filters.
     """
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
         query = query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        query = query.where(ContactRequest.request_flow == request_flow)
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
         count_query = count_query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        count_query = count_query.where(ContactRequest.request_flow == request_flow)
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -133,6 +139,7 @@ async def get_contact_requests(
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,
                 "user_role": r.user_role.value if r.user_role else "NDA",
+                "request_flow": getattr(r, "request_flow", "buyer"),
                 "notes": r.notes,
                 "created_at": (r.created_at.isoformat() + "Z")
                 if r.created_at
@@ -161,8 +168,13 @@ async def update_contact_request(
     """
     from uuid import UUID
 
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -205,6 +217,7 @@ async def update_contact_request(
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "user_role": contact.user_role.value if contact.user_role else "NDA",
+                "request_flow": getattr(contact, "request_flow", "buyer"),
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -226,8 +239,13 @@ async def delete_contact_request(
     Delete a contact request permanently.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -256,6 +274,9 @@ async def create_user_from_contact_request(
         None, description="Password (required for manual mode)"
     ),
     position: Optional[str] = Query(None, description="Position/title"),  # noqa: B008
+    target_role: Optional[str] = Query(  # noqa: B008
+        "KYC", description="Target role: 'KYC' (buyer flow, creates Entity) or 'INTRODUCER' (no Entity)"
+    ),
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
@@ -301,18 +322,24 @@ async def create_user_from_contact_request(
         else 7
     )
 
+    is_introducer = (target_role or "KYC").upper() == "INTRODUCER"
+    entity_id_val = None
+
     try:
-        # Create entity from contact request
-        entity = Entity(
-            name=contact_request.entity_name,
-            jurisdiction=Jurisdiction.OTHER,
-            kyc_status=KYCStatus.PENDING,
-        )
-        db.add(entity)
-        await db.flush()
+        if not is_introducer:
+            # Create entity from contact request (buyer flow)
+            entity = Entity(
+                name=contact_request.entity_name,
+                jurisdiction=Jurisdiction.OTHER,
+                kyc_status=KYCStatus.PENDING,
+            )
+            db.add(entity)
+            await db.flush()
+            entity_id_val = entity.id
+
+        user_role_val = UserRole.INTRODUCER if is_introducer else UserRole.KYC
 
         if mode == "manual":
-            # Manual creation with password
             if not password or len(password) < 8:
                 raise HTTPException(
                     status_code=400,
@@ -324,8 +351,8 @@ async def create_user_from_contact_request(
                 first_name=first_name,
                 last_name=last_name,
                 password_hash=hash_password(password),
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 must_change_password=False,
                 is_active=True,
@@ -333,23 +360,21 @@ async def create_user_from_contact_request(
                 created_by=admin_user.id,
             )
         else:
-            # Send invitation
             invitation_token = secrets.token_urlsafe(32)
             user = User(
                 email=email.lower(),
                 first_name=first_name,
                 last_name=last_name,
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 invitation_token=invitation_token,
-                # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
                 invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 invitation_expires_at=(
                     datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
                 ),
                 must_change_password=True,
-                is_active=False,  # Activate when password is set
+                is_active=False,
                 creation_method="invitation",
                 created_by=admin_user.id,
             )
@@ -417,6 +442,7 @@ async def create_user_from_contact_request(
                 "nda_file_name": contact_request.nda_file_name,
                 "submitter_ip": contact_request.submitter_ip,
                 "user_role": contact_request.user_role.value if contact_request.user_role else "NDA",
+                "request_flow": getattr(contact_request, "request_flow", "buyer"),
                 "notes": contact_request.notes,
                 "created_at": (contact_request.created_at.isoformat() + "Z")
                 if contact_request.created_at
@@ -446,7 +472,7 @@ async def create_user_from_contact_request(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "role": user.role.value,
-            "entity_id": str(entity.id),
+            "entity_id": str(entity_id_val) if entity_id_val else None,
             "creation_method": mode,
         },
     }
@@ -463,8 +489,13 @@ async def download_nda_file(
     Serves PDF from database binary storage.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -1523,6 +1554,18 @@ async def update_scraping_source(
     if not source:
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
+    # If marking as primary, unset other primary sources with same certificate_type
+    if update.is_primary:
+        from sqlalchemy import update as sql_update
+        await db.execute(
+            sql_update(ScrapingSource)
+            .where(
+                ScrapingSource.certificate_type == source.certificate_type,
+                ScrapingSource.id != source.id,
+            )
+            .values(is_primary=False)
+        )
+
     if update.name is not None:
         source.name = update.name
     if update.url is not None:
@@ -1531,6 +1574,8 @@ async def update_scraping_source(
         source.scrape_library = update.scrape_library
     if update.is_active is not None:
         source.is_active = update.is_active
+    if update.is_primary is not None:
+        source.is_primary = update.is_primary
     if update.scrape_interval_minutes is not None:
         source.scrape_interval_minutes = update.scrape_interval_minutes
     if update.config is not None:
@@ -1659,6 +1704,47 @@ async def delete_scraping_source(
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
     )
+
+
+@router.get("/scraping-sources/{source_id}/history")
+async def get_scraping_source_history(
+    source_id: str,
+    hours: int = Query(24, ge=1, le=168),
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get price history for a specific scraping source."""
+    result = await db.execute(
+        select(ScrapingSource).where(ScrapingSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Scraping source not found")
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
+    history_result = await db.execute(
+        select(PriceHistory)
+        .where(
+            PriceHistory.source == source.name,
+            PriceHistory.recorded_at >= since,
+        )
+        .order_by(PriceHistory.recorded_at.asc())
+    )
+    records = history_result.scalars().all()
+
+    return {
+        "source_id": source_id,
+        "source_name": source.name,
+        "certificate_type": source.certificate_type.value,
+        "currency": "EUR" if source.certificate_type == CertificateType.EUA else "CNY",
+        "points": [
+            {
+                "price": float(r.price),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
+            }
+            for r in records
+        ],
+    }
 
 
 # ==================== Exchange Rate Sources ====================
@@ -2339,6 +2425,74 @@ async def _check_is_online(db: AsyncSession, market_key: str) -> bool:
     return False
 
 
+def _build_market_settings_response(
+    settings: AutoTradeMarketSettings,
+    market_makers: list,
+    current_liquidity,
+    liquidity_percentage,
+    is_online: bool,
+) -> AutoTradeMarketSettingsResponse:
+    """Build a standardized AutoTradeMarketSettingsResponse from a settings model."""
+    return AutoTradeMarketSettingsResponse(
+        id=settings.id,
+        market_key=settings.market_key,
+        enabled=settings.enabled,
+        target_liquidity=settings.target_liquidity,
+        price_deviation_pct=settings.price_deviation_pct,
+        avg_order_count=settings.avg_order_count,
+        min_order_volume_eur=settings.min_order_volume_eur,
+        volume_variety=settings.volume_variety,
+        avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
+        max_orders_per_price_level=settings.max_orders_per_price_level,
+        max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
+        min_order_value_variation_pct=settings.min_order_value_variation_pct,
+        interval_seconds=settings.interval_seconds,
+        order_interval_variation_pct=settings.order_interval_variation_pct,
+        max_order_volume_eur=settings.max_order_volume_eur,
+        max_liquidity_threshold=settings.max_liquidity_threshold,
+        internal_trade_interval=settings.internal_trade_interval,
+        internal_trade_volume_min=settings.internal_trade_volume_min,
+        internal_trade_volume_max=settings.internal_trade_volume_max,
+        avg_spread=settings.avg_spread,
+        tick_size=settings.tick_size,
+        created_at=settings.created_at,
+        updated_at=settings.updated_at,
+        market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
+        current_liquidity=current_liquidity,
+        liquidity_percentage=liquidity_percentage,
+        is_online=is_online,
+    )
+
+
+@router.get("/auto-trade-status")
+async def get_auto_trade_status(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """
+    Get executor status: running state, last/next cycle, results summary, and rules overview.
+    Polled by the frontend to display the read-only timer.
+    """
+    from app.services.auto_trade_executor import get_executor_status
+
+    status = get_executor_status()
+
+    # Add live rules summary from DB
+    rules_result = await db.execute(select(AutoTradeRule))
+    all_rules = list(rules_result.scalars().all())
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    status["rules_summary"] = {
+        "total": len(all_rules),
+        "enabled": sum(1 for r in all_rules if r.enabled),
+        "ready_to_execute": sum(
+            1 for r in all_rules
+            if r.enabled and (r.next_execution_at is None or r.next_execution_at <= now)
+        ),
+    }
+
+    return status
+
+
 @router.get("/auto-trade-market-settings", response_model=list[AutoTradeMarketSettingsResponse])
 async def get_all_market_settings(
     db: AsyncSession = Depends(get_db),
@@ -2367,32 +2521,8 @@ async def get_all_market_settings(
         # Check if auto-trader is actively running
         is_online = settings.enabled and await _check_is_online(db, settings.market_key)
 
-        responses.append(AutoTradeMarketSettingsResponse(
-            id=settings.id,
-            market_key=settings.market_key,
-            enabled=settings.enabled,
-            target_liquidity=settings.target_liquidity,
-            price_deviation_pct=settings.price_deviation_pct,
-            avg_order_count=settings.avg_order_count,
-            min_order_volume_eur=settings.min_order_volume_eur,
-            volume_variety=settings.volume_variety,
-            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-            max_orders_per_price_level=settings.max_orders_per_price_level,
-            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-            min_order_value_variation_pct=settings.min_order_value_variation_pct,
-            interval_seconds=settings.interval_seconds,
-            order_interval_variation_pct=settings.order_interval_variation_pct,
-            max_order_volume_eur=settings.max_order_volume_eur,
-            max_liquidity_threshold=settings.max_liquidity_threshold,
-            internal_trade_interval=settings.internal_trade_interval,
-            internal_trade_volume_min=settings.internal_trade_volume_min,
-            internal_trade_volume_max=settings.internal_trade_volume_max,
-            created_at=settings.created_at,
-            updated_at=settings.updated_at,
-            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-            current_liquidity=current_liquidity,
-            liquidity_percentage=liquidity_percentage,
-            is_online=is_online,
+        responses.append(_build_market_settings_response(
+            settings, market_makers, current_liquidity, liquidity_percentage, is_online
         ))
 
     return responses
@@ -2520,48 +2650,51 @@ async def refresh_cea_market(
         ask_orders_created = 0
         price_step = Decimal("0.1")
 
-        MAX_ORDERS_PER_LEVEL = 3  # hard cap per price level
+        from app.services.auto_trade_executor import AutoTradeExecutor
 
-        # Helper: random volume uniformly between min_eur and max_eur
-        def random_volume_eur(min_eur, max_eur):
-            """Random EUR value between min and max. Gives true diversity."""
-            lo = float(min_eur) if min_eur else 1.0
-            hi = float(max_eur) if max_eur else lo * 10
-            if hi <= lo:
-                hi = lo * 2
-            return Decimal(str(round(random.uniform(lo, hi), 2)))
+        # Helper: generate volume using log-normal distribution from settings
+        def _lognormal_volume(settings):
+            return AutoTradeExecutor.calculate_order_volume_with_variety(
+                min_volume_eur=settings.min_order_volume_eur,
+                volume_variety=settings.volume_variety or 5,
+                target_liquidity=settings.target_liquidity,
+                current_liquidity=Decimal("0"),
+                avg_order_count=settings.avg_order_count or 10,
+                max_volume_eur=settings.max_order_volume_eur,
+            )
 
         # 5. Create BID orders (from best_bid downward)
-        bid_min_vol = bid_settings.min_order_volume_eur
-        bid_max_vol = bid_settings.max_order_volume_eur
         bid_target = bid_settings.target_liquidity or Decimal("50000000")
         bid_max_orders = int(bid_settings.avg_order_count or 200) * 2  # safety cap
+        bid_max_per_level = bid_settings.max_orders_per_price_level or 3
+        bid_depth_pct = bid_settings.price_deviation_pct or Decimal("5.0")
+        bid_worst_price = best_bid * (Decimal("1") - bid_depth_pct / Decimal("100"))
+        bid_worst_price = max(bid_worst_price, Decimal("0.1"))
 
         current_price = best_bid
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, bid_max_per_level)
         buyer_idx = 0
         bid_liquidity_eur = Decimal("0")
 
         for _ in range(bid_max_orders):
-            if current_price <= Decimal("0.1") or bid_liquidity_eur >= bid_target:
+            if current_price < bid_worst_price or bid_liquidity_eur >= bid_target:
                 break
 
             if orders_at_level >= max_at_this_level:
                 current_price -= price_step
                 current_price = current_price.quantize(Decimal("0.1"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
-                if current_price <= Decimal("0"):
+                max_at_this_level = random.randint(1, bid_max_per_level)
+                if current_price < bid_worst_price:
                     break
 
-            # Cap max volume by remaining budget
+            # Log-normal volume, capped by remaining budget
             remaining = bid_target - bid_liquidity_eur
-            effective_max = min(bid_max_vol, remaining) if bid_max_vol else remaining
-            if effective_max < bid_min_vol:
-                break  # Can't even fit one min-size order
+            order_value_eur = min(_lognormal_volume(bid_settings), remaining)
+            if order_value_eur < (bid_settings.min_order_volume_eur or Decimal("1")):
+                break
 
-            order_value_eur = random_volume_eur(bid_min_vol, effective_max)
             quantity = (order_value_eur / current_price).quantize(Decimal("1"))
             if quantity < 1:
                 quantity = Decimal("1")
@@ -2585,14 +2718,15 @@ async def refresh_cea_market(
             bid_liquidity_eur += current_price * quantity
 
         # 6. Create ASK orders (from best_ask upward)
-        ask_min_vol = ask_settings.min_order_volume_eur
-        ask_max_vol = ask_settings.max_order_volume_eur
         ask_target = ask_settings.target_liquidity or Decimal("90000000")
         ask_max_orders = int(ask_settings.avg_order_count or 200) * 2  # safety cap
+        ask_max_per_level = ask_settings.max_orders_per_price_level or 3
+        ask_depth_pct = ask_settings.price_deviation_pct or Decimal("5.0")
+        ask_worst_price = best_ask * (Decimal("1") + ask_depth_pct / Decimal("100"))
 
         current_price = best_ask
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, ask_max_per_level)
         seller_idx = 0
         ask_liquidity_eur = Decimal("0")
 
@@ -2604,15 +2738,17 @@ async def refresh_cea_market(
                 current_price += price_step
                 current_price = current_price.quantize(Decimal("0.1"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+                max_at_this_level = random.randint(1, ask_max_per_level)
 
-            # Cap max volume by remaining budget
-            remaining = ask_target - ask_liquidity_eur
-            effective_max = min(ask_max_vol, remaining) if ask_max_vol else remaining
-            if effective_max < ask_min_vol:
+            if current_price > ask_worst_price:
                 break
 
-            order_value_eur = random_volume_eur(ask_min_vol, effective_max)
+            # Log-normal volume, capped by remaining budget
+            remaining = ask_target - ask_liquidity_eur
+            order_value_eur = min(_lognormal_volume(ask_settings), remaining)
+            if order_value_eur < (ask_settings.min_order_volume_eur or Decimal("1")):
+                break
+
             quantity = (order_value_eur / current_price).quantize(Decimal("1"))
             if quantity < 1:
                 quantity = Decimal("1")
@@ -2736,26 +2872,30 @@ async def refresh_swap_market(
             raise HTTPException(status_code=400, detail="No active EUA_OFFER market makers")
 
         # 6. Create ASK orders from best_ratio DOWNWARD to worst_ratio
+        from app.services.auto_trade_executor import AutoTradeExecutor
+
         target_liquidity_eur = swap_settings.target_liquidity or Decimal("90000000")
-        min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
-        max_vol = swap_settings.max_order_volume_eur or Decimal("5000000")
         max_orders = int(swap_settings.avg_order_count or 100) * 2  # safety cap
         ratio_step = Decimal("0.0001")
-        MAX_ORDERS_PER_LEVEL = 3
+        swap_max_per_level = swap_settings.max_orders_per_price_level or 3
 
-        def random_volume_eur(lo, hi):
-            lo_f = float(lo) if lo else 1.0
-            hi_f = float(hi) if hi else lo_f * 10
-            if hi_f <= lo_f:
-                hi_f = lo_f * 2
-            return Decimal(str(round(random.uniform(lo_f, hi_f), 2)))
+        def _swap_lognormal_volume():
+            return AutoTradeExecutor.calculate_order_volume_with_variety(
+                min_volume_eur=swap_settings.min_order_volume_eur or Decimal("200000"),
+                volume_variety=swap_settings.volume_variety or 5,
+                target_liquidity=swap_settings.target_liquidity,
+                current_liquidity=Decimal("0"),
+                avg_order_count=swap_settings.avg_order_count or 10,
+                max_volume_eur=swap_settings.max_order_volume_eur,
+            )
 
         current_ratio = best_ratio
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, swap_max_per_level)
         mm_idx = 0
         liquidity_eur = Decimal("0")
         orders_created = 0
+        min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
 
         for _ in range(max_orders):
             if liquidity_eur >= target_liquidity_eur:
@@ -2767,15 +2907,14 @@ async def refresh_swap_market(
                 current_ratio -= ratio_step
                 current_ratio = current_ratio.quantize(Decimal("0.0001"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+                max_at_this_level = random.randint(1, swap_max_per_level)
 
-            # Cap max volume by remaining budget
+            # Log-normal volume, capped by remaining budget
             remaining = target_liquidity_eur - liquidity_eur
-            effective_max = min(max_vol, remaining) if max_vol else remaining
-            if effective_max < min_vol:
+            order_value_eur = min(_swap_lognormal_volume(), remaining)
+            if order_value_eur < min_vol:
                 break
 
-            order_value_eur = random_volume_eur(min_vol, effective_max)
             # eua_quantity = volume_eur / eua_price_eur (whole certificates)
             eua_quantity = (order_value_eur / eua_price).quantize(Decimal("1"))
             if eua_quantity < 1:
@@ -3601,56 +3740,55 @@ async def get_mm_activity(
     _current_user: User = Depends(get_admin_user),
 ):
     """
-    Get recent MM orders and trades for the activity feed.
-    Returns orders and trades merged chronologically, newest first.
+    Aggregated trade activity feed.
+    Groups trades by aggressor order and returns VWAP, total qty, total EUR.
     """
-    from sqlalchemy import and_, literal
+    from sqlalchemy.orm import selectinload
+    from collections import defaultdict
 
-    # Recent MM orders (all statuses)
-    orders_result = await db.execute(
-        select(Order)
-        .where(
-            and_(
-                Order.market_maker_id.isnot(None),
-                Order.market == MarketType.CEA_CASH,
-            )
-        )
-        .order_by(Order.created_at.desc())
-        .limit(limit)
-    )
-    orders = list(orders_result.scalars().all())
-
-    # Recent trades
     trades_result = await db.execute(
         select(CashMarketTrade)
         .where(CashMarketTrade.certificate_type == CertificateType.CEA)
+        .options(selectinload(CashMarketTrade.buy_order), selectinload(CashMarketTrade.sell_order))
         .order_by(CashMarketTrade.executed_at.desc())
-        .limit(limit)
+        .limit(limit * 5)  # fetch more to group properly
     )
     trades = list(trades_result.scalars().all())
 
-    # Build unified activity list
-    activity = []
-
-    for o in orders:
-        activity.append({
-            "type": "order",
-            "id": str(o.id),
-            "side": o.side.value,
-            "price": str(o.price),
-            "quantity": str(o.quantity),
-            "filled_quantity": str(o.filled_quantity or 0),
-            "status": o.status.value,
-            "timestamp": o.created_at.isoformat() if o.created_at else None,
-        })
-
+    # Group trades by aggressor order
+    groups: dict[str, list] = defaultdict(list)
     for t in trades:
+        aggressor_side = None
+        if t.buy_order and t.sell_order:
+            if (t.buy_order.created_at or t.executed_at) >= (t.sell_order.created_at or t.executed_at):
+                aggressor_side = "BUY"
+            else:
+                aggressor_side = "SELL"
+
+        if aggressor_side is None:
+            continue  # skip trades without both orders loaded
+
+        aggressor_order_id = str(t.buy_order_id) if aggressor_side == "BUY" else str(t.sell_order_id)
+        groups[aggressor_order_id].append((t, aggressor_side))
+
+    # Build aggregated activity
+    activity = []
+    for _order_id, group_trades in groups.items():
+        total_qty = sum(float(t.quantity) for t, _ in group_trades)
+        if total_qty <= 0:
+            continue  # skip zero-quantity groups
+        total_eur = sum(float(t.price) * float(t.quantity) for t, _ in group_trades)
+        vwap = total_eur / total_qty
+        latest_ts = max((t.executed_at for t, _ in group_trades if t.executed_at), default=None)
+        side = group_trades[0][1]  # aggressor side (same for all in group)
+
         activity.append({
-            "type": "trade",
-            "id": str(t.id),
-            "price": str(t.price),
-            "quantity": str(t.quantity),
-            "timestamp": t.executed_at.isoformat() if t.executed_at else None,
+            "side": side,
+            "total_quantity": round(total_qty),
+            "vwap": round(vwap, 4),
+            "total_eur": round(total_eur, 2),
+            "fill_count": len(group_trades),
+            "timestamp": (latest_ts.isoformat() + "Z") if latest_ts else None,
         })
 
     # Sort by timestamp descending
@@ -3698,32 +3836,8 @@ async def get_market_settings(
     # Check if auto-trader is actively running
     is_online = settings.enabled and await _check_is_online(db, market_key_upper)
 
-    return AutoTradeMarketSettingsResponse(
-        id=settings.id,
-        market_key=settings.market_key,
-        enabled=settings.enabled,
-        target_liquidity=settings.target_liquidity,
-        price_deviation_pct=settings.price_deviation_pct,
-        avg_order_count=settings.avg_order_count,
-        min_order_volume_eur=settings.min_order_volume_eur,
-        volume_variety=settings.volume_variety,
-        avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-        max_orders_per_price_level=settings.max_orders_per_price_level,
-        max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-        min_order_value_variation_pct=settings.min_order_value_variation_pct,
-        interval_seconds=settings.interval_seconds,
-        order_interval_variation_pct=settings.order_interval_variation_pct,
-        max_order_volume_eur=settings.max_order_volume_eur,
-        max_liquidity_threshold=settings.max_liquidity_threshold,
-        internal_trade_interval=settings.internal_trade_interval,
-        internal_trade_volume_min=settings.internal_trade_volume_min,
-        internal_trade_volume_max=settings.internal_trade_volume_max,
-        created_at=settings.created_at,
-        updated_at=settings.updated_at,
-        market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-        current_liquidity=current_liquidity,
-        liquidity_percentage=liquidity_percentage,
-        is_online=is_online,
+    return _build_market_settings_response(
+        settings, market_makers, current_liquidity, liquidity_percentage, is_online
     )
 
 
@@ -3781,32 +3895,8 @@ async def update_market_settings(
         # Check if auto-trader is actively running
         is_online = settings.enabled and await _check_is_online(db, market_key_upper)
 
-        return AutoTradeMarketSettingsResponse(
-            id=settings.id,
-            market_key=settings.market_key,
-            enabled=settings.enabled,
-            target_liquidity=settings.target_liquidity,
-            price_deviation_pct=settings.price_deviation_pct,
-            avg_order_count=settings.avg_order_count,
-            min_order_volume_eur=settings.min_order_volume_eur,
-            volume_variety=settings.volume_variety,
-            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-            max_orders_per_price_level=settings.max_orders_per_price_level,
-            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-            min_order_value_variation_pct=settings.min_order_value_variation_pct,
-            interval_seconds=settings.interval_seconds,
-            order_interval_variation_pct=settings.order_interval_variation_pct,
-            max_order_volume_eur=settings.max_order_volume_eur,
-            max_liquidity_threshold=settings.max_liquidity_threshold,
-            internal_trade_interval=settings.internal_trade_interval,
-            internal_trade_volume_min=settings.internal_trade_volume_min,
-            internal_trade_volume_max=settings.internal_trade_volume_max,
-            created_at=settings.created_at,
-            updated_at=settings.updated_at,
-            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-            current_liquidity=current_liquidity,
-            liquidity_percentage=liquidity_percentage,
-            is_online=is_online,
+        return _build_market_settings_response(
+            settings, market_makers, current_liquidity, liquidity_percentage, is_online
         )
 
     except HTTPException:

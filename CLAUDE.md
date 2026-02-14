@@ -73,7 +73,7 @@ frontend/
 |---------|------|
 | Frontend | 5173 |
 | Backend | 8000 |
-| PostgreSQL | 5433 (host) / 5432 (internal) |
+| PostgreSQL | 5434 (host) / 5432 (internal) |
 | Redis | 6379 |
 
 ## Code Style
@@ -113,8 +113,8 @@ See `app_truth.md` §10. These files are locked:
 
 ## Gotchas
 
-1. **PostgreSQL port**: Host uses 5433 to avoid conflicts with local Postgres
-2. **Migrations**: Current head is `2026_01_30_add_mm` - new migrations use this as `down_revision`
+1. **PostgreSQL port**: Host uses 5434 to avoid conflicts with local Postgres
+2. **Migrations**: Current head is `2026_02_13_source_primary` — new migrations use this as `down_revision`
 3. **WebSocket**: Backoffice uses realtime updates - normalize payloads to snake_case
 4. **Deposits**: APPROVED→FUNDING only via first `announce_deposit` (no manual "fund user")
 5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list

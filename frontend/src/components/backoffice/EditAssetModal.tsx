@@ -191,7 +191,7 @@ export function EditAssetModal({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Reason for adjustment..."
                     rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                   />
                 </div>
 

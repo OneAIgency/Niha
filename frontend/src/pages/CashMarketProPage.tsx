@@ -14,7 +14,7 @@ import { Subheader, Modal } from '../components/common';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi, usersApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
-import { formatCertificateQuantity } from '../utils';
+import { formatCertificateQuantity, formatRelativeTime } from '../utils';
 import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/InlineOrderForm';
 import type {
   OrderBookLevel,
@@ -203,14 +203,14 @@ interface RecentTradesTickerProps {
 }
 
 function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProps) {
-  /** Infer side from price: trade at bid = SELL (seller hit bid), trade at ask = BUY (buyer lifted ask).
-   * Backend currently returns side="BUY" for all trades, so we infer from order book levels. */
-  const inferIsBuy = (price: number) => {
+  /** Use backend side when available; otherwise infer from price vs mid (trade at ask = BUY, at bid = SELL). */
+  const isBuy = (trade: CashMarketTrade) => {
+    if (trade.side === 'BUY' || trade.side === 'SELL') return trade.side === 'BUY';
     if (bestBid != null && bestAsk != null) {
       const mid = (bestBid + bestAsk) / 2;
-      return price >= mid; // price closer to/at ask → BUY, closer to/at bid → SELL
+      return trade.price >= mid;
     }
-    return true; // fallback to BUY styling if no order book
+    return true;
   };
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '-';
@@ -245,16 +245,16 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
             {[1, 2].map((copy) => (
               <div key={copy} className="flex items-center gap-x-2 shrink-0 px-2">
                 {trades.map((trade) => {
-                  const isBuy = inferIsBuy(trade.price);
+                  const buy = isBuy(trade);
                   return (
                   <div
                     key={`${copy}-${trade.id}`}
                     className={`flex items-center gap-3 px-3 py-1 rounded transition-colors shrink-0 hover:bg-navy-700/50 ${
-                      isBuy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]'
+                      buy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]'
                     }`}
                   >
                     <span className={`font-mono font-medium text-xs tabular-nums ${
-                      isBuy ? 'text-emerald-400' : 'text-red-400'
+                      buy ? 'text-emerald-400' : 'text-red-400'
                     }`}>
                       €{trade.price.toFixed(1)}
                     </span>
@@ -269,6 +269,99 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
                 })}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// ACTIVITY (vertical list, same source as ticker — BUY/SELL badge, total, relative time + full timestamp on hover)
+// =============================================================================
+
+interface RecentTradesActivityProps {
+  trades: CashMarketTrade[];
+  bestBid: number | null;
+  bestAsk: number | null;
+}
+
+function formatFullTimestamp(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    const utcDateStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcDateStr);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+      timeZone: 'UTC',
+      hour12: true,
+    }) + ' UTC';
+  } catch {
+    return '—';
+  }
+}
+
+function RecentTradesActivity({ trades, bestBid, bestAsk }: RecentTradesActivityProps) {
+  const isBuy = (trade: CashMarketTrade) => {
+    if (trade.side === 'BUY' || trade.side === 'SELL') return trade.side === 'BUY';
+    if (bestBid != null && bestAsk != null) {
+      const mid = (bestBid + bestAsk) / 2;
+      return trade.price >= mid;
+    }
+    return true;
+  };
+
+  return (
+    <div className="bg-navy-900 rounded border border-navy-700 overflow-hidden">
+      <div className="px-3 py-1.5 border-b border-navy-700 flex items-center gap-1.5 bg-navy-800">
+        <Activity className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <h3 className="text-xs font-semibold text-white">ACTIVITY</h3>
+        <span className="text-xs text-navy-500">(last 20)</span>
+      </div>
+      <div className="overflow-y-auto max-h-64">
+        {trades.length === 0 ? (
+          <div className="py-3 px-4 text-xs text-navy-500">No recent trades</div>
+        ) : (
+          <div className="flex flex-col gap-2 py-2 px-3">
+            {trades.map((trade) => {
+              const buy = isBuy(trade);
+              const totalEur = trade.price * trade.quantity;
+              return (
+                <div
+                  key={trade.id}
+                  className={`flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 px-2 rounded ${
+                    buy ? 'bg-emerald-500/[0.08]' : 'bg-red-500/[0.06]'
+                  }`}
+                >
+                  <span
+                    className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                      buy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                    }`}
+                  >
+                    {buy ? 'BUY' : 'SELL'}
+                  </span>
+                  <span className="text-xs font-mono text-white tabular-nums">
+                    {Math.round(trade.quantity).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-navy-400">@€{trade.price.toFixed(2)}</span>
+                  <span
+                    className={`text-xs font-medium tabular-nums ${
+                      buy ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  >
+                    €{totalEur.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                  <span
+                    className="ml-auto text-xs text-navy-500 tabular-nums"
+                    title={formatFullTimestamp(trade.executedAt)}
+                  >
+                    {trade.executedAt ? formatRelativeTime(trade.executedAt) : '—'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -454,12 +547,23 @@ export function CashMarketProPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Recent Trades ticker — at top of page content */}
-              <RecentTradesTicker
-                trades={recentTrades}
-                bestBid={safeOrderBook.bestBid}
-                bestAsk={safeOrderBook.bestAsk}
-              />
+              {/* Recent Trades ticker + ACTIVITY — same source (recentTrades), same WebSocket updates */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-8">
+                  <RecentTradesTicker
+                    trades={recentTrades}
+                    bestBid={safeOrderBook.bestBid}
+                    bestAsk={safeOrderBook.bestAsk}
+                  />
+                </div>
+                <div className="lg:col-span-4">
+                  <RecentTradesActivity
+                    trades={recentTrades}
+                    bestBid={safeOrderBook.bestBid}
+                    bestAsk={safeOrderBook.bestAsk}
+                  />
+                </div>
+              </div>
 
               {/* Inline Order Form — market only, full balance, single execute */}
               <InlineOrderForm

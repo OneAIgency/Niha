@@ -35,8 +35,13 @@ async def test_get_entity_eur_balance_no_holding_fallback_to_balance_amount():
 
 
 @pytest.mark.asyncio
-async def test_get_entity_eur_balance_holding_zero_fallback_to_balance_amount():
-    """When EntityHolding EUR exists but is 0, fall back to Entity.balance_amount."""
+async def test_get_entity_eur_balance_holding_zero_no_fallback():
+    """When EntityHolding EUR exists but is 0, return 0 (no fallback).
+
+    Once an EntityHolding row exists it is authoritative — even at 0.
+    Falling back to balance_amount would re-surface seed data after a user
+    spent all their EUR, enabling double-spending.
+    """
     entity_id = uuid.uuid4()
     async with AsyncSessionLocal() as db:
         entity = Entity(
@@ -57,7 +62,7 @@ async def test_get_entity_eur_balance_holding_zero_fallback_to_balance_amount():
         await db.flush()
 
         result = await get_entity_eur_balance(db, entity_id)
-        assert result == Decimal("1000.50")
+        assert result == Decimal("0")
 
         await db.rollback()
 

@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIHA Carbon Market Research & Platform Analysis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=DM+Serif+Display&display=swap');
+
+  :root {
+    --navy-900: #0c1b33;
+    --navy-800: #132744;
+    --navy-700: #1a3355;
+    --navy-600: #2a4a6b;
+    --emerald-500: #10b981;
+    --emerald-400: #34d399;
+    --emerald-300: #6ee7b7;
+    --amber-500: #f59e0b;
+    --amber-400: #fbbf24;
+    --amber-300: #fcd34d;
+    --blue-500: #3b82f6;
+    --blue-400: #60a5fa;
+    --red-500: #ef4444;
+    --red-400: #f87171;
+    --white: #ffffff;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy-900);
+    color: var(--white);
+    line-height: 1.6;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 50%, var(--navy-800) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(16,185,129,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 50%, rgba(59,130,246,0.06) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, var(--emerald-300), var(--blue-400));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .subtitle {
+    font-size: 1.3rem;
+    color: var(--gray-300);
+    max-width: 700px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid var(--emerald-500);
+    color: var(--emerald-400);
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Navigation ── */
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12,27,51,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 0.8rem 2rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .toc a {
+    color: var(--gray-300);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .toc a:hover { color: var(--emerald-400); }
+
+  /* ── Sections ── */
+  section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+  section h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--emerald-300);
+  }
+  section .section-sub {
+    color: var(--gray-300);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    max-width: 700px;
+  }
+
+  /* ── Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .card:hover {
+    border-color: rgba(16,185,129,0.3);
+    transform: translateY(-2px);
+  }
+  .card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+    color: var(--white);
+  }
+  .card .metric {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.5rem;
+    margin-bottom: 0.3rem;
+  }
+  .card .metric.emerald { color: var(--emerald-400); }
+  .card .metric.amber { color: var(--amber-400); }
+  .card .metric.blue { color: var(--blue-400); }
+  .card .metric.red { color: var(--red-400); }
+  .card .detail {
+    font-size: 0.85rem;
+    color: var(--gray-300);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  thead th {
+    background: rgba(16,185,129,0.12);
+    color: var(--emerald-300);
+    font-weight: 600;
+    text-align: left;
+    padding: 0.9rem 1.2rem;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  tbody td {
+    padding: 0.8rem 1.2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--gray-200);
+  }
+  tbody tr:hover td { background: rgba(255,255,255,0.03); }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .tag-green { background: rgba(16,185,129,0.15); color: var(--emerald-400); }
+  .tag-amber { background: rgba(245,158,11,0.15); color: var(--amber-400); }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--red-400); }
+  .tag-blue { background: rgba(59,130,246,0.15); color: var(--blue-400); }
+
+  /* ── Comparison columns ── */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2rem 0;
+  }
+  @media (max-width: 768px) { .comparison { grid-template-columns: 1fr; } }
+  .comparison .col {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 2rem;
+  }
+  .comparison .col h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* ── Pros / Cons ── */
+  .pro-con-list { list-style: none; }
+  .pro-con-list li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+    font-size: 0.9rem;
+    color: var(--gray-200);
+  }
+  .pro-con-list li::before {
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+  .pro-con-list.pros li::before { content: '+'; color: var(--emerald-400); }
+  .pro-con-list.cons li::before { content: '-'; color: var(--red-400); }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 2rem 0;
+  }
+  .flow-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    min-width: 120px;
+  }
+  .flow-box.highlight {
+    border-color: var(--emerald-500);
+    background: rgba(16,185,129,0.1);
+    color: var(--emerald-300);
+    font-weight: 600;
+  }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--gray-600);
+  }
+
+  /* ── Scenario boxes ── */
+  .scenario {
+    background: rgba(255,255,255,0.03);
+    border-left: 4px solid var(--emerald-500);
+    border-radius: 0 12px 12px 0;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem 0;
+  }
+  .scenario h4 {
+    color: var(--emerald-300);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .scenario p {
+    font-size: 0.9rem;
+    color: var(--gray-200);
+  }
+  .scenario.amber-border { border-left-color: var(--amber-500); }
+  .scenario.amber-border h4 { color: var(--amber-300); }
+  .scenario.blue-border { border-left-color: var(--blue-500); }
+  .scenario.blue-border h4 { color: var(--blue-400); }
+
+  /* ── Flywheel ── */
+  .flywheel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 2.5rem 0;
+  }
+  .fw-node {
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 14px;
+    padding: 1rem 1.4rem;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--emerald-300);
+    min-width: 150px;
+    max-width: 180px;
+    position: relative;
+  }
+  .fw-node small { display: block; color: var(--gray-300); font-weight: 400; margin-top: 0.2rem; font-size: 0.75rem; }
+  .fw-arrow {
+    font-size: 1.6rem;
+    color: rgba(16,185,129,0.4);
+    padding: 0 0.3rem;
+  }
+
+  /* ── Growth phases timeline ── */
+  .phases {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  .phase {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .phase::before {
+    content: attr(data-phase);
+    position: absolute;
+    top: 0.8rem;
+    right: 1rem;
+    font-family: 'DM Serif Display', serif;
+    font-size: 3rem;
+    color: rgba(255,255,255,0.04);
+    line-height: 1;
+  }
+  .phase h4 {
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+  }
+  .phase h4 .phase-label {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 50px;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .phase .phase-metrics {
+    display: flex;
+    gap: 1.2rem;
+    margin: 0.8rem 0;
+    flex-wrap: wrap;
+  }
+  .phase .pm {
+    font-size: 0.78rem;
+    color: var(--gray-300);
+  }
+  .phase .pm strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.1rem;
+  }
+  .phase p { font-size: 0.85rem; color: var(--gray-200); }
+
+  /* phase color accents */
+  .phase.phase-seed { border-top: 3px solid var(--amber-500); }
+  .phase.phase-seed h4 { color: var(--amber-300); }
+  .phase.phase-seed .phase-label { background: rgba(245,158,11,0.15); color: var(--amber-400); }
+  .phase.phase-seed .pm strong { color: var(--amber-400); }
+
+  .phase.phase-traction { border-top: 3px solid var(--blue-500); }
+  .phase.phase-traction h4 { color: var(--blue-400); }
+  .phase.phase-traction .phase-label { background: rgba(59,130,246,0.15); color: var(--blue-400); }
+  .phase.phase-traction .pm strong { color: var(--blue-400); }
+
+  .phase.phase-overtake { border-top: 3px solid var(--emerald-500); }
+  .phase.phase-overtake h4 { color: var(--emerald-300); }
+  .phase.phase-overtake .phase-label { background: rgba(16,185,129,0.15); color: var(--emerald-400); }
+  .phase.phase-overtake .pm strong { color: var(--emerald-400); }
+
+  /* ── Inversion comparison bar ── */
+  .bar-comparison {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .bar-row .bar-label {
+    min-width: 110px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--gray-300);
+    text-align: right;
+  }
+  .bar-row .bar-track {
+    flex: 1;
+    height: 36px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bar-row .bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: width 0.6s ease;
+  }
+  .bar-fill.china { background: rgba(245,158,11,0.25); color: var(--amber-300); }
+  .bar-fill.niha { background: rgba(16,185,129,0.25); color: var(--emerald-300); }
+
+  /* ── FAQ / Key Questions ── */
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .faq-list details {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .faq-list details[open] {
+    border-color: rgba(16,185,129,0.25);
+  }
+  .faq-list summary {
+    padding: 1.1rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--white);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .faq-list summary:hover { background: rgba(255,255,255,0.02); }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary::before {
+    content: '+';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(16,185,129,0.12);
+    color: var(--emerald-400);
+    font-size: 1.1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .faq-list details[open] summary::before {
+    content: '\2212';
+    background: rgba(16,185,129,0.2);
+    transform: rotate(0deg);
+  }
+  .faq-answer {
+    padding: 0 1.5rem 1.3rem 3.5rem;
+    font-size: 0.9rem;
+    color: var(--gray-200);
+    line-height: 1.7;
+  }
+  .faq-answer p { margin-bottom: 0.8rem; }
+  .faq-answer p:last-child { margin-bottom: 0; }
+  .faq-answer strong { color: var(--emerald-300); }
+  .faq-answer .faq-highlight {
+    background: rgba(16,185,129,0.08);
+    border-left: 3px solid var(--emerald-500);
+    padding: 0.8rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 0.8rem 0;
+    font-size: 0.88rem;
+  }
+  .faq-num {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--gray-600);
+    margin-left: auto;
+    padding-left: 1rem;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--gray-600);
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    margin: 3rem 0;
+  }
+
+  /* ── Highlight numbers ── */
+  .highlight-num {
+    color: var(--emerald-400);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<div class="hero">
+  <div class="badge">Research Report &mdash; February 2026</div>
+  <h1 style="margin-top:1rem;">Carbon Credit Markets<br>& NIHA Platform Analysis</h1>
+  <p class="subtitle">
+    A deep-dive into EU ETS &amp; China ETS liquidity, market microstructure, and how NIHA's
+    role as principal intermediary &mdash; sourcing CEA, executing swaps, and delivering EUA &mdash;
+    creates value for every participant.
+  </p>
+</div>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav class="toc">
+  <a href="#overview">Market Overview</a>
+  <a href="#eu-ets">EU ETS (EUA)</a>
+  <a href="#china-ets">China ETS (CEA)</a>
+  <a href="#comparison">Liquidity Comparison</a>
+  <a href="#niha-model">NIHA Business Model</a>
+  <a href="#party-a">EU Buyers</a>
+  <a href="#party-b">Non-EU CEA Sellers</a>
+  <a href="#party-c">Non-EU EUA Holders</a>
+  <a href="#flywheel">Liquidity Flywheel</a>
+  <a href="#faq">Key Questions</a>
+  <a href="#algo">Algorithm Parameters</a>
+</nav>
+
+<!-- ═══════════════════ MARKET OVERVIEW ═══════════════════ -->
+<section id="overview">
+  <h2>Global Carbon Market Overview</h2>
+  <p class="section-sub">
+    The world's two largest compliance carbon markets operate at vastly different scales, prices, and liquidity levels
+    &mdash; creating a structural opportunity for cross-border intermediation.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Global Carbon Market Size</h3>
+      <div class="metric emerald">&euro;865B+</div>
+      <div class="detail">Total 2024 traded value across all compliance markets. EU ETS alone accounts for ~87%.</div>
+    </div>
+    <div class="card">
+      <h3>EUA / CEA Price Ratio</h3>
+      <div class="metric amber">~7:1</div>
+      <div class="detail">1 EUA (&euro;81) is worth approximately 7 CEA (&euro;11.40 equivalent) &mdash; a persistent arbitrage window.</div>
+    </div>
+    <div class="card">
+      <h3>Liquidity Ratio</h3>
+      <div class="metric blue">~300:1</div>
+      <div class="detail">EU ETS daily spot volume (~&euro;3B) dwarfs China ETS (~&euro;9.5M), making CEA access the bottleneck.</div>
+    </div>
+    <div class="card">
+      <h3>OTC Market Share</h3>
+      <div class="metric emerald">15&ndash;25%</div>
+      <div class="detail">Of total EUA volume trades OTC (bilateral deals, voice brokers, electronic platforms like NIHA).</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ EU ETS ═══════════════════ -->
+<section id="eu-ets">
+  <h2>EU ETS &mdash; European Union Allowances (EUA)</h2>
+  <p class="section-sub">
+    The world's largest and most liquid carbon market, established in 2005.
+    Covers ~10,000 installations across power generation, heavy industry, and aviation.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Spot Price (Feb 2026)</h3>
+      <div class="metric emerald">&euro;81</div>
+      <div class="detail">Per tonne CO2 equivalent. All-time high &euro;101 (Feb 2023). Historical range &euro;20&ndash;&euro;101.</div>
+    </div>
+    <div class="card">
+      <h3>Daily Spot Volume</h3>
+      <div class="metric emerald">&euro;3B+</div>
+      <div class="detail">~37M tonnes/day on ICE and EEX combined. Futures volume is 5&ndash;8x higher.</div>
+    </div>
+    <div class="card">
+      <h3>Bid-Ask Spread</h3>
+      <div class="metric amber">&euro;0.02&ndash;0.04</div>
+      <div class="detail">Tight institutional spreads: 2&ndash;5 bps. OTC spreads widen to 5&ndash;25 bps.</div>
+    </div>
+    <div class="card">
+      <h3>Tick Size / Block Size</h3>
+      <div class="metric blue">&euro;0.01 / 10K&ndash;500K</div>
+      <div class="detail">Minimum price increment &euro;0.01. Block trades from 10,000 to 500,000+ tonnes.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Exchange</th>
+          <th>Product</th>
+          <th>Daily Volume</th>
+          <th>Spread</th>
+          <th>Trading Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ICE Endex</td>
+          <td>EUA Futures + Spot</td>
+          <td>~25M tonnes/day</td>
+          <td>&euro;0.01&ndash;0.03</td>
+          <td>07:00&ndash;17:00 CET</td>
+        </tr>
+        <tr>
+          <td>EEX (Leipzig)</td>
+          <td>EUA Spot Auction + Secondary</td>
+          <td>~12M tonnes/day</td>
+          <td>&euro;0.02&ndash;0.05</td>
+          <td>08:00&ndash;18:00 CET</td>
+        </tr>
+        <tr>
+          <td>OTC / Bilateral</td>
+          <td>EUA Spot + Forward</td>
+          <td>~5&ndash;10M tonnes/day</td>
+          <td>&euro;0.04&ndash;0.20</td>
+          <td>24/7 (negotiated)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scenario">
+    <h4>Key Takeaway</h4>
+    <p>
+      EUA is deeply liquid with tight institutional spreads. However, access requires EU registry accounts,
+      compliance infrastructure, and clearing membership &mdash; significant barriers for non-EU participants.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ CHINA ETS ═══════════════════ -->
+<section id="china-ets">
+  <h2>China ETS &mdash; Chinese Emission Allowances (CEA)</h2>
+  <p class="section-sub">
+    Launched July 2021, the world's largest ETS by covered emissions (~5 billion tonnes CO2).
+    Currently covers ~2,200 power-sector entities with expansion planned.
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Spot Price (Feb 2026)</h3>
+      <div class="metric amber">&yen;100 / &euro;11.40</div>
+      <div class="detail">Per tonne CO2. Rose from &yen;48 at launch to &yen;100+. Range: &yen;40&ndash;&yen;105.</div>
+    </div>
+    <div class="card">
+      <h3>Daily Spot Volume</h3>
+      <div class="metric amber">&euro;9.5M</div>
+      <div class="detail">~830K tonnes/day average. Highly seasonal: spikes 5&ndash;10x near compliance deadlines.</div>
+    </div>
+    <div class="card">
+      <h3>Bid-Ask Spread</h3>
+      <div class="metric red">1&ndash;2%</div>
+      <div class="detail">&yen;1.00&ndash;2.00 typical. Widens to 3&ndash;5% on low-volume days. No market makers on exchange.</div>
+    </div>
+    <div class="card">
+      <h3>Market Access</h3>
+      <div class="metric blue">Restricted</div>
+      <div class="detail">Trading limited to compliance entities. No financial institutions, no foreign participants, no derivatives yet.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Exchange</th>
+          <th>Product</th>
+          <th>Daily Volume</th>
+          <th>Spread</th>
+          <th>Access</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Shanghai Environment & Energy Exchange</td>
+          <td>CEA Spot</td>
+          <td>~830K tonnes</td>
+          <td>1&ndash;2%</td>
+          <td>Compliance entities only</td>
+        </tr>
+        <tr>
+          <td>Regional Pilots (Beijing, Shenzhen, Hubei, etc.)</td>
+          <td>Local ETS Allowances</td>
+          <td>~50K&ndash;200K tonnes/day combined</td>
+          <td>2&ndash;5%</td>
+          <td>Local entities + some institutional</td>
+        </tr>
+        <tr>
+          <td>OTC / Bilateral (emerging)</td>
+          <td>CEA Block Trades</td>
+          <td>Undisclosed</td>
+          <td>Negotiated</td>
+          <td>Via approved intermediaries</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scenario amber-border">
+    <h4>Key Takeaway</h4>
+    <p>
+      CEA liquidity is thin and access is restricted. Spreads are 50&ndash;100x wider than EUA.
+      This illiquidity creates opportunity &mdash; sellers who can source CEA outside the exchange
+      (through industrial relationships) can offer better execution than the public market.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ COMPARISON ═══════════════════ -->
+<section id="comparison">
+  <h2>Liquidity Comparison: EUA vs CEA</h2>
+  <p class="section-sub">
+    Side-by-side analysis reveals the structural asymmetry that NIHA exploits.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>EU ETS (EUA)</th>
+          <th>China ETS (CEA)</th>
+          <th>Ratio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Price per tonne</td>
+          <td>&euro;81</td>
+          <td>&euro;11.40 (&yen;100)</td>
+          <td><span class="highlight-num">7.1x</span></td>
+        </tr>
+        <tr>
+          <td>Daily spot volume (EUR)</td>
+          <td>&euro;3,000M</td>
+          <td>&euro;9.5M</td>
+          <td><span class="highlight-num">316x</span></td>
+        </tr>
+        <tr>
+          <td>Daily spot volume (tonnes)</td>
+          <td>~37M</td>
+          <td>~830K</td>
+          <td><span class="highlight-num">45x</span></td>
+        </tr>
+        <tr>
+          <td>Bid-ask spread</td>
+          <td>2&ndash;5 bps (&euro;0.02&ndash;0.04)</td>
+          <td>100&ndash;200 bps (&yen;1&ndash;2)</td>
+          <td><span class="highlight-num">50&ndash;100x</span></td>
+        </tr>
+        <tr>
+          <td>Market participants</td>
+          <td>~10,000 installations + financials</td>
+          <td>~2,200 compliance entities only</td>
+          <td>5x</td>
+        </tr>
+        <tr>
+          <td>Derivatives available</td>
+          <td><span class="tag tag-green">Futures, Options, Swaps</span></td>
+          <td><span class="tag tag-red">None (planned)</span></td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td>Foreign access</td>
+          <td><span class="tag tag-green">Open (with EU registry)</span></td>
+          <td><span class="tag tag-red">Closed</span></td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td>Market maker programs</td>
+          <td><span class="tag tag-green">Multiple (ICE, EEX)</span></td>
+          <td><span class="tag tag-red">None</span></td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td>Trading hours</td>
+          <td>11h/day (electronic)</td>
+          <td>4h/day (09:30&ndash;11:30, 13:00&ndash;15:00)</td>
+          <td>2.8x</td>
+        </tr>
+        <tr>
+          <td>Settlement cycle</td>
+          <td>T+2 (spot), T+1 (auction)</td>
+          <td>T+0 (immediate transfer)</td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td>Price volatility (annualized)</td>
+          <td>~35%</td>
+          <td>~25%</td>
+          <td>&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="comparison">
+    <div class="col">
+      <h3><span style="color:var(--emerald-400)">&#9679;</span> EU ETS Strengths</h3>
+      <ul class="pro-con-list pros">
+        <li>Deep, continuous liquidity &mdash; can execute any size in minutes</li>
+        <li>Transparent price discovery with multiple venues</li>
+        <li>Derivatives for hedging (futures, options)</li>
+        <li>Regulated clearing reduces counterparty risk</li>
+        <li>Open to financial institutions &amp; foreign participants</li>
+        <li>Mature market with 20+ years of price history</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3><span style="color:var(--amber-400)">&#9679;</span> China ETS Challenges</h3>
+      <ul class="pro-con-list cons">
+        <li>Thin liquidity &mdash; large orders move the market</li>
+        <li>No foreign access &mdash; requires domestic entity</li>
+        <li>Wide spreads increase transaction costs</li>
+        <li>No derivatives for risk management</li>
+        <li>Seasonal volume spikes create unpredictable execution</li>
+        <li>Regulatory uncertainty as market rules evolve</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ NIHA MODEL ═══════════════════ -->
+<section id="niha-model">
+  <h2>NIHA Business Model</h2>
+  <p class="section-sub">
+    NIHA operates as a principal intermediary: it sources CEA directly from Chinese entities
+    via bilateral deals, executes CEA&harr;EUA swaps on its own account, and delivers the resulting
+    certificates to its clients. No participant needs access to both markets &mdash; NIHA bridges them.
+  </p>
+
+  <!-- ── Flow 1: EU entity path ── -->
+  <h3 style="margin-bottom: 0.3rem; color: var(--blue-400);">Path A &mdash; EU Entity Acquiring EUA</h3>
+  <p style="color: var(--gray-300); font-size: 0.88rem; margin-bottom: 0.5rem;">
+    EU entities <strong>cannot access Chinese markets</strong>. NIHA acts as principal &mdash;
+    it sources CEA directly from Chinese counterparties, executes the CEA&rarr;EUA swap itself,
+    takes possession of the EUA, and only then transfers EUA to the EU entity.
+  </p>
+
+  <div class="flow">
+    <div class="flow-box">EU Entity<br><small>needs EUA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Deposits EUR<br><small>funds to NIHA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box highlight">NIHA<br>Sources CEA<br><small>bilateral from CN entities</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box highlight">NIHA<br>Swaps CEA &rarr; EUA<br><small>takes possession of EUA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box highlight">NIHA<br>Transfers EUA<br><small>to EU entity</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">EU Entity<br>Receives EUA<br><small>for compliance</small></div>
+  </div>
+
+  <!-- ── Flow 2: CN seller path ── -->
+  <h3 style="margin-bottom: 0.3rem; margin-top: 1rem; color: var(--amber-300);">Path B &mdash; Chinese Entity Selling Surplus CEA</h3>
+  <p style="color: var(--gray-300); font-size: 0.88rem; margin-bottom: 0.5rem;">
+    Chinese entities with excess certificates sell directly to NIHA via bilateral agreements &mdash;
+    not through the Shanghai exchange. They receive EUR at a competitive rate, often better
+    than what the thin domestic exchange can offer.
+  </p>
+
+  <div class="flow">
+    <div class="flow-box">CN Entity<br><small>surplus CEA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Sells CEA<br><small>bilateral to NIHA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box highlight">NIHA<br>Cash Market</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Receives EUR<br><small>at competitive rate</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Better price<br><small>than CN exchange</small></div>
+  </div>
+
+  <!-- ── Flow 3: Non-EU EUA holder path ── -->
+  <h3 style="margin-bottom: 0.3rem; margin-top: 1rem; color: var(--emerald-300);">Path C &mdash; Non-EU Entity Swapping EUA &rarr; CEA</h3>
+  <p style="color: var(--gray-300); font-size: 0.88rem; margin-bottom: 0.5rem;">
+    Entities holding EUA (from EU business, portfolio trades, or legacy swaps) who need CEA
+    for Chinese compliance can execute an atomic swap through NIHA &mdash; avoiding the
+    need for separate exchange accounts, FX conversions, and double transaction costs.
+  </p>
+
+  <div class="flow">
+    <div class="flow-box">Non-EU Entity<br><small>holds EUA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Deposits EUA<br><small>to NIHA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box highlight">NIHA<br>Swap Engine<br><small>EUA &rarr; CEA</small></div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box">Entity receives CEA<br><small>for CN compliance</small></div>
+  </div>
+
+  <h3 style="margin-top: 2.5rem; margin-bottom: 1rem;">Core Value Propositions</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h3>Price Efficiency</h3>
+      <div class="detail">
+        The CEA/EUA price gap (~7:1) means NIHA can source CEA cheaply from Chinese entities
+        and swap it into EUA for EU clients at 3&ndash;8% below direct EUA exchange purchase price.
+        EU entities fund the acquisition; NIHA handles sourcing and custody.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Access Bridge</h3>
+      <div class="detail">
+        EU participants have <strong>zero access</strong> to Chinese carbon markets.
+        Chinese entities face barriers to EU ETS. NIHA bridges both markets through
+        direct bilateral relationships with Chinese CEA holders, completely bypassing
+        exchange restrictions on both sides.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Full-Service Intermediation</h3>
+      <div class="detail">
+        NIHA purchases CEA directly from Chinese entities (not from exchanges), executes
+        the CEA&rarr;EUA swap on its own account, takes possession of the EUA, and only then
+        transfers the EUA to the EU client. The EU entity never touches CEA &mdash;
+        it simply funds the operation and receives EUA.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Execution Speed &amp; Confidentiality</h3>
+      <div class="detail">
+        All transactions are bilateral and off-exchange &mdash; invisible to public orderbooks.
+        A 100K-tonne trade executes at a known price with no market impact, no slippage,
+        and no signal to competitors. The platform operates 24/7 with T+0 settlement.
+      </div>
+    </div>
+  </div>
+
+  <div class="scenario blue-border">
+    <h4>Swap Mechanics</h4>
+    <p>
+      Swap ratio is ~8.5 CEA per 1 EUA (derived from spot prices minus NIHA spread). The swap ratio
+      floats with market prices and is updated continuously from scraped reference data.
+      NIHA's spread on the swap (&sim;0.5&ndash;2%) is the primary revenue source.
+      <strong>Critically:</strong> NIHA executes the swap on its own account, settles the EUA delivery,
+      takes possession, and only after that transfers the EUA to the EU client.
+      The EU entity is never exposed to CEA or Chinese market mechanics.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ PARTY A: EU BUYERS ═══════════════════ -->
+<section id="party-a">
+  <h2>Party A: EU Companies Buying EUA</h2>
+  <p class="section-sub">
+    EU industrial installations and power generators with ETS compliance obligations
+    seeking to acquire EUA credits at the best possible price.
+  </p>
+
+  <div class="comparison">
+    <div class="col">
+      <h3><span style="color:var(--blue-400)">&#9679;</span> Via Regulated Exchanges</h3>
+      <ul class="pro-con-list pros">
+        <li>Transparent, regulated price discovery</li>
+        <li>Central counterparty clearing (no credit risk)</li>
+        <li>Deep liquidity for standard-size orders</li>
+        <li>Hedging via futures and options</li>
+        <li>Well-established legal framework</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li>Full market price (&euro;81/t) with no arbitrage benefit</li>
+        <li>Large orders (50K+ tonnes) create price impact</li>
+        <li>T+2 settlement delays</li>
+        <li>Exchange membership and compliance costs</li>
+        <li>Limited trading hours (11h/day)</li>
+        <li>All trades visible &mdash; signals intent to competitors</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3><span style="color:var(--emerald-400)">&#9679;</span> Via NIHA (Fund &rarr; NIHA Sources &amp; Swaps &rarr; EUA Delivered)</h3>
+      <ul class="pro-con-list pros">
+        <li><strong>3&ndash;8% cost savings</strong> &mdash; NIHA sources CEA cheaply, swaps, delivers EUA</li>
+        <li>No Chinese market access needed &mdash; NIHA handles everything end-to-end</li>
+        <li>EU entity never touches CEA &mdash; only funds and receives EUA</li>
+        <li>No market impact &mdash; all bilateral, off-exchange</li>
+        <li>Faster execution for large sizes (no orderbook slippage)</li>
+        <li>Continuous availability &amp; confidential (24/7, off-tape)</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li>Counterparty risk (OTC, not centrally cleared)</li>
+        <li>Regulatory complexity (cross-border)</li>
+        <li>NIHA platform reliability dependency</li>
+        <li>Swap ratio fluctuation risk</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="scenario">
+    <h4>Example: EU Steel Plant Needs 200,000 EUA</h4>
+    <p>
+      <strong>Exchange route:</strong> Buy 200K EUA on ICE at &euro;81 = &euro;16.2M.
+      Market impact likely pushes price to &euro;81.50&ndash;82 = total &euro;16.3&ndash;16.4M.<br>
+      <strong>NIHA route:</strong> EU entity deposits &euro;15.8M. NIHA sources 1.7M CEA directly from Chinese
+      counterparties at &euro;11.40/t, executes the CEA&rarr;EUA swap on its own account (8.5:1 ratio),
+      takes possession of 200K EUA, then transfers them to the EU entity.
+      Effective EUA cost: &euro;78&ndash;79/t. <span class="highlight-num">Saving: &euro;500K&ndash;800K</span>.
+      The EU entity never touches CEA.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ PARTY B: NON-EU CEA SELLERS ═══════════════════ -->
+<section id="party-b">
+  <h2>Party B: Non-EU Entities Selling CEA</h2>
+  <p class="section-sub">
+    Chinese companies with excess CEA allowances from over-compliance, efficiency improvements,
+    or portfolio optimization, seeking to monetize their carbon assets.
+  </p>
+
+  <div class="comparison">
+    <div class="col">
+      <h3><span style="color:var(--amber-400)">&#9679;</span> Via China Exchange</h3>
+      <ul class="pro-con-list pros">
+        <li>Domestic regulated market</li>
+        <li>RMB-denominated (no FX risk)</li>
+        <li>T+0 settlement</li>
+        <li>No counterparty risk</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li>Thin liquidity &mdash; large sell orders depress price</li>
+        <li>Wide spreads: 1&ndash;2% typical, 3&ndash;5% on thin days</li>
+        <li>Only 4h/day trading window</li>
+        <li>Seasonal demand (spikes near compliance deadline, quiet otherwise)</li>
+        <li>Price at &yen;100 may be below fair value vs international markets</li>
+        <li>No access to foreign currency proceeds</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3><span style="color:var(--emerald-400)">&#9679;</span> Via NIHA</h3>
+      <ul class="pro-con-list pros">
+        <li><strong>Better effective price</strong> &mdash; NIHA (backed by EU demand) pays a premium vs CN exchange</li>
+        <li>EUR proceeds (hard currency diversification)</li>
+        <li>Immediate execution regardless of exchange hours</li>
+        <li>No market impact &mdash; trades don't depress public CEA price</li>
+        <li>Can sell larger blocks without moving the market</li>
+        <li>Relationship-based pricing (predictable, repeat business)</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li>FX risk (EUR/CNY fluctuation)</li>
+        <li>Cross-border regulatory requirements</li>
+        <li>Counterparty risk on NIHA</li>
+        <li>Less transparent price discovery</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="scenario amber-border">
+    <h4>Example: Chinese Power Company with 500,000 Excess CEA</h4>
+    <p>
+      <strong>Exchange route:</strong> Sell 500K CEA on Shanghai at &yen;100. Market depth
+      ~830K tonnes/day &mdash; this order is 60% of daily volume. Likely execution
+      at &yen;97&ndash;99 over 2&ndash;3 days. Proceeds: &yen;48.5&ndash;49.5M.<br>
+      <strong>NIHA route:</strong> Sell 500K CEA to NIHA buyers at &yen;101&ndash;102 equivalent (&euro;11.50&ndash;11.60/t).
+      No market impact. Proceeds: &yen;50.5&ndash;51M in EUR equivalent.
+      <span class="highlight-num">~3&ndash;5% better realization</span>.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ PARTY C: NON-EU EUA HOLDERS ═══════════════════ -->
+<section id="party-c">
+  <h2>Party C: Non-EU Entities Holding EUA</h2>
+  <p class="section-sub">
+    Companies holding EUA from EU business activities, portfolio transactions, or historical
+    direct swaps, who prefer to convert to CEA for China compliance needs rather than sell on EU exchange.
+  </p>
+
+  <div class="comparison">
+    <div class="col">
+      <h3><span style="color:var(--blue-400)">&#9679;</span> Via EU Exchange + CN Exchange</h3>
+      <ul class="pro-con-list pros">
+        <li>Transparent EUA sell price</li>
+        <li>Regulated clearing on both sides</li>
+        <li>Well-understood process</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li><strong>Two separate transactions</strong> required (sell EUA, buy CEA)</li>
+        <li>Double transaction costs (EU exchange fees + CN exchange fees)</li>
+        <li>FX conversion loss (EUR &rarr; CNY)</li>
+        <li>Settlement mismatch (T+2 EUA vs T+0 CEA)</li>
+        <li>Requires accounts on both exchange systems</li>
+        <li>CEA purchase restricted to compliance entities only</li>
+        <li>Market impact on thin CEA market when buying</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3><span style="color:var(--emerald-400)">&#9679;</span> Via NIHA (EUA&rarr;CEA Swap)</h3>
+      <ul class="pro-con-list pros">
+        <li><strong>Single atomic transaction</strong> &mdash; EUA in, CEA out</li>
+        <li>No FX conversion needed (handled in swap ratio)</li>
+        <li>No exchange membership required</li>
+        <li>Faster settlement (T+0 on NIHA)</li>
+        <li>Single set of fees instead of double exchange costs</li>
+        <li>Bypasses CEA exchange access restrictions</li>
+        <li>Predictable execution price (locked swap ratio)</li>
+      </ul>
+      <ul class="pro-con-list cons" style="margin-top: 1rem;">
+        <li>Swap ratio includes NIHA spread</li>
+        <li>Counterparty risk</li>
+        <li>Cross-border regulatory compliance</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="scenario blue-border">
+    <h4>Example: HK Trading House Converting 50,000 EUA to CEA</h4>
+    <p>
+      <strong>Exchange route:</strong> Sell 50K EUA on ICE at &euro;81 = &euro;4.05M. Convert to CNY at
+      1:7.7 = &yen;31.2M. Buy 312K CEA on Shanghai at &yen;100. Total fees: ~&euro;40K (exchange + FX + slippage).<br>
+      <strong>NIHA route:</strong> Swap 50K EUA at 1:8.3 ratio = 415K CEA. No FX, no double exchange fees.
+      Effective fee is in the swap ratio spread (~2%). <span class="highlight-num">33% more CEA received</span>
+      (8.3 vs ~6.2 effective ratio through exchanges).
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ LIQUIDITY FLYWHEEL ═══════════════════ -->
+<section id="flywheel">
+  <h2>The Liquidity Flywheel: How NIHA Surpasses China ETS</h2>
+  <p class="section-sub">
+    The advantages outlined above are not isolated &mdash; they compound.
+    Each new participant attracted by better pricing, faster execution, or broader access
+    adds liquidity that makes the platform even more attractive to the next one.
+    The result: NIHA's CEA market becomes more dynamic and more liquid than China's own regulated exchange.
+  </p>
+
+  <!-- ── Flywheel diagram ── -->
+  <div class="flywheel">
+    <div class="fw-node">Better Prices<small>3&ndash;8% savings vs exchange</small></div>
+    <div class="fw-arrow">&rarr;</div>
+    <div class="fw-node">More Participants<small>EU buyers, CN sellers, swappers</small></div>
+    <div class="fw-arrow">&rarr;</div>
+    <div class="fw-node">Deeper Liquidity<small>tighter spreads, less slippage</small></div>
+    <div class="fw-arrow">&rarr;</div>
+    <div class="fw-node">Faster Execution<small>large blocks fill instantly</small></div>
+    <div class="fw-arrow">&rarr;</div>
+    <div class="fw-node">Stronger Network<small>reputation, trust, repeat flow</small></div>
+    <div class="fw-arrow" style="opacity:0.3;">&circlearrowleft;</div>
+  </div>
+
+  <div class="scenario">
+    <h4>Why This Flywheel Doesn't Exist on China ETS</h4>
+    <p>
+      The Shanghai exchange is structurally capped: only ~2,200 compliance entities can trade, foreign access is blocked,
+      there are no market makers, no derivatives, and only 4 hours of trading per day.
+      No amount of demand can widen that funnel &mdash; the rules prevent it.
+      NIHA faces none of these constraints. Every new bilateral relationship the platform establishes
+      adds permanent, repeatable liquidity that the exchange simply cannot match.
+    </p>
+  </div>
+
+  <!-- ── Growth phases ── -->
+  <h3 style="margin-top: 2.5rem; margin-bottom: 0.5rem;">Growth Trajectory: Three Phases</h3>
+  <p style="color: var(--gray-300); font-size: 0.9rem; margin-bottom: 1.5rem;">
+    As NIHA onboards participants across all three party types, its CEA liquidity
+    progresses through distinct phases &mdash; each unlocking the next.
+  </p>
+
+  <div class="phases">
+    <div class="phase phase-seed" data-phase="1">
+      <h4><span class="phase-label">Seed</span> Market Making &amp; Early Adopters</h4>
+      <div class="phase-metrics">
+        <div class="pm"><strong>&euro;50K&ndash;500K</strong>daily volume</div>
+        <div class="pm"><strong>5&ndash;15</strong>active counterparties</div>
+        <div class="pm"><strong>1&ndash;3%</strong>bid-ask spread</div>
+      </div>
+      <p>
+        Internal market makers seed the orderbook. First EU buyers discover the CEA&rarr;swap arbitrage.
+        First Chinese sellers test NIHA as an alternative channel. Volume is modest, but already
+        competitive with quiet days on the Shanghai exchange.
+      </p>
+    </div>
+
+    <div class="phase phase-traction" data-phase="2">
+      <h4><span class="phase-label">Traction</span> Network Effects Kick In</h4>
+      <div class="phase-metrics">
+        <div class="pm"><strong>&euro;1M&ndash;10M</strong>daily volume</div>
+        <div class="pm"><strong>30&ndash;100</strong>active counterparties</div>
+        <div class="pm"><strong>0.5&ndash;1.5%</strong>bid-ask spread</div>
+      </div>
+      <p>
+        Word spreads through industry networks. CEA sellers see consistent, fair pricing without market impact.
+        EU buyers scale up as they prove out the swap economics. Swap volume rises in parallel.
+        NIHA daily volume now <strong>rivals or exceeds</strong> the Shanghai exchange average (&euro;9.5M/day).
+        Spreads tighten as multiple sellers compete for buyers.
+      </p>
+    </div>
+
+    <div class="phase phase-overtake" data-phase="3">
+      <h4><span class="phase-label">Overtake</span> NIHA Becomes the Primary CEA Venue</h4>
+      <div class="phase-metrics">
+        <div class="pm"><strong>&euro;10M&ndash;50M+</strong>daily volume</div>
+        <div class="pm"><strong>200+</strong>active counterparties</div>
+        <div class="pm"><strong>0.2&ndash;0.8%</strong>bid-ask spread</div>
+      </div>
+      <p>
+        NIHA's CEA market is now structurally more liquid than China's exchange.
+        Spreads are tighter, block execution is instantaneous, and the platform operates 24/7
+        compared to 4h/day.  International participants who previously couldn't access CEA at all
+        now have a liquid, reliable venue. NIHA effectively becomes the <strong>offshore
+        price-discovery mechanism</strong> for Chinese carbon credits &mdash; a role
+        the Shanghai exchange cannot fill due to its closed-access design.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Comparison bars: China ETS vs NIHA at Phase 3 ── -->
+  <h3 style="margin-top: 2.5rem; margin-bottom: 0.5rem;">The Liquidity Inversion: NIHA vs China ETS</h3>
+  <p style="color: var(--gray-300); font-size: 0.9rem; margin-bottom: 1.5rem;">
+    At scale, NIHA's structural advantages flip the liquidity relationship.
+    What was once a thin, restricted market becomes a deep, accessible one &mdash; not by reforming the exchange,
+    but by routing flow around it.
+  </p>
+
+  <div class="bar-comparison">
+    <div class="bar-row">
+      <div class="bar-label">Daily Volume</div>
+      <div class="bar-track">
+        <div class="bar-fill china" style="width: 19%;">&euro;9.5M &mdash; China ETS</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill niha" style="width: 65%;">&euro;10&ndash;50M+ &mdash; NIHA (Phase 3)</div>
+      </div>
+    </div>
+
+    <div class="bar-row">
+      <div class="bar-label">Bid-Ask Spread</div>
+      <div class="bar-track">
+        <div class="bar-fill china" style="width: 60%;">1&ndash;2% &mdash; China ETS</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill niha" style="width: 20%;">0.2&ndash;0.8% &mdash; NIHA (Phase 3)</div>
+      </div>
+    </div>
+
+    <div class="bar-row">
+      <div class="bar-label">Trading Hours</div>
+      <div class="bar-track">
+        <div class="bar-fill china" style="width: 17%;">4h/day &mdash; China ETS</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill niha" style="width: 100%;">24/7 &mdash; NIHA</div>
+      </div>
+    </div>
+
+    <div class="bar-row">
+      <div class="bar-label">Participants</div>
+      <div class="bar-track">
+        <div class="bar-fill china" style="width: 44%;">~2,200 (domestic only) &mdash; China ETS</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill niha" style="width: 40%;">200+ (global, uncapped) &mdash; NIHA</div>
+      </div>
+    </div>
+
+    <div class="bar-row">
+      <div class="bar-label">Block Execution</div>
+      <div class="bar-track">
+        <div class="bar-fill china" style="width: 70%;">2&ndash;3 days for 500K tonnes &mdash; China ETS</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill niha" style="width: 15%;">Instant &mdash; NIHA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Structural Factor</th>
+          <th>China ETS (Shanghai)</th>
+          <th>NIHA Platform</th>
+          <th>Advantage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Participant cap</td>
+          <td>Fixed at ~2,200 (regulatory)</td>
+          <td>Unlimited (bilateral onboarding)</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Foreign access</td>
+          <td><span class="tag tag-red">Blocked</span></td>
+          <td><span class="tag tag-green">Open to EU, HK, global</span></td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Market makers</td>
+          <td>None (no designated MM program)</td>
+          <td>Active internal MMs providing continuous liquidity</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Cross-border swap</td>
+          <td>Not possible</td>
+          <td>CEA&harr;EUA atomic swap</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Trading hours</td>
+          <td>4h/day (9:30&ndash;11:30, 13:00&ndash;15:00)</td>
+          <td>24/7 continuous</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Block trade visibility</td>
+          <td>Public orderbook (all visible)</td>
+          <td>Dark pool (confidential)</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Settlement</td>
+          <td>T+0 (but restricted hours)</td>
+          <td>T+0 (any time)</td>
+          <td><span class="tag tag-blue">Tie</span></td>
+        </tr>
+        <tr>
+          <td>Regulatory certainty</td>
+          <td>Evolving rules, uncertain expansion</td>
+          <td>OTC bilateral (flexible framework)</td>
+          <td><span class="tag tag-blue">Context-dependent</span></td>
+        </tr>
+        <tr>
+          <td>Price discovery</td>
+          <td>Domestic-only reference</td>
+          <td>International price discovery (EU+CN integrated)</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+        <tr>
+          <td>Volume scalability</td>
+          <td>Capped by participant pool &amp; trading hours</td>
+          <td>Scales with network growth (no structural ceiling)</td>
+          <td><span class="tag tag-green">NIHA</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scenario">
+    <h4>The Core Thesis</h4>
+    <p>
+      China's carbon exchange is constrained by design: closed access, limited hours, no market makers, no derivatives.
+      These aren't problems that will be fixed quickly &mdash; they are structural features of a nascent, heavily regulated market.
+      NIHA doesn't compete with the exchange; it <strong>routes around its limitations</strong>.
+      Every participant who discovers that NIHA offers better pricing, faster execution, or access they couldn't get otherwise
+      becomes a permanent source of liquidity.
+      The result is a platform that &mdash; despite being younger and smaller in absolute terms &mdash;
+      is already <strong>more dynamic, more accessible, and functionally more liquid</strong>
+      for the participants it serves than the regulated market it draws from.
+    </p>
+  </div>
+
+  <div class="scenario blue-border" style="margin-top: 1rem;">
+    <h4>What "More Liquid" Means in Practice</h4>
+    <p>
+      A CEA seller on NIHA can execute a 500,000-tonne block trade instantly at a known price, at any hour, with no market impact.
+      On the Shanghai exchange, the same trade would take 2&ndash;3 days, move the price 2&ndash;3%, and be visible to every other participant.
+      A EU buyer on NIHA can acquire EUA-equivalent exposure through CEA&rarr;swap at a 3&ndash;8% discount with no exchange membership.
+      On ICE, the same trade requires clearing infrastructure and moves the tape.
+      <strong>Liquidity isn't just volume &mdash; it's the ability to transact without friction.</strong>
+      By that measure, NIHA is already the more liquid venue for cross-border carbon credit flow.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ KEY QUESTIONS ═══════════════════ -->
+<section id="faq">
+  <h2>Key Questions</h2>
+  <p class="section-sub">
+    Common questions about the NIHA model, market mechanics, and why certain alternatives
+    don't work the way you'd expect.
+  </p>
+
+  <div class="faq-list">
+
+    <!-- Q1 -->
+    <details>
+      <summary>
+        Why wouldn't an EU entity just buy EUA directly from a non-EU holder?
+        <span class="faq-num">Q1</span>
+      </summary>
+      <div class="faq-answer">
+        <p>
+          They can, and sometimes they do. If both parties have EU registry accounts, a direct
+          bilateral OTC trade is perfectly legal. The problem is <strong>price</strong>:
+        </p>
+        <div class="faq-highlight">
+          A direct EUA purchase &mdash; whether on exchange or bilateral &mdash; costs market price (~&euro;81/t).
+          Going through NIHA costs ~&euro;78&ndash;79/t effective. The 3&ndash;8% saving comes from the
+          CEA&rarr;EUA swap arbitrage path that only NIHA can offer.
+        </div>
+        <p>
+          No non-EU holder will sell EUA at a discount. Why would they? They can sell at &euro;81 on ICE.
+          NIHA's advantage isn't finding a cheaper EUA seller &mdash; it's <strong>bypassing the EUA market entirely</strong>
+          by sourcing cheap CEA (&euro;11.40/t) from Chinese entities and swapping it into EUA.
+        </p>
+        <p>
+          Beyond price, direct bilateral trades have practical friction:
+        </p>
+        <p>
+          <strong>Discovery</strong> &mdash; How does an EU steel plant find a HK trading house with surplus EUA?
+          There's no public directory of willing sellers.<br>
+          <strong>Trust</strong> &mdash; Who sends first? Neither party knows the other. Settlement requires legal
+          agreements (ISDA/EFET), KYC/AML due diligence.<br>
+          <strong>Infrastructure</strong> &mdash; Both parties need EU registry accounts and settlement coordination.
+          The non-EU entity may not have one.<br>
+          <strong>Price negotiation</strong> &mdash; Without a market maker, agreeing on price is slow and adversarial.
+        </p>
+        <p>
+          NIHA solves all of these &mdash; but the primary reason is economics: the CEA arbitrage path
+          delivers EUA cheaper than any direct purchase can.
+        </p>
+      </div>
+    </details>
+
+    <!-- Q2 -->
+    <details>
+      <summary>
+        Can Hong Kong entities access the China ETS to trade CEA?
+        <span class="faq-num">Q2</span>
+      </summary>
+      <div class="faq-answer">
+        <p>
+          <strong>No.</strong> Despite Hong Kong's status as a Chinese SAR, HK-based entities
+          are not compliance entities under the national ETS and therefore cannot trade CEA
+          on the Shanghai Environment &amp; Energy Exchange.
+        </p>
+        <p>
+          The China ETS restricts trading exclusively to the ~2,200 domestic companies directly
+          regulated under the system (currently power sector, expanding to cement/steel/aluminum).
+          Hong Kong companies, foreign companies, financial institutions, and individual investors
+          are all excluded.
+        </p>
+        <div class="faq-highlight">
+          There is ongoing work on a "Greater Bay Area Carbon Connect" scheme (similar to Stock Connect
+          for equities), but it remains at the feasibility assessment stage with no specific timeline.
+          HKEx launched Core Climate for voluntary credits, but that does not include CEA.
+        </div>
+        <p>
+          This means HK entities are in the same position as EU entities &mdash;
+          they need NIHA to access CEA. This further expands NIHA's addressable market
+          beyond Europe to include the entire Hong Kong financial and corporate ecosystem.
+        </p>
+      </div>
+    </details>
+
+    <!-- Q3 -->
+    <details>
+      <summary>
+        Why don't Chinese entities just sell CEA on their own exchange?
+        <span class="faq-num">Q3</span>
+      </summary>
+      <div class="faq-answer">
+        <p>
+          They can, but the experience is often poor:
+        </p>
+        <p>
+          <strong>Thin liquidity</strong> &mdash; average daily volume is ~830K tonnes. A 500K-tonne sell
+          order is 60% of daily volume and would depress the price 2&ndash;3%.<br>
+          <strong>Wide spreads</strong> &mdash; 1&ndash;2% typical, widening to 3&ndash;5% on thin days.
+          That's direct money lost vs. a bilateral deal.<br>
+          <strong>Limited hours</strong> &mdash; only 4 hours/day of trading
+          (09:30&ndash;11:30, 13:00&ndash;15:00).<br>
+          <strong>Seasonal demand</strong> &mdash; volume spikes near compliance deadlines
+          and collapses otherwise. Selling outside the deadline window is painful.<br>
+          <strong>RMB only</strong> &mdash; proceeds stay in local currency. Via NIHA, sellers receive EUR
+          (hard currency diversification).
+        </p>
+        <div class="faq-highlight">
+          NIHA, backed by EU demand, can pay a premium to the domestic exchange price.
+          For a Chinese seller, getting &yen;101&ndash;102 equivalent via NIHA vs &yen;97&ndash;99 on exchange
+          (after slippage) is a 3&ndash;5% improvement &mdash; plus EUR diversification and instant execution.
+        </div>
+      </div>
+    </details>
+
+    <!-- Q4 -->
+    <details>
+      <summary>
+        What prevents someone from replicating NIHA's model?
+        <span class="faq-num">Q4</span>
+      </summary>
+      <div class="faq-answer">
+        <p>
+          The model is conceptually simple but operationally difficult to replicate:
+        </p>
+        <p>
+          <strong>Bilateral relationships with Chinese CEA holders</strong> &mdash;
+          These are built over years through trust, local presence, and industry networks.
+          You cannot source CEA from a directory or an API. Each relationship is a handshake deal
+          with a compliance entity.<br>
+          <strong>Cross-border regulatory navigation</strong> &mdash;
+          Operating across EU, Chinese, and HK regulatory frameworks simultaneously requires
+          specialized legal and compliance infrastructure.<br>
+          <strong>Swap execution capability</strong> &mdash;
+          Actually converting CEA to EUA requires inventory management, registry access on both sides,
+          and settlement infrastructure that takes significant capital and time to build.<br>
+          <strong>Network effects</strong> &mdash;
+          Once NIHA has liquidity, each new participant makes it more attractive.
+          A new entrant starts with zero liquidity and zero counterparties &mdash;
+          the cold-start problem is severe in bilateral OTC markets.
+        </p>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ═══════════════════ ALGORITHM PARAMETERS ═══════════════════ -->
+<section id="algo">
+  <h2>Recommended Algorithm Parameters</h2>
+  <p class="section-sub">
+    Based on real market microstructure data, here are the recommended settings
+    for NIHA's auto-trade engine to simulate realistic OTC carbon market behavior.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>CEA Cash (BID)</th>
+          <th>CEA Cash (ASK)</th>
+          <th>EUA Swap</th>
+          <th>Rationale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Interval (sec)</strong></td>
+          <td>30&ndash;90</td>
+          <td>30&ndash;90</td>
+          <td>60&ndash;180</td>
+          <td>OTC markets have lower frequency than exchanges. Swap orders are less frequent.</td>
+        </tr>
+        <tr>
+          <td><strong>Volume Min (EUR)</strong></td>
+          <td>5,000</td>
+          <td>5,000</td>
+          <td>10,000</td>
+          <td>Minimum OTC ticket size. Below this, exchange execution is cheaper.</td>
+        </tr>
+        <tr>
+          <td><strong>Volume Max (EUR)</strong></td>
+          <td>250,000</td>
+          <td>250,000</td>
+          <td>500,000</td>
+          <td>Large block trades up to 500K typical in institutional OTC carbon markets.</td>
+        </tr>
+        <tr>
+          <td><strong>Volume Variety</strong></td>
+          <td>7</td>
+          <td>7</td>
+          <td>5</td>
+          <td>Log-normal sigma=0.55 for CEA (wide variety), 0.38 for swap (more concentrated).</td>
+        </tr>
+        <tr>
+          <td><strong>Price Deviation %</strong></td>
+          <td>3.0</td>
+          <td>3.0</td>
+          <td>2.0</td>
+          <td>CEA spreads up to 2% + OTC premium. Swap spreads tighter.</td>
+        </tr>
+        <tr>
+          <td><strong>Max Orders/Level</strong></td>
+          <td>4</td>
+          <td>4</td>
+          <td>3</td>
+          <td>Simulate 3&ndash;5 market makers per price level in OTC market.</td>
+        </tr>
+        <tr>
+          <td style="border-top: 2px solid rgba(245,158,11,0.3);"><strong>Internal Trade Interval (sec)</strong></td>
+          <td style="border-top: 2px solid rgba(245,158,11,0.3);">120</td>
+          <td style="border-top: 2px solid rgba(245,158,11,0.3);">120</td>
+          <td style="border-top: 2px solid rgba(245,158,11,0.3);">300</td>
+          <td style="border-top: 2px solid rgba(245,158,11,0.3);">Internal matching occurs less frequently than order placement.</td>
+        </tr>
+        <tr>
+          <td><strong>Internal Trade Vol Min (EUR)</strong></td>
+          <td>10,000</td>
+          <td>10,000</td>
+          <td>25,000</td>
+          <td>Minimum meaningful internal cross (must justify settlement costs).</td>
+        </tr>
+        <tr>
+          <td><strong>Internal Trade Vol Max (EUR)</strong></td>
+          <td>100,000</td>
+          <td>100,000</td>
+          <td>200,000</td>
+          <td>Cap internal trades to avoid depleting one MM's inventory too fast.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scenario">
+    <h4>Parameter Philosophy</h4>
+    <p>
+      The key insight is that NIHA simulates an <strong>OTC dark pool</strong>, not a public exchange.
+      OTC carbon markets have: (1) lower order frequency than exchanges, (2) larger ticket sizes,
+      (3) wider spreads, (4) clustered volume around reference prices, and (5) periodic internal crosses
+      between liquidity providers. The log-normal volume distribution ensures most orders are
+      moderate-sized with occasional large blocks &mdash; matching real institutional flow patterns.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<div class="footer">
+  <p>NIHA Carbon Trading Platform &mdash; Market Research &amp; Analysis</p>
+  <p style="margin-top: 0.3rem;">Data sourced from ICE, EEX, Shanghai Environment &amp; Energy Exchange, ICAP, Refinitiv &mdash; February 2026</p>
+</div>
+
+</body>
+</html>

@@ -75,6 +75,20 @@ export function useClientRealtime() {
         logger.debug('Client realtime: orderbook_updated', message.data);
       }
 
+      if (message.type === 'trade_executed' && message.data) {
+        const d = message.data;
+        const trade = {
+          id: d.id ?? '',
+          certificateType: (d.certificateType ?? 'CEA') as 'CEA' | 'EUA',
+          price: Number(d.price ?? 0),
+          quantity: Number(d.quantity ?? 0),
+          side: (d.side === 'SELL' ? 'SELL' : 'BUY') as 'BUY' | 'SELL',
+          executedAt: d.executedAt ?? new Date().toISOString(),
+        };
+        window.dispatchEvent(new CustomEvent('nihao:tradeExecuted', { detail: { trade } }));
+        logger.debug('Client realtime: trade_executed', trade);
+      }
+
       if (message.type === 'user_deactivated') {
         logger.info('Client realtime: user_deactivated — forcing logout');
         useAuthStore.getState().logout();

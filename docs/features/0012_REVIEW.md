@@ -135,4 +135,4 @@ The plan is **fully implemented** modulo the minor token and validation improvem
 
 ## 9. Conclusion
 
-The 0012 “Approve & Create User” feature is implemented correctly and in line with the plan. Remaining items are minor (design token consistency, UUID validation, datetime usage) and one adjacent UX fix (Reject loading). Addressing the emerald focus token and, if desired, the validation/datetime changes will bring the implementation fully in line with the design system and backend best practices.
+The 0012 “Approve & Create User” feature is implemented correctly and in line with the plan. All recommended fixes have been applied (emerald focus, UUID validation, datetime.now(timezone.utc), Reject loading key). The implementation is fully in line with the design system and backend best practices.
