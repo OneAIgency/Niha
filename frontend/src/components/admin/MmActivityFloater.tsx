@@ -8,18 +8,13 @@ import { formatNumberWithSeparators } from '../common';
 // Types & helpers
 // ============================================================================
 
-interface MmActivityItem {
-  type: 'order' | 'trade';
-  id: string;
-  side?: string;
-  price: string;
-  quantity: string;
-  filledQuantity?: string;
-  status?: string;
+interface TradeActivity {
+  side: 'SELL' | 'BUY';
+  totalQuantity: number;
+  vwap: number;
+  totalEur: number;
+  fillCount: number;
   timestamp: string;
-  aggressorSide?: string;    // BUY or SELL — who initiated the trade
-  buyOrderId?: string;
-  sellOrderId?: string;
 }
 
 const POLL_MS = 10_000;
@@ -35,13 +30,19 @@ function timeAgo(isoStr: string): string {
   return `${h}h ago`;
 }
 
+function formatEur(value: number): string {
+  if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `€${formatNumberWithSeparators(Math.round(value), 'en-US', 0)}`;
+  return `€${value.toFixed(2)}`;
+}
+
 // ============================================================================
 // Component
 // ============================================================================
 
 export function MmActivityFloater() {
   const { user } = useAuthStore();
-  const [activity, setActivity] = useState<MmActivityItem[]>([]);
+  const [activity, setActivity] = useState<TradeActivity[]>([]);
   const [expanded, setExpanded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,71 +66,35 @@ export function MmActivityFloater() {
 
   const latest = activity[0];
 
-  // Pre-compute group boundaries for order grouping
-  const groupInfo = computeGroups(activity);
-
-  const renderItem = (item: MmActivityItem, idx: number, isFirst = false) => {
-    const isTrade = item.type === 'trade';
-    const isBuy = item.side === 'BUY';
-    const group = groupInfo.get(idx);
-
-    // Trade background: green for buyer-initiated, red for seller-initiated
-    let tradeBg = '';
-    if (isTrade && item.aggressorSide === 'BUY') {
-      tradeBg = 'bg-emerald-500/8';
-    } else if (isTrade && item.aggressorSide === 'SELL') {
-      tradeBg = 'bg-red-500/8';
-    }
-
-    // Group border styling
-    let groupClass = '';
-    if (group === 'start') groupClass = 'border-l-2 border-l-navy-500/40 pl-2 rounded-t pt-1';
-    else if (group === 'mid') groupClass = 'border-l-2 border-l-navy-500/40 pl-2';
-    else if (group === 'end') groupClass = 'border-l-2 border-l-navy-500/40 pl-2 rounded-b pb-1';
+  const renderItem = (item: TradeActivity, idx: number) => {
+    const isSold = item.side === 'SELL';
 
     return (
       <div
-        key={item.id}
-        className={`flex items-center gap-2 text-[11px] ${tradeBg} ${groupClass}
-          ${isFirst ? '' : 'border-t border-navy-700/40 pt-1.5 mt-1.5'}`}
+        key={`${item.timestamp}-${idx}`}
+        className={`flex items-center gap-2 text-[11px] rounded px-1.5 py-1 ${
+          isSold ? 'bg-red-500/8' : 'bg-emerald-500/8'
+        } ${idx > 0 ? 'mt-1' : ''}`}
       >
-        {isTrade ? (
-          <span className={`px-1.5 py-0.5 rounded font-medium ${
-            item.aggressorSide === 'BUY'
-              ? 'bg-emerald-500/20 text-emerald-400'
-              : item.aggressorSide === 'SELL'
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-amber-500/20 text-amber-400'
-          }`}>TRADE</span>
-        ) : (
-          <span className={`px-1.5 py-0.5 rounded font-medium ${
-            isBuy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-          }`}>
-            {item.side}
-          </span>
-        )}
-        <span className="text-white font-medium">{`€${Number(item.price).toFixed(1)}`}</span>
-        <span className="text-navy-400">{`×${formatNumberWithSeparators(Number(item.quantity), 'en-US', 0)}`}</span>
-        {item.status && item.status !== 'OPEN' && (
-          <span className={`text-[10px] ${item.status === 'FILLED' ? 'text-amber-400' : 'text-navy-500'}`}>
-            {item.status}
-          </span>
+        <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
+          isSold ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+        }`}>
+          {item.side}
+        </span>
+        <span className="text-white font-medium">
+          {formatNumberWithSeparators(item.totalQuantity, 'en-US', 0)}
+        </span>
+        <span className="text-navy-400">@€{item.vwap.toFixed(2)}</span>
+        <span className={`text-[10px] font-medium ${isSold ? 'text-red-400/70' : 'text-emerald-400/70'}`}>
+          {formatEur(item.totalEur)}
+        </span>
+        {item.fillCount > 1 && (
+          <span className="text-navy-600 text-[9px]">({item.fillCount})</span>
         )}
         <span className="ml-auto text-navy-500 text-[10px]">{timeAgo(item.timestamp)}</span>
       </div>
     );
   };
-
-  if (!latest) {
-    return (
-      <div className="fixed bottom-20 right-4 z-40 w-80 rounded-xl border bg-navy-800 border-navy-600 shadow-lg px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-navy-400">
-          <Activity className="w-3.5 h-3.5" />
-          <span>No activity yet</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -144,7 +109,9 @@ export function MmActivityFloater() {
         <div className="flex items-center gap-2 text-xs text-white font-semibold tracking-wide uppercase">
           <Activity className="w-3.5 h-3.5 text-emerald-400" />
           Activity
-          <span className="text-navy-500 font-normal normal-case text-[10px]">({activity.length})</span>
+          {activity.length > 0 && (
+            <span className="text-navy-500 font-normal normal-case text-[10px]">({activity.length})</span>
+          )}
         </div>
         {expanded ? (
           <ChevronDown className="w-3.5 h-3.5 text-navy-400" />
@@ -153,49 +120,29 @@ export function MmActivityFloater() {
         )}
       </button>
 
-      {/* Latest item always visible */}
-      <div className="px-3 pb-2 pt-2 shrink-0">
-        {renderItem(latest, 0, true)}
-      </div>
-
-      {/* Expanded: full scrollable history */}
-      {expanded && activity.length > 1 && (
-        <div className="px-3 pb-2 overflow-y-auto min-h-0">
-          {activity.slice(1).map((item, i) => renderItem(item, i + 1))}
+      {/* Content */}
+      {!latest ? (
+        <div className="px-3 py-3">
+          <div className="flex items-center gap-2 text-xs text-navy-500">
+            <Activity className="w-3.5 h-3.5" />
+            <span>No recent trades</span>
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Latest always visible */}
+          <div className="px-3 pb-2 pt-2 shrink-0">
+            {renderItem(latest, 0)}
+          </div>
+
+          {/* Expanded: scrollable history */}
+          {expanded && activity.length > 1 && (
+            <div className="px-3 pb-2 overflow-y-auto min-h-0">
+              {activity.slice(1).map((item, i) => renderItem(item, i + 1))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
-}
-
-/** Compute group membership for each item: 'start', 'mid', 'end', or undefined */
-function computeGroups(items: MmActivityItem[]): Map<number, 'start' | 'mid' | 'end'> {
-  const result = new Map<number, 'start' | 'mid' | 'end'>();
-
-  let i = 0;
-  while (i < items.length) {
-    if (items[i].type !== 'trade' || (!items[i].buyOrderId && !items[i].sellOrderId)) {
-      i++;
-      continue;
-    }
-
-    const buyId = items[i].buyOrderId;
-    const sellId = items[i].sellOrderId;
-    let j = i + 1;
-
-    while (j < items.length && items[j].type === 'trade' &&
-      ((buyId && items[j].buyOrderId === buyId) || (sellId && items[j].sellOrderId === sellId))) {
-      j++;
-    }
-
-    if (j > i + 1) {
-      result.set(i, 'start');
-      for (let k = i + 1; k < j - 1; k++) result.set(k, 'mid');
-      result.set(j - 1, 'end');
-    }
-
-    i = j;
-  }
-
-  return result;
 }

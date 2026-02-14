@@ -43,6 +43,7 @@ class MatchResult:
     price: Decimal
     quantity: Decimal
     maker_is_buyer: bool  # True if the existing order (maker) was the buyer
+    executed_at: datetime
 
 
 @dataclass
@@ -223,12 +224,14 @@ class LimitOrderMatcher:
                 contra_order.status = OrderStatus.PARTIALLY_FILLED
 
             # Track match
+            exec_at = trade.executed_at
             matches.append(MatchResult(
                 trade_id=trade.id,
                 counterparty_order_id=contra_order.id,
                 price=trade_price,
                 quantity=match_qty,
                 maker_is_buyer=maker_is_buyer,
+                executed_at=exec_at,
             ))
 
             total_filled += match_qty

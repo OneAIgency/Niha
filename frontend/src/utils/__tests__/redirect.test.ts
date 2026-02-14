@@ -31,6 +31,10 @@ describe('getPostLoginRedirect', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'REJECTED' }))).toBe('/login');
   });
 
+  it('sends INTRODUCER users to /introducer/dashboard', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'INTRODUCER' }))).toBe('/introducer/dashboard');
+  });
+
   it('sends APPROVED users to /funding', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'APPROVED' }))).toBe('/funding');
   });
@@ -47,8 +51,8 @@ describe('getPostLoginRedirect', () => {
     expect(getPostLoginRedirect(makeUser({ role: 'CEA' }))).toBe('/cash-market');
   });
 
-  it('sends CEA_SETTLE users to /cash-market', () => {
-    expect(getPostLoginRedirect(makeUser({ role: 'CEA_SETTLE' }))).toBe('/cash-market');
+  it('sends CEA_SETTLE users to /swap (waiting for CEA settlement)', () => {
+    expect(getPostLoginRedirect(makeUser({ role: 'CEA_SETTLE' }))).toBe('/swap');
   });
 
   it('sends SWAP users to /swap', () => {

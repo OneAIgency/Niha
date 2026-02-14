@@ -37,9 +37,10 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity)."""
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -394,6 +395,7 @@ class ContactRequest(Base):
     nda_file_mime_type = Column(String(100), nullable=True, default="application/pdf")
     submitter_ip = Column(String(45), nullable=True)  # IPv6 max length
     user_role = Column(SQLEnum(ContactStatus), default=ContactStatus.NDA)
+    request_flow = Column(String(32), default="buyer", nullable=False)  # 'buyer' | 'introducer'
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -1266,7 +1268,7 @@ class AutoTradeSettings(Base):
     __tablename__ = "auto_trade_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    certificate_type = Column(String(10), nullable=False, unique=True)  # 'CEA' or 'EUA'
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False, unique=True)
 
     # Target liquidity in EUR (total value = price * quantity for all open orders)
     target_ask_liquidity = Column(Numeric(18, 2), nullable=True)  # Target EUR value on SELL side

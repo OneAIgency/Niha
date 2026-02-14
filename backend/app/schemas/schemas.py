@@ -51,9 +51,10 @@ class Jurisdiction(str, Enum):
 
 
 class UserRole(str, Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only)."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity)."""
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
+    INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -164,6 +165,7 @@ class ContactRequestResponse(BaseModel):
     nda_file_name: Optional[str]
     submitter_ip: Optional[str] = None
     user_role: str  # Sole source for request state; values NDA, KYC, REJECTED
+    request_flow: str = "buyer"  # 'buyer' | 'introducer'
     notes: Optional[str] = None
     created_at: datetime
 

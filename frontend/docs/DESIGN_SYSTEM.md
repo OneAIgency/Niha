@@ -611,6 +611,25 @@ import { NumberInput } from '../common';
 />
 ```
 
+#### Admin config inputs (SettingsInput pattern)
+
+For **admin configuration panels** (e.g. Auto Trade settings) where numeric values use thousands-separator formatting and optional recommended-value hints:
+
+- Use the same visual pattern as NumberInput: **light/dark support** with `bg-white dark:bg-navy-900`, `border-navy-300 dark:border-navy-700`, `text-navy-900 dark:text-white`, and `focus:border-emerald-500/50 dark:focus:border-emerald-500/50`.
+- Raw value on focus, formatted (e.g. with commas) on blur.
+- Optional "Rec: …" hint below the input; clicking the hint applies the recommended value.
+- Reference: `frontend/src/pages/AutoTradePage.tsx` — `SettingsInput` component.
+
+#### ActionsDropdown (table row actions)
+
+For **table row actions** (Edit, Delete, Test, etc.) use a compact **ellipsis button** (e.g. `MoreHorizontal` icon) that opens a dropdown menu. The dropdown must:
+
+- Close on **click outside** (document mousedown) and on **Escape** key.
+- Render above or below the trigger as needed (e.g. `bottom-full` for last rows).
+- Use design tokens only (navy background, border, emerald/red for actions).
+
+Reference: `frontend/src/pages/SettingsPage.tsx` — `ActionsDropdown` component used in Price Scraping and Exchange Rate tables.
+
 ---
 
 ### Badges
@@ -621,6 +640,8 @@ import { NumberInput } from '../common';
 2. **Certificates** - EUA (blue), CEA (amber)
 3. **Trading** - Bid (green), Ask (red)
 4. **Count** - Notification badges
+
+**Cash Market – Recent Trades (Ticker & ACTIVITY):** The ticker and ACTIVITY panel on Cash Market Pro share a single data source (`recentTrades` from `useCashMarket`), updated on initial load and on WebSocket `trade_executed`. Use **emerald** for BUY and **red** for SELL in both. ACTIVITY shows relative time; on hover over the time, show the full UTC timestamp (e.g. "Feb 14, 2026, 1:22:08 AM UTC"). Use `flex flex-col gap-2` for row spacing.
 
 #### Examples
 

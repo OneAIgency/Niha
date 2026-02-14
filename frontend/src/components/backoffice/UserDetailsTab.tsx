@@ -70,7 +70,7 @@ export const UserDetailsTab: FC<UserDetailsTabProps> = memo(({
               value={searchQuery}
               onChange={(e) => onSearchQueryChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onSearchUser()}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <Button variant="primary" onClick={onSearchUser} loading={loading}>

@@ -344,6 +344,26 @@ export const contactApi = {
     const { data } = await api.post('/contact/nda-request', formData);
     return data;
   },
+
+  submitIntroducerNDARequest: async (request: {
+    entity_name: string;
+    contact_email: string;
+    contact_first_name: string;
+    contact_last_name: string;
+    position: string;
+    nda_file: File;
+  }): Promise<ContactRequestResponse> => {
+    const formData = new FormData();
+    formData.append('entity_name', request.entity_name);
+    formData.append('contact_email', request.contact_email);
+    formData.append('contact_first_name', request.contact_first_name);
+    formData.append('contact_last_name', request.contact_last_name);
+    formData.append('position', request.position);
+    formData.append('file', request.nda_file);
+
+    const { data } = await api.post('/contact/introducer-nda-request', formData);
+    return data;
+  },
 };
 
 // Prices API
@@ -414,7 +434,7 @@ export interface ClientWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated'
     | 'deposit_status_updated' | 'kyc_status_updated' | 'swap_updated'
     | 'settlement_updated' | 'user_deactivated' | 'notification'
-    | 'orderbook_updated';
+    | 'orderbook_updated' | 'trade_executed';
   data?: {
     role?: string; oldRole?: string; entityId?: string;
     eurBalance?: number; ceaBalance?: number; source?: string;
@@ -423,6 +443,12 @@ export interface ClientWebSocketMessage {
     documentId?: string;
     message?: string; level?: string;
     certificateType?: string;
+    /** New trade from trade_executed (id, certificateType, price, quantity, side, executedAt) */
+    id?: string;
+    price?: number;
+    quantity?: number;
+    side?: 'BUY' | 'SELL';
+    executedAt?: string;
   };
   message?: string;
   timestamp: string;
@@ -842,6 +868,8 @@ export const adminApi = {
       mode: 'manual' | 'invitation';
       password?: string;
       position?: string;
+      /** Target role: 'KYC' (buyer flow, creates Entity) or 'INTRODUCER' (no Entity). */
+      target_role?: 'KYC' | 'INTRODUCER';
     }
   ): Promise<{
     message: string;
@@ -868,6 +896,9 @@ export const adminApi = {
     }
     if (userData.position != null && userData.position !== '') {
       params.position = userData.position;
+    }
+    if (userData.target_role) {
+      params.target_role = userData.target_role;
     }
     const { data } = await api.post('/admin/users/create-from-request', null, {
       params,
@@ -1257,13 +1288,11 @@ export const adminApi = {
   },
 
   getMmActivity: async (limit = 50): Promise<Array<{
-    type: 'order' | 'trade';
-    id: string;
-    side?: string;
-    price: string;
-    quantity: string;
-    filled_quantity?: string;
-    status?: string;
+    side: 'SELL' | 'BUY';
+    totalQuantity: number;
+    vwap: number;
+    totalEur: number;
+    fillCount: number;
     timestamp: string;
   }>> => {
     const { data } = await api.get(`/admin/auto-trade-market-settings/mm-activity?limit=${limit}`);

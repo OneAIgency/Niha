@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -225,15 +225,16 @@ function LiquidityBar({ current, target, color }: {
 // TOOLTIP + SETTINGS INPUT WITH FORMATTING + RECOMMENDED HINT
 // ============================================================================
 
-function FieldLabel({ label, tipKey }: { label: string; tipKey?: string }) {
+function FieldLabel({ label, tipKey, htmlFor }: { label: string; tipKey?: string; htmlFor?: string }) {
   const [show, setShow] = useState(false);
   const tip = tipKey ? FIELD_TIPS[tipKey] : undefined;
 
-  if (!tip) return <label className="text-[11px] text-navy-400 font-medium">{label}</label>;
+  if (!tip) return <label htmlFor={htmlFor} className="text-[11px] text-navy-400 font-medium">{label}</label>;
 
   return (
     <div className="relative inline-flex items-center gap-1 group">
       <label
+        htmlFor={htmlFor}
         className="text-[11px] text-navy-400 font-medium cursor-help"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
@@ -268,6 +269,7 @@ function SettingsInput({ label, value, onChange, suffix, min, max, step, decimal
   hint?: string;
   tipKey?: string;
 }) {
+  const id = useId();
   const dec = decimals ?? (step && step < 1 ? Math.max(0, -Math.floor(Math.log10(step))) : 0);
   const [focused, setFocused] = useState(false);
   const [rawText, setRawText] = useState('');
@@ -278,9 +280,10 @@ function SettingsInput({ label, value, onChange, suffix, min, max, step, decimal
 
   return (
     <div className="space-y-0.5">
-      <FieldLabel label={label} tipKey={tipKey} />
+      <FieldLabel label={label} tipKey={tipKey} htmlFor={id} />
       <div className="flex items-center gap-1.5">
         <input
+          id={id}
           type="text"
           inputMode="decimal"
           value={displayValue}
@@ -306,8 +309,8 @@ function SettingsInput({ label, value, onChange, suffix, min, max, step, decimal
           min={min}
           max={max}
           step={step ?? 1}
-          className="w-full bg-navy-900 border border-navy-700 rounded px-2.5 py-1.5 text-sm text-white
-                     focus:outline-none focus:border-emerald-500/50 transition-colors tabular-nums"
+          className="w-full bg-white dark:bg-navy-900 border border-navy-300 dark:border-navy-700 rounded px-2.5 py-1.5 text-sm text-navy-900 dark:text-white
+                     focus:outline-none focus:border-emerald-500/50 dark:focus:border-emerald-500/50 transition-colors tabular-nums"
         />
         {suffix && <span className="text-[11px] text-navy-500 whitespace-nowrap">{suffix}</span>}
       </div>

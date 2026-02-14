@@ -30,6 +30,11 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/login';
   }
 
+  // INTRODUCER: introducer dashboard
+  if (role === 'INTRODUCER') {
+    return '/introducer/dashboard';
+  }
+
   // NDA, KYC: onboarding (KYC form)
   if (role === 'NDA' || role === 'KYC') {
     return '/onboarding';

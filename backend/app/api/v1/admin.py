@@ -94,23 +94,28 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/contact-requests")
 async def get_contact_requests(
     status: Optional[str] = None,
+    request_flow: Optional[str] = Query(None, description="Filter by request_flow: 'buyer' or 'introducer'"),  # noqa: B008
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=100),  # noqa: B008
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all contact requests with optional status filter.
+    Get all contact requests with optional status and request_flow filters.
     """
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
         query = query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        query = query.where(ContactRequest.request_flow == request_flow)
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
         count_query = count_query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        count_query = count_query.where(ContactRequest.request_flow == request_flow)
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -134,6 +139,7 @@ async def get_contact_requests(
                 "nda_file_name": r.nda_file_name,
                 "submitter_ip": r.submitter_ip,
                 "user_role": r.user_role.value if r.user_role else "NDA",
+                "request_flow": getattr(r, "request_flow", "buyer"),
                 "notes": r.notes,
                 "created_at": (r.created_at.isoformat() + "Z")
                 if r.created_at
@@ -162,8 +168,13 @@ async def update_contact_request(
     """
     from uuid import UUID
 
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -206,6 +217,7 @@ async def update_contact_request(
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "user_role": contact.user_role.value if contact.user_role else "NDA",
+                "request_flow": getattr(contact, "request_flow", "buyer"),
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -227,8 +239,13 @@ async def delete_contact_request(
     Delete a contact request permanently.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -257,6 +274,9 @@ async def create_user_from_contact_request(
         None, description="Password (required for manual mode)"
     ),
     position: Optional[str] = Query(None, description="Position/title"),  # noqa: B008
+    target_role: Optional[str] = Query(  # noqa: B008
+        "KYC", description="Target role: 'KYC' (buyer flow, creates Entity) or 'INTRODUCER' (no Entity)"
+    ),
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
@@ -302,18 +322,24 @@ async def create_user_from_contact_request(
         else 7
     )
 
+    is_introducer = (target_role or "KYC").upper() == "INTRODUCER"
+    entity_id_val = None
+
     try:
-        # Create entity from contact request
-        entity = Entity(
-            name=contact_request.entity_name,
-            jurisdiction=Jurisdiction.OTHER,
-            kyc_status=KYCStatus.PENDING,
-        )
-        db.add(entity)
-        await db.flush()
+        if not is_introducer:
+            # Create entity from contact request (buyer flow)
+            entity = Entity(
+                name=contact_request.entity_name,
+                jurisdiction=Jurisdiction.OTHER,
+                kyc_status=KYCStatus.PENDING,
+            )
+            db.add(entity)
+            await db.flush()
+            entity_id_val = entity.id
+
+        user_role_val = UserRole.INTRODUCER if is_introducer else UserRole.KYC
 
         if mode == "manual":
-            # Manual creation with password
             if not password or len(password) < 8:
                 raise HTTPException(
                     status_code=400,
@@ -325,8 +351,8 @@ async def create_user_from_contact_request(
                 first_name=first_name,
                 last_name=last_name,
                 password_hash=hash_password(password),
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 must_change_password=False,
                 is_active=True,
@@ -334,23 +360,21 @@ async def create_user_from_contact_request(
                 created_by=admin_user.id,
             )
         else:
-            # Send invitation
             invitation_token = secrets.token_urlsafe(32)
             user = User(
                 email=email.lower(),
                 first_name=first_name,
                 last_name=last_name,
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 invitation_token=invitation_token,
-                # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
                 invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 invitation_expires_at=(
                     datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
                 ),
                 must_change_password=True,
-                is_active=False,  # Activate when password is set
+                is_active=False,
                 creation_method="invitation",
                 created_by=admin_user.id,
             )
@@ -418,6 +442,7 @@ async def create_user_from_contact_request(
                 "nda_file_name": contact_request.nda_file_name,
                 "submitter_ip": contact_request.submitter_ip,
                 "user_role": contact_request.user_role.value if contact_request.user_role else "NDA",
+                "request_flow": getattr(contact_request, "request_flow", "buyer"),
                 "notes": contact_request.notes,
                 "created_at": (contact_request.created_at.isoformat() + "Z")
                 if contact_request.created_at
@@ -447,7 +472,7 @@ async def create_user_from_contact_request(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "role": user.role.value,
-            "entity_id": str(entity.id),
+            "entity_id": str(entity_id_val) if entity_id_val else None,
             "creation_method": mode,
         },
     }
@@ -464,8 +489,13 @@ async def download_nda_file(
     Serves PDF from database binary storage.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -1710,7 +1740,7 @@ async def get_scraping_source_history(
         "points": [
             {
                 "price": float(r.price),
-                "recorded_at": r.recorded_at.isoformat(),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
             }
             for r in records
         ],
@@ -3710,69 +3740,55 @@ async def get_mm_activity(
     _current_user: User = Depends(get_admin_user),
 ):
     """
-    Get recent MM orders and trades for the activity feed.
-    Returns orders and trades merged chronologically, newest first.
+    Aggregated trade activity feed.
+    Groups trades by aggressor order and returns VWAP, total qty, total EUR.
     """
-    from sqlalchemy import and_, literal
-
-    # Recent MM orders (all statuses)
-    orders_result = await db.execute(
-        select(Order)
-        .where(
-            and_(
-                Order.market_maker_id.isnot(None),
-                Order.market == MarketType.CEA_CASH,
-            )
-        )
-        .order_by(Order.created_at.desc())
-        .limit(limit)
-    )
-    orders = list(orders_result.scalars().all())
-
-    # Recent trades with eager-loaded orders for aggressor detection
     from sqlalchemy.orm import selectinload
+    from collections import defaultdict
+
     trades_result = await db.execute(
         select(CashMarketTrade)
         .where(CashMarketTrade.certificate_type == CertificateType.CEA)
         .options(selectinload(CashMarketTrade.buy_order), selectinload(CashMarketTrade.sell_order))
         .order_by(CashMarketTrade.executed_at.desc())
-        .limit(limit)
+        .limit(limit * 5)  # fetch more to group properly
     )
     trades = list(trades_result.scalars().all())
 
-    # Build unified activity list
-    activity = []
-    order_id_set = {str(o.id) for o in orders}
-
-    for o in orders:
-        activity.append({
-            "type": "order",
-            "id": str(o.id),
-            "side": o.side.value,
-            "price": str(o.price),
-            "quantity": str(o.quantity),
-            "filled_quantity": str(o.filled_quantity or 0),
-            "status": o.status.value,
-            "timestamp": o.created_at.isoformat() if o.created_at else None,
-        })
-
+    # Group trades by aggressor order
+    groups: dict[str, list] = defaultdict(list)
     for t in trades:
-        # Determine aggressor: the order created later triggered the match
         aggressor_side = None
         if t.buy_order and t.sell_order:
             if (t.buy_order.created_at or t.executed_at) >= (t.sell_order.created_at or t.executed_at):
                 aggressor_side = "BUY"
             else:
                 aggressor_side = "SELL"
+
+        if aggressor_side is None:
+            continue  # skip trades without both orders loaded
+
+        aggressor_order_id = str(t.buy_order_id) if aggressor_side == "BUY" else str(t.sell_order_id)
+        groups[aggressor_order_id].append((t, aggressor_side))
+
+    # Build aggregated activity
+    activity = []
+    for _order_id, group_trades in groups.items():
+        total_qty = sum(float(t.quantity) for t, _ in group_trades)
+        if total_qty <= 0:
+            continue  # skip zero-quantity groups
+        total_eur = sum(float(t.price) * float(t.quantity) for t, _ in group_trades)
+        vwap = total_eur / total_qty
+        latest_ts = max((t.executed_at for t, _ in group_trades if t.executed_at), default=None)
+        side = group_trades[0][1]  # aggressor side (same for all in group)
+
         activity.append({
-            "type": "trade",
-            "id": str(t.id),
-            "price": str(t.price),
-            "quantity": str(t.quantity),
-            "aggressor_side": aggressor_side,
-            "buy_order_id": str(t.buy_order_id),
-            "sell_order_id": str(t.sell_order_id),
-            "timestamp": t.executed_at.isoformat() if t.executed_at else None,
+            "side": side,
+            "total_quantity": round(total_qty),
+            "vwap": round(vwap, 4),
+            "total_eur": round(total_eur, 2),
+            "fill_count": len(group_trades),
+            "timestamp": (latest_ts.isoformat() + "Z") if latest_ts else None,
         })
 
     # Sort by timestamp descending

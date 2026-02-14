@@ -191,3 +191,15 @@ The `Card`, `Button`, `AlertBanner`, and `formatNumberWithSeparators` are correc
 The plan has been **substantially implemented** with one critical omission (C1: GET-single endpoint missing the new fields). All other planned items -- DB columns, migration, schema updates, executor defaults, tick_size algorithm integration, TS types, UI rewrite with two-level expand, recommended values, and BID-to-ASK sync -- are correctly in place.
 
 **Recommendation:** Fix C1 before merging. I1 (extract serialization helper) is strongly recommended as a follow-up to prevent the same class of bug recurring. Other items are minor and can be addressed opportunistically.
+
+---
+
+## Fixes applied (post-review)
+
+| # | Issue | Status |
+|---|--------|--------|
+| **C1** | GET single endpoint omits `avg_spread` and `tick_size` | **Already fixed** — `get_market_settings()` uses `_build_market_settings_response()`, which includes both fields. |
+| **I1** | Extract response serialization helper | **Already done** — `_build_market_settings_response()` is used by GET-all, GET-single, and PUT. |
+| **I2** | Defensive guard for `tick_size` (zero/negative) | **Already done** — In `auto_trade_executor.py`, `tick = max(raw_tick, Decimal("0.0001"))` guards against zero/negative. |
+| **M1** | SettingsInput missing `dark:` variants | **Done** — Input now uses `bg-white dark:bg-navy-900`, `border-navy-300 dark:border-navy-700`, `text-navy-900 dark:text-white`, and `focus:border-emerald-500/50 dark:focus:border-emerald-500/50` for light/dark compatibility. |
+| **M3** | Save requests sequential | **Already done** — `handleSaveSettings` uses `Promise.all(updates.map(...))` for parallel save. |

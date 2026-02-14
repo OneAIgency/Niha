@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   Database,
@@ -50,52 +51,80 @@ interface ActionItem {
 
 function ActionsDropdown({ actions }: { actions: ActionItem[] }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, openAbove: true });
 
   useEffect(() => {
     if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open]);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const menuHeight = actions.length * 30 + 8; // approximate: 30px per item + padding
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openAbove = spaceAbove > menuHeight || spaceAbove > spaceBelow;
+      setPos({
+        top: openAbove ? rect.top - 4 : rect.bottom + 4,
+        left: Math.min(rect.right - 144, window.innerWidth - 152), // 144 = w-36, 8px margin
+        openAbove,
+      });
+    }
+    setOpen(o => !o);
+  };
+
+  const menu = open && createPortal(
+    <>
+      <div className="fixed inset-0 z-[9998] backdrop-blur-sm bg-black/10" onClick={() => setOpen(false)} />
+      <div
+        ref={menuRef}
+        className="fixed w-36 bg-navy-800 border border-navy-600 rounded-lg shadow-xl z-[9999] py-1"
+        style={{
+          top: pos.top,
+          left: pos.left,
+          transform: pos.openAbove ? 'translateY(-100%)' : undefined,
+        }}
+      >
+        {actions.map((a, i) => (
+          <div key={i}>
+            {a.separator && <div className="border-t border-navy-600 my-1" />}
+            <button
+              onClick={() => { a.onClick(); setOpen(false); }}
+              disabled={a.loading}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
+                ${a.danger
+                  ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                  : 'text-navy-200 hover:bg-navy-700 hover:text-white'}
+                ${a.loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {a.loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : a.icon}
+              {a.label}
+            </button>
+          </div>
+        ))}
+      </div>
+    </>,
+    document.body
+  );
 
   return (
     <>
-      {open && (
-        <div className="fixed inset-0 z-40 backdrop-blur-sm bg-black/10" onClick={() => setOpen(false)} />
-      )}
-      <div ref={ref} className="relative inline-block">
-        <button
-          onClick={() => setOpen(o => !o)}
-          className="p-1.5 rounded hover:bg-navy-700 transition-colors text-navy-400 hover:text-white"
-          aria-label="Actions"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-        {open && (
-          <div className="absolute right-0 bottom-full mb-1 w-36 bg-navy-800 border border-navy-600 rounded-lg shadow-xl z-50 py-1">
-            {actions.map((a, i) => (
-              <div key={i}>
-                {a.separator && <div className="border-t border-navy-600 my-1" />}
-                <button
-                  onClick={() => { a.onClick(); setOpen(false); }}
-                  disabled={a.loading}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors
-                    ${a.danger
-                      ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                      : 'text-navy-200 hover:bg-navy-700 hover:text-white'}
-                    ${a.loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {a.loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : a.icon}
-                  {a.label}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        className="p-1.5 rounded hover:bg-navy-700 transition-colors text-navy-400 hover:text-white"
+        aria-label="Actions"
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
+      {menu}
     </>
   );
 }
@@ -1425,12 +1454,6 @@ export function SettingsPage() {
                   onChange={(e) => setEditSourceForm({ ...editSourceForm, url: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Certificate Type</label>
-                <div className="px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-100 dark:bg-navy-900 text-navy-500 dark:text-navy-400 text-sm">
-                  {editSourceForm.certificate_type}
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>

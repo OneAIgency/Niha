@@ -76,10 +76,11 @@ export interface SwapCalculation {
 }
 
 // User Types
-/** Full onboarding flow: NDA → KYC → … → EUA. MM = Market Maker (admin-created only). */
+/** Full onboarding flow: NDA → KYC → … → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity). */
 export type UserRole =
   | 'ADMIN'
   | 'MM'
+  | 'INTRODUCER'
   | 'NDA'
   | 'REJECTED'
   | 'KYC'
@@ -277,6 +278,8 @@ export interface ContactRequestResponse {
   submitterIp?: string;
   /** Sole source for request state; values NDA, KYC, REJECTED. */
   userRole: string;
+  /** Request flow: 'buyer' (default) or 'introducer'. */
+  requestFlow?: string;
   notes?: string;
   createdAt: string;
 }

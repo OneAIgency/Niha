@@ -109,6 +109,7 @@ export function ApproveInviteModal({
         mode,
         password: mode === 'manual' ? password : undefined,
         position: position || undefined,
+        target_role: contactRequest.requestFlow === 'introducer' ? 'INTRODUCER' : undefined,
       });
 
       setSuccess(true);

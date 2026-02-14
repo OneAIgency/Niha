@@ -2,7 +2,7 @@
 
 **Reviewer**: Claude Opus 4.6 (Senior Code Reviewer)
 **Date**: 2026-02-13
-**Status**: Issues found -- requires fixes before ship
+**Status**: Fixes applied (see "Fixes applied (post-review)" below)
 
 ---
 
@@ -316,3 +316,17 @@ This is a required boolean, which aligns with the backend schema `is_primary: bo
 2. **Either remove Certificate Type from the edit modal or add it to the update API** -- the current mismatch creates confusing UX.
 3. **Add optimistic primary unset to `handleSaveEditExchange`** or reload exchange rate data after save.
 4. **Add `last_price_eur` and `last_exchange_rate` to `ScrapingSourceResponse`** -- this fixes a pre-existing data serialization gap.
+
+---
+
+## Fixes applied (post-review)
+
+**Status**: Recommendations and applicable fixes have been applied.
+
+| # | Action | Status |
+|---|--------|--------|
+| 1 | Add `source.name` to Price Scraping table | **Already in place** — table already renders `source.name` (SettingsPage.tsx, Source column). |
+| 2 | Remove Certificate Type from edit modal or add to API | **Done** — Certificate Type block removed from the **Edit** Scraping Source modal (it cannot be changed via the update API). Add Source modal still has the dropdown. |
+| 3 | Optimistic primary unset in `handleSaveEditExchange` | **Already in place** — `handleSaveEditExchange` already unsets `isPrimary` on other sources with the same `fromCurrency`/`toCurrency` when setting one as primary. |
+| 4 | Add `last_price_eur` and `last_exchange_rate` to `ScrapingSourceResponse` | **Already in place** — schema has both fields; with `from_attributes=True`, API responses include them from the model. |
+| 6 | ActionsDropdown Escape key handler | **Done** — `keydown` listener for `Escape` added in the same `useEffect` as click-outside; closes the dropdown when Escape is pressed. |

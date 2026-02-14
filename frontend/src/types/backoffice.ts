@@ -22,6 +22,8 @@ export interface ContactRequest {
   submitterIp?: string;
   /** Sole source for request state; values NDA, KYC, REJECTED (aligned with UserRole). */
   userRole: string;
+  /** Request flow: 'buyer' (default) or 'introducer'. */
+  requestFlow?: string;
   notes?: string;
   createdAt: string;
 }

@@ -45,6 +45,8 @@ class BackofficeErrorBoundary extends Component<
 // Code splitting: Lazy load pages with DIRECT imports (not barrel) for true code splitting
 const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const IntroducerPage = lazy(() => import('./pages/IntroducerPage').then(m => ({ default: m.IntroducerPage })));
+const IntroducerDashboardPage = lazy(() => import('./pages/IntroducerDashboardPage').then(m => ({ default: m.IntroducerDashboardPage })));
 const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -393,6 +395,14 @@ function App() {
                 </DashboardRoute>
               }
             />
+            <Route
+              path="/introducer/dashboard"
+              element={
+                <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']} redirectTo="/introducer">
+                  <IntroducerDashboardPage />
+                </RoleProtectedRoute>
+              }
+            />
             {/* Legacy: redirect to main cash market */}
             <Route path="/cash-market-pro" element={<Navigate to="/cash-market" replace />} />
             {/* Swap Center: SWAP, EUA_SETTLE, EUA, ADMIN */}
@@ -492,6 +502,16 @@ function App() {
               }
             />
             <Route
+              path="/backoffice/onboarding/introducer"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
               path="/backoffice/onboarding/kyc"
               element={
                 <AdminRoute>
@@ -552,6 +572,16 @@ function App() {
               }
             />
           </Route>
+
+          {/* Introducer - public page (no layout) */}
+          <Route
+            path="/introducer"
+            element={
+              <LoginRoute>
+                <IntroducerPage />
+              </LoginRoute>
+            }
+          />
 
           {/* Auth routes (no layout) */}
           <Route
