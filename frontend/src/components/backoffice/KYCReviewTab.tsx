@@ -36,11 +36,11 @@ export const KYCReviewTab: FC<KYCReviewTabProps> = memo(({
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-500" />
           KYC Documents Review
         </h2>
-        <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
+        <p className="text-sm text-navy-400 mt-1">
           Review and approve user KYC documents by category
         </p>
       </div>
@@ -49,20 +49,20 @@ export const KYCReviewTab: FC<KYCReviewTabProps> = memo(({
         <div className="space-y-4">
           {[...Array(2)].map((_, i) => (
             <Card key={i} className="animate-pulse">
-              <div className="p-4 border-b border-navy-100 dark:border-navy-700">
+              <div className="p-4 border-b border-navy-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-navy-200 dark:bg-navy-700" />
+                  <div className="w-12 h-12 rounded-full bg-navy-700" />
                   <div className="flex-1">
-                    <div className="h-5 bg-navy-200 dark:bg-navy-700 rounded w-1/4 mb-2" />
-                    <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/3" />
+                    <div className="h-5 bg-navy-700 rounded w-1/4 mb-2" />
+                    <div className="h-4 bg-navy-600 rounded w-1/3" />
                   </div>
                 </div>
               </div>
               <div className="p-4">
-                <div className="h-10 bg-navy-100 dark:bg-navy-700 rounded mb-3" />
+                <div className="h-10 bg-navy-700 rounded mb-3" />
                 <div className="space-y-3">
                   {[...Array(3)].map((_, j) => (
-                    <div key={j} className="h-16 bg-navy-100 dark:bg-navy-700 rounded" />
+                    <div key={j} className="h-16 bg-navy-700 rounded" />
                   ))}
                 </div>
               </div>
@@ -111,7 +111,7 @@ export const KYCReviewTab: FC<KYCReviewTabProps> = memo(({
         <Card>
           <div className="text-center py-12">
             <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
-            <p className="text-navy-500 dark:text-navy-400">No KYC reviews pending</p>
+            <p className="text-navy-400">No KYC reviews pending</p>
             <p className="text-xs text-navy-400 mt-1">All users have completed their verification</p>
           </div>
         </Card>

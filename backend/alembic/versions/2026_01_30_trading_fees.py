@@ -10,7 +10,6 @@ Create Date: 2026-01-30
 
 """
 import uuid
-from datetime import datetime
 
 import sqlalchemy as sa
 from alembic import op

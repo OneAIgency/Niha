@@ -77,7 +77,7 @@ export function EUAPriceDisplay({
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {showLabel && (
-        <span className={cn(styles.label, 'text-blue-600 dark:text-blue-400 font-medium')}>
+        <span className={cn(styles.label, 'text-blue-400 font-medium')}>
           EUA
         </span>
       )}

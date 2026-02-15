@@ -446,21 +446,21 @@ function ContentSections({ mode, activeSection }: { mode: 'light' | 'dark'; acti
                 Glow Effects
               </h4>
               <div className="grid grid-cols-3 gap-4">
-                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(52,211,153,0.4)] ${isDark ? 'bg-navy-800 dark:bg-navy-800' : 'bg-white'}`}>
+                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(52,211,153,0.4)] ${isDark ? 'bg-navy-800' : 'bg-white'}`}>
                   <div className="h-16 rounded-lg bg-emerald-500" />
-                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400 dark:text-navy-400' : 'text-navy-600'}`}>
+                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400' : 'text-navy-600'}`}>
                     Emerald Glow
                   </p>
                 </div>
-                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(96,165,250,0.4)] ${isDark ? 'bg-navy-800 dark:bg-navy-800' : 'bg-white'}`}>
+                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(96,165,250,0.4)] ${isDark ? 'bg-navy-800' : 'bg-white'}`}>
                   <div className="h-16 rounded-lg bg-blue-500" />
-                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400 dark:text-navy-400' : 'text-navy-600'}`}>
+                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400' : 'text-navy-600'}`}>
                     Blue Glow
                   </p>
                 </div>
-                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(251,191,36,0.4)] ${isDark ? 'bg-navy-800 dark:bg-navy-800' : 'bg-white'}`}>
+                <div className={`rounded-xl p-6 shadow-[0_0_30px_rgba(251,191,36,0.4)] ${isDark ? 'bg-navy-800' : 'bg-white'}`}>
                   <div className="h-16 rounded-lg bg-amber-500" />
-                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400 dark:text-navy-400' : 'text-navy-600'}`}>
+                  <p className={`mt-2 text-center text-xs ${isDark ? 'text-navy-400' : 'text-navy-600'}`}>
                     Amber Glow
                   </p>
                 </div>

@@ -21,7 +21,7 @@ interface ToggleGroupProps {
 const colorSchemes = {
   default: {
     active: 'bg-navy-800 text-white',
-    inactive: 'bg-white dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-700',
+    inactive: 'bg-navy-800 text-navy-400 hover:bg-navy-700',
   },
   eua: {
     active: 'tab-toggle-item-active-eua',
@@ -60,7 +60,7 @@ export function ToggleGroup({
     <div
       className={cn(
         'flex rounded-lg overflow-hidden',
-        variant === 'default' && 'border border-navy-200 dark:border-navy-600',
+        variant === 'default' && 'border border-navy-600',
         fullWidth && 'w-full',
         className
       )}

@@ -20,7 +20,8 @@ import {
   MoreHorizontal,
   TrendingUp,
 } from 'lucide-react';
-import { Button, Card, Badge, Subheader, SubSubHeader, AlertBanner, NumberInput } from '../components/common';
+import { Button, Card, Badge, AlertBanner, NumberInput } from '../components/common';
+import { BackofficeLayout } from '../components/layout';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
@@ -144,9 +145,9 @@ function PriceHistoryChart({ sourceName, currency, points }: {
   if (points.length < 2) {
     return (
       <Card className="p-4">
-        <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+        <div className="flex items-center gap-2 text-xs text-navy-400">
           <TrendingUp className="w-3.5 h-3.5" />
-          <span className="font-medium text-navy-700 dark:text-navy-200">{sourceName}</span>
+          <span className="font-medium text-navy-200">{sourceName}</span>
           <span>— Not enough data points</span>
         </div>
       </Card>
@@ -194,7 +195,7 @@ function PriceHistoryChart({ sourceName, currency, points }: {
     <Card className="p-4">
       <div className="flex items-center gap-2 mb-3">
         <TrendingUp className={`w-3.5 h-3.5 ${trending ? 'text-emerald-400' : 'text-red-400'}`} />
-        <span className="text-xs font-medium text-navy-700 dark:text-navy-200">{sourceName}</span>
+        <span className="text-xs font-medium text-navy-200">{sourceName}</span>
         <span className="text-[10px] text-navy-500">{currency}</span>
         <span className="ml-auto text-[10px] text-navy-500">{points.length} pts</span>
       </div>
@@ -208,7 +209,7 @@ function PriceHistoryChart({ sourceName, currency, points }: {
         {/* Grid lines */}
         {yTicks.map((t, i) => (
           <line key={i} x1={PX} x2={W - PX} y1={toY(t)} y2={toY(t)}
-            stroke="currentColor" className="text-navy-200 dark:text-navy-700" strokeWidth="0.5" strokeDasharray="4 2" />
+            stroke="currentColor" className="text-navy-700" strokeWidth="0.5" strokeDasharray="4 2" />
         ))}
 
         {/* Area fill */}
@@ -219,12 +220,12 @@ function PriceHistoryChart({ sourceName, currency, points }: {
 
         {/* Y-axis labels */}
         {yTicks.map((t, i) => (
-          <text key={i} x={PX - 4} y={toY(t) + 3} textAnchor="end" className="fill-navy-500 dark:fill-navy-400" fontSize="9">{t.toFixed(2)}</text>
+          <text key={i} x={PX - 4} y={toY(t) + 3} textAnchor="end" className="fill-navy-400" fontSize="9">{t.toFixed(2)}</text>
         ))}
 
         {/* X-axis labels */}
         {xIndices.map((idx) => (
-          <text key={idx} x={toX(idx)} y={H - 2} textAnchor="middle" className="fill-navy-500 dark:fill-navy-400" fontSize="8">{fmtTime(points[idx].recordedAt)}</text>
+          <text key={idx} x={toX(idx)} y={H - 2} textAnchor="middle" className="fill-navy-400" fontSize="8">{fmtTime(points[idx].recordedAt)}</text>
         ))}
 
         {/* Hover crosshair + tooltip */}
@@ -233,7 +234,7 @@ function PriceHistoryChart({ sourceName, currency, points }: {
             <line x1={hover.x} x2={hover.x} y1={PY} y2={H - PY} stroke={lineColor} strokeWidth="0.5" opacity="0.5" />
             <circle cx={hover.x} cy={hover.y} r="3" fill={lineColor} />
             <rect x={hover.x - 45} y={hover.y - 28} width="90" height="20" rx="4"
-              className="fill-navy-900 dark:fill-navy-700" opacity="0.9" />
+              className="fill-navy-700" opacity="0.9" />
             <text x={hover.x} y={hover.y - 15} textAnchor="middle" className="fill-white" fontSize="9" fontWeight="600">
               {hover.point.price.toFixed(4)} {currency}
             </text>
@@ -795,37 +796,27 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-900">
-      <div className="page-section-header-sticky">
-        <Subheader
-          icon={<Database className="w-5 h-5 text-blue-500" />}
-          title="Platform Settings"
-          description="Configure scraping sources, exchange rates, and mail delivery"
-          iconBg="bg-blue-500/20"
-        />
-        <SubSubHeader
-          left={
-            <nav className="flex items-center gap-2" aria-label="Settings sections">
-              {SETTINGS_TABS.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`subsubheader-nav-btn ${
-                    activeTab === key
-                      ? 'subsubheader-nav-btn-active'
-                      : 'subsubheader-nav-btn-inactive'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">{label}</span>
-                </button>
-              ))}
-            </nav>
-          }
-        />
-      </div>
-
-      <div className="page-container py-8">
+    <BackofficeLayout
+      subSubHeaderLeft={
+        <nav className="flex items-center gap-2" aria-label="Settings sections">
+          {SETTINGS_TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`subsubheader-nav-btn ${
+                activeTab === key
+                  ? 'subsubheader-nav-btn-active'
+                  : 'subsubheader-nav-btn-inactive'
+              }`}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="whitespace-nowrap">{label}</span>
+            </button>
+          ))}
+        </nav>
+      }
+    >
+      <div>
 
         {error && (
           <AlertBanner
@@ -836,7 +827,7 @@ export function SettingsPage() {
           />
         )}
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Scraping Sources */}
           {activeTab === 'scraping' && <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -847,7 +838,7 @@ export function SettingsPage() {
               data-component="PriceScrapingSources"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Database className="w-5 h-5 text-blue-500" />
                   Price Scraping Sources
                 </h2>
@@ -859,46 +850,46 @@ export function SettingsPage() {
               <div className="w-full overflow-x-auto">
                 <table className="w-full table-fixed min-w-[800px]">
                   <thead>
-                    <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[26%]">
+                    <tr className="border-b border-navy-700">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[26%]">
                         Source
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[14%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[14%]">
                         Library
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[10%]">
                         Interval
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[9%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[9%]">
                         Last Scrape
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[17%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[17%]">
                         Last Price
                       </th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[8%]">
                         Status
                       </th>
-                      <th className="text-center py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[6%]">
+                      <th className="text-center py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[6%]">
                         Enable
                       </th>
-                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[5%]">
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[5%]">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
+                  <tbody className="divide-y divide-navy-700">
                     {sources.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
+                        <td colSpan={8} className="py-8 text-center text-navy-400">
                           No scraping sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
                     ) : (
                       sources.map((source) => (
-                        <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
+                        <tr key={source.id} className="hover:bg-navy-800/50">
                           <td className="py-2 px-2 align-middle">
                             <div className="min-w-0">
-                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-2.5 flex-wrap">
+                              <p className="font-medium text-sm text-white flex items-center gap-2.5 flex-wrap">
                                 <span className="truncate">{source.name}</span>
                                 <Badge variant={source.certificateType === 'EUA' ? 'info' : 'warning'} className="text-[10px] px-1.5 py-0.5 shrink-0">
                                   {source.certificateType}
@@ -907,7 +898,7 @@ export function SettingsPage() {
                                   <Badge variant="success" className="text-[10px] px-1.5 py-0.5">Primary</Badge>
                                 )}
                               </p>
-                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate" title={source.url}>
+                              <p className="text-[10px] text-navy-400 truncate" title={source.url}>
                                 {source.url}
                               </p>
                             </div>
@@ -922,7 +913,7 @@ export function SettingsPage() {
                                   })()
                                 }
                                 onChange={(e) => handleLibraryChange(source.id, e.target.value as ScrapeLibrary)}
-                                className="w-full min-w-[6.5rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800 pl-2 pr-7"
+                                className="w-full min-w-[6.5rem] form-select text-xs text-white bg-navy-900 pl-2 pr-7"
                                 aria-label={`Library for ${source.certificateType} source`}
                               >
                                 {SCRAPE_LIBRARY_OPTIONS.map((opt) => (
@@ -942,7 +933,7 @@ export function SettingsPage() {
                                     : 5
                                 )}
                                 onChange={(e) => handleIntervalChange(source.id, parseInt(e.target.value, 10))}
-                                className="w-full min-w-[4rem] form-select text-xs text-navy-900 dark:text-white bg-white dark:bg-navy-800 pl-2 pr-7"
+                                className="w-full min-w-[4rem] form-select text-xs text-white bg-navy-900 pl-2 pr-7"
                                 aria-label={`Interval for ${source.certificateType} source`}
                               >
                                 {SCRAPE_INTERVAL_OPTIONS.map((opt) => (
@@ -954,18 +945,18 @@ export function SettingsPage() {
                             </div>
                           </td>
                           <td className="py-2 px-2 align-middle">
-                            <span className="text-xs text-navy-600 dark:text-navy-300 whitespace-nowrap">
+                            <span className="text-xs text-navy-300 whitespace-nowrap">
                               {formatTimeAgo(source.lastScrapeAt)}
                             </span>
                           </td>
                           <td className="py-2 px-2 align-middle min-w-0">
                             {source.lastPrice ? (
                               <div className="flex flex-col">
-                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <span className="text-xs font-medium text-emerald-400">
                                   {source.certificateType === 'EUA' ? '€' : '¥'}{source.lastPrice.toFixed(2)}
                                 </span>
                                 {source.certificateType === 'CEA' && source.lastPriceEur && (
-                                  <span className="text-[10px] text-navy-500 dark:text-navy-400">
+                                  <span className="text-[10px] text-navy-400">
                                     ≈ €{source.lastPriceEur.toFixed(2)}
                                   </span>
                                 )}
@@ -982,7 +973,7 @@ export function SettingsPage() {
                           <td className="py-2 px-2 align-middle">
                             <div className="flex items-center gap-1 whitespace-nowrap">
                               {getStatusIcon(source.lastScrapeStatus)}
-                              <span className="text-[10px] text-navy-600 dark:text-navy-300">
+                              <span className="text-[10px] text-navy-300">
                                 {getStatusLabel(source.lastScrapeStatus)}
                               </span>
                             </div>
@@ -1018,7 +1009,7 @@ export function SettingsPage() {
             {sources.length > 0 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-navy-700 dark:text-navy-200 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-navy-200 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-blue-500" />
                     Price History
                   </h3>
@@ -1030,7 +1021,7 @@ export function SettingsPage() {
                         className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                           historyHours === h
                             ? 'bg-blue-500 text-white'
-                            : 'bg-navy-100 dark:bg-navy-700 text-navy-600 dark:text-navy-300 hover:bg-navy-200 dark:hover:bg-navy-600'
+                            : 'bg-navy-700 text-navy-300 hover:bg-navy-600'
                         }`}
                       >
                         {h < 24 ? `${h}h` : `${h / 24}d`}
@@ -1059,7 +1050,7 @@ export function SettingsPage() {
           >
             <Card data-testid="exchange-rate-sources-card">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-emerald-500" />
                   Exchange Rate Sources
                 </h2>
@@ -1068,61 +1059,61 @@ export function SettingsPage() {
                 </Button>
               </div>
 
-              <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+              <p className="text-sm text-navy-400 mb-4">
                 Configure exchange rate sources for currency conversion. CEA prices are converted from CNY to EUR using scraped rates.
               </p>
 
               <div className="w-full">
                 <table className="w-full table-fixed">
                   <thead>
-                    <tr className="border-b border-navy-100 dark:border-navy-700">
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[22%]">Source</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Pair</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Method</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[7%]">Interval</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[10%]">Last Scrape</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Rate</th>
-                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[8%]">Status</th>
-                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider w-[6%]">Actions</th>
+                    <tr className="border-b border-navy-700">
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[22%]">Source</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[8%]">Pair</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[10%]">Method</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[7%]">Interval</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[10%]">Last Scrape</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[8%]">Rate</th>
+                      <th className="text-left py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[8%]">Status</th>
+                      <th className="text-right py-2 px-2 text-[10px] font-medium text-navy-400 uppercase tracking-wider w-[6%]">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
+                  <tbody className="divide-y divide-navy-700">
                     {exchangeRateSources.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-navy-500 dark:text-navy-400">
+                        <td colSpan={8} className="py-8 text-center text-navy-400">
                           No exchange rate sources configured. Click &quot;Add Source&quot; to create one.
                         </td>
                       </tr>
                     ) : (
                       exchangeRateSources.map((source) => (
-                        <tr key={source.id} className="hover:bg-navy-50 dark:hover:bg-navy-800/50">
+                        <tr key={source.id} className="hover:bg-navy-800/50">
                           <td className="py-2 px-2">
                             <div className="min-w-0">
-                              <p className="font-medium text-sm text-navy-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-sm text-white flex items-center gap-1.5 flex-wrap">
                                 <span className="truncate">{source.name}</span>
                                 {source.isPrimary && (
                                   <Badge variant="success" className="text-[10px] px-1.5 py-0.5">Primary</Badge>
                                 )}
                               </p>
-                              <p className="text-[10px] text-navy-500 dark:text-navy-400 truncate">{source.url}</p>
+                              <p className="text-[10px] text-navy-400 truncate">{source.url}</p>
                             </div>
                           </td>
                           <td className="py-2 px-2">
                             <Badge variant="info" className="text-[10px] px-1.5 py-0.5">{source.fromCurrency}/{source.toCurrency}</Badge>
                           </td>
                           <td className="py-2 px-2">
-                            <span className="text-[10px] font-mono text-navy-600 dark:text-navy-300">{source.scrapeLibrary || 'HTTPX'}</span>
+                            <span className="text-[10px] font-mono text-navy-300">{source.scrapeLibrary || 'HTTPX'}</span>
                           </td>
                           <td className="py-2 px-2">
-                            <span className="text-xs text-navy-600 dark:text-navy-300">{source.scrapeIntervalMinutes}m</span>
+                            <span className="text-xs text-navy-300">{source.scrapeIntervalMinutes}m</span>
                           </td>
                           <td className="py-2 px-2">
-                            <span className="text-xs text-navy-600 dark:text-navy-300">{formatTimeAgo(source.lastScrapedAt)}</span>
+                            <span className="text-xs text-navy-300">{formatTimeAgo(source.lastScrapedAt)}</span>
                           </td>
                           <td className="py-2 px-2">
                             <div className="flex flex-col">
                               {source.lastRate ? (
-                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <span className="text-xs font-medium text-emerald-400">
                                   {source.lastRate.toFixed(4)}
                                 </span>
                               ) : (
@@ -1136,7 +1127,7 @@ export function SettingsPage() {
                           <td className="py-2 px-2">
                             <div className="flex items-center gap-1">
                               {getStatusIcon(source.lastScrapeStatus)}
-                              <span className="text-[10px] text-navy-600 dark:text-navy-300">
+                              <span className="text-[10px] text-navy-300">
                                 {source.lastScrapeStatus ? getStatusLabel(source.lastScrapeStatus) : 'Pending'}
                               </span>
                             </div>
@@ -1171,13 +1162,13 @@ export function SettingsPage() {
               aria-describedby="mail-auth-description"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Mail className="w-5 h-5 text-amber-500" />
                   Mail & Authentication
                 </h2>
                 <div className="flex items-center gap-3">
                   {mailSavedSuccess && (
-                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400" role="status">
+                    <span className="text-sm font-medium text-emerald-400" role="status">
                       Saved
                     </span>
                   )}
@@ -1192,18 +1183,18 @@ export function SettingsPage() {
                   </Button>
                 </div>
               </div>
-              <p id="mail-auth-description" className="text-sm text-navy-500 dark:text-navy-400 mb-6">
+              <p id="mail-auth-description" className="text-sm text-navy-400 mb-6">
                 Configure mail server and invitation emails. When set, invitation emails use these settings; otherwise env (RESEND_API_KEY, FROM_EMAIL) is used.
               </p>
               {mailForm.provider === 'smtp' && (!mailForm.smtpHost || String(mailForm.smtpHost).trim() === '') && (
-                <div className="mb-6 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200" role="alert">
+                <div className="mb-6 rounded-lg border border-amber-800 bg-amber-950/30 px-4 py-3 text-sm text-amber-200" role="alert">
                   SMTP host is not set. Invitation emails will not send until you configure host and port.
                 </div>
               )}
 
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Provider</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">Provider</label>
                   <select
                     value={mailForm.provider ?? 'resend'}
                     onChange={(e) => setMailForm({ ...mailForm, provider: e.target.value as 'resend' | 'smtp' })}
@@ -1221,28 +1212,28 @@ export function SettingsPage() {
                     onChange={(e) => setMailForm({ ...mailForm, useEnvCredentials: e.target.checked })}
                     className="rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="useEnvCredentials" className="text-sm text-navy-600 dark:text-navy-300">
+                  <label htmlFor="useEnvCredentials" className="text-sm text-navy-300">
                     Use credentials from environment
                   </label>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">From email</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">From email</label>
                   <input
                     type="email"
                     value={mailForm.fromEmail ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, fromEmail: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-input"
                     placeholder="noreply@example.com"
                   />
                 </div>
                 {mailForm.provider === 'resend' && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Resend API key</label>
+                    <label className="block text-sm font-medium text-navy-300 mb-1">Resend API key</label>
                     <input
                       type="password"
                       value={mailForm.resendApiKey === '********' ? '' : (mailForm.resendApiKey ?? '')}
                       onChange={(e) => setMailForm({ ...mailForm, resendApiKey: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                      className="w-full form-input"
                       placeholder="Leave blank to use RESEND_API_KEY from env"
                       autoComplete="off"
                     />
@@ -1251,17 +1242,17 @@ export function SettingsPage() {
                 {mailForm.provider === 'smtp' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP host</label>
+                      <label className="block text-sm font-medium text-navy-300 mb-1">SMTP host</label>
                       <input
                         type="text"
                         value={mailForm.smtpHost ?? ''}
                         onChange={(e) => setMailForm({ ...mailForm, smtpHost: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        className="w-full form-input"
                         placeholder="smtp.example.com"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP port</label>
+                      <label className="block text-sm font-medium text-navy-300 mb-1">SMTP port</label>
                       <NumberInput
                         value={mailForm.smtpPort ?? ''}
                         onChange={(v) => setMailForm({ ...mailForm, smtpPort: v === '' ? undefined : parseInt(v, 10) })}
@@ -1277,25 +1268,25 @@ export function SettingsPage() {
                         onChange={(e) => setMailForm({ ...mailForm, smtpUseTls: e.target.checked })}
                         className="rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                       />
-                      <label htmlFor="smtpUseTls" className="text-sm text-navy-600 dark:text-navy-300">Use TLS</label>
+                      <label htmlFor="smtpUseTls" className="text-sm text-navy-300">Use TLS</label>
                     </div>
                     <div />
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP username</label>
+                      <label className="block text-sm font-medium text-navy-300 mb-1">SMTP username</label>
                       <input
                         type="text"
                         value={mailForm.smtpUsername ?? ''}
                         onChange={(e) => setMailForm({ ...mailForm, smtpUsername: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        className="w-full form-input"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">SMTP password</label>
+                      <label className="block text-sm font-medium text-navy-300 mb-1">SMTP password</label>
                       <input
                         type="password"
                         value={mailForm.smtpPassword === '********' ? '' : (mailForm.smtpPassword ?? '')}
                         onChange={(e) => setMailForm({ ...mailForm, smtpPassword: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                        className="w-full form-input"
                         placeholder="Leave blank to keep current"
                         autoComplete="off"
                       />
@@ -1303,17 +1294,17 @@ export function SettingsPage() {
                   </>
                 )}
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation link base URL</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">Invitation link base URL</label>
                   <input
                     type="url"
                     value={mailForm.invitationLinkBaseUrl ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, invitationLinkBaseUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-input"
                     placeholder="https://app.example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Invitation token expiry (days)</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">Invitation token expiry (days)</label>
                   <NumberInput
                     value={mailForm.invitationTokenExpiryDays ?? 7}
                     onChange={(v) => setMailForm({ ...mailForm, invitationTokenExpiryDays: parseInt(v, 10) || 7 })}
@@ -1321,7 +1312,7 @@ export function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Verification method</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">Verification method</label>
                   <select
                     value={mailForm.verificationMethod ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, verificationMethod: e.target.value || undefined })}
@@ -1333,7 +1324,7 @@ export function SettingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Auth method</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">Auth method</label>
                   <select
                     value={mailForm.authMethod ?? ''}
                     onChange={(e) => setMailForm({ ...mailForm, authMethod: e.target.value || undefined })}
@@ -1349,8 +1340,8 @@ export function SettingsPage() {
 
             {/* Test Email Delivery — second wrapper: settings verification */}
             <Card className="bg-navy-800/50 border-navy-700 mt-6" data-testid="mail-test-email-card">
-              <SubSubHeader>Test Email Delivery</SubSubHeader>
-              <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+              <h3 className="text-lg font-semibold text-white mb-2">Test Email Delivery</h3>
+              <p className="text-sm text-navy-400 mb-4">
                 Send a test email to verify your mail configuration is working.
               </p>
               <div className="flex gap-3 items-start">
@@ -1373,7 +1364,7 @@ export function SettingsPage() {
                 </Button>
               </div>
               {testEmailResult && (
-                <div className={`mt-3 flex items-center gap-2 text-sm ${testEmailResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                <div className={`mt-3 flex items-center gap-2 text-sm ${testEmailResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
                   {testEmailResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                   {testEmailResult.message}
                 </div>
@@ -1383,8 +1374,8 @@ export function SettingsPage() {
             {/* Email Templates — separate wrapper */}
             {emailTemplates.length > 0 && (
               <Card className="bg-navy-800/50 border-navy-700 mt-6" data-testid="mail-templates-card">
-                <SubSubHeader>Email Templates</SubSubHeader>
-                <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                <h3 className="text-lg font-semibold text-white mb-2">Email Templates</h3>
+                <p className="text-sm text-navy-400 mb-3">
                   Preview email templates with sample data
                 </p>
                 <div className="flex items-center gap-3">
@@ -1394,7 +1385,7 @@ export function SettingsPage() {
                       setSelectedTemplate(e.target.value);
                       setTemplatePreviewHtml('');
                     }}
-                    className="flex-1 form-input"
+                    className="flex-1 form-select"
                   >
                     {emailTemplates.map((t) => (
                       <option key={t} value={t}>
@@ -1414,7 +1405,7 @@ export function SettingsPage() {
                   </Button>
                 </div>
                 {templatePreviewHtml && (
-                  <div className="mt-4 border border-navy-200 dark:border-navy-600 rounded-lg overflow-hidden">
+                  <div className="mt-4 border border-navy-600 rounded-lg overflow-hidden">
                     <iframe
                       srcDoc={templatePreviewHtml}
                       title="Email Template Preview"
@@ -1434,29 +1425,29 @@ export function SettingsPage() {
       {/* Edit Scraping Source Modal */}
       {editingSource && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Edit Scraping Source</h3>
+          <div className="bg-navy-800 rounded-2xl p-6 border border-navy-700 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Edit Scraping Source</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Name</label>
                 <input
                   type="text"
                   value={editSourceForm.name}
                   onChange={(e) => setEditSourceForm({ ...editSourceForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">URL</label>
                 <input
                   type="url"
                   value={editSourceForm.url}
                   onChange={(e) => setEditSourceForm({ ...editSourceForm, url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scraping Library</label>
                 <select
                   value={editSourceForm.scrape_library}
                   onChange={(e) => setEditSourceForm({ ...editSourceForm, scrape_library: e.target.value as ScrapeLibrary })}
@@ -1469,7 +1460,7 @@ export function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scrape Interval</label>
                 <select
                   value={editSourceForm.scrape_interval_minutes}
                   onChange={(e) => setEditSourceForm({ ...editSourceForm, scrape_interval_minutes: parseInt(e.target.value) })}
@@ -1491,7 +1482,7 @@ export function SettingsPage() {
                     onChange={(e) => setEditSourceForm({ ...editSourceForm, is_primary: e.target.checked })}
                     className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="edit_source_is_primary" className="text-sm text-navy-700 dark:text-navy-300">Primary</label>
+                  <label htmlFor="edit_source_is_primary" className="text-sm text-navy-300">Primary</label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -1501,7 +1492,7 @@ export function SettingsPage() {
                     onChange={(e) => setEditSourceForm({ ...editSourceForm, is_active: e.target.checked })}
                     className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="edit_source_is_active" className="text-sm text-navy-700 dark:text-navy-300">Active</label>
+                  <label htmlFor="edit_source_is_active" className="text-sm text-navy-300">Active</label>
                 </div>
               </div>
             </div>
@@ -1520,31 +1511,31 @@ export function SettingsPage() {
       {/* Add Source Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Add Scraping Source</h3>
+          <div className="bg-navy-800 rounded-2xl p-6 border border-navy-700 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Add Scraping Source</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Name</label>
                 <input
                   type="text"
                   value={newSource.name}
                   onChange={(e) => setNewSource({ ...newSource, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                   placeholder="e.g., ICE Exchange"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">URL</label>
                 <input
                   type="url"
                   value={newSource.url}
                   onChange={(e) => setNewSource({ ...newSource, url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                   placeholder="https://example.com/prices"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Certificate Type</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Certificate Type</label>
                 <select
                   value={newSource.certificate_type}
                   onChange={(e) => setNewSource({ ...newSource, certificate_type: e.target.value as 'EUA' | 'CEA' })}
@@ -1555,7 +1546,7 @@ export function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scraping Library</label>
                 <select
                   value={newSource.scrape_library}
                   onChange={(e) => setNewSource({ ...newSource, scrape_library: e.target.value as ScrapeLibrary })}
@@ -1568,7 +1559,7 @@ export function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scrape Interval</label>
                 <select
                   value={newSource.scrape_interval_minutes}
                   onChange={(e) => setNewSource({ ...newSource, scrape_interval_minutes: parseInt(e.target.value) })}
@@ -1597,29 +1588,29 @@ export function SettingsPage() {
       {/* Edit Exchange Rate Source Modal */}
       {editingExchangeSource && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Edit Exchange Rate Source</h3>
+          <div className="bg-navy-800 rounded-2xl p-6 border border-navy-700 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Edit Exchange Rate Source</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Name</label>
                 <input
                   type="text"
                   value={editExchangeForm.name}
                   onChange={(e) => setEditExchangeForm({ ...editExchangeForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">URL</label>
                 <input
                   type="url"
                   value={editExchangeForm.url}
                   onChange={(e) => setEditExchangeForm({ ...editExchangeForm, url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scraping Library</label>
                 <select
                   value={editExchangeForm.scrape_library}
                   onChange={(e) => setEditExchangeForm({ ...editExchangeForm, scrape_library: e.target.value as ScrapeLibrary })}
@@ -1632,7 +1623,7 @@ export function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scrape Interval</label>
                 <select
                   value={editExchangeForm.scrape_interval_minutes}
                   onChange={(e) => setEditExchangeForm({ ...editExchangeForm, scrape_interval_minutes: parseInt(e.target.value) })}
@@ -1656,7 +1647,7 @@ export function SettingsPage() {
                     onChange={(e) => setEditExchangeForm({ ...editExchangeForm, is_primary: e.target.checked })}
                     className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="edit_is_primary" className="text-sm text-navy-700 dark:text-navy-300">Primary</label>
+                  <label htmlFor="edit_is_primary" className="text-sm text-navy-300">Primary</label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -1666,7 +1657,7 @@ export function SettingsPage() {
                     onChange={(e) => setEditExchangeForm({ ...editExchangeForm, is_active: e.target.checked })}
                     className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <label htmlFor="edit_is_active" className="text-sm text-navy-700 dark:text-navy-300">Active</label>
+                  <label htmlFor="edit_is_active" className="text-sm text-navy-300">Active</label>
                 </div>
               </div>
             </div>
@@ -1685,55 +1676,55 @@ export function SettingsPage() {
       {/* Add Exchange Rate Source Modal */}
       {showAddExchangeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-navy-800 rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-navy-900 dark:text-white mb-4">Add Exchange Rate Source</h3>
+          <div className="bg-navy-800 rounded-2xl p-6 border border-navy-700 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Add Exchange Rate Source</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Name</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Name</label>
                 <input
                   type="text"
                   value={newExchangeSource.name}
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                   placeholder="e.g., ECB Daily Rates"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">From Currency</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">From Currency</label>
                   <input
                     type="text"
                     value={newExchangeSource.from_currency}
                     onChange={(e) => setNewExchangeSource({ ...newExchangeSource, from_currency: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-input"
                     placeholder="EUR"
                     maxLength={3}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">To Currency</label>
+                  <label className="block text-sm font-medium text-navy-300 mb-1">To Currency</label>
                   <input
                     type="text"
                     value={newExchangeSource.to_currency}
                     onChange={(e) => setNewExchangeSource({ ...newExchangeSource, to_currency: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                    className="w-full form-input"
                     placeholder="CNY"
                     maxLength={3}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">URL</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">URL</label>
                 <input
                   type="url"
                   value={newExchangeSource.url}
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-700 text-navy-900 dark:text-white"
+                  className="w-full form-input"
                   placeholder="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scraping Library</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scraping Library</label>
                 <select
                   value={newExchangeSource.scrape_library}
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, scrape_library: e.target.value as ScrapeLibrary })}
@@ -1746,7 +1737,7 @@ export function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">Scrape Interval</label>
+                <label className="block text-sm font-medium text-navy-300 mb-1">Scrape Interval</label>
                 <select
                   value={newExchangeSource.scrape_interval_minutes}
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, scrape_interval_minutes: parseInt(e.target.value) })}
@@ -1769,7 +1760,7 @@ export function SettingsPage() {
                   onChange={(e) => setNewExchangeSource({ ...newExchangeSource, is_primary: e.target.checked })}
                   className="w-4 h-4 rounded border-navy-300 text-emerald-600 focus:ring-emerald-500"
                 />
-                <label htmlFor="is_primary" className="text-sm text-navy-700 dark:text-navy-300">
+                <label htmlFor="is_primary" className="text-sm text-navy-300">
                   Set as primary source for this currency pair
                 </label>
               </div>
@@ -1785,6 +1776,6 @@ export function SettingsPage() {
           </div>
         </div>
       )}
-    </div>
+    </BackofficeLayout>
   );
 }

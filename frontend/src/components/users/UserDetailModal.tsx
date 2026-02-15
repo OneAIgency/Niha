@@ -119,7 +119,7 @@ export function UserDetailModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col"
       >
         {loading ? (
           <div className="flex items-center justify-center p-12">
@@ -128,7 +128,7 @@ export function UserDetailModal({
         ) : user && (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
+            <div className="flex items-center justify-between p-6 border-b border-navy-700">
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl',
@@ -141,22 +141,22 @@ export function UserDetailModal({
                   {getInitials(user.firstName, user.lastName, user.email)}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-navy-900 dark:text-white">
+                  <h2 className="text-xl font-bold text-white">
                     {user.firstName} {user.lastName}
                   </h2>
-                  <p className="text-navy-500 dark:text-navy-400">{user.email}</p>
+                  <p className="text-navy-400">{user.email}</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+                className="p-2 hover:bg-navy-700 rounded-lg"
               >
                 <X className="w-5 h-5 text-navy-500" />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-navy-100 dark:border-navy-700">
+            <div className="flex border-b border-navy-700">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
@@ -169,8 +169,8 @@ export function UserDetailModal({
                   className={cn(
                     'flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors',
                     activeTab === tab.id
-                      ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                      : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                      ? 'border-emerald-500 text-emerald-400'
+                      : 'border-transparent text-navy-500 hover:text-navy-300'
                   )}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -233,84 +233,84 @@ function UserInfoTab({
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-          <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Role</p>
+        <div className="p-4 bg-navy-700/50 rounded-lg">
+          <p className="text-xs text-navy-400 mb-1">Role</p>
           <Badge variant={getRoleBadgeVariant(user.role as UserRole)}>
             {user.role}
           </Badge>
         </div>
-        <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-          <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Status</p>
+        <div className="p-4 bg-navy-700/50 rounded-lg">
+          <p className="text-xs text-navy-400 mb-1">Status</p>
           <Badge variant={user.isActive ? 'success' : 'danger'}>
             {user.isActive ? 'Active' : 'DISABLED'}
           </Badge>
         </div>
-        <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-          <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Password</p>
+        <div className="p-4 bg-navy-700/50 rounded-lg">
+          <p className="text-xs text-navy-400 mb-1">Password</p>
           <Badge variant={user.passwordSet ? 'success' : 'warning'}>
             {user.passwordSet ? 'Set' : 'Not Set'}
           </Badge>
         </div>
-        <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-          <p className="text-xs text-navy-500 dark:text-navy-400 mb-1">Total Logins</p>
-          <p className="text-lg font-bold text-navy-900 dark:text-white">{user.loginCount}</p>
+        <div className="p-4 bg-navy-700/50 rounded-lg">
+          <p className="text-xs text-navy-400 mb-1">Total Logins</p>
+          <p className="text-lg font-bold text-white">{user.loginCount}</p>
         </div>
       </div>
 
       {/* Details */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <h3 className="font-semibold text-navy-900 dark:text-white">Account Details</h3>
+          <h3 className="font-semibold text-white">Account Details</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Full Name</span>
-              <span className="text-navy-900 dark:text-white font-medium">
+              <span className="text-navy-400">Full Name</span>
+              <span className="text-white font-medium">
                 {[user.firstName, user.lastName].filter(Boolean).join(' ') || 'Not set'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Entity</span>
-              <span className="text-navy-900 dark:text-white">{user.entityName || 'None'}</span>
+              <span className="text-navy-400">Entity</span>
+              <span className="text-white">{user.entityName || 'None'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Position</span>
-              <span className="text-navy-900 dark:text-white">{user.position || 'Not set'}</span>
+              <span className="text-navy-400">Position</span>
+              <span className="text-white">{user.position || 'Not set'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Phone</span>
-              <span className="text-navy-900 dark:text-white">{user.phone || 'Not set'}</span>
+              <span className="text-navy-400">Phone</span>
+              <span className="text-white">{user.phone || 'Not set'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Created</span>
-              <span className="text-navy-900 dark:text-white">
+              <span className="text-navy-400">Created</span>
+              <span className="text-white">
                 {user.createdAt ? formatRelativeTime(user.createdAt) : 'Unknown'}
               </span>
             </div>
           </div>
         </div>
         <div className="space-y-4">
-          <h3 className="font-semibold text-navy-900 dark:text-white">Security</h3>
+          <h3 className="font-semibold text-white">Security</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Last Login</span>
-              <span className="text-navy-900 dark:text-white">
+              <span className="text-navy-400">Last Login</span>
+              <span className="text-white">
                 {user.lastLogin ? formatRelativeTime(user.lastLogin) : 'Never'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-navy-500 dark:text-navy-400">Last IP</span>
-              <span className="text-navy-900 dark:text-white font-mono text-sm">
+              <span className="text-navy-400">Last IP</span>
+              <span className="text-white font-mono text-sm">
                 {user.lastLoginIp || 'Unknown'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-navy-500 dark:text-navy-400">Failed (24h)</span>
+              <span className="text-navy-400">Failed (24h)</span>
               <Badge variant={user.failedLoginCount24h > 5 ? 'danger' : user.failedLoginCount24h > 0 ? 'warning' : 'success'}>
                 {user.failedLoginCount24h}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-navy-500 dark:text-navy-400">Force Password Change</span>
+              <span className="text-navy-400">Force Password Change</span>
               <Badge variant={user.mustChangePassword ? 'warning' : 'success'}>
                 {user.mustChangePassword ? 'Yes' : 'No'}
               </Badge>
@@ -320,13 +320,13 @@ function UserInfoTab({
       </div>
 
       {/* Password Reset */}
-      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+      <div className="p-4 bg-amber-900/20 rounded-lg border border-amber-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Key className="w-5 h-5 text-amber-600" />
             <div>
-              <p className="font-medium text-navy-900 dark:text-white">Password Management</p>
-              <p className="text-sm text-navy-500 dark:text-navy-400">Reset user&apos;s password</p>
+              <p className="font-medium text-white">Password Management</p>
+              <p className="text-sm text-navy-400">Reset user&apos;s password</p>
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={onShowPasswordReset}>
@@ -342,11 +342,11 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHisto
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-navy-900 dark:text-white">Authentication History</h3>
+        <h3 className="font-semibold text-white">Authentication History</h3>
         <p className="text-sm text-navy-500">Last 50 attempts</p>
       </div>
       {authHistory.length === 0 ? (
-        <div className="text-center py-8 text-navy-500 dark:text-navy-400">
+        <div className="text-center py-8 text-navy-400">
           No authentication attempts recorded
         </div>
       ) : (
@@ -357,8 +357,8 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHisto
               className={cn(
                 'flex items-center justify-between p-3 rounded-lg border',
                 attempt.success
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  ? 'bg-emerald-900/20 border-emerald-800'
+                  : 'bg-red-900/20 border-red-800'
               )}
             >
               <div className="flex items-center gap-3">
@@ -368,13 +368,13 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHisto
                   <XCircle className="w-5 h-5 text-red-500" />
                 )}
                 <div>
-                  <p className="text-sm font-medium text-navy-900 dark:text-white">
+                  <p className="text-sm font-medium text-white">
                     {attempt.success ? 'Successful Login' : 'Failed Attempt'}
                     {attempt.failureReason && (
                       <span className="text-red-500 ml-2">({attempt.failureReason})</span>
                     )}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                  <div className="flex items-center gap-2 text-xs text-navy-400">
                     <Badge variant="default" className="text-xs">{attempt.method}</Badge>
                     {attempt.ipAddress && (
                       <span className="flex items-center gap-1">
@@ -385,7 +385,7 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHisto
                   </div>
                 </div>
               </div>
-              <span className="text-xs text-navy-500 dark:text-navy-400">
+              <span className="text-xs text-navy-400">
                 {formatRelativeTime(attempt.createdAt)}
               </span>
             </div>
@@ -399,9 +399,9 @@ function AuthHistoryTab({ authHistory }: { authHistory: AdminUserFull['authHisto
 function SessionsTab({ sessions }: { sessions: AdminUserFull['sessions'] }) {
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-navy-900 dark:text-white">Recent Sessions</h3>
+      <h3 className="font-semibold text-white">Recent Sessions</h3>
       {sessions.length === 0 ? (
-        <div className="text-center py-8 text-navy-500 dark:text-navy-400">
+        <div className="text-center py-8 text-navy-400">
           No sessions recorded
         </div>
       ) : (
@@ -409,15 +409,15 @@ function SessionsTab({ sessions }: { sessions: AdminUserFull['sessions'] }) {
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-navy-50 dark:bg-navy-700/50"
+              className="flex items-center justify-between p-3 rounded-lg bg-navy-700/50"
             >
               <div className="flex items-center gap-3">
                 <Monitor className="w-5 h-5 text-navy-400" />
                 <div>
-                  <p className="text-sm font-medium text-navy-900 dark:text-white font-mono">
+                  <p className="text-sm font-medium text-white font-mono">
                     {session.ipAddress || 'Unknown IP'}
                   </p>
-                  <p className="text-xs text-navy-500 dark:text-navy-400 truncate max-w-md">
+                  <p className="text-xs text-navy-400 truncate max-w-md">
                     {session.userAgent || 'Unknown device'}
                   </p>
                 </div>
@@ -426,7 +426,7 @@ function SessionsTab({ sessions }: { sessions: AdminUserFull['sessions'] }) {
                 <Badge variant={session.isActive ? 'success' : 'default'}>
                   {session.isActive ? 'Active' : 'Ended'}
                 </Badge>
-                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                <p className="text-xs text-navy-400 mt-1">
                   {formatRelativeTime(session.startedAt)}
                 </p>
               </div>
@@ -467,11 +467,11 @@ function DepositsTab({
   if (!user.entityId) {
     return (
       <div className="text-center py-8">
-        <Building2 className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-        <p className="text-navy-500 dark:text-navy-400">
+        <Building2 className="w-12 h-12 text-navy-600 mx-auto mb-4" />
+        <p className="text-navy-400">
           User is not associated with any entity
         </p>
-        <p className="text-sm text-navy-400 dark:text-navy-500 mt-2">
+        <p className="text-sm text-navy-500 mt-2">
           Deposits can only be made for users with an entity
         </p>
       </div>
@@ -482,10 +482,10 @@ function DepositsTab({
     return (
       <div className="text-center py-8">
         <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p className="text-red-600 dark:text-red-400 font-medium mb-2">
+        <p className="text-red-400 font-medium mb-2">
           {depositsError}
         </p>
-        <p className="text-sm text-navy-500 dark:text-navy-400 mb-4">
+        <p className="text-sm text-navy-400 mb-4">
           Unable to load entity assets. This could be due to permissions, network issues, or server problems.
         </p>
         <Button variant="secondary" onClick={onRetry}>
@@ -508,12 +508,12 @@ function DepositsTab({
     <div className="space-y-6">
       {/* Entity Header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-          <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+        <div className="p-2 bg-emerald-900/30 rounded-lg">
+          <Wallet className="w-6 h-6 text-emerald-400" />
         </div>
         <div>
-          <p className="text-sm text-navy-500 dark:text-navy-400">Entity Holdings</p>
-          <p className="font-bold text-navy-900 dark:text-white">
+          <p className="text-sm text-navy-400">Entity Holdings</p>
+          <p className="font-bold text-white">
             {entityAssets?.entityName || entityBalance?.entityName || user.entityName || 'Unknown Entity'}
           </p>
         </div>
@@ -594,13 +594,13 @@ function DepositsTab({
       </div>
 
       {/* Deposit Summary */}
-      <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-100 dark:border-navy-600">
+      <div className="p-4 bg-navy-700/50 rounded-xl border border-navy-600">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BanknoteIcon className="w-5 h-5 text-navy-400" />
-            <span className="text-sm text-navy-600 dark:text-navy-300">Total Deposited</span>
+            <span className="text-sm text-navy-300">Total Deposited</span>
           </div>
-          <span className="font-mono font-semibold text-navy-900 dark:text-white">
+          <span className="font-mono font-semibold text-white">
             {entityBalance ? formatCurrency(entityBalance.totalDeposited, entityBalance.balanceCurrency || 'EUR') : '\u20AC 0.00'}
           </span>
         </div>
@@ -608,14 +608,14 @@ function DepositsTab({
 
       {/* Role Info */}
       {(user.role === 'NDA' || user.role === 'KYC') && (
-        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+        <div className="p-4 bg-amber-900/20 rounded-lg border border-amber-800">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-navy-900 dark:text-white">
+              <p className="font-medium text-white">
                 User has {user.role} status (under review)
               </p>
-              <p className="text-sm text-navy-600 dark:text-navy-300 mt-1">
+              <p className="text-sm text-navy-300 mt-1">
                 {user.role === 'NDA' ? 'Approve to create user (KYC).' : 'Approve KYC to grant funding access.'}
               </p>
             </div>
@@ -625,10 +625,10 @@ function DepositsTab({
 
       {/* Deposit & Withdrawal History */}
       <div>
-        <h3 className="font-semibold text-navy-900 dark:text-white mb-4">Deposit & Withdrawal History</h3>
+        <h3 className="font-semibold text-white mb-4">Deposit & Withdrawal History</h3>
         {depositAndWithdrawalHistory.length === 0 ? (
-          <div className="text-center py-8 text-navy-500 dark:text-navy-400">
-            <BanknoteIcon className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
+          <div className="text-center py-8 text-navy-400">
+            <BanknoteIcon className="w-12 h-12 text-navy-600 mx-auto mb-4" />
             <p>No deposits or withdrawals recorded</p>
           </div>
         ) : (
@@ -638,16 +638,16 @@ function DepositsTab({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-700/50 border border-navy-100 dark:border-navy-600"
+                    className="flex items-center justify-between p-4 rounded-lg bg-navy-700/50 border border-navy-600"
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         'p-2 rounded-lg',
                         item.status === 'confirmed'
-                          ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                          ? 'bg-emerald-900/30'
                           : item.status === 'rejected'
-                          ? 'bg-red-100 dark:bg-red-900/30'
-                          : 'bg-amber-100 dark:bg-amber-900/30'
+                          ? 'bg-red-900/30'
+                          : 'bg-amber-900/30'
                       )}>
                         <DollarSign className={cn(
                           'w-5 h-5',
@@ -659,19 +659,19 @@ function DepositsTab({
                         )} />
                       </div>
                       <div>
-                        <p className="font-semibold text-navy-900 dark:text-white">
+                        <p className="font-semibold text-white">
                           {item.amount != null
                             ? formatCurrency(item.amount, item.currency ?? 'EUR')
                             : '—'}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                        <div className="flex items-center gap-2 text-xs text-navy-400">
                           {item.wireReference && (
                             <span>Ref: {item.wireReference}</span>
                           )}
                           <span>{formatRelativeTime(item.createdAt)}</span>
                         </div>
                         {item.notes && (
-                          <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
+                          <p className="text-xs text-navy-500 mt-1 italic">
                             {item.notes}
                           </p>
                         )}
@@ -693,33 +693,33 @@ function DepositsTab({
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-700/50 border border-navy-100 dark:border-navy-600"
+                  className="flex items-center justify-between p-4 rounded-lg bg-navy-700/50 border border-navy-600"
                 >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       'p-2 rounded-lg',
                       isWithdrawal
-                        ? 'bg-red-100 dark:bg-red-900/30'
-                        : 'bg-emerald-100 dark:bg-emerald-900/30'
+                        ? 'bg-red-900/30'
+                        : 'bg-emerald-900/30'
                     )}>
                       {isWithdrawal ? (
-                        <Minus className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        <Minus className="w-5 h-5 text-red-400" />
                       ) : (
-                        <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        <DollarSign className="w-5 h-5 text-emerald-400" />
                       )}
                     </div>
                     <div>
                       <p className={cn(
                         'font-semibold',
-                        isWithdrawal ? 'text-red-600 dark:text-red-400' : 'text-navy-900 dark:text-white'
+                        isWithdrawal ? 'text-red-400' : 'text-white'
                       )}>
                         {amountLabel}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                      <div className="flex items-center gap-2 text-xs text-navy-400">
                         <span>{formatRelativeTime(item.createdAt)}</span>
                       </div>
                       {item.notes && (
-                        <p className="text-xs text-navy-400 dark:text-navy-500 mt-1 italic">
+                        <p className="text-xs text-navy-500 mt-1 italic">
                           {item.notes}
                         </p>
                       )}
@@ -742,11 +742,11 @@ function OrdersTab({ user }: { user: AdminUserFull }) {
   if (!user.entityId) {
     return (
       <div className="text-center py-8">
-        <BarChart3 className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-        <p className="text-navy-500 dark:text-navy-400">
+        <BarChart3 className="w-12 h-12 text-navy-600 mx-auto mb-4" />
+        <p className="text-navy-400">
           User is not associated with any entity
         </p>
-        <p className="text-sm text-navy-400 dark:text-navy-500 mt-2">
+        <p className="text-sm text-navy-500 mt-2">
           Orders can only be viewed for users with an entity
         </p>
       </div>

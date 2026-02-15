@@ -33,7 +33,7 @@ function DataRow({
   const display = value != null && value !== '' ? value : showEmpty ? '—' : null;
   if (display === null) return null;
   return (
-    <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60 last:border-0">
+    <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-600/60 last:border-0">
       <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
         {label}:
       </Typography>
@@ -149,17 +149,17 @@ export function ContactRequestViewModal({
         transition={{ duration: 0.2 }}
         onAnimationComplete={handleAnimationComplete}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
       >
-        <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700 shrink-0">
-          <h2 id="contact-request-view-title" className="text-lg font-semibold text-navy-900 dark:text-white">
+        <div className="flex items-center justify-between p-4 border-b border-navy-700 shrink-0">
+          <h2 id="contact-request-view-title" className="text-lg font-semibold text-white">
             Contact request details
           </h2>
           <button
             ref={closeButtonRef}
             type="button"
             onClick={handleClose}
-            className="p-1 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-navy-800"
+            className="p-1 hover:bg-navy-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-navy-500" />
@@ -175,7 +175,7 @@ export function ContactRequestViewModal({
           <DataRow label="Position" value={showingRequest.position} showEmpty />
           <DataRow label="User role" value={showingRequest.userRole} showEmpty />
           <DataRow label="NDA file name" value={showingRequest.ndaFileName} />
-          <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-200/60 dark:border-navy-600/60">
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 py-1.5 border-b border-navy-600/60">
             <Typography as="span" variant="sectionLabel" color="muted" className="shrink-0">
               Submitter IP:
             </Typography>
@@ -186,7 +186,7 @@ export function ContactRequestViewModal({
               <button
                 type="button"
                 onClick={() => onIpLookup(showingRequest.submitterIp!)}
-                className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 rounded"
+                className="text-sm font-medium text-emerald-400 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 rounded"
                 aria-label={`Lookup IP ${showingRequest.submitterIp}`}
               >
                 Lookup
@@ -201,7 +201,7 @@ export function ContactRequestViewModal({
           />
 
           {showingRequest.ndaFileName && (
-            <div className="pt-2 border-t border-navy-200/60 dark:border-navy-600/60">
+            <div className="pt-2 border-t border-navy-600/60">
               <Typography as="p" variant="sectionLabel" color="muted" className="mb-2">
                 Link to attached PDF for verification
               </Typography>
@@ -209,7 +209,7 @@ export function ContactRequestViewModal({
                 type="button"
                 onClick={handleOpenNDA}
                 disabled={openNDALoading}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-900/50 text-navy-700 dark:text-navy-200 hover:bg-navy-100 dark:hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-navy-600 bg-navy-900/50 text-navy-200 hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={`Open NDA ${showingRequest.ndaFileName}`}
               >
                 <FileText className="w-4 h-4 shrink-0" />

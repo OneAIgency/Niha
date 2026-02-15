@@ -248,7 +248,7 @@ function FieldLabel({ label, tipKey, htmlFor }: { label: string; tipKey?: string
       />
       {show && (
         <div className="absolute left-0 bottom-full mb-1.5 z-50 w-64 px-3 py-2 text-[11px] leading-relaxed
-                        text-navy-200 bg-navy-800 border border-navy-600 rounded-lg shadow-xl
+                        text-navy-200 bg-navy-800 border border-navy-700 rounded-lg shadow-xl
                         pointer-events-none animate-in fade-in duration-150">
           {tip}
         </div>
@@ -309,8 +309,8 @@ function SettingsInput({ label, value, onChange, suffix, min, max, step, decimal
           min={min}
           max={max}
           step={step ?? 1}
-          className="w-full bg-white dark:bg-navy-900 border border-navy-300 dark:border-navy-700 rounded px-2.5 py-1.5 text-sm text-navy-900 dark:text-white
-                     focus:outline-none focus:border-emerald-500/50 dark:focus:border-emerald-500/50 transition-colors tabular-nums"
+          className="w-full bg-navy-900 border border-navy-700 rounded-lg px-2.5 py-1.5 text-sm text-white
+                     focus:outline-none focus:border-emerald-500/50 transition-colors tabular-nums"
         />
         {suffix && <span className="text-[11px] text-navy-500 whitespace-nowrap">{suffix}</span>}
       </div>
@@ -1148,7 +1148,7 @@ export function AutoTradePage() {
                 />
               )}
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {markets.map(market => (
                   <MarketSection
                     key={market.marketKey}

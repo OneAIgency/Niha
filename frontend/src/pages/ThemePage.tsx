@@ -543,7 +543,7 @@ export function ThemePage() {
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                   {/* Main Card */}
-                  <div className="lg:col-span-2 content_wrapper_last">
+                  <div className="lg:col-span-2 panel panel--flush">
                     <div className="px-4 py-3 border-b border-navy-700 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
@@ -559,7 +559,7 @@ export function ThemePage() {
                   </div>
 
                   {/* Sidebar Card */}
-                  <div className="content_wrapper_last">
+                  <div className="panel panel--flush">
                     <div className="px-4 py-3 border-b border-navy-700">
                       <span className="text-sm font-semibold text-white">Quick Actions</span>
                     </div>
@@ -603,20 +603,24 @@ export function ThemePage() {
               <h4 className="text-sm font-semibold text-white mb-3">Content Components</h4>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
+                  <code className="text-emerald-400">.panel</code>
+                  <span className="text-navy-400">Canonical container (p-5)</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">.panel--flush</code>
+                  <span className="text-navy-400">No padding (tables, lists)</span>
+                </div>
+                <div className="flex justify-between">
+                  <code className="text-emerald-400">.panel--compact</code>
+                  <span className="text-navy-400">Compact padding (p-3)</span>
+                </div>
+                <div className="flex justify-between">
                   <code className="text-emerald-400">.content_wrapper</code>
-                  <span className="text-navy-400">Stat cards, value displays</span>
-                </div>
-                <div className="flex justify-between">
-                  <code className="text-emerald-400">.content_wrapper_last</code>
-                  <span className="text-navy-400">Section cards, panels</span>
-                </div>
-                <div className="flex justify-between">
-                  <code className="text-emerald-400">.table-container</code>
-                  <span className="text-navy-400">Data tables</span>
+                  <span className="text-navy-400">Theme-aware stat cards</span>
                 </div>
                 <div className="flex justify-between">
                   <code className="text-emerald-400">&lt;Card /&gt;</code>
-                  <span className="text-navy-400">Generic content wrapper</span>
+                  <span className="text-navy-400">React component wrapper</span>
                 </div>
               </div>
             </Card>
@@ -659,10 +663,62 @@ export function ThemePage() {
             </div>
           </div>
 
-          {/* Card/Wrapper Classes */}
+          {/* Panel Classes (canonical container) */}
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-white mb-4">Card & Wrapper Classes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Panel Classes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-3">
+                <div className="panel">
+                  <p className="text-sm text-navy-400">Default panel (p-5)</p>
+                  <p className="text-lg font-bold text-white font-mono mt-1">€1,234.56</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.panel</code>
+                  <p className="text-xs text-navy-400 mt-1">Canonical container with default padding</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="panel panel--flush">
+                  <div className="px-4 py-3 border-b border-navy-700">
+                    <span className="text-sm font-semibold text-white">Header</span>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-navy-400">Flush panel (p-0) with manual padding</p>
+                  </div>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.panel.panel--flush</code>
+                  <p className="text-xs text-navy-400 mt-1">For tables, lists with header/body sections</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="panel panel--compact">
+                  <p className="text-sm text-navy-400">Compact panel (p-3)</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.panel.panel--compact</code>
+                  <p className="text-xs text-navy-400 mt-1">Tight spacing for dense UIs</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="panel panel--hover cursor-pointer">
+                  <p className="text-sm text-navy-400">Hover me</p>
+                </div>
+                <div>
+                  <code className="text-emerald-400 text-sm">.panel.panel--hover</code>
+                  <p className="text-xs text-navy-400 mt-1">Interactive with lift on hover</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Legacy Wrapper Classes */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-white mb-4">Legacy Wrapper Classes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <div className="content_wrapper">
                   <p className="text-sm text-navy-400">Label</p>
@@ -670,27 +726,17 @@ export function ThemePage() {
                 </div>
                 <div>
                   <code className="text-emerald-400 text-sm">.content_wrapper</code>
-                  <p className="text-xs text-navy-400 mt-1">Dashboard stat cards</p>
+                  <p className="text-xs text-navy-400 mt-1">Theme-aware stat cards (uses CSS variables)</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="content_wrapper_last p-4">
-                  <p className="text-sm text-navy-400">Section content</p>
+                  <p className="text-sm text-navy-400">Legacy — use <code className="text-emerald-400">.panel</code> instead</p>
                 </div>
                 <div>
-                  <code className="text-emerald-400 text-sm">.content_wrapper_last</code>
-                  <p className="text-xs text-navy-400 mt-1">Generic section wrapper</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="content_wrapper_last-hover p-4 cursor-pointer">
-                  <p className="text-sm text-navy-400">Hover me</p>
-                </div>
-                <div>
-                  <code className="text-emerald-400 text-sm">.content_wrapper_last-hover</code>
-                  <p className="text-xs text-navy-400 mt-1">Interactive with hover effect</p>
+                  <code className="text-navy-500 text-sm">.content_wrapper_last</code>
+                  <p className="text-xs text-navy-400 mt-1">Deprecated alias for .panel</p>
                 </div>
               </div>
             </div>
@@ -1185,7 +1231,7 @@ export function ThemePage() {
                 </div>
               </div>
             </Card>
-            <Card className="p-6 border border-white/20 dark:border-navy-700/50 bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg">
+            <Card className="p-6 border border-navy-700/50 bg-navy-800/80 backdrop-blur-lg">
               <div className="flex items-start gap-4">
                 <div className={`rounded-xl p-3 ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
                   <BarChart3 className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />

@@ -38,13 +38,13 @@ export function CreateUserModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
       >
-        <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
-          <h2 className="text-xl font-bold text-navy-900 dark:text-white">Create New User</h2>
+        <div className="flex items-center justify-between p-6 border-b border-navy-700">
+          <h2 className="text-xl font-bold text-white">Create New User</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+            className="p-2 hover:bg-navy-700 rounded-lg"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 text-navy-500" aria-hidden="true" />
@@ -79,7 +79,7 @@ export function CreateUserModal({
             onChange={(e) => setNewUser({ ...newUser, position: e.target.value })}
           />
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
+            <label className="block text-sm font-medium text-navy-200 mb-2">
               Initial Role
             </label>
             <select
@@ -104,7 +104,7 @@ export function CreateUserModal({
           </div>
 
           {/* Password or Invitation Toggle */}
-          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg space-y-3">
+          <div className="p-4 bg-navy-700/50 rounded-lg space-y-3">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -113,7 +113,7 @@ export function CreateUserModal({
                 onChange={(e) => setUseInvitation(e.target.checked)}
                 className="w-4 h-4 text-emerald-500 rounded"
               />
-              <label htmlFor="useInvitation" className="text-sm text-navy-700 dark:text-navy-200">
+              <label htmlFor="useInvitation" className="text-sm text-navy-200">
                 Send invitation email instead of setting password
               </label>
             </div>
@@ -128,14 +128,14 @@ export function CreateUserModal({
               />
             )}
 
-            <p className="text-xs text-navy-500 dark:text-navy-400">
+            <p className="text-xs text-navy-400">
               {useInvitation
                 ? 'An invitation email will be sent to the user to set up their password.'
                 : 'The user will be able to login immediately with this password.'}
             </p>
           </div>
         </div>
-        <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
+        <div className="flex justify-end gap-3 p-6 border-t border-navy-700">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

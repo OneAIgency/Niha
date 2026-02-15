@@ -116,15 +116,15 @@ export function SetupPasswordPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+          className="bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
         >
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
             <XCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold text-navy-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-white mb-2">
             Invalid Invitation
           </h1>
-          <p className="text-navy-500 dark:text-navy-400 mb-6">
+          <p className="text-navy-400 mb-6">
             {error}
           </p>
           <button
@@ -143,17 +143,17 @@ export function SetupPasswordPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full"
+        className="bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full"
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+          <div className="w-16 h-16 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-2xl font-bold text-navy-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-white">
             Welcome, {userInfo?.firstName}!
           </h1>
-          <p className="text-navy-500 dark:text-navy-400 mt-2">
+          <p className="text-navy-400 mt-2">
             Set up your password to activate your account
           </p>
         </div>
@@ -161,20 +161,20 @@ export function SetupPasswordPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email (readonly) */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1.5">
+            <label className="block text-sm font-medium text-navy-300 mb-1.5">
               Email
             </label>
             <input
               type="email"
               value={userInfo?.email || ''}
               disabled
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-700 bg-navy-50 dark:bg-navy-900 text-navy-500 dark:text-navy-400"
+              className="w-full px-4 py-2.5 rounded-lg border border-navy-700 bg-navy-900 text-navy-400"
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1.5">
+            <label className="block text-sm font-medium text-navy-300 mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -183,7 +183,7 @@ export function SetupPasswordPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a strong password"
-                className="w-full px-4 py-2.5 pr-10 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 pr-10 rounded-lg border border-navy-700 bg-navy-900 text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -197,7 +197,7 @@ export function SetupPasswordPage() {
             {/* Password Requirements */}
             <div className="mt-3 space-y-1.5">
               <div className={`flex items-center gap-2 text-sm ${
-                hasMinLength ? 'text-emerald-600 dark:text-emerald-400' : 'text-navy-400'
+                hasMinLength ? 'text-emerald-400' : 'text-navy-400'
               }`}>
                 {hasMinLength ? (
                   <Check className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function SetupPasswordPage() {
                 At least 8 characters
               </div>
               <div className={`flex items-center gap-2 text-sm ${
-                hasUppercase ? 'text-emerald-600 dark:text-emerald-400' : 'text-navy-400'
+                hasUppercase ? 'text-emerald-400' : 'text-navy-400'
               }`}>
                 {hasUppercase ? (
                   <Check className="w-4 h-4" />
@@ -217,7 +217,7 @@ export function SetupPasswordPage() {
                 At least 1 uppercase letter
               </div>
               <div className={`flex items-center gap-2 text-sm ${
-                hasSpecialChar ? 'text-emerald-600 dark:text-emerald-400' : 'text-navy-400'
+                hasSpecialChar ? 'text-emerald-400' : 'text-navy-400'
               }`}>
                 {hasSpecialChar ? (
                   <Check className="w-4 h-4" />
@@ -231,7 +231,7 @@ export function SetupPasswordPage() {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1.5">
+            <label className="block text-sm font-medium text-navy-300 mb-1.5">
               Confirm Password
             </label>
             <input
@@ -239,7 +239,7 @@ export function SetupPasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
-              className="w-full px-4 py-2.5 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 rounded-lg border border-navy-700 bg-navy-900 text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
             {confirmPassword && !passwordsMatch && (
               <p className="mt-1.5 text-sm text-red-500 flex items-center gap-1">
@@ -248,7 +248,7 @@ export function SetupPasswordPage() {
               </p>
             )}
             {passwordsMatch && (
-              <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <p className="mt-1.5 text-sm text-emerald-400 flex items-center gap-1">
                 <Check className="w-4 h-4" />
                 Passwords match
               </p>
@@ -257,8 +257,8 @@ export function SetupPasswordPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 

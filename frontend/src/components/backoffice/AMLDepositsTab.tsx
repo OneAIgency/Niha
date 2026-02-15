@@ -215,24 +215,24 @@ export function AMLDepositsTab() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <div className="p-2 bg-amber-900/30 rounded-lg">
+                <Clock className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-navy-500 dark:text-navy-400">Pending</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.pendingCount}</p>
+                <p className="text-sm text-navy-400">Pending</p>
+                <p className="text-2xl font-bold text-white">{stats.pendingCount}</p>
               </div>
             </div>
           </Card>
 
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-blue-900/30 rounded-lg">
+                <Shield className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-navy-500 dark:text-navy-400">On Hold</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.onHoldCount}</p>
+                <p className="text-sm text-navy-400">On Hold</p>
+                <p className="text-2xl font-bold text-white">{stats.onHoldCount}</p>
                 <p className="text-xs text-navy-400">{formatCurrency(stats.onHoldTotal)} EUR</p>
               </div>
             </div>
@@ -240,12 +240,12 @@ export function AMLDepositsTab() {
 
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-2 bg-emerald-900/30 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm text-navy-500 dark:text-navy-400">Cleared</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.clearedCount}</p>
+                <p className="text-sm text-navy-400">Cleared</p>
+                <p className="text-2xl font-bold text-white">{stats.clearedCount}</p>
                 <p className="text-xs text-navy-400">{formatCurrency(stats.clearedTotal)} EUR</p>
               </div>
             </div>
@@ -253,12 +253,12 @@ export function AMLDepositsTab() {
 
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div className="p-2 bg-red-900/30 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <p className="text-sm text-navy-500 dark:text-navy-400">Expired Holds</p>
-                <p className="text-2xl font-bold text-navy-900 dark:text-white">{stats.expiredHoldsCount}</p>
+                <p className="text-sm text-navy-400">Expired Holds</p>
+                <p className="text-2xl font-bold text-white">{stats.expiredHoldsCount}</p>
               </div>
             </div>
           </Card>
@@ -266,13 +266,13 @@ export function AMLDepositsTab() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-navy-200 dark:border-navy-700">
+      <div className="flex gap-2 border-b border-navy-700">
         <button
           onClick={() => setActiveTab('pending')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'pending'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-navy-500 hover:text-navy-300'
           }`}
         >
           Pending ({pendingDeposits.length})
@@ -281,8 +281,8 @@ export function AMLDepositsTab() {
           onClick={() => setActiveTab('on_hold')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'on_hold'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-navy-500 hover:text-navy-300'
           }`}
         >
           On Hold ({onHoldDeposits.length})
@@ -318,7 +318,7 @@ export function AMLDepositsTab() {
         </Card>
       ) : activeTab === 'pending' ? (
         <Card>
-          <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Banknote className="w-5 h-5" />
             Pending Deposits
           </h3>
@@ -333,12 +333,12 @@ export function AMLDepositsTab() {
               {pendingDeposits.map((deposit) => (
                 <div
                   key={deposit.id}
-                  className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl"
+                  className="p-4 bg-navy-700/50 rounded-xl"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-navy-900 dark:text-white">
+                        <h4 className="font-semibold text-white">
                           {deposit.entityName || 'Unknown Entity'}
                         </h4>
                         <ClientStatusBadge role={deposit.userRole} />
@@ -346,24 +346,24 @@ export function AMLDepositsTab() {
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                         <div>
                           <span className="text-navy-500">Reported:</span>
-                          <span className="ml-2 font-medium text-navy-900 dark:text-white">
+                          <span className="ml-2 font-medium text-white">
                             {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency}
                           </span>
                         </div>
                         <div>
                           <span className="text-navy-500">User:</span>
-                          <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.userEmail}</span>
+                          <span className="ml-2 text-navy-300">{deposit.userEmail}</span>
                         </div>
                         {deposit.sourceBank && (
                           <div>
                             <span className="text-navy-500">Bank:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-300">{deposit.sourceBank}</span>
+                            <span className="ml-2 text-navy-300">{deposit.sourceBank}</span>
                           </div>
                         )}
                         {deposit.sourceIban && (
                           <div>
                             <span className="text-navy-500">IBAN:</span>
-                            <span className="ml-2 font-mono text-xs text-navy-700 dark:text-navy-300">{deposit.sourceIban}</span>
+                            <span className="ml-2 font-mono text-xs text-navy-300">{deposit.sourceIban}</span>
                           </div>
                         )}
                       </div>
@@ -387,7 +387,7 @@ export function AMLDepositsTab() {
                           setRejectModal(deposit);
                           resetForm();
                         }}
-                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="text-red-500 hover:bg-red-900/20"
                       >
                         <XCircle className="w-4 h-4" />
                         Reject
@@ -414,7 +414,7 @@ export function AMLDepositsTab() {
         </Card>
       ) : (
         <Card>
-          <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5" />
             On Hold Deposits
           </h3>
@@ -437,20 +437,20 @@ export function AMLDepositsTab() {
                 return (
                   <div
                     key={deposit.id}
-                    className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg"
+                    className="p-3 bg-navy-700/50 rounded-lg"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-sm text-navy-900 dark:text-white truncate">
+                          <h4 className="font-medium text-sm text-white truncate">
                             {deposit.entityName || 'Unknown Entity'}
                           </h4>
-                          <span className="text-xs text-navy-500 dark:text-navy-400 whitespace-nowrap">
+                          <span className="text-xs text-navy-400 whitespace-nowrap">
                             RECEIVED AT {confirmedDate}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="font-semibold text-navy-900 dark:text-white">
+                          <span className="font-semibold text-white">
                             {deposit.amount ? formatCurrency(deposit.amount) : 'N/A'} {deposit.currency}
                           </span>
                           {/* Progress bar - segmente per zi */}
@@ -458,7 +458,7 @@ export function AMLDepositsTab() {
                             {Array.from({ length: Math.max(daysPassed, 1) }).map((_, i) => (
                               <div
                                 key={i}
-                                className="w-2 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-sm"
+                                className="w-2 h-3 bg-emerald-400 rounded-sm"
                               />
                             ))}
                           </div>
@@ -504,14 +504,14 @@ export function AMLDepositsTab() {
           }}
         >
           <div className="space-y-4">
-            <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+            <div className="p-3 bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{confirmModal.entityName}</p>
+              <p className="font-semibold text-white">{confirmModal.entityName}</p>
             </div>
 
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-400">Reported by Client</p>
-              <p className="font-semibold text-amber-900 dark:text-amber-200">
+            <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-400">Reported by Client</p>
+              <p className="font-semibold text-amber-200">
                 {confirmModal.reportedAmount ? formatCurrency(confirmModal.reportedAmount) : 'N/A'} {confirmModal.reportedCurrency}
               </p>
             </div>
@@ -521,7 +521,7 @@ export function AMLDepositsTab() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Actual Amount Received *
               </label>
               <NumberInput
@@ -533,7 +533,7 @@ export function AMLDepositsTab() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Currency
               </label>
               <select
@@ -549,32 +549,32 @@ export function AMLDepositsTab() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Wire Reference
               </label>
               <input
                 type="text"
                 value={wireReference}
                 onChange={(e) => setWireReference(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white"
+                className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white"
                 placeholder="Bank wire reference"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Admin Notes
               </label>
               <textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white resize-none"
+                className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white resize-none"
               />
             </div>
 
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
-              <p className="text-blue-700 dark:text-blue-300 flex items-center gap-2">
+            <div className="p-3 bg-blue-900/20 border border-blue-800 rounded-lg text-sm">
+              <p className="text-blue-300 flex items-center gap-2">
                 <Shield className="w-4 h-4" />
                 Deposit will be placed on AML hold after confirmation
               </p>
@@ -608,21 +608,21 @@ export function AMLDepositsTab() {
           }}
         >
           <div className="space-y-4">
-            <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+            <div className="p-3 bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{clearModal.entityName}</p>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              <p className="font-semibold text-white">{clearModal.entityName}</p>
+              <p className="text-lg font-bold text-emerald-400 mt-1">
                 {clearModal.amount ? formatCurrency(clearModal.amount) : 'N/A'} {clearModal.currency}
               </p>
             </div>
 
             {!isHoldExpired(clearModal.holdExpiresAt) && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-400 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Hold period has not expired yet
                 </p>
-                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                <p className="text-xs text-amber-500 mt-1">
                   Expires: {getHoldTimeRemaining(clearModal.holdExpiresAt)}
                 </p>
                 <label className="flex items-center gap-2 mt-2">
@@ -632,7 +632,7 @@ export function AMLDepositsTab() {
                     onChange={(e) => setForceClear(e.target.checked)}
                     className="rounded border-amber-300"
                   />
-                  <span className="text-sm text-amber-700 dark:text-amber-400">
+                  <span className="text-sm text-amber-400">
                     Force clear before hold expires
                   </span>
                 </label>
@@ -644,19 +644,19 @@ export function AMLDepositsTab() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Admin Notes
               </label>
               <textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white resize-none"
+                className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white resize-none"
               />
             </div>
 
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm">
-              <p className="text-emerald-700 dark:text-emerald-300">
+            <div className="p-3 bg-emerald-900/20 border border-emerald-800 rounded-lg text-sm">
+              <p className="text-emerald-300">
                 Clearing will credit funds to entity balance and upgrade users to FUNDED status.
               </p>
             </div>
@@ -690,10 +690,10 @@ export function AMLDepositsTab() {
           }}
         >
           <div className="space-y-4">
-            <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+            <div className="p-3 bg-navy-700/50 rounded-lg">
               <p className="text-sm text-navy-500">Entity</p>
-              <p className="font-semibold text-navy-900 dark:text-white">{rejectModal.entityName}</p>
-              <p className="text-lg font-bold text-navy-600 dark:text-navy-400 mt-1">
+              <p className="font-semibold text-white">{rejectModal.entityName}</p>
+              <p className="text-lg font-bold text-navy-400 mt-1">
                 {(rejectModal.amount || rejectModal.reportedAmount) ?
                   formatCurrency(rejectModal.amount || rejectModal.reportedAmount!) : 'N/A'
                 } {rejectModal.currency || rejectModal.reportedCurrency}
@@ -705,7 +705,7 @@ export function AMLDepositsTab() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Rejection Reason *
               </label>
               <select
@@ -720,20 +720,20 @@ export function AMLDepositsTab() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Admin Notes
               </label>
               <textarea
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white resize-none"
+                className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white resize-none"
                 placeholder="Provide details for the rejection..."
               />
             </div>
 
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm">
-              <p className="text-red-700 dark:text-red-300 flex items-center gap-2">
+            <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg text-sm">
+              <p className="text-red-300 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 This action cannot be undone
               </p>
@@ -745,7 +745,7 @@ export function AMLDepositsTab() {
               </Button>
               <Button
                 variant="secondary"
-                className="flex-1 text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                className="flex-1 text-red-500 hover:bg-red-500/20"
                 onClick={handleRejectDeposit}
                 loading={actionLoading === `reject-${rejectModal.id}`}
               >
@@ -767,11 +767,11 @@ export function AMLDepositsTab() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-navy-500">Entity</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.entityName}</p>
+                <p className="font-medium text-white">{detailModal.entityName}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">User</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.userEmail}</p>
+                <p className="font-medium text-white">{detailModal.userEmail}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Status</p>
@@ -785,56 +785,56 @@ export function AMLDepositsTab() {
               </div>
               <div>
                 <p className="text-sm text-navy-500">AML Status</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.amlStatus}</p>
+                <p className="font-medium text-white">{detailModal.amlStatus}</p>
               </div>
             </div>
 
-            <hr className="border-navy-200 dark:border-navy-700" />
+            <hr className="border-navy-700" />
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-navy-500">Reported Amount</p>
-                <p className="font-medium text-navy-900 dark:text-white">
+                <p className="font-medium text-white">
                   {detailModal.reportedAmount ? formatCurrency(detailModal.reportedAmount) : 'N/A'} {detailModal.reportedCurrency}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Confirmed Amount</p>
-                <p className="font-medium text-navy-900 dark:text-white">
+                <p className="font-medium text-white">
                   {detailModal.amount ? formatCurrency(detailModal.amount) : 'N/A'} {detailModal.currency}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Source Bank</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.sourceBank || 'N/A'}</p>
+                <p className="font-medium text-white">{detailModal.sourceBank || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Source IBAN</p>
-                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.sourceIban || 'N/A'}</p>
+                <p className="font-mono text-sm text-white">{detailModal.sourceIban || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Wire Reference</p>
-                <p className="font-mono text-sm text-navy-900 dark:text-white">{detailModal.wireReference || 'N/A'}</p>
+                <p className="font-mono text-sm text-white">{detailModal.wireReference || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Hold Type</p>
-                <p className="font-medium text-navy-900 dark:text-white">{detailModal.holdType || 'N/A'}</p>
+                <p className="font-medium text-white">{detailModal.holdType || 'N/A'}</p>
               </div>
             </div>
 
             {detailModal.adminNotes && (
               <>
-                <hr className="border-navy-200 dark:border-navy-700" />
+                <hr className="border-navy-700" />
                 <div>
                   <p className="text-sm text-navy-500">Admin Notes</p>
-                  <p className="text-sm text-navy-700 dark:text-navy-300 whitespace-pre-wrap">{detailModal.adminNotes}</p>
+                  <p className="text-sm text-navy-300 whitespace-pre-wrap">{detailModal.adminNotes}</p>
                 </div>
               </>
             )}
 
             {detailModal.rejectionReason && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-400">
+              <div className="p-3 bg-red-900/20 rounded-lg">
+                <p className="text-sm text-red-400">
                   Rejection Reason: {detailModal.rejectionReason}
                 </p>
               </div>
@@ -861,13 +861,13 @@ function Modal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700 sticky top-0 bg-white dark:bg-navy-800">
-          <h3 className="font-semibold text-navy-900 dark:text-white">{title}</h3>
+        <div className="flex items-center justify-between p-4 border-b border-navy-700 sticky top-0 bg-navy-800">
+          <h3 className="font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+            className="text-navy-400 hover:text-navy-200"
           >
             <X className="w-5 h-5" />
           </button>

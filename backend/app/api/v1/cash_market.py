@@ -11,7 +11,7 @@ import uuid
 
 logger = logging.getLogger(__name__)
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from typing import List, Optional
 
 # Price step for CEA cash market (0.1 EUR)
@@ -72,7 +72,6 @@ from ...schemas.schemas import (
 from ..v1.client_ws import client_ws_manager
 from ...services.balance_utils import get_entity_eur_balance
 from ...services.order_matching import (
-    DEFAULT_FEE_RATE,
     execute_market_buy_order,
     get_effective_fee_rate,
     get_entity_balance,
@@ -146,7 +145,7 @@ async def get_market_depth(
 @router.get("/trades/{certificate_type}", response_model=List[CashMarketTradeResponse])
 async def get_recent_trades(
     certificate_type: CertificateType,
-    limit: int = Query(50, ge=1, le=100),  # noqa: B008
+    limit: int = Query(50, ge=1, le=5000),  # noqa: B008
     db=Depends(get_db),  # noqa: B008
 ):
     """

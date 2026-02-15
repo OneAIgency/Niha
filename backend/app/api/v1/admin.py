@@ -43,7 +43,6 @@ from ...models.models import (
     OrderSide,
     OrderStatus,
     ScrapeLibrary,
-    ScrapeStatus,
     ScrapingSource,
     SettlementBatch,
     SettlementStatus,
@@ -4149,7 +4148,7 @@ async def credit_my_entity(
     This allows admins to quickly add EUR, CEA, or EUA to their entity
     for testing trading functionality.
     """
-    from app.models.models import AssetType, EntityHolding, AssetTransaction, TransactionType
+    from app.models.models import AssetType, TransactionType
     from app.services.balance_utils import update_entity_balance, get_entity_balance
 
     try:
@@ -4167,7 +4166,7 @@ async def credit_my_entity(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid asset type. Must be one of: EUR, CEA, EUA"
+                detail="Invalid asset type. Must be one of: EUR, CEA, EUA"
             )
 
         # Credit the entity using ADJUSTMENT type (for admin credits)
@@ -4255,7 +4254,6 @@ async def get_admin_pending_settlements(
         entity_ids = list({b.entity_id for b in batches if b.entity_id})
         user_map: dict[UUID, User] = {}
         if entity_ids:
-            from sqlalchemy import distinct
             from sqlalchemy.orm import load_only
 
             user_result = await db.execute(

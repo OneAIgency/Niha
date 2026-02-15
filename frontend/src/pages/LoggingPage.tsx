@@ -73,7 +73,7 @@ export default function LoggingPage() {
   return (
     <BackofficeLayout subSubHeaderLeft={subSubHeaderLeft}>
       {/* Tab Content */}
-      <div className="bg-white dark:bg-navy-800 rounded-xl border border-navy-200 dark:border-navy-700 p-6">
+      <div className="panel">
         {activeTab === 'overview' && <LoggingOverview />}
         {activeTab === 'all' && <AllTicketsTab />}
         {activeTab === 'mm-actions' && <MarketMakerActionsTab />}

@@ -90,6 +90,17 @@ frontend/
 - Use components from `src/components/common/`
 - Use `ClientStatusBadge` for role/status display
 
+## Post-Implementation Checks
+
+After implementing a feature or fix, verify before considering done:
+
+1. **Build passes** — `cd frontend && npx tsc --noEmit` (zero errors)
+2. **Backend tests pass** — `docker compose exec backend pytest --tb=short -q`
+3. **No hardcoded colors** — no hex colors, `slate-*`, or `gray-*` in new/changed files
+4. **Update app_truth.md** — if you added routes, roles, API endpoints, or business rules
+
+Exceptions: documentation-only changes, comment-only changes, dependency updates.
+
 ## Critical Rules
 
 ### Frozen Files (Do Not Refactor)

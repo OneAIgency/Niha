@@ -77,7 +77,7 @@ export function CEAPriceDisplay({
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {showLabel && (
-        <span className={cn(styles.label, 'text-amber-600 dark:text-amber-400 font-medium')}>
+        <span className={cn(styles.label, 'text-amber-400 font-medium')}>
           CEA
         </span>
       )}

@@ -124,7 +124,7 @@ const transactionColumns: Column<Transaction>[] = [
         SELL: 'text-red-400 bg-red-500/20',
         DEPOSIT: 'text-blue-400 bg-blue-500/20',
         WITHDRAW: 'text-amber-400 bg-amber-500/20',
-        SYSTEM: 'text-navy-400 dark:text-navy-400 bg-navy-500/20',
+        SYSTEM: 'text-navy-400 bg-navy-500/20',
       };
       const typeKey = typeof value === 'string' ? value : '';
       return (
@@ -657,7 +657,7 @@ export function DashboardPage() {
               className="relative w-full max-w-lg"
             >
               {/* Modal card */}
-              <div className="relative bg-navy-800 border border-navy-600 rounded-2xl overflow-hidden">
+              <div className="relative bg-navy-800 border border-navy-700 rounded-2xl overflow-hidden">
                 {/* Top accent bar */}
                 <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
 
@@ -690,7 +690,7 @@ export function DashboardPage() {
                 <div className="px-8 pb-6">
                   <div className="space-y-4">
                     {/* Approved Amount */}
-                    <div className="bg-navy-700/50 border border-navy-600 rounded-xl p-5">
+                    <div className="bg-navy-700/50 border border-navy-700 rounded-xl p-5">
                       <div className="text-xs text-navy-400 uppercase tracking-wider mb-2 font-medium">Approved Amount</div>
                       <div className="text-3xl font-mono font-bold text-white tracking-tight">
                         {amlDeposit?.amount
@@ -705,7 +705,7 @@ export function DashboardPage() {
 
                     {/* Timestamps */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-navy-700/50 border border-navy-600 rounded-xl p-4">
+                      <div className="bg-navy-700/50 border border-navy-700 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <ArrowUpRight className="w-3.5 h-3.5 text-navy-400" />
                           <span className="text-xs text-navy-400 uppercase tracking-wider font-medium">Reported</span>
@@ -724,7 +724,7 @@ export function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="bg-navy-700/50 border border-navy-600 rounded-xl p-4">
+                      <div className="bg-navy-700/50 border border-navy-700 rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                           <span className="text-xs text-navy-400 uppercase tracking-wider font-medium">Confirmed</span>
@@ -748,7 +748,7 @@ export function DashboardPage() {
 
                 {/* Footer */}
                 <div className="px-8 pb-8">
-                  <div className="flex items-start gap-3 px-4 py-3 bg-navy-700/30 border border-navy-600/50 rounded-xl">
+                  <div className="flex items-start gap-3 px-4 py-3 bg-navy-700/30 border border-navy-700/50 rounded-xl">
                     <Clock className="w-4 h-4 text-navy-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-navy-400 leading-relaxed">
                       Your deposit is under compliance review. Trading will be enabled once the review is complete. No action is required from your side.

@@ -61,18 +61,18 @@ export function TradePanel({
 
   return (
     <Card className="h-full" padding="none">
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-        <h3 className="font-semibold text-navy-900 dark:text-white">Place Order</h3>
+      <div className="px-4 py-3 border-b border-navy-700">
+        <h3 className="font-semibold text-white">Place Order</h3>
       </div>
 
       {/* Buy/Sell Tabs */}
-      <div className="flex border-b border-navy-200 dark:border-navy-700">
+      <div className="flex border-b border-navy-700">
         <button
           onClick={() => setSide('BUY')}
           className={`flex-1 py-3 text-sm font-semibold transition-colors ${
             side === 'BUY'
               ? 'bg-emerald-500 text-white'
-              : 'bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+              : 'bg-navy-800 text-navy-400 hover:bg-emerald-900/20'
           }`}
         >
           BUY
@@ -82,7 +82,7 @@ export function TradePanel({
           className={`flex-1 py-3 text-sm font-semibold transition-colors ${
             side === 'SELL'
               ? 'bg-red-500 text-white'
-              : 'bg-navy-50 dark:bg-navy-800 text-navy-600 dark:text-navy-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+              : 'bg-navy-800 text-navy-400 hover:bg-red-900/20'
           }`}
         >
           SELL
@@ -93,13 +93,13 @@ export function TradePanel({
         {/* Price Input */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <span className="text-sm text-navy-600 dark:text-navy-400">
+            <span className="text-sm text-navy-400">
               Price (EUR)
             </span>
             <button
               type="button"
               onClick={setMarketPrice}
-              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+              className="text-xs text-emerald-400 hover:underline"
               aria-label={`Set price to ${side === 'BUY' ? 'best ask' : 'best bid'}`}
             >
               {side === 'BUY' ? 'Best Ask' : 'Best Bid'}
@@ -127,10 +127,10 @@ export function TradePanel({
         </div>
 
         {/* Total */}
-        <div className="pt-2 border-t border-navy-100 dark:border-navy-700">
+        <div className="pt-2 border-t border-navy-700">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-navy-600 dark:text-navy-400">Total</span>
-            <span className="text-lg font-bold font-mono text-navy-900 dark:text-white">
+            <span className="text-sm text-navy-400">Total</span>
+            <span className="text-lg font-bold font-mono text-white">
               €{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -152,7 +152,7 @@ export function TradePanel({
         </motion.button>
 
         {/* Market Info */}
-        <div className="text-xs text-navy-500 dark:text-navy-400 space-y-1">
+        <div className="text-xs text-navy-400 space-y-1">
           {lastPrice && (
             <div className="flex justify-between">
               <span>Last Price</span>
@@ -162,13 +162,13 @@ export function TradePanel({
           {bestBid && (
             <div className="flex justify-between">
               <span>Best Bid</span>
-              <span className="font-mono text-emerald-600 dark:text-emerald-400">€{bestBid.toFixed(2)}</span>
+              <span className="font-mono text-emerald-400">€{bestBid.toFixed(2)}</span>
             </div>
           )}
           {bestAsk && (
             <div className="flex justify-between">
               <span>Best Ask</span>
-              <span className="font-mono text-red-600 dark:text-red-400">€{bestAsk.toFixed(2)}</span>
+              <span className="font-mono text-red-400">€{bestAsk.toFixed(2)}</span>
             </div>
           )}
         </div>

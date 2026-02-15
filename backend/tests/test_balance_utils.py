@@ -7,7 +7,6 @@ import uuid
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.models.models import AssetType, Entity, EntityHolding, Jurisdiction

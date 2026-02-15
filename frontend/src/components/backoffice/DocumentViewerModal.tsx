@@ -62,7 +62,7 @@ export function DocumentViewerModal({
         return (
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-            <p className="text-red-500 dark:text-red-400 mb-4">Failed to load image</p>
+            <p className="text-red-400 mb-4">Failed to load image</p>
             <Button variant="outline" onClick={onDownload}>
               <Download className="w-4 h-4 mr-2" />
               Download File
@@ -93,7 +93,7 @@ export function DocumentViewerModal({
         <iframe
           src={documentContentUrl}
           title={document.fileName}
-          className="w-full h-[60vh] rounded-lg border border-navy-200 dark:border-navy-600"
+          className="w-full h-[60vh] rounded-lg border border-navy-600"
           aria-label={`PDF preview of ${document.fileName}`}
         />
       );
@@ -103,7 +103,7 @@ export function DocumentViewerModal({
     return (
       <div className="text-center">
         <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-        <p className="text-navy-500 dark:text-navy-400 mb-4">
+        <p className="text-navy-400 mb-4">
           Preview not available for this file type
         </p>
         <Button variant="primary" onClick={onDownload}>
@@ -119,14 +119,14 @@ export function DocumentViewerModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden"
       >
-        <div className="flex items-center justify-between p-4 border-b border-navy-100 dark:border-navy-700">
+        <div className="flex items-center justify-between p-4 border-b border-navy-700">
           <div>
-            <h2 id="document-viewer-title" className="font-semibold text-navy-900 dark:text-white">
+            <h2 id="document-viewer-title" className="font-semibold text-white">
               {document.type.replace(/_/g, ' ')}
             </h2>
-            <p className="text-sm text-navy-500 dark:text-navy-400">{document.fileName}</p>
+            <p className="text-sm text-navy-400">{document.fileName}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -139,23 +139,23 @@ export function DocumentViewerModal({
             </Button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+              className="p-2 hover:bg-navy-700 rounded-lg"
               aria-label="Close document viewer"
             >
               <X className="w-5 h-5 text-navy-500" aria-hidden="true" />
             </button>
           </div>
         </div>
-        <div className="p-6 overflow-auto max-h-[calc(85vh-80px)] flex items-center justify-center bg-navy-50 dark:bg-navy-900">
+        <div className="p-6 overflow-auto max-h-[calc(85vh-80px)] flex items-center justify-center bg-navy-900">
           {documentLoading ? (
             <div className="text-center">
               <RefreshCw className="w-8 h-8 text-navy-400 animate-spin mx-auto mb-4" />
-              <p className="text-navy-500 dark:text-navy-400">Loading document...</p>
+              <p className="text-navy-400">Loading document...</p>
             </div>
           ) : documentError ? (
             <div className="text-center">
               <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-              <p className="text-red-500 dark:text-red-400" role="alert">{documentError}</p>
+              <p className="text-red-400" role="alert">{documentError}</p>
               {onRetry && (
                 <Button
                   variant="outline"
@@ -172,7 +172,7 @@ export function DocumentViewerModal({
           ) : (
             <div className="text-center">
               <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-              <p className="text-navy-500 dark:text-navy-400">Document preview not available</p>
+              <p className="text-navy-400">Document preview not available</p>
             </div>
           )}
         </div>

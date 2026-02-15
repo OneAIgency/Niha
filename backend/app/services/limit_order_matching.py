@@ -16,7 +16,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_DOWN
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, select

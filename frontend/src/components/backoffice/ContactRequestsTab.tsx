@@ -98,13 +98,13 @@ export function ContactRequestsTab({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="rounded-xl border-2 border-navy-200 dark:border-navy-700 py-6 px-4 bg-white dark:bg-navy-800/50">
+        <div className="rounded-xl border-2 border-navy-700 py-6 px-4 bg-navy-800/50">
           {loading ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="card_contact_request_list animate-pulse">
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3" />
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-24" />
+                  <div className="h-4 bg-navy-600 rounded w-1/3" />
+                  <div className="h-4 bg-navy-600 rounded w-24" />
                 </div>
               ))}
             </div>
@@ -148,7 +148,7 @@ export function ContactRequestsTab({
                     <button
                       type="button"
                       onClick={() => setViewModalRequest(request)}
-                      className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
+                      className="p-2 rounded-lg text-navy-400 hover:bg-navy-700 hover:text-navy-200 transition-colors"
                       aria-label={`View details for ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                     >
                       <Eye className="w-4 h-4" />
@@ -167,7 +167,7 @@ export function ContactRequestsTab({
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="text-red-500 hover:bg-red-500/10 dark:hover:bg-red-500/20"
+                          className="text-red-500 hover:bg-red-500/20"
                           onClick={() => onReject(request.id)}
                           loading={actionLoading === `reject-${request.id}`}
                           aria-label={`Reject request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
@@ -180,7 +180,7 @@ export function ContactRequestsTab({
                       type="button"
                       onClick={() => handleDeleteClick(request)}
                       disabled={!!actionLoading}
-                      className="p-2 rounded-lg text-navy-500 dark:text-navy-400 hover:bg-navy-100 dark:hover:bg-navy-700 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                      className="p-2 rounded-lg text-navy-400 hover:bg-navy-700 hover:text-red-400 transition-colors disabled:opacity-50"
                       aria-label={`Delete request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -191,8 +191,8 @@ export function ContactRequestsTab({
             </div>
           ) : (
             <div className="text-center py-12">
-              <Users className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-              <p className="text-navy-500 dark:text-navy-400">No contact requests</p>
+              <Users className="w-12 h-12 text-navy-600 mx-auto mb-4" />
+              <p className="text-navy-400">No contact requests</p>
             </div>
           )}
         </div>

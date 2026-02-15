@@ -1,7 +1,7 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout, ThemeLayout } from './components/layout';
-import { AutoOrdersService, MmActivityFloater, RoleSimulationFloater } from './components/admin';
+import { AutoOrdersService } from './components/admin';
 import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -75,11 +75,11 @@ const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ de
 
 // Loading fallback component with proper semantic structure for accessibility
 const PageLoader = () => (
-  <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+  <div className="min-h-screen bg-navy-950">
     <main className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-        <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
+        <p className="mt-4 text-navy-400">Loading...</p>
       </div>
     </main>
   </div>
@@ -606,8 +606,6 @@ function App() {
           <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
         <AutoOrdersService />
-        <MmActivityFloater />
-        <RoleSimulationFloater />
       </Suspense>
     </Router>
   );

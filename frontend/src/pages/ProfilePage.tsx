@@ -353,7 +353,7 @@ export function ProfilePage() {
         description="Manage your personal information and security settings"
         iconBg="bg-emerald-500/20"
       />
-      <div className="page-container py-8">
+      <div className="page-container py-6">
         {/* Error Display */}
         {error && (
           <AlertBanner
@@ -379,10 +379,10 @@ export function ProfilePage() {
             {[...Array(3)].map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <div className="p-6">
-                  <div className="h-6 bg-navy-200 dark:bg-navy-700 rounded w-1/3 mb-4" />
+                  <div className="h-6 bg-navy-700 rounded w-1/3 mb-4" />
                   <div className="space-y-3">
-                    <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
-                    <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-2/3" />
+                    <div className="h-4 bg-navy-600 rounded w-1/2" />
+                    <div className="h-4 bg-navy-600 rounded w-2/3" />
                   </div>
                 </div>
               </Card>
@@ -397,7 +397,7 @@ export function ProfilePage() {
           >
             <Card>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <User className="w-5 h-5 text-emerald-500" />
                   Personal Information
                 </h2>
@@ -481,38 +481,38 @@ export function ProfilePage() {
                   ) : (
                     <>
                       <div>
-                        <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                           Full Name
                         </label>
-                        <p className="text-navy-900 dark:text-white font-medium">
+                        <p className="text-white font-medium">
                           {user?.firstName && user?.lastName
                             ? `${user.firstName} ${user.lastName}`
                             : 'Not set'}
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                           Email Address
                         </label>
-                        <p className="text-navy-900 dark:text-white font-medium flex items-center gap-2">
+                        <p className="text-white font-medium flex items-center gap-2">
                           <Mail className="w-4 h-4 text-navy-400" />
                           {user?.email}
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                           Phone Number
                         </label>
-                        <p className="text-navy-900 dark:text-white font-medium flex items-center gap-2">
+                        <p className="text-white font-medium flex items-center gap-2">
                           <Phone className="w-4 h-4 text-navy-400" />
                           {user?.phone || 'Not set'}
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                           Position
                         </label>
-                        <p className="text-navy-900 dark:text-white font-medium flex items-center gap-2">
+                        <p className="text-white font-medium flex items-center gap-2">
                           <Briefcase className="w-4 h-4 text-navy-400" />
                           {user?.position || 'Not set'}
                         </p>
@@ -532,37 +532,37 @@ export function ProfilePage() {
               transition={{ delay: 0.1 }}
             >
               <Card>
-                <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-blue-500" />
                   Entity Information
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                       Entity Name
                     </label>
-                    <p className="text-navy-900 dark:text-white font-medium">{entity.name}</p>
+                    <p className="text-white font-medium">{entity.name}</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                       Legal Name
                     </label>
-                    <p className="text-navy-900 dark:text-white font-medium">
+                    <p className="text-white font-medium">
                       {entity.legalName || entity.name}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                       Jurisdiction
                     </label>
-                    <p className="text-navy-900 dark:text-white font-medium flex items-center gap-2">
+                    <p className="text-white font-medium flex items-center gap-2">
                       <Globe className="w-4 h-4 text-navy-400" />
                       {jurisdictionLabels[entity.jurisdiction] || entity.jurisdiction}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-navy-400 uppercase tracking-wider mb-1">
                       KYC Status
                     </label>
                     <Badge variant={getKycBadgeVariant(entity.kycStatus || 'pending')}>
@@ -583,7 +583,7 @@ export function ProfilePage() {
             transition={{ delay: 0.2 }}
           >
             <Card className="border-2 border-dashed border-amber-500/30 bg-amber-500/5">
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <FlaskConical className="w-5 h-5 text-amber-500" />
                 Testing Tools
                 <Badge variant="warning" className="ml-2">Admin Only</Badge>
@@ -591,12 +591,12 @@ export function ProfilePage() {
 
               <div className="space-y-6">
                 {/* Role Changer */}
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                <div className="p-4 bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                     <User className="w-4 h-4 text-amber-500" />
                     Change My Role
                   </h3>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                  <p className="text-sm text-navy-400 mb-3">
                     Test the UI from different user perspectives. Note: ADMIN always has access to all features
                     regardless of displayed role - this only changes what role-specific UI elements are shown.
                   </p>
@@ -625,12 +625,12 @@ export function ProfilePage() {
                 </div>
 
                 {/* Asset Credit */}
-                <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <h3 className="font-medium text-navy-900 dark:text-white mb-3 flex items-center gap-2">
+                <div className="p-4 bg-navy-700/50 rounded-xl">
+                  <h3 className="font-medium text-white mb-3 flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-amber-500" />
                     Credit Assets to My Entity
                   </h3>
-                  <p className="text-sm text-navy-500 dark:text-navy-400 mb-3">
+                  <p className="text-sm text-navy-400 mb-3">
                     Add funds or certificates for testing trading
                   </p>
                   <div className="flex gap-3 mb-4">
@@ -660,8 +660,8 @@ export function ProfilePage() {
                   </div>
 
                   {/* Current Balances */}
-                  <div className="flex items-center gap-4 pt-3 border-t border-navy-200 dark:border-navy-600">
-                    <span className="text-sm text-navy-500 dark:text-navy-400">Current Balances:</span>
+                  <div className="flex items-center gap-4 pt-3 border-t border-navy-600">
+                    <span className="text-sm text-navy-400">Current Balances:</span>
                     {isLoadingBalances ? (
                       <RefreshCw className="w-4 h-4 animate-spin text-navy-400" />
                     ) : balances ? (
@@ -681,7 +681,7 @@ export function ProfilePage() {
                     )}
                     <button
                       onClick={loadBalances}
-                      className="ml-auto text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                      className="ml-auto text-navy-400 hover:text-navy-300"
                       title="Refresh balances"
                     >
                       <RefreshCw className={`w-4 h-4 ${isLoadingBalances ? 'animate-spin' : ''}`} />
@@ -701,21 +701,21 @@ export function ProfilePage() {
             transition={{ delay: 0.3 }}
           >
             <Card>
-              <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-navy-500" />
                 Security
               </h2>
 
               <div className="space-y-6">
                 {/* Last Login */}
-                <div className="flex items-center justify-between p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-navy-700/50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-navy-100 dark:bg-navy-600 rounded-full flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+                    <div className="w-10 h-10 bg-navy-600 rounded-full flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-navy-300" />
                     </div>
                     <div>
-                      <p className="font-medium text-navy-900 dark:text-white">Last Login</p>
-                      <p className="text-sm text-navy-500 dark:text-navy-400">
+                      <p className="font-medium text-white">Last Login</p>
+                      <p className="text-sm text-navy-400">
                         {user?.lastLogin
                           ? formatRelativeTime(user.lastLogin)
                           : 'First session'}
@@ -726,14 +726,14 @@ export function ProfilePage() {
 
                 {/* Change Password */}
                 {!showPasswordForm ? (
-                  <div className="flex items-center justify-between p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-navy-700/50 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-navy-100 dark:bg-navy-600 rounded-full flex items-center justify-center">
-                        <Key className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+                      <div className="w-10 h-10 bg-navy-600 rounded-full flex items-center justify-center">
+                        <Key className="w-5 h-5 text-navy-300" />
                       </div>
                       <div>
-                        <p className="font-medium text-navy-900 dark:text-white">Password</p>
-                        <p className="text-sm text-navy-500 dark:text-navy-400">
+                        <p className="font-medium text-white">Password</p>
+                        <p className="text-sm text-navy-400">
                           Change your account password
                         </p>
                       </div>
@@ -743,9 +743,9 @@ export function ProfilePage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl space-y-4">
+                  <div className="p-4 bg-navy-700/50 rounded-xl space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-navy-900 dark:text-white flex items-center gap-2">
+                      <h3 className="font-medium text-white flex items-center gap-2">
                         <Key className="w-4 h-4" />
                         Change Password
                       </h3>
@@ -777,7 +777,7 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, current: !showPasswords.current })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-300"
                           aria-label={showPasswords.current ? 'Hide current password' : 'Show current password'}
                         >
                           {showPasswords.current ? (
@@ -803,7 +803,7 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, new: !showPasswords.new })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-300"
                           aria-label={showPasswords.new ? 'Hide new password' : 'Show new password'}
                         >
                           {showPasswords.new ? (
@@ -829,7 +829,7 @@ export function ProfilePage() {
                           onClick={() =>
                             setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
                           }
-                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-600 dark:hover:text-navy-300"
+                          className="absolute right-3 top-9 text-navy-400 hover:text-navy-300"
                           aria-label={showPasswords.confirm ? 'Hide confirm password' : 'Show confirm password'}
                         >
                           {showPasswords.confirm ? (
@@ -842,7 +842,7 @@ export function ProfilePage() {
                     </div>
 
                     {/* Password Requirements */}
-                    <div className="text-xs text-navy-500 dark:text-navy-400 space-y-1">
+                    <div className="text-xs text-navy-400 space-y-1">
                       <p className="font-medium">Password requirements:</p>
                       <ul className="list-disc list-inside space-y-0.5">
                         <li>At least 8 characters</li>
@@ -856,8 +856,8 @@ export function ProfilePage() {
                     </div>
 
                     {passwordErrors.length > 0 && (
-                      <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                      <div className="p-3 bg-red-900/20 rounded-lg">
+                        <div className="flex items-center gap-2 text-red-400 text-sm">
                           <AlertCircle className="w-4 h-4" />
                           <span className="font-medium">Please fix the following:</span>
                         </div>

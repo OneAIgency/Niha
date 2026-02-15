@@ -42,9 +42,9 @@ export function UnifiedOrderBook({
   const maxCumulative = Math.max(maxBidCumulative, maxAskCumulative);
 
   return (
-    <div className="content_wrapper_last">
+    <div className="panel panel--flush">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
+      <div className="px-4 py-3 border-b border-navy-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             {/* Total Bids */}

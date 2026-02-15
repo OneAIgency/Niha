@@ -7,14 +7,13 @@ Validates balances before placing orders to ensure orders are always covered.
 
 import asyncio
 import logging
-import math
 import random
 import uuid
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, ROUND_DOWN
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 

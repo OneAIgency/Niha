@@ -282,8 +282,8 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
             <Zap className="w-5 h-5 text-emerald-500" />
           </div>
           <div>
-            <h3 className="font-semibold text-navy-900 dark:text-white">Auto Trade Rules</h3>
-            <p className="text-sm text-navy-500 dark:text-navy-400">
+            <h3 className="font-semibold text-white">Auto Trade Rules</h3>
+            <p className="text-sm text-navy-400">
               {activeRulesCount} active rule{activeRulesCount !== 1 ? 's' : ''}
             </p>
           </div>
@@ -302,8 +302,8 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
         {/* Rules List */}
         <div className="space-y-2">
           {rules.length === 0 ? (
-            <div className="p-6 rounded-xl border-2 border-dashed border-navy-300 dark:border-navy-600 text-center">
-              <p className="text-navy-500 dark:text-navy-400 text-sm">
+            <div className="p-6 rounded-xl border-2 border-dashed border-navy-600 text-center">
+              <p className="text-navy-400 text-sm">
                 No rules configured.<br />Click "Add Rule" to create one.
               </p>
             </div>
@@ -316,15 +316,15 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                 animate={{ opacity: 1, y: 0 }}
                 className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
                   selectedRuleId === rule.id
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg shadow-emerald-500/10'
+                    ? 'border-emerald-500 bg-emerald-900/20 shadow-lg shadow-emerald-500/10'
                     : rule.enabled
-                      ? 'border-emerald-400/40 bg-emerald-50/50 dark:bg-emerald-900/10 hover:border-emerald-400'
-                      : 'border-navy-200 dark:border-navy-700 hover:border-navy-300 dark:hover:border-navy-600 opacity-70'
+                      ? 'border-emerald-400/40 bg-emerald-900/10 hover:border-emerald-400'
+                      : 'border-navy-700 hover:border-navy-600 opacity-70'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-navy-900 dark:text-white text-sm truncate max-w-[120px]">
+                    <span className="font-semibold text-white text-sm truncate max-w-[120px]">
                       {rule.name}
                     </span>
                     {rule.enabled && (
@@ -342,13 +342,13 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                     className={`p-1.5 rounded-lg transition-colors ${
                       rule.enabled
                         ? 'text-white bg-emerald-500 hover:bg-emerald-600'
-                        : 'text-navy-400 bg-navy-100 dark:bg-navy-800 hover:bg-navy-200'
+                        : 'text-navy-400 bg-navy-800 hover:bg-navy-200'
                     }`}
                   >
                     {rule.enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400">
+                <div className="flex items-center gap-2 text-xs text-navy-400">
                   {rule.side === 'BUY' ? (
                     <TrendingUp className="w-3 h-3 text-emerald-500" />
                   ) : (
@@ -360,13 +360,13 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                   <span>{formatInterval(rule)}</span>
                 </div>
                 {rule.executionCount > 0 && (
-                  <div className="mt-2 pt-2 border-t border-navy-200 dark:border-navy-700">
+                  <div className="mt-2 pt-2 border-t border-navy-700">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-navy-500 dark:text-navy-400">
+                      <span className="text-navy-400">
                         {rule.executionCount} orders
                       </span>
                       {rule.enabled && rule.nextExecutionAt && (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span className="text-emerald-400 font-medium">
                           Next: {Math.max(0, Math.round((new Date(rule.nextExecutionAt).getTime() - Date.now()) / 1000))}s
                         </span>
                       )}
@@ -381,19 +381,19 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
         {/* Rule Editor */}
         <div className="col-span-2">
           {selectedRule ? (
-            <div className="p-4 rounded-xl bg-white dark:bg-navy-800/50 border border-navy-200 dark:border-navy-700 space-y-5">
+            <div className="p-4 rounded-xl bg-navy-800/50 border border-navy-700 space-y-5">
               {/* Rule Header */}
               <div className="flex items-center justify-between">
                 <input
                   type="text"
                   value={selectedRule.name}
                   onChange={(e) => handleUpdateRule(selectedRule.id, { name: e.target.value })}
-                  className="text-lg font-bold text-navy-900 dark:text-white bg-transparent border-none focus:outline-none focus:ring-0 p-0"
+                  className="text-lg font-bold text-white bg-transparent border-none focus:outline-none focus:ring-0 p-0"
                 />
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleDeleteRule(selectedRule.id)}
-                    className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="p-2 rounded-lg text-red-500 hover:bg-red-900/20 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -413,11 +413,11 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                       </span>
-                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-sm font-semibold text-emerald-400">
                         LIVE - Auto Trading Active
                       </span>
                     </div>
-                    <div className="text-xs text-navy-600 dark:text-navy-300">
+                    <div className="text-xs text-navy-300">
                       {selectedRule.executionCount} orders placed
                       {selectedRule.nextExecutionAt && (
                         <> • Next in ~{Math.max(0, Math.round((new Date(selectedRule.nextExecutionAt).getTime() - Date.now()) / 1000))}s</>
@@ -429,7 +429,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
               {/* Quick Presets */}
               <div>
-                <label className="block text-xs font-semibold text-navy-500 dark:text-navy-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-navy-400 uppercase tracking-wider mb-2">
                   Quick Presets
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -445,7 +445,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                           <Icon className={`w-4 h-4 ${preset.color}`} />
                           <span className={`font-semibold text-sm ${preset.color}`}>{preset.name}</span>
                         </div>
-                        <p className="text-xs text-navy-500 dark:text-navy-400">{preset.description}</p>
+                        <p className="text-xs text-navy-400">{preset.description}</p>
                       </button>
                     );
                   })}
@@ -453,12 +453,12 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
               </div>
 
               {/* Preview */}
-              <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-900/50 border border-navy-200 dark:border-navy-700">
+              <div className="p-3 rounded-lg bg-navy-900/50 border border-navy-700">
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs font-semibold text-navy-600 dark:text-navy-300 uppercase tracking-wider mb-1">Preview</p>
-                    <p className="text-sm text-navy-700 dark:text-navy-200">
+                    <p className="text-xs font-semibold text-navy-300 uppercase tracking-wider mb-1">Preview</p>
+                    <p className="text-sm text-navy-200">
                       {getPreviewText(selectedRule)}
                     </p>
                   </div>
@@ -468,10 +468,10 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
               {/* Main Settings - 3 Cards */}
               <div className="grid grid-cols-3 gap-3">
                 {/* Price Card */}
-                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                <div className="p-3 rounded-lg bg-navy-900/30 border border-navy-700">
                   <div className="flex items-center gap-2 mb-3">
                     <DollarSign className="w-4 h-4 text-emerald-500" />
-                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Price</span>
+                    <span className="font-semibold text-sm text-white">Price</span>
                   </div>
                   <select
                     value={selectedRule.priceMode}
@@ -534,10 +534,10 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                 </div>
 
                 {/* Quantity Card */}
-                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                <div className="p-3 rounded-lg bg-navy-900/30 border border-navy-700">
                   <div className="flex items-center gap-2 mb-3">
                     <BarChart3 className="w-4 h-4 text-blue-500" />
-                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Quantity</span>
+                    <span className="font-semibold text-sm text-white">Quantity</span>
                   </div>
                   <select
                     value={selectedRule.quantityMode}
@@ -597,10 +597,10 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                 </div>
 
                 {/* Speed Card */}
-                <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                <div className="p-3 rounded-lg bg-navy-900/30 border border-navy-700">
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="w-4 h-4 text-amber-500" />
-                    <span className="font-semibold text-sm text-navy-900 dark:text-white">Speed</span>
+                    <span className="font-semibold text-sm text-white">Speed</span>
                   </div>
 
                   {/* Quick speed buttons */}
@@ -616,7 +616,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                         className={`py-1 px-2 rounded text-xs font-medium transition-colors ${
                           selectedRule.intervalMode === 'fixed' && selectedRule.intervalSeconds === sec
                             ? 'bg-amber-500 text-white'
-                            : 'bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 text-navy-600 dark:text-navy-300 hover:border-amber-300'
+                            : 'bg-navy-800 border border-navy-600 text-navy-300 hover:border-amber-300'
                         }`}
                       >
                         {sec}s
@@ -634,7 +634,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                     className={`w-full py-1.5 px-2 rounded text-xs font-medium transition-colors ${
                       selectedRule.intervalMode === 'random'
                         ? 'bg-amber-500 text-white'
-                        : 'bg-white dark:bg-navy-800 border border-navy-200 dark:border-navy-600 text-navy-600 dark:text-navy-300'
+                        : 'bg-navy-800 border border-navy-600 text-navy-300'
                     }`}
                   >
                     {selectedRule.intervalMode === 'random' ? '✓ Random interval' : 'Use random interval'}
@@ -666,7 +666,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
               {/* Advanced Settings Toggle */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-navy-500 dark:text-navy-400 hover:text-navy-700 dark:hover:text-navy-200 transition-colors"
+                className="flex items-center gap-2 text-sm text-navy-400 hover:text-navy-200 transition-colors"
               >
                 {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 Advanced Settings
@@ -681,9 +681,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-4 overflow-hidden"
                   >
-                    <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-navy-50 dark:bg-navy-900/30 border border-navy-200 dark:border-navy-700">
+                    <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-navy-900/30 border border-navy-700">
                       <div>
-                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                        <label className="block text-xs font-medium text-navy-300 mb-1">
                           Min Balance Required
                         </label>
                         <NumberInput
@@ -695,7 +695,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                        <label className="block text-xs font-medium text-navy-300 mb-1">
                           Max Active Orders
                         </label>
                         <NumberInput
@@ -707,7 +707,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-navy-600 dark:text-navy-300 mb-1">
+                        <label className="block text-xs font-medium text-navy-300 mb-1">
                           Max Price Deviation (%)
                         </label>
                         <NumberInput
@@ -726,40 +726,40 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
 
               {/* Stats Section */}
               {selectedRule.executionCount > 0 && (
-                <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+                <div className="pt-4 border-t border-navy-700">
                   <div className="flex items-center gap-2 mb-3">
                     <Activity className="w-4 h-4 text-navy-500" />
-                    <span className="text-sm font-semibold text-navy-700 dark:text-navy-300">Statistics</span>
+                    <span className="text-sm font-semibold text-navy-300">Statistics</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-center">
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <div className="p-3 rounded-lg bg-emerald-900/20 text-center">
+                      <div className="text-2xl font-bold text-emerald-400">
                         {selectedRule.executionCount}
                       </div>
-                      <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Orders Placed</div>
+                      <div className="text-xs text-emerald-400/70">Orders Placed</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-800 text-center">
-                      <div className="text-sm font-semibold text-navy-700 dark:text-navy-200">
+                    <div className="p-3 rounded-lg bg-navy-800 text-center">
+                      <div className="text-sm font-semibold text-navy-200">
                         {selectedRule.lastExecutedAt
                           ? new Date(selectedRule.lastExecutedAt).toLocaleTimeString()
                           : '-'}
                       </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">Last Order</div>
+                      <div className="text-xs text-navy-400">Last Order</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-navy-100 dark:bg-navy-800 text-center">
-                      <div className="text-sm font-semibold text-navy-700 dark:text-navy-200">
+                    <div className="p-3 rounded-lg bg-navy-800 text-center">
+                      <div className="text-sm font-semibold text-navy-200">
                         {selectedRule.nextExecutionAt && selectedRule.enabled
                           ? new Date(selectedRule.nextExecutionAt).toLocaleTimeString()
                           : '-'}
                       </div>
-                      <div className="text-xs text-navy-500 dark:text-navy-400">Next Order</div>
+                      <div className="text-xs text-navy-400">Next Order</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Main Toggle */}
-              <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+              <div className="pt-4 border-t border-navy-700">
                 <button
                   onClick={() => handleToggleRule(selectedRule.id)}
                   disabled={isSaving}
@@ -784,12 +784,12 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full py-12 text-center rounded-xl bg-navy-50 dark:bg-navy-800/30 border-2 border-dashed border-navy-300 dark:border-navy-600">
-              <Settings className="w-12 h-12 text-navy-300 dark:text-navy-600 mb-4" />
-              <p className="text-navy-500 dark:text-navy-400 mb-2">
+            <div className="flex flex-col items-center justify-center h-full py-12 text-center rounded-xl bg-navy-800/30 border-2 border-dashed border-navy-600">
+              <Settings className="w-12 h-12 text-navy-600 mb-4" />
+              <p className="text-navy-400 mb-2">
                 Select a rule to configure
               </p>
-              <p className="text-sm text-navy-400 dark:text-navy-500">
+              <p className="text-sm text-navy-500">
                 or create a new one with the button above
               </p>
             </div>

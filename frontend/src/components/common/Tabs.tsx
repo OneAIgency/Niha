@@ -62,7 +62,7 @@ export function Tabs({
             {tab.icon && <span className="mr-2">{tab.icon}</span>}
             {tab.label}
             {tab.badge !== undefined && (
-              <span className="ml-2 px-1.5 py-0.5 bg-navy-200 dark:bg-navy-600 rounded text-xs">
+              <span className="ml-2 px-1.5 py-0.5 bg-navy-600 rounded text-xs">
                 {tab.badge}
               </span>
             )}
@@ -107,7 +107,7 @@ export function Tabs({
 
   if (variant === 'underline') {
     return (
-      <div className={cn('flex border-b border-navy-200 dark:border-navy-700', fullWidth && 'w-full', className)} role="tablist">
+      <div className={cn('flex border-b border-navy-700', fullWidth && 'w-full', className)} role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -119,8 +119,8 @@ export function Tabs({
               sizeStyles[size],
               fullWidth && 'flex-1 justify-center',
               activeTab === tab.id
-                ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500'
-                : 'text-navy-500 dark:text-navy-400 hover:text-navy-700 dark:hover:text-navy-300',
+                ? 'text-emerald-400 border-b-2 border-emerald-500'
+                : 'text-navy-400 hover:text-navy-300',
               tab.disabled && 'opacity-50 cursor-not-allowed'
             )}
             aria-label={tab.label}
@@ -130,7 +130,7 @@ export function Tabs({
             {tab.icon}
             {tab.label}
             {tab.badge !== undefined && (
-              <span className="px-1.5 py-0.5 bg-navy-100 dark:bg-navy-700 rounded text-xs">
+              <span className="px-1.5 py-0.5 bg-navy-700 rounded text-xs">
                 {tab.badge}
               </span>
             )}
@@ -154,8 +154,8 @@ export function Tabs({
             sizeStyles[size],
             fullWidth && 'flex-1 justify-center',
             activeTab === tab.id
-              ? 'bg-navy-100 dark:bg-navy-700 text-navy-900 dark:text-white'
-              : 'text-navy-600 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800',
+              ? 'bg-navy-700 text-white'
+              : 'text-navy-400 hover:bg-navy-800',
             tab.disabled && 'opacity-50 cursor-not-allowed'
           )}
           aria-label={tab.label}
@@ -165,7 +165,7 @@ export function Tabs({
           {tab.icon}
           {tab.label}
           {tab.badge !== undefined && (
-            <span className="px-1.5 py-0.5 bg-navy-200 dark:bg-navy-600 rounded text-xs">
+            <span className="px-1.5 py-0.5 bg-navy-600 rounded text-xs">
               {tab.badge}
             </span>
           )}

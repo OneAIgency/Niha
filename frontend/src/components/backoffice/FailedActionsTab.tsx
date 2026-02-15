@@ -76,7 +76,7 @@ export function FailedActionsTab() {
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
-        <code className="text-xs font-mono text-red-900 dark:text-red-100 font-semibold">
+        <code className="text-xs font-mono text-red-100 font-semibold">
           {String(value)}
         </code>
       ),
@@ -86,7 +86,7 @@ export function FailedActionsTab() {
       header: 'Timestamp',
       width: '160px',
       render: (value) => (
-        <span className="text-xs text-red-900 dark:text-red-100">
+        <span className="text-xs text-red-100">
           {new Date(String(value).endsWith('Z') ? String(value) : String(value) + 'Z').toLocaleString()}
         </span>
       ),
@@ -97,8 +97,8 @@ export function FailedActionsTab() {
       width: '200px',
       render: (value) => (
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
-          <span className="text-xs font-medium text-red-700 dark:text-red-300">
+          <AlertTriangle className="w-3 h-3 text-red-400" />
+          <span className="text-xs font-medium text-red-300">
             {String(value)}
           </span>
         </div>
@@ -109,7 +109,7 @@ export function FailedActionsTab() {
       header: 'Entity',
       width: '120px',
       render: (value) => (
-        <span className="text-xs text-red-600 dark:text-red-400">
+        <span className="text-xs text-red-400">
           {String(value)}
         </span>
       ),
@@ -120,7 +120,7 @@ export function FailedActionsTab() {
       width: '100px',
       align: 'center',
       render: () => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-900/30 text-red-400">
           FAILED
         </span>
       ),
@@ -131,11 +131,11 @@ export function FailedActionsTab() {
       width: '100px',
       render: (value) =>
         value ? (
-          <code className="text-xs font-mono text-red-600 dark:text-red-400">
+          <code className="text-xs font-mono text-red-400">
             {String(value).substring(0, 8)}...
           </code>
         ) : (
-          <span className="text-xs text-red-400 dark:text-red-600">—</span>
+          <span className="text-xs text-red-600">—</span>
         ),
     },
     {
@@ -144,11 +144,11 @@ export function FailedActionsTab() {
       width: '100px',
       render: (value) =>
         value ? (
-          <code className="text-xs font-mono text-red-600 dark:text-red-400">
+          <code className="text-xs font-mono text-red-400">
             {String(value).substring(0, 8)}...
           </code>
         ) : (
-          <span className="text-xs text-red-400 dark:text-red-600">—</span>
+          <span className="text-xs text-red-600">—</span>
         ),
     },
   ];
@@ -156,17 +156,17 @@ export function FailedActionsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/20 dark:to-amber-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+      <div className="bg-gradient-to-r from-red-900/20 to-amber-900/20 rounded-lg p-4 border border-red-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <div className="p-2 rounded-lg bg-red-900/30">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-navy-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-white">
                 Failed Actions
               </h3>
-              <p className="text-xs text-navy-600 dark:text-navy-400">
+              <p className="text-xs text-navy-400">
                 Actions that encountered errors
               </p>
             </div>
@@ -181,7 +181,7 @@ export function FailedActionsTab() {
             Refresh
           </Button>
         </div>
-        <div className="mt-3 text-sm text-navy-600 dark:text-navy-400">
+        <div className="mt-3 text-sm text-navy-400">
           Showing {tickets.length} of {total.toLocaleString()} failed actions
         </div>
       </div>
@@ -193,16 +193,16 @@ export function FailedActionsTab() {
 
       {/* Success Message */}
       {!loading && tickets.length === 0 && (
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-8 text-center">
+        <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-8 text-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-              <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-3 rounded-full bg-emerald-900/30">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+              <h3 className="text-lg font-semibold text-emerald-100">
                 No Failed Actions
               </h3>
-              <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+              <p className="text-sm text-emerald-300 mt-1">
                 All actions completed successfully
               </p>
             </div>
@@ -212,8 +212,8 @@ export function FailedActionsTab() {
 
       {/* Table with red highlighting */}
       {tickets.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg border-2 border-red-200 dark:border-red-800 p-1">
-          <div className="bg-white dark:bg-navy-800 rounded-lg border border-red-200 dark:border-red-700">
+        <div className="bg-red-900/10 rounded-lg border-2 border-red-800 p-1">
+          <div className="bg-navy-800 rounded-lg border border-red-700">
             <DataTable
               columns={columns}
               data={tickets}
@@ -237,7 +237,7 @@ export function FailedActionsTab() {
           >
             Previous
           </Button>
-          <span className="text-sm text-navy-600 dark:text-navy-400">
+          <span className="text-sm text-navy-400">
             Page {Math.floor(offset / limit) + 1} of {Math.ceil(total / limit)}
           </span>
           <Button

@@ -19,12 +19,12 @@ const sizeStyles = {
 const typeStyles = {
   EUA: {
     default: 'cert-badge-eua',
-    outline: 'border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 bg-transparent',
+    outline: 'border border-blue-700 text-blue-400 bg-transparent',
     solid: 'bg-blue-500 text-white',
   },
   CEA: {
     default: 'cert-badge-cea',
-    outline: 'border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 bg-transparent',
+    outline: 'border border-amber-700 text-amber-400 bg-transparent',
     solid: 'bg-amber-500 text-white',
   },
 };

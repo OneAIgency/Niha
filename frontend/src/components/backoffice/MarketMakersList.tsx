@@ -72,9 +72,9 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       width: '20%',
       render: (value, row) => (
         <div>
-          <div className="font-medium text-navy-900 dark:text-white">{String(value)}</div>
+          <div className="font-medium text-white">{String(value)}</div>
           {row.description && (
-            <div className="text-xs text-navy-500 dark:text-navy-400">{row.description}</div>
+            <div className="text-xs text-navy-400">{row.description}</div>
           )}
         </div>
       ),
@@ -124,12 +124,12 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
           return (
             <div className="text-right">
               {/* Available - Highlighted */}
-              <div className="font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400">
+              <div className="font-mono font-bold text-lg text-emerald-400">
                 {loadingBalances ? '...' : formatCurrency(eurBal.available, 'EUR')}
               </div>
               {/* Initial & Locked - Secondary, stacked */}
               {!loadingBalances && eurBal.locked > 0 && (
-                <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                <div className="mt-1 text-xs text-navy-400 space-y-0.5">
                   <div>Initial: {formatCurrency(eurBal.total, 'EUR')}</div>
                   <div className="flex items-center justify-end gap-1">
                     <Lock className="w-3 h-3" />
@@ -148,21 +148,21 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               {/* Available CEA - Highlighted */}
               <div className="flex items-center justify-end gap-2">
                 <Leaf className="w-4 h-4 text-amber-500" />
-                <span className="font-mono font-bold text-lg text-amber-600 dark:text-amber-400">
+                <span className="font-mono font-bold text-lg text-amber-400">
                   {loadingBalances ? '...' : formatCertificateQuantity(ceaBal.available)} CEA
                 </span>
               </div>
               {/* EUR Value of Available CEA */}
               {!loadingBalances && (
-                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="font-mono font-bold text-emerald-400">
                   {formatCurrency(ceaAvailableValue, 'EUR')}
                 </div>
               )}
               {/* CEA Sold with value */}
               {!loadingBalances && ceaSold > 0 && (
-                <div className="mt-1 text-xs text-navy-500 dark:text-navy-400 space-y-0.5">
+                <div className="mt-1 text-xs text-navy-400 space-y-0.5">
                   <div>Sold: {formatCertificateQuantity(ceaSold)} CEA</div>
-                  <div className="font-mono text-emerald-600 dark:text-emerald-400">
+                  <div className="font-mono text-emerald-400">
                     {formatCurrency(ceaSoldValue, 'EUR')}
                   </div>
                 </div>
@@ -176,13 +176,13 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
               {/* EUA Available - Highlighted */}
               <div className="flex items-center justify-end gap-2">
                 <Wind className="w-4 h-4 text-blue-500" />
-                <span className="font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
+                <span className="font-mono font-bold text-lg text-blue-400">
                   {loadingBalances ? '...' : formatCertificateQuantity(euaBal.available)} EUA
                 </span>
               </div>
               {/* EUR Value of Available EUA */}
               {!loadingBalances && (
-                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="font-mono font-bold text-emerald-400">
                   {formatCurrency(euaAvailableValue, 'EUR')}
                 </div>
               )}
@@ -220,7 +220,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       render: (value) => (
         <div className="flex items-center justify-center gap-2">
           <Activity className="w-4 h-4 text-navy-400" />
-          <span className="font-semibold text-navy-900 dark:text-white">
+          <span className="font-semibold text-white">
             {(value as number) || 0}
           </span>
         </div>
@@ -231,7 +231,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
       header: 'Description',
       width: '10%',
       render: (value) => (
-        <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-2">
+        <span className="text-sm text-navy-300 line-clamp-2">
           {(value as string) || '-'}
         </span>
       ),
@@ -247,7 +247,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6">
+      <h2 className="text-xl font-bold text-white mb-6">
         Market Makers ({marketMakers.length})
       </h2>
       <DataTable
@@ -289,23 +289,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             return ceaCashMMs.length > 0 ? (
               <Card className="overflow-hidden">
                 {/* Header with gradient accent */}
-                <div className="px-5 py-4 border-b border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent">
+                <div className="px-5 py-4 border-b border-emerald-800/50 bg-gradient-to-r from-emerald-900/20 to-transparent">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <div className="w-10 h-10 rounded-lg bg-emerald-900/50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-emerald-400" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.CEA_CASH.name}</span>
+                          <span className="font-semibold text-white">{MARKETS.CEA_CASH.name}</span>
                           <Badge variant="emerald" className="text-xs">{ceaCashMMs.length} MMs</Badge>
                         </div>
-                        <div className="text-xs text-navy-500 dark:text-navy-400">Available Liquidity</div>
+                        <div className="text-xs text-navy-400">Available Liquidity</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
-                      <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                      <div className="text-xs font-medium text-navy-400 uppercase tracking-wide">Available Total</div>
+                      <div className="text-2xl font-bold font-mono text-emerald-400">
                         {formatCurrency(totalEUR + ceaValueEur, 'EUR')}
                       </div>
                     </div>
@@ -313,17 +313,17 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 divide-x divide-navy-200 dark:divide-navy-700">
+                <div className="grid grid-cols-2 divide-x divide-navy-700">
                   {/* Cash Buyers */}
                   <div className="p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <Wallet className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">Cash Available</span>
+                      <span className="text-sm font-medium text-navy-300">Cash Available</span>
                     </div>
-                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    <div className="text-xl font-bold font-mono text-emerald-400">
                       {formatCurrency(totalEUR, 'EUR')}
                     </div>
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    <div className="text-xs text-navy-400 mt-1">
                       {cashBuyers.length} Cash Buyer{cashBuyers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -332,12 +332,12 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                   <div className="p-5 text-right">
                     <div className="flex items-center justify-end gap-2 mb-2">
                       <Leaf className="w-4 h-4 text-amber-500" />
-                      <span className="text-sm font-medium text-navy-600 dark:text-navy-300">CEA Available</span>
+                      <span className="text-sm font-medium text-navy-300">CEA Available</span>
                     </div>
-                    <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
+                    <div className="text-xl font-bold font-mono text-amber-400">
                       {formatCertificateQuantity(totalCEA)} CEA
                     </div>
-                    <div className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    <div className="text-xs text-navy-400 mt-1">
                       {formatCurrency(ceaValueEur, 'EUR')} · {ceaSellers.length} Seller{ceaSellers.length !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -362,23 +362,23 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
             return swapMMs.length > 0 ? (
               <Card className="overflow-hidden">
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-blue-200 dark:border-blue-800/50 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent">
+                <div className="px-5 py-4 border-b border-blue-800/50 bg-gradient-to-r from-blue-900/20 to-transparent">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <div className="w-10 h-10 rounded-lg bg-blue-900/50 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-blue-400" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-navy-900 dark:text-white">{MARKETS.SWAP.name}</span>
+                          <span className="font-semibold text-white">{MARKETS.SWAP.name}</span>
                           <Badge variant="blue" className="text-xs">{swapMMs.length} MMs</Badge>
                         </div>
-                        <div className="text-xs text-navy-500 dark:text-navy-400">Available Liquidity</div>
+                        <div className="text-xs text-navy-400">Available Liquidity</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wide">Available Total</div>
-                      <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
+                      <div className="text-xs font-medium text-navy-400 uppercase tracking-wide">Available Total</div>
+                      <div className="text-2xl font-bold font-mono text-blue-400">
                         {formatCurrency(swapTotal, 'EUR')}
                       </div>
                     </div>
@@ -389,12 +389,12 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                 <div className="p-5">
                   <div className="flex items-center justify-end gap-2 mb-2">
                     <Wind className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium text-navy-600 dark:text-navy-300">EUA Available</span>
+                    <span className="text-sm font-medium text-navy-300">EUA Available</span>
                   </div>
-                  <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400 text-right">
+                  <div className="text-xl font-bold font-mono text-blue-400 text-right">
                     {formatCertificateQuantity(totalEUAAvailable)} EUA
                   </div>
-                  <div className="text-xs text-navy-500 dark:text-navy-400 mt-1 text-right">
+                  <div className="text-xs text-navy-400 mt-1 text-right">
                     {formatCurrency(euaValue, 'EUR')}
                   </div>
                 </div>
@@ -404,12 +404,12 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
 
           {/* Overall Portfolio Total */}
           <Card>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20">
-              <span className="text-sm font-semibold text-navy-700 dark:text-navy-300">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-900/20 to-blue-900/20">
+              <span className="text-sm font-semibold text-navy-300">
                 Total Available Portfolio Value
               </span>
               <div className="text-right">
-                <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                <div className="text-2xl font-bold font-mono text-emerald-400">
                   {(() => {
                     const total = marketMakers.reduce((sum, mm) => {
                       const eurBal = Number(detailedBalances[mm.id]?.eur?.available) || 0;
@@ -431,7 +431,7 @@ export function MarketMakersList({ marketMakers, loading, onSelectMM }: MarketMa
                     return formatCurrency(total, 'EUR');
                   })()}
                 </div>
-                <div className="text-xs text-navy-500 dark:text-navy-400">
+                <div className="text-xs text-navy-400">
                   Across {marketMakers.length} Market Makers
                 </div>
               </div>

@@ -281,23 +281,23 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="relative bg-navy-900 rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-navy-700">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+            <div className="p-2 bg-primary-900/30 rounded-lg">
               {hasExistingMMs ? (
-                <Wallet className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                <Wallet className="w-6 h-6 text-primary-400" />
               ) : (
-                <Users className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                <Users className="w-6 h-6 text-primary-400" />
               )}
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-semibold text-white">
                 {hasExistingMMs ? 'Refund Market Makers' : 'Create Market Makers'}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-navy-400">
                 {hasExistingMMs
                   ? 'Add funds to existing market makers'
                   : 'Create 3 market makers with initial deposits'}
@@ -306,25 +306,25 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-navy-700 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-navy-500" />
           </button>
         </div>
 
         {/* Price Info */}
-        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-3 bg-navy-900/50 border-b border-navy-700">
           <div className="flex items-center gap-6 text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Current Prices:</span>
+            <span className="text-navy-400">Current Prices:</span>
             {pricesLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              <Loader2 className="w-4 h-4 animate-spin text-navy-400" />
             ) : (
               <>
                 <span className="font-medium">
-                  CEA: <span className="text-emerald-600 dark:text-emerald-400">€{ceaPrice.toFixed(2)}</span>
+                  CEA: <span className="text-emerald-400">€{ceaPrice.toFixed(2)}</span>
                 </span>
                 <span className="font-medium">
-                  EUA: <span className="text-blue-600 dark:text-blue-400">€{euaPrice.toFixed(2)}</span>
+                  EUA: <span className="text-blue-400">€{euaPrice.toFixed(2)}</span>
                 </span>
               </>
             )}
@@ -341,32 +341,32 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
             {/* CEA Buyer */}
             <Card className={cn(
               "p-4 transition-all",
-              ceaBuyer.isDone && "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10"
+              ceaBuyer.isDone && "border-emerald-500 bg-emerald-900/10"
             )}>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                  <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-3 rounded-lg bg-emerald-900/30">
+                  <TrendingUp className="w-6 h-6 text-emerald-400" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-white">
                         CEA Buyer
                         {ceaBuyer.mmId && (
-                          <span className="ml-2 text-xs font-normal text-gray-500">({ceaBuyer.mmName})</span>
+                          <span className="ml-2 text-xs font-normal text-navy-500">({ceaBuyer.mmName})</span>
                         )}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-navy-400">
                         Buys CEA certificates with EUR
                         {ceaBuyer.mmId && (
-                          <span className="ml-2 text-emerald-600 dark:text-emerald-400">
+                          <span className="ml-2 text-emerald-400">
                             Current: €{ceaBuyer.currentBalance.toLocaleString()}
                           </span>
                         )}
                       </p>
                     </div>
                     {ceaBuyer.isDone && (
-                      <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                      <div className="flex items-center gap-2 text-emerald-400">
                         <CheckCircle className="w-5 h-5" />
                         <span className="text-sm font-medium">{ceaBuyer.mmId ? 'Refunded' : 'Created'}</span>
                       </div>
@@ -388,13 +388,13 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
                         disabled={ceaBuyer.isDone || ceaBuyer.isProcessing}
                       />
                     </div>
-                    <div className="pb-1 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="pb-1 text-sm text-navy-400">
                       Available to buy CEA
                     </div>
                   </div>
 
                   {ceaBuyer.error && (
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                    <div className="flex items-center gap-2 text-red-400 text-sm">
                       <AlertCircle className="w-4 h-4" />
                       {ceaBuyer.error}
                     </div>
@@ -406,32 +406,32 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
             {/* CEA Seller */}
             <Card className={cn(
               "p-4 transition-all",
-              ceaSeller.isDone && "border-amber-500 bg-amber-50/50 dark:bg-amber-900/10"
+              ceaSeller.isDone && "border-amber-500 bg-amber-900/10"
             )}>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                  <TrendingDown className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                <div className="p-3 rounded-lg bg-amber-900/30">
+                  <TrendingDown className="w-6 h-6 text-amber-400" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-white">
                         CEA Seller
                         {ceaSeller.mmId && (
-                          <span className="ml-2 text-xs font-normal text-gray-500">({ceaSeller.mmName})</span>
+                          <span className="ml-2 text-xs font-normal text-navy-500">({ceaSeller.mmName})</span>
                         )}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-navy-400">
                         Sells CEA certificates for EUR
                         {ceaSeller.mmId && (
-                          <span className="ml-2 text-amber-600 dark:text-amber-400">
+                          <span className="ml-2 text-amber-400">
                             Current: {ceaSeller.currentBalance.toLocaleString()} CEA
                           </span>
                         )}
                       </p>
                     </div>
                     {ceaSeller.isDone && (
-                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-2 text-amber-400">
                         <CheckCircle className="w-5 h-5" />
                         <span className="text-sm font-medium">{ceaSeller.mmId ? 'Refunded' : 'Created'}</span>
                       </div>
@@ -454,15 +454,15 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
                       />
                     </div>
                     <div className="pb-1 min-w-[120px]">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">CEA to deposit:</div>
-                      <div className="text-lg font-semibold text-amber-600 dark:text-amber-400">
+                      <div className="text-sm text-navy-400">CEA to deposit:</div>
+                      <div className="text-lg font-semibold text-amber-400">
                         {ceaSeller.calculatedAmount.toLocaleString()} CEA
                       </div>
                     </div>
                   </div>
 
                   {ceaSeller.error && (
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                    <div className="flex items-center gap-2 text-red-400 text-sm">
                       <AlertCircle className="w-4 h-4" />
                       {ceaSeller.error}
                     </div>
@@ -474,32 +474,32 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
             {/* Swapper (EUA_OFFER) */}
             <Card className={cn(
               "p-4 transition-all",
-              swapper.isDone && "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+              swapper.isDone && "border-blue-500 bg-blue-900/10"
             )}>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <ArrowLeftRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="p-3 rounded-lg bg-blue-900/30">
+                  <ArrowLeftRight className="w-6 h-6 text-blue-400" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-white">
                         Swapper (EUA Offer)
                         {swapper.mmId && (
-                          <span className="ml-2 text-xs font-normal text-gray-500">({swapper.mmName})</span>
+                          <span className="ml-2 text-xs font-normal text-navy-500">({swapper.mmName})</span>
                         )}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-navy-400">
                         Offers EUA in exchange for CEA
                         {swapper.mmId && (
-                          <span className="ml-2 text-blue-600 dark:text-blue-400">
+                          <span className="ml-2 text-blue-400">
                             Current: {swapper.currentBalance.toLocaleString()} EUA
                           </span>
                         )}
                       </p>
                     </div>
                     {swapper.isDone && (
-                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <div className="flex items-center gap-2 text-blue-400">
                         <CheckCircle className="w-5 h-5" />
                         <span className="text-sm font-medium">{swapper.mmId ? 'Refunded' : 'Created'}</span>
                       </div>
@@ -522,15 +522,15 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
                       />
                     </div>
                     <div className="pb-1 min-w-[120px]">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">EUA to deposit:</div>
-                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      <div className="text-sm text-navy-400">EUA to deposit:</div>
+                      <div className="text-lg font-semibold text-blue-400">
                         {swapper.calculatedAmount.toLocaleString()} EUA
                       </div>
                     </div>
                   </div>
 
                   {swapper.error && (
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                    <div className="flex items-center gap-2 text-red-400 text-sm">
                       <AlertCircle className="w-4 h-4" />
                       {swapper.error}
                     </div>
@@ -542,10 +542,10 @@ export function CreateMarketMakersModal({ isOpen, onClose, onSuccess }: CreateMa
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between p-6 border-t border-navy-700 bg-navy-900/50">
+          <div className="text-sm text-navy-400">
             {allDone ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="text-emerald-400 font-medium">
                 All market makers {hasExistingMMs ? 'refunded' : 'created'} successfully!
               </span>
             ) : (

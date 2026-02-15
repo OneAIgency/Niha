@@ -125,7 +125,7 @@ export function ComponentShowcasePage() {
           </div>
         </header>
 
-        <div className="page-container py-8">
+        <div className="page-container py-6">
           <div className="grid grid-cols-12 gap-8">
             {/* Navigation Sidebar */}
             <nav className="col-span-3 sticky top-24 h-fit">
@@ -259,15 +259,15 @@ export function ComponentShowcasePage() {
                 <p className="text-muted mb-6">Card containers and variants</p>
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
-                    <h3 className="font-semibold text-navy-900 dark:text-white mb-2">Default Card</h3>
+                    <h3 className="font-semibold text-white mb-2">Default Card</h3>
                     <p className="text-muted text-sm">Standard card with default styling.</p>
                   </Card>
                   <Card variant="hover">
-                    <h3 className="font-semibold text-navy-900 dark:text-white mb-2">Hover Card</h3>
+                    <h3 className="font-semibold text-white mb-2">Hover Card</h3>
                     <p className="text-muted text-sm">Card with hover effect.</p>
                   </Card>
                   <Card variant="glass">
-                    <h3 className="font-semibold text-navy-900 dark:text-white mb-2">Glass Card</h3>
+                    <h3 className="font-semibold text-white mb-2">Glass Card</h3>
                     <p className="text-muted text-sm">Glassmorphism style.</p>
                   </Card>
                 </div>

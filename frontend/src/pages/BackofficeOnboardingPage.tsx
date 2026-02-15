@@ -552,7 +552,7 @@ export function BackofficeOnboardingPage() {
         <Card>
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-white">
               AML Review Queue
             </h2>
             <Badge variant="warning" className="ml-2">
@@ -563,14 +563,14 @@ export function BackofficeOnboardingPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="animate-pulse p-4 bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-600 rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : amlDeposits.length === 0 ? (
-            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+            <div className="text-center py-12 text-navy-400">
               <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No deposits pending AML review</p>
             </div>
@@ -587,12 +587,12 @@ export function BackofficeOnboardingPage() {
                 return (
                   <div
                     key={deposit.id}
-                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                    className="p-4 bg-navy-700/50 rounded-xl border border-navy-700"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                          <h3 className="font-semibold text-white">
                             {entityName}
                           </h3>
                           <Badge variant="warning">AML Hold</Badge>
@@ -602,19 +602,19 @@ export function BackofficeOnboardingPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Amount:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Amount:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               €{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {currency}
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{userEmail}</span>
+                            <span className="text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-200">{userEmail}</span>
                           </div>
                           {holdExpiresAt && (
                             <div className="flex items-center gap-1">
                               <Timer className="w-4 h-4 text-navy-400" />
-                              <span className="text-navy-500 dark:text-navy-400">Hold expires:</span>
+                              <span className="text-navy-400">Hold expires:</span>
                               <span className={`ml-1 font-medium ${isExpired ? 'text-emerald-600' : 'text-amber-600'}`}>
                                 {isExpired ? 'Expired' : new Date(holdExpiresAt).toLocaleDateString()}
                               </span>
@@ -659,7 +659,7 @@ export function BackofficeOnboardingPage() {
         <Card>
           <div className="flex items-center gap-2 mb-6">
             <Timer className="w-5 h-5 text-emerald-500" />
-            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-white">
               Settlement Queue
             </h2>
             <Badge variant="info" className="ml-2">
@@ -670,14 +670,14 @@ export function BackofficeOnboardingPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="animate-pulse p-4 bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-600 rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : settlementBatches.length === 0 ? (
-            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+            <div className="text-center py-12 text-navy-400">
               <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No settlements pending</p>
             </div>
@@ -703,12 +703,12 @@ export function BackofficeOnboardingPage() {
                 return (
                   <div
                     key={batch.id}
-                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                    className="p-4 bg-navy-700/50 rounded-xl border border-navy-700"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                          <h3 className="font-semibold text-white">
                             {batch.entityName}
                           </h3>
                           <Badge variant={typeVariant}>{typeLabel}</Badge>
@@ -723,20 +723,20 @@ export function BackofficeOnboardingPage() {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Quantity:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Quantity:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               {batch.quantity.toLocaleString()} tCO₂
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Value:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Value:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               €{batch.totalValueEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">
+                            <span className="text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-200">
                               {batch.userEmail ?? '—'}
                             </span>
                           </div>

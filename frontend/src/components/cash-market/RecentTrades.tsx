@@ -23,7 +23,7 @@ export function RecentTrades({ orderBook }: RecentTradesProps) {
   };
 
   return (
-    <div className="content_wrapper_last">
+    <div className="panel panel--flush">
       <div className="px-4 py-3 border-b border-navy-700">
         <h3 className="font-semibold text-white flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-amber-400" />

@@ -85,23 +85,23 @@ export function KYCReviewPanel({
   return (
     <Card className="overflow-hidden">
       {/* User Header */}
-      <div className="p-4 border-b border-navy-100 dark:border-navy-700 bg-gradient-to-r from-navy-50 to-transparent dark:from-navy-900/50">
+      <div className="p-4 border-b border-navy-700 bg-gradient-to-r from-navy-900/50 to-transparent">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg">
               {userName?.charAt(0)?.toUpperCase() || userEmail.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
+              <h3 className="font-semibold text-white flex items-center gap-2">
                 <User className="w-4 h-4" />
                 {userName || 'Unknown User'}
               </h3>
-              <p className="text-sm text-navy-500 dark:text-navy-400 flex items-center gap-1">
+              <p className="text-sm text-navy-400 flex items-center gap-1">
                 <Mail className="w-3 h-3" />
                 {userEmail}
               </p>
               {entityName && (
-                <p className="text-sm text-navy-500 dark:text-navy-400 flex items-center gap-1 mt-0.5">
+                <p className="text-sm text-navy-400 flex items-center gap-1 mt-0.5">
                   <Building2 className="w-3 h-3" />
                   {entityName}
                 </p>
@@ -109,10 +109,10 @@ export function KYCReviewPanel({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm text-navy-500 dark:text-navy-400">
+            <p className="text-sm text-navy-400">
               {uploadedRequired} of {REQUIRED_DOCUMENT_COUNT} required uploaded
             </p>
-            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <p className="text-sm font-medium text-emerald-400">
               {approvedRequired} of {REQUIRED_DOCUMENT_COUNT} approved
             </p>
           </div>
@@ -120,11 +120,11 @@ export function KYCReviewPanel({
 
         {/* Progress Bar */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-navy-500 dark:text-navy-400 mb-1">
+          <div className="flex items-center justify-between text-xs text-navy-400 mb-1">
             <span>Approval Progress</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-2 bg-navy-200 dark:bg-navy-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-navy-700 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-full"
               initial={{ width: 0 }}
@@ -136,7 +136,7 @@ export function KYCReviewPanel({
       </div>
 
       {/* Category Tabs */}
-      <div className="flex border-b border-navy-100 dark:border-navy-700">
+      <div className="flex border-b border-navy-700">
         {documentCategories.map(cat => {
           const catDocs = getDocumentsByCategory(cat.id);
           const approved = catDocs.filter(d => {
@@ -151,14 +151,14 @@ export function KYCReviewPanel({
               onClick={() => setActiveCategory(cat.id)}
               className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeCategory === cat.id
-                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-                  : 'text-navy-500 dark:text-navy-400 hover:bg-navy-50 dark:hover:bg-navy-800'
+                  ? 'text-emerald-400 bg-emerald-900/20'
+                  : 'text-navy-400 hover:bg-navy-800'
               }`}
             >
               <div className="flex items-center justify-center gap-2">
                 <Icon className="w-4 h-4" style={{ color: cat.color }} />
                 <span>{cat.name}</span>
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-navy-200 dark:bg-navy-700">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-navy-700">
                   {approved}/{catDocs.length}
                 </span>
               </div>
@@ -187,11 +187,11 @@ export function KYCReviewPanel({
               className={`p-4 rounded-xl border-2 transition-all ${
                 uploadedDoc
                   ? isApproved
-                    ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10'
+                    ? 'border-emerald-800 bg-emerald-900/10'
                     : isRejected
-                    ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
-                    : 'border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10'
-                  : 'border-navy-200 dark:border-navy-700 bg-navy-50/50 dark:bg-navy-800/50'
+                    ? 'border-red-800 bg-red-900/10'
+                    : 'border-amber-800 bg-amber-900/10'
+                  : 'border-navy-700 bg-navy-800/50'
               }`}
             >
               <div className="flex items-start justify-between gap-4">
@@ -202,20 +202,20 @@ export function KYCReviewPanel({
                         ? isApproved ? 'text-emerald-500' : isRejected ? 'text-red-500' : 'text-amber-500'
                         : 'text-navy-400'
                     }`} />
-                    <span className="font-medium text-navy-900 dark:text-white">
+                    <span className="font-medium text-white">
                       {docDef.name}
                     </span>
                     {docDef.required && (
                       <span className="text-xs text-red-500">*</span>
                     )}
                   </div>
-                  <p className="text-xs text-navy-500 dark:text-navy-400 mb-2">
+                  <p className="text-xs text-navy-400 mb-2">
                     {docDef.description}
                   </p>
 
                   {uploadedDoc ? (
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-navy-600 dark:text-navy-300 truncate max-w-[200px]">
+                      <span className="text-navy-300 truncate max-w-[200px]">
                         {uploadedDoc.fileName}
                       </span>
                       <Badge
@@ -232,7 +232,7 @@ export function KYCReviewPanel({
                   )}
 
                   {uploadedDoc?.notes && (
-                    <p className="mt-2 text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                    <p className="mt-2 text-xs text-red-400 bg-red-900/20 p-2 rounded">
                       Note: {uploadedDoc.notes}
                     </p>
                   )}
@@ -258,7 +258,7 @@ export function KYCReviewPanel({
                             size="sm"
                             onClick={() => onDocumentApprove(uploadedDoc.id)}
                             loading={actionLoading === `approve-${uploadedDoc.id}`}
-                            className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            className="text-emerald-600 hover:bg-emerald-900/20"
                             title="Approve document"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -267,7 +267,7 @@ export function KYCReviewPanel({
                             variant="ghost"
                             size="sm"
                             onClick={() => setRejectingDoc(uploadedDoc.id)}
-                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            className="text-red-500 hover:bg-red-900/20"
                             title="Reject document"
                           >
                             <XCircle className="w-4 h-4" />
@@ -293,16 +293,16 @@ export function KYCReviewPanel({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 pt-3 border-t border-navy-200 dark:border-navy-700"
+                  className="mt-3 pt-3 border-t border-navy-700"
                 >
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                  <label className="block text-sm font-medium text-navy-300 mb-1">
                     Rejection reason (optional)
                   </label>
                   <textarea
                     value={rejectNotes}
                     onChange={(e) => setRejectNotes(e.target.value)}
                     placeholder="Explain why this document is being rejected..."
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-navy-700 bg-navy-900 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     rows={2}
                   />
                   <div className="flex justify-end gap-2 mt-2">
@@ -335,10 +335,10 @@ export function KYCReviewPanel({
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-navy-100 dark:border-navy-700 bg-navy-50/50 dark:bg-navy-900/50 flex items-center justify-between">
-        <div className="text-sm text-navy-500 dark:text-navy-400">
+      <div className="p-4 border-t border-navy-700 bg-navy-900/50 flex items-center justify-between">
+        <div className="text-sm text-navy-400">
           {allRequiredApproved ? (
-            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <span className="text-emerald-400 flex items-center gap-1">
               <CheckCircle className="w-4 h-4" />
               All required documents approved
             </span>
@@ -353,7 +353,7 @@ export function KYCReviewPanel({
             variant="outline"
             onClick={onUserReject}
             loading={actionLoading === `reject-user-${userId}`}
-            className="text-red-500 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
+            className="text-red-500 border-red-800 hover:bg-red-900/20"
           >
             <XCircle className="w-4 h-4" />
             Reject User

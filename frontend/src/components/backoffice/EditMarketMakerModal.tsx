@@ -33,38 +33,38 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-4xl overflow-hidden"
+          className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-4xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
+          <div className="flex items-center justify-between p-6 border-b border-navy-700">
             <div>
-              <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-white">
                 Edit Market Maker
               </h2>
               {marketMaker.description && (
-                <p className="text-sm text-navy-500 dark:text-navy-400 mt-1">
+                <p className="text-sm text-navy-400 mt-1">
                   {marketMaker.description}
                 </p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
+              className="p-1 hover:bg-navy-700 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-navy-500" />
             </button>
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-navy-200 dark:border-navy-700">
+          <div className="border-b border-navy-700">
             <div className="flex gap-1 px-6">
               <button
                 onClick={() => setActiveTab('details')}
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'details'
-                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                    : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-navy-500 hover:text-navy-300'
                 )}
               >
                 Details
@@ -74,8 +74,8 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'transactions'
-                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                    : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-navy-500 hover:text-navy-300'
                 )}
               >
                 Balances & Transactions
@@ -85,8 +85,8 @@ export function EditMarketMakerModal({ isOpen, onClose, onSuccess, marketMaker }
                 className={cn(
                   'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                   activeTab === 'autotrade'
-                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                    : 'border-transparent text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-navy-500 hover:text-navy-300'
                 )}
               >
                 Auto Trade

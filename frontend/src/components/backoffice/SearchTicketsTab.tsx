@@ -104,7 +104,7 @@ export function SearchTicketsTab() {
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
-        <code className="text-xs font-mono text-navy-900 dark:text-white">
+        <code className="text-xs font-mono text-white">
           {String(value)}
         </code>
       ),
@@ -124,7 +124,7 @@ export function SearchTicketsTab() {
       header: 'Action Type',
       width: '180px',
       render: (value) => (
-        <span className="text-xs font-medium text-navy-700 dark:text-navy-300">
+        <span className="text-xs font-medium text-navy-300">
           {String(value)}
         </span>
       ),
@@ -134,7 +134,7 @@ export function SearchTicketsTab() {
       header: 'Entity',
       width: '120px',
       render: (value) => (
-        <span className="text-xs text-navy-600 dark:text-navy-400">
+        <span className="text-xs text-navy-400">
           {String(value)}
         </span>
       ),
@@ -148,8 +148,8 @@ export function SearchTicketsTab() {
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
             String(value) === 'SUCCESS'
-              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              ? 'bg-emerald-900/30 text-emerald-400'
+              : 'bg-red-900/30 text-red-400'
           }`}
         >
           {String(value)}
@@ -161,16 +161,16 @@ export function SearchTicketsTab() {
   return (
     <div className="space-y-4">
       {/* Search Form */}
-      <div className="bg-white dark:bg-navy-800 rounded-lg p-6 border border-navy-200 dark:border-navy-700">
+      <div className="bg-navy-800 rounded-lg p-6 border border-navy-700">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Search className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 rounded-lg bg-blue-900/30">
+            <Search className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-navy-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-white">
               Advanced Search
             </h3>
-            <p className="text-sm text-navy-600 dark:text-navy-400">
+            <p className="text-sm text-navy-400">
               Search tickets using multiple criteria
             </p>
           </div>
@@ -179,7 +179,7 @@ export function SearchTicketsTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Ticket ID */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Ticket ID
             </label>
             <input
@@ -187,13 +187,13 @@ export function SearchTicketsTab() {
               value={ticketId}
               onChange={(e) => setTicketId(e.target.value)}
               placeholder="TKT-2026-001234"
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Action Type */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Action Type
             </label>
             <input
@@ -201,13 +201,13 @@ export function SearchTicketsTab() {
               value={actionType}
               onChange={(e) => setActionType(e.target.value)}
               placeholder="MM_CREATED, ORDER_PLACED, etc."
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Entity Type */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Entity Type
             </label>
             <input
@@ -215,13 +215,13 @@ export function SearchTicketsTab() {
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
               placeholder="Order, MarketMaker, User, etc."
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Entity ID */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Entity ID (UUID)
             </label>
             <input
@@ -229,13 +229,13 @@ export function SearchTicketsTab() {
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
               placeholder="UUID"
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* User ID */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               User ID (UUID)
             </label>
             <input
@@ -243,13 +243,13 @@ export function SearchTicketsTab() {
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               placeholder="UUID"
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Market Maker ID */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Market Maker ID (UUID)
             </label>
             <input
@@ -257,13 +257,13 @@ export function SearchTicketsTab() {
               value={marketMakerId}
               onChange={(e) => setMarketMakerId(e.target.value)}
               placeholder="UUID"
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Status
             </label>
             <select
@@ -279,7 +279,7 @@ export function SearchTicketsTab() {
 
           {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Tags (comma-separated)
             </label>
             <input
@@ -287,39 +287,39 @@ export function SearchTicketsTab() {
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="market_maker, order, placement"
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Date From */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Date From
             </label>
             <input
               type="datetime-local"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Date To */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               Date To
             </label>
             <input
               type="datetime-local"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-4 py-2 border border-navy-200 dark:border-navy-700 rounded-lg bg-white dark:bg-navy-900 text-navy-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg bg-navy-900 text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-navy-200 dark:border-navy-700">
+        <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-navy-700">
           <Button onClick={handleClear} variant="secondary">
             Clear
           </Button>
@@ -337,11 +337,11 @@ export function SearchTicketsTab() {
       {/* Results */}
       {hasSearched && (
         <>
-          <div className="text-sm text-navy-600 dark:text-navy-400">
+          <div className="text-sm text-navy-400">
             Found {total.toLocaleString()} results
           </div>
 
-          <div className="bg-white dark:bg-navy-800 rounded-lg border border-navy-200 dark:border-navy-700">
+          <div className="bg-navy-800 rounded-lg border border-navy-700">
             <DataTable
               columns={columns}
               data={tickets}

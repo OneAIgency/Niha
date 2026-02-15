@@ -52,13 +52,13 @@ export function EditUserModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
       >
-        <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
-          <h2 className="text-xl font-bold text-navy-900 dark:text-white">Edit User</h2>
+        <div className="flex items-center justify-between p-6 border-b border-navy-700">
+          <h2 className="text-xl font-bold text-white">Edit User</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+            className="p-2 hover:bg-navy-700 rounded-lg"
           >
             <X className="w-5 h-5 text-navy-500" />
           </button>
@@ -76,10 +76,10 @@ export function EditUserModal({
               {getInitials(user.firstName, user.lastName, user.email)}
             </div>
             <div>
-              <p className="font-semibold text-navy-900 dark:text-white">
+              <p className="font-semibold text-white">
                 {user.firstName} {user.lastName}
               </p>
-              <p className="text-sm text-navy-500 dark:text-navy-400">{user.email}</p>
+              <p className="text-sm text-navy-400">{user.email}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -100,7 +100,7 @@ export function EditUserModal({
             onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
           />
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
+            <label className="block text-sm font-medium text-navy-200 mb-2">
               Role
             </label>
             {user.role === 'MM' ? (
@@ -125,17 +125,17 @@ export function EditUserModal({
               </select>
             ) : (
               <>
-                <p className="px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-navy-50 dark:bg-navy-800/50 text-navy-700 dark:text-navy-300 text-sm">
+                <p className="px-4 py-2 rounded-lg border border-navy-600 bg-navy-800/50 text-navy-300 text-sm">
                   {user.role}
                 </p>
-                <p className="mt-1 text-xs text-navy-500 dark:text-navy-400">
+                <p className="mt-1 text-xs text-navy-400">
                   Role changes only via platform flows (see docs/ROLE_TRANSITIONS.md).
                 </p>
               </>
             )}
           </div>
         </div>
-        <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
+        <div className="flex justify-end gap-3 p-6 border-t border-navy-700">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

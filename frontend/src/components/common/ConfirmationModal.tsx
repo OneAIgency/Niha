@@ -69,19 +69,19 @@ export function ConfirmationModal({
 
   const variantStyles = {
     danger: {
-      icon: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+      icon: 'bg-red-900/30 text-red-400',
       button: 'bg-red-600 hover:bg-red-700 text-white',
-      border: 'border-red-200 dark:border-red-800',
+      border: 'border-red-800',
     },
     warning: {
-      icon: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+      icon: 'bg-amber-900/30 text-amber-400',
       button: 'bg-amber-600 hover:bg-amber-700 text-white',
-      border: 'border-amber-200 dark:border-amber-800',
+      border: 'border-amber-800',
     },
     info: {
-      icon: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+      icon: 'bg-blue-900/30 text-blue-400',
       button: 'bg-blue-600 hover:bg-blue-700 text-white',
-      border: 'border-blue-200 dark:border-blue-800',
+      border: 'border-blue-800',
     },
   };
 
@@ -111,7 +111,7 @@ export function ConfirmationModal({
           >
             <div
               className={cn(
-                'bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border',
+                'bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border',
                 styles.border
               )}
               onClick={(e) => e.stopPropagation()}
@@ -122,16 +122,16 @@ export function ConfirmationModal({
                   <AlertTriangle className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-navy-900 dark:text-white">
+                  <h3 className="text-lg font-bold text-white">
                     {title}
                   </h3>
-                  <p className="mt-1 text-sm text-navy-600 dark:text-navy-400">
+                  <p className="mt-1 text-sm text-navy-400">
                     {message}
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1 rounded-lg text-navy-400 hover:text-navy-600 dark:hover:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-800 transition-colors"
+                  className="p-1 rounded-lg text-navy-400 hover:text-navy-300 hover:bg-navy-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -139,11 +139,11 @@ export function ConfirmationModal({
 
               {/* Details */}
               {details && details.length > 0 && (
-                <div className="mx-6 p-4 bg-navy-50 dark:bg-navy-800/50 rounded-xl space-y-2">
+                <div className="mx-6 p-4 bg-navy-800/50 rounded-xl space-y-2">
                   {details.map((detail, index) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span className="text-navy-500 dark:text-navy-400">{detail.label}</span>
-                      <span className="font-medium text-navy-900 dark:text-white">{detail.value}</span>
+                      <span className="text-navy-400">{detail.label}</span>
+                      <span className="font-medium text-white">{detail.value}</span>
                     </div>
                   ))}
                 </div>
@@ -152,8 +152,8 @@ export function ConfirmationModal({
               {/* Confirmation Input */}
               {requireConfirmation && (
                 <div className="px-6 pt-4">
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
-                    Type <span className="font-bold text-red-600 dark:text-red-400">&quot;{requireConfirmation}&quot;</span> to confirm
+                  <label className="block text-sm font-medium text-navy-300 mb-2">
+                    Type <span className="font-bold text-red-400">&quot;{requireConfirmation}&quot;</span> to confirm
                   </label>
                   <input
                     type="text"
@@ -161,11 +161,11 @@ export function ConfirmationModal({
                     onChange={(e) => setConfirmationInput(e.target.value)}
                     placeholder={requireConfirmation}
                     className={cn(
-                      'w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400',
+                      'w-full px-4 py-3 rounded-xl border-2 bg-navy-800 text-white placeholder-navy-400',
                       'focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
                       confirmationInput.toLowerCase() === requireConfirmation.toLowerCase()
                         ? 'border-emerald-500 focus:ring-emerald-500'
-                        : 'border-navy-200 dark:border-navy-700 focus:ring-red-500'
+                        : 'border-navy-700 focus:ring-red-500'
                     )}
                     autoFocus
                   />
@@ -177,7 +177,7 @@ export function ConfirmationModal({
                 <button
                   onClick={onClose}
                   disabled={isConfirming || loading}
-                  className="flex-1 px-4 py-3 rounded-xl font-semibold text-navy-700 dark:text-navy-300 bg-navy-100 dark:bg-navy-800 hover:bg-navy-200 dark:hover:bg-navy-700 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-3 rounded-xl font-semibold text-navy-300 bg-navy-800 hover:bg-navy-700 transition-colors disabled:opacity-50"
                 >
                   {cancelText}
                 </button>

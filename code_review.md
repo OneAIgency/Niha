@@ -318,3 +318,80 @@ Review of: **0033** (Ticker & ACTIVITY on Cash Market Pro). Reference: [docs/fea
 | useCashMarket / useClientRealtime / api.ts | ✅ |
 
 **Action items**: None. Implementation matches plan.
+
+---
+
+# Code Review: 0034 – Cash Market Pro layout & CEA chart
+
+Review of: **0034** (layout, order of components, CEA price chart). Reference: [docs/features/0034_PLAN.md](docs/features/0034_PLAN.md).
+
+---
+
+## 1. Layout (Faza 1)
+
+### 1.1 Page container flex ✅
+
+- **Parent**: `min-h-screen bg-navy-900 flex flex-col` — flex column so content can extend to bottom.
+- **Page container**: `page-container py-6 flex flex-col flex-1 min-h-0` — flex-1 + min-h-0 so content fills and scrolls correctly.
+- **Verdict**: Done.
+
+### 1.2 Order of components (top → bottom) ✅
+
+1. **Ticker** – Recent Trades (last 20), full width, `shrink-0`.
+2. **Order input** – InlineOrderForm, immediately under ticker, `shrink-0`.
+3. **Order book** – ProfessionalOrderBook, full width, `shrink-0`.
+4. **Grid**: ACTIVITY (lg:col-span-4) | Chart (lg:col-span-8), `flex-1 min-h-0`, under order book.
+
+Layout matches plan: `[Ticker] → [InlineOrderForm] → [Order Book] → [ACTIVITY | Chart]`.
+
+### 1.3 ACTIVITY under order book ✅
+
+- RecentTradesActivity is in the grid under the order book; ticker/ACTIVITY both use `recentTrades` (last 20) from useCashMarket.
+- **Verdict**: Done.
+
+---
+
+## 2. Chart component & integration (Faza 2)
+
+### 2.1 CEAPriceChart.tsx ✅
+
+- **Container style**: `bg-navy-900 rounded border border-navy-700 overflow-hidden` — matches plan and RecentTradesActivity; plus `flex flex-col h-full min-h-[200px]` for layout.
+- **Header**: TrendingUp icon, "CEA Price" title; border-b, navy-800 bar — consistent with ACTIVITY header pattern.
+- **Library**: `lightweight-charts` (^5.1.0) in package.json ✅.
+
+### 2.2 Data & real-time ✅
+
+- **Fetch**: `cashMarketApi.getRecentTrades('CEA', 100)` on mount — limit 100 as specified.
+- **Transform**: `tradesToChartData` → `{ time: unix_sec, value: price }`, sorted ascending by time.
+- **Series**: AreaSeries, navy background (#0f172a), grid #1e293b, borders #334155, text #94a3b8 (design system navy-400), line emerald (#34d399) — per DESIGN_SYSTEM/app_truth (no slate/gray).
+- **WebSocket**: Listener `nihao:tradeExecuted`; on event, `seriesRef.current.update(point)` with `{ time: toUnixSeconds(t.executedAt), value: t.price }`. useClientRealtime dispatches `detail: { trade }` with id, certificateType, price, quantity, side, executedAt — chart uses trade.executedAt and trade.price ✅.
+- **Resize**: ResizeObserver updates chart width.
+- **Cleanup**: removeEventListener, chart.remove(), refs nulled on unmount.
+
+### 2.3 useCashMarket / API ✅
+
+- Ticker and ACTIVITY keep `getRecentTrades(certificateType, 20)`; chart does its own fetch with 100 — no change to useCashMarket; plan’s “preferabil fetch separat pentru chart” satisfied.
+- API: getRecentTrades already supports limit 1–100 — no changes.
+
+---
+
+## 3. Summary (0034)
+
+| Area | Status | Notes |
+|------|--------|--------|
+| Page container flex | ✅ | min-h-screen flex flex-col; page-container flex-1 min-h-0 |
+| Order: Ticker → Form → Book → Grid | ✅ | As in plan |
+| ACTIVITY under order book | ✅ | lg:col-span-4 in grid |
+| Chart in “zona roșie” | ✅ | lg:col-span-8, same row as ACTIVITY |
+| Chart container style | ✅ | Same base classes as RecentTradesActivity |
+| lightweight-charts | ✅ | Area series, navy/emerald, grid, resize |
+| Fetch 100 + trade_executed | ✅ | Initial 100, real-time update via nihao:tradeExecuted |
+| Design system colors | ✅ | navy-900/800/700, emerald, no slate/gray |
+
+---
+
+## 4. Action items (0034)
+
+**None required.** Implementation matches 0034_PLAN.
+
+**Optional hardening**: If the backend ever broadcasts `trade_executed` for both CEA and EUA on the same channel, consider filtering in the chart listener so only `detail.trade.certificateType === 'CEA'` is applied to the series. Current behavior is correct if only CEA trades are pushed on this page.

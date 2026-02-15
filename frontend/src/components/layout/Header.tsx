@@ -74,27 +74,29 @@ export function Header() {
       links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
       links.push({ href: '/swap', label: 'Swap', icon: null });
       links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
-      return links;
+    } else {
+
+      // Regular users: show only their allowed sections
+      const canCashMarket = ['CEA', 'MM'].includes(role);
+      const canSwap = ['CEA', 'CEA_SETTLE', 'SWAP', 'MM'].includes(role);
+      const canDashboard = ['AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
+      const canFunding = ['APPROVED', 'FUNDING', 'MM'].includes(role);
+      const canOnboarding = ['NDA', 'KYC'].includes(role);
+
+      if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
+      if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
+      if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
+      if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
+      if (canOnboarding) links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
     }
 
-    // Regular users: show only their allowed sections
-    // CEA Cash Market: only CEA (pre-purchase) + MM
-    const canCashMarket = ['CEA', 'MM'].includes(role);
-    // Swap: SWAP role only (after swap completes, role changes to EUA_SETTLE which loses access) + MM
-    const canSwap = ['CEA', 'CEA_SETTLE', 'SWAP', 'MM'].includes(role);
-    // AML: Dashboard only (no Funding in header); canDashboard includes AML, canFunding excludes AML
-    const canDashboard = ['AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM'].includes(role);
-    const canFunding = ['APPROVED', 'FUNDING', 'MM'].includes(role);
-    const canOnboarding = ['NDA', 'KYC'].includes(role);
-
-    if (canDashboard) links.push({ href: '/dashboard', label: 'Dashboard', icon: null });
-    if (canFunding) links.push({ href: '/funding', label: 'Funding', icon: null });
-    if (canCashMarket) links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
-    if (canSwap) links.push({ href: '/swap', label: 'Swap', icon: null });
-    if (canOnboarding) links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+    // Hide Dashboard when on cash-market (trading terminal uses full viewport)
+    if (location.pathname === '/cash-market') {
+      return links.filter(l => l.href !== '/dashboard');
+    }
 
     return links;
-  }, [isAuthenticated, role, isAdmin]);
+  }, [isAuthenticated, role, isAdmin, location.pathname]);
 
   return (
     <header
@@ -271,7 +273,7 @@ export function Header() {
                           onClick={handleLogout}
                           className={cn(
                             'w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors',
-                            'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            'text-red-500 hover:bg-red-900/20'
                           )}
                         >
                           <LogOut className="w-4 h-4" />

@@ -31,11 +31,11 @@ export function PageHeader({
             <span key={index} className="flex items-center gap-1">
               {index > 0 && <ChevronRight className="w-4 h-4" />}
               {crumb.href ? (
-                <Link to={crumb.href} className="hover:text-navy-700 dark:hover:text-navy-200 transition-colors">
+                <Link to={crumb.href} className="hover:text-navy-200 transition-colors">
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-navy-900 dark:text-white">{crumb.label}</span>
+                <span className="text-white">{crumb.label}</span>
               )}
             </span>
           ))}
