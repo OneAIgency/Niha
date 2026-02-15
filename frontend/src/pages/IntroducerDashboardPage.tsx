@@ -1,26 +1,62 @@
-import { useAuthStore } from '../stores/useStore';
+import {
+  IntroducerLayout,
+  HeroMetrics,
+  HowItWorksFlow,
+  MarketSection,
+  ValuePropositionCards,
+  ClientPathsSection,
+  TimingSection,
+  LegalSection,
+  ROICalculator,
+  FAQSection,
+  ResourcesSection,
+} from '../components/introducer';
+import { useSection } from '../components/introducer/SectionRegistry';
+import { SECTION_IDS } from '../components/introducer/constants';
+import { ComparisonTable } from '../components/introducer/ComparisonTable';
 
-/**
- * Introducer dashboard: simplified, discrete content for INTRODUCER role.
- * No cash market, swap, funding, settlements, or balances.
- */
-export function IntroducerDashboardPage() {
-  const { user } = useAuthStore();
-
+/** Markets: comparison table + tabbed deep-dive */
+function MarketsSection() {
+  const ref = useSection(SECTION_IDS.MARKETS);
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-light text-navy-50 tracking-wide mb-2">
-        Introducer Dashboard
-      </h1>
-      <p className="text-navy-400 text-sm mb-8">
-        Welcome, {user?.firstName ?? user?.email ?? 'User'}.
-      </p>
-      <div className="rounded-xl border border-navy-700 bg-navy-900/50 p-6">
-        <p className="text-navy-300 text-sm leading-relaxed">
-          This area provides access to introducer-specific resources and reference information.
-          For questions or support, please contact your Nihao Group representative.
-        </p>
+    <section ref={ref} id={SECTION_IDS.MARKETS}>
+      <h3 className="section-heading text-white mb-6">NIHA vs Direct EUA Purchase</h3>
+      <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-6 mb-8">
+        <ComparisonTable />
       </div>
-    </div>
+      <MarketSection />
+    </section>
+  );
+}
+
+/** Advantages: value props + client paths + timing */
+function AdvantagesSection() {
+  const ref = useSection(SECTION_IDS.ADVANTAGES);
+  return (
+    <section ref={ref} id={SECTION_IDS.ADVANTAGES}>
+      <h3 className="section-heading text-white mb-6">Why NIHA</h3>
+      <ValuePropositionCards />
+      <div className="mt-8">
+        <ClientPathsSection />
+      </div>
+      <div className="mt-8">
+        <TimingSection />
+      </div>
+    </section>
+  );
+}
+
+export function IntroducerDashboardPage() {
+  return (
+    <IntroducerLayout>
+      <HeroMetrics />
+      <HowItWorksFlow />
+      <MarketsSection />
+      <AdvantagesSection />
+      <LegalSection />
+      <ROICalculator />
+      <ResourcesSection />
+      <FAQSection />
+    </IntroducerLayout>
   );
 }
