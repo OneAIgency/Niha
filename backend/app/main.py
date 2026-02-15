@@ -16,6 +16,7 @@ from .api.v1 import (
     client_ws,
     contact,
     deposits,
+    introducer,
     market_maker,
     marketplace,
     onboarding,
@@ -431,6 +432,7 @@ app.include_router(admin_fees.router, prefix="/api/v1/admin")
 app.include_router(deposits.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")
 app.include_router(withdrawals.router, prefix="/api/v1")
+app.include_router(introducer.router, prefix="/api/v1")
 
 
 @app.get("/")
