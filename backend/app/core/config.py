@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # Anthropic API (for introducer AI chat)
     ANTHROPIC_API_KEY: str = ""
 
+    # OpenAI API (for RAG embeddings)
+    OPENAI_API_KEY: str = ""
+
     # Market Defaults (based on research)
     DEFAULT_EUA_PRICE_EUR: float = 75.0
     DEFAULT_CEA_PRICE_CNY: float = 100.0
