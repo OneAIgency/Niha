@@ -2359,4 +2359,85 @@ export const feesApi = {
   },
 };
 
+// AI Agent API (admin only)
+export const aiAgentApi = {
+  // Configs
+  getConfigs: async () => {
+    const { data } = await api.get('/admin/ai-agent/configs');
+    return data;
+  },
+
+  updateConfig: async (role: string, update: {
+    model?: string;
+    system_prompt?: string;
+    temperature?: number;
+    max_tokens?: number;
+    allow_internet?: boolean;
+    allow_off_knowledge?: boolean;
+    enabled?: boolean;
+  }) => {
+    const { data } = await api.put(`/admin/ai-agent/configs/${role}`, update);
+    return data;
+  },
+
+  // Knowledge
+  getKnowledgeSources: async () => {
+    const { data } = await api.get('/admin/ai-agent/knowledge');
+    return data;
+  },
+
+  uploadKnowledgeFile: async (name: string, file: File) => {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('file', file);
+    const { data } = await api.post('/admin/ai-agent/knowledge/upload', formData);
+    return data;
+  },
+
+  addKnowledgeURL: async (name: string, url: string) => {
+    const { data } = await api.post('/admin/ai-agent/knowledge/add-url', { name, url });
+    return data;
+  },
+
+  deleteKnowledgeSource: async (id: string) => {
+    const { data } = await api.delete(`/admin/ai-agent/knowledge/${id}`);
+    return data;
+  },
+
+  reindexSource: async (id: string) => {
+    const { data } = await api.post(`/admin/ai-agent/knowledge/${id}/reindex`);
+    return data;
+  },
+
+  getSourceChunks: async (id: string) => {
+    const { data } = await api.get(`/admin/ai-agent/knowledge/${id}/chunks`);
+    return data;
+  },
+
+  // API Keys
+  getApiKeys: async () => {
+    const { data } = await api.get('/admin/ai-agent/api-keys');
+    return data;
+  },
+
+  updateApiKeys: async (update: {
+    anthropic_api_key?: string;
+    openai_api_key?: string;
+  }) => {
+    const { data } = await api.put('/admin/ai-agent/api-keys', update);
+    return data;
+  },
+
+  // Test Chat
+  testChat: async (messages: Array<{ role: string; content: string }>, role: string) => {
+    const { data } = await api.post('/admin/ai-agent/test-chat', { messages, role });
+    return data;
+  },
+
+  dualChat: async (messages: Array<{ role: string; content: string }>) => {
+    const { data } = await api.post('/admin/ai-agent/dual-chat', { messages });
+    return data;
+  },
+};
+
 export default api;
