@@ -1,9 +1,12 @@
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
-import { SECTION_IDS, LEGAL_ACCORDIONS } from './constants';
+import { SECTION_IDS, LEGAL_ACCORDIONS, depthAtLeast } from './constants';
 import { AccordionItem } from './AccordionItem';
 
 export function LegalSection() {
   const ref = useSection(SECTION_IDS.LEGAL);
+  const { contentDepth } = useIntroducerStore();
+  const visibleAccordions = LEGAL_ACCORDIONS.filter((a) => depthAtLeast(contentDepth, a.depth));
 
   return (
     <section ref={ref} id={SECTION_IDS.LEGAL}>
@@ -27,7 +30,7 @@ export function LegalSection() {
 
       {/* Accordion items */}
       <div className="space-y-2">
-        {LEGAL_ACCORDIONS.map((item) => (
+        {visibleAccordions.map((item) => (
           <AccordionItem key={item.id} sectionId="legal" itemId={item.id} title={item.title}>
             {item.content}
           </AccordionItem>

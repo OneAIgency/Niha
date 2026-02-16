@@ -74,6 +74,8 @@ export function Header() {
       links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
       links.push({ href: '/swap', label: 'Swap', icon: null });
       links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+    } else if (role === 'INTRODUCER') {
+      links.push({ href: '/introducer/dashboard', label: 'Introducer Portal', icon: null });
     } else {
 
       // Regular users: show only their allowed sections

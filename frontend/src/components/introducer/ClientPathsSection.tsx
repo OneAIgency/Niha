@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { cn } from '../../utils';
-import { CLIENT_PATHS } from './constants';
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
+import { CLIENT_PATHS, depthAtLeast } from './constants';
 
 const borderColorMap = {
   emerald: 'border-t-emerald-500',
@@ -15,6 +16,10 @@ const badgeColorMap = {
 } as const;
 
 export function ClientPathsSection() {
+  const { contentDepth } = useIntroducerStore();
+  const showAdvanced = depthAtLeast(contentDepth, 'advanced');
+  const showExpert = depthAtLeast(contentDepth, 'expert');
+
   return (
     <div>
       <h4 className="text-sm font-semibold text-navy-300 mb-4">Client Transaction Paths</h4>
@@ -61,6 +66,45 @@ export function ClientPathsSection() {
                 {path.comparison.niha}
               </div>
             </div>
+
+            {/* Extended example (advanced) */}
+            {showAdvanced && path.extendedExample && (
+              <div className="mt-4 bg-navy-900/30 border border-navy-700 rounded-lg p-4">
+                <h5 className="text-xs font-semibold text-amber-400 mb-2">{path.extendedExample.title}</h5>
+                <ul className="space-y-1">
+                  {path.extendedExample.lines.map((line, i) => (
+                    <li key={i} className="text-xs text-navy-400 font-mono flex items-start gap-2">
+                      <span className="text-navy-600 mt-0.5">-</span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Detailed comparison (expert) */}
+            {showExpert && path.detailedComparison && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-xs text-navy-500">
+                      <th className="pb-1 pr-3 font-medium"></th>
+                      <th className="pb-1 px-3 font-medium">Via Exchange</th>
+                      <th className="pb-1 pl-3 font-medium text-emerald-400">Via NIHA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {path.detailedComparison.rows.map((row) => (
+                      <tr key={row.label} className="border-t border-navy-800">
+                        <td className="py-1.5 pr-3 text-xs text-navy-400 font-medium">{row.label}</td>
+                        <td className="py-1.5 px-3 text-xs text-navy-500 font-mono">{row.exchange}</td>
+                        <td className="py-1.5 pl-3 text-xs text-emerald-400 font-mono">{row.niha}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         ))}
       </div>

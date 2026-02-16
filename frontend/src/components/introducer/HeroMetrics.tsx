@@ -1,7 +1,8 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAuthStore } from '../../stores/useStore';
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
-import { SECTION_IDS, HERO_METRICS } from './constants';
+import { SECTION_IDS, HERO_METRICS, OVERVIEW_NARRATIVES, depthAtLeast } from './constants';
 
 const colorMap = {
   emerald: 'text-emerald-400',
@@ -12,8 +13,12 @@ const colorMap = {
 export function HeroMetrics() {
   const ref = useSection(SECTION_IDS.OVERVIEW);
   const { user } = useAuthStore();
+  const { contentDepth } = useIntroducerStore();
   const name = user?.firstName ?? user?.email ?? 'User';
   const prefersReduced = useReducedMotion();
+
+  const visibleMetrics = HERO_METRICS.filter((m) => depthAtLeast(contentDepth, m.depth));
+  const visibleNarratives = OVERVIEW_NARRATIVES.filter((n) => depthAtLeast(contentDepth, n.depth));
 
   return (
     <section ref={ref} id={SECTION_IDS.OVERVIEW}>
@@ -27,7 +32,7 @@ export function HeroMetrics() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {HERO_METRICS.map((metric, i) => (
+        {visibleMetrics.map((metric, i) => (
           <motion.div
             key={metric.label}
             initial={prefersReduced ? false : { opacity: 0, y: 20 }}
@@ -44,6 +49,21 @@ export function HeroMetrics() {
           </motion.div>
         ))}
       </div>
+
+      {/* Narrative sections */}
+      {visibleNarratives.length > 0 && (
+        <div className="mt-6 space-y-4">
+          {visibleNarratives.map((narrative) => (
+            <div
+              key={narrative.id}
+              className="bg-navy-800/30 border border-navy-700 rounded-xl p-5"
+            >
+              <h4 className="text-sm font-semibold text-emerald-400 mb-2">{narrative.title}</h4>
+              <p className="text-sm text-navy-300 leading-relaxed">{narrative.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

@@ -886,6 +886,15 @@ class CashMarketTradeResponse(BaseModel):
         from_attributes = True
 
 
+class OHLCCandle(BaseModel):
+    time: int  # Unix seconds (bucket start)
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
 class MarketStatsResponse(BaseModel):
     certificate_type: str
     last_price: float

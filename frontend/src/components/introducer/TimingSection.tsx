@@ -1,12 +1,18 @@
 import { cn } from '../../utils';
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { AccordionItem } from './AccordionItem';
 import {
   TIMING_CATALYSTS,
   CONVERGENCE_TABLE,
   RISK_MITIGATIONS,
+  depthAtLeast,
 } from './constants';
 
 export function TimingSection() {
+  const { contentDepth } = useIntroducerStore();
+  const showAdvanced = depthAtLeast(contentDepth, 'advanced');
+  const visibleRisks = RISK_MITIGATIONS.filter((r) => depthAtLeast(contentDepth, r.depth));
+
   return (
     <div>
       <h4 className="text-sm font-semibold text-navy-300 mb-4">Why 2026 Is the Optimal Entry Point</h4>
@@ -18,6 +24,11 @@ export function TimingSection() {
             <div className="text-xs text-emerald-400 font-semibold mb-1">{catalyst.year}</div>
             <div className="text-sm font-medium text-white mb-1">{catalyst.title}</div>
             <div className="text-xs text-navy-500">{catalyst.description}</div>
+            {showAdvanced && catalyst.extendedContent && (
+              <div className="text-xs text-navy-500 mt-2 border-t border-navy-700 pt-2 leading-relaxed">
+                {catalyst.extendedContent}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -65,8 +76,8 @@ export function TimingSection() {
       {/* Risks & Mitigations */}
       <h5 className="text-xs uppercase tracking-wider text-navy-400 mb-3">Risks & Mitigations</h5>
       <div className="space-y-2">
-        {RISK_MITIGATIONS.map((item) => (
-          <AccordionItem key={item.risk} sectionId="timing" itemId={item.risk} title={`${item.risk}: ${item.description}`}>
+        {visibleRisks.map((item) => (
+          <AccordionItem key={item.id} sectionId="timing" itemId={item.id} title={`${item.risk}: ${item.description}`}>
             <span className="text-emerald-400/80">Mitigation:</span> {item.mitigation}
           </AccordionItem>
         ))}

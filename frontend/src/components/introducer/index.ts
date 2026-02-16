@@ -16,3 +16,4 @@ export { ResourcesSection } from './ResourcesSection';
 export { DocumentPanel } from './DocumentPanel';
 export { ChatPanel } from './ChatPanel';
 export { ChatFAB } from './ChatFAB';
+export { ContentDepthSelector } from './ContentDepthSelector';

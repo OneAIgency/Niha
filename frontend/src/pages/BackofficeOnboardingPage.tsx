@@ -105,7 +105,6 @@ export function BackofficeOnboardingPage() {
   );
   const introducerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow === 'introducer');
   const buyerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow !== 'introducer');
-  const contactRequestsCount = contactRequests.length;
 
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KYCDocument[]>([]);

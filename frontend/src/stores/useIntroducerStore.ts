@@ -1,14 +1,21 @@
 import { create } from 'zustand';
+import { SECTION_DEPTH_MAP } from '../components/introducer/constants';
 
 export interface ChatMsg {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
+export type ContentDepth = 'essential' | 'advanced' | 'expert';
+
 interface IntroducerState {
   // Dashboard tab navigation
   dashboardTab: string;
   setDashboardTab: (tab: string) => void;
+
+  // Content depth level
+  contentDepth: ContentDepth;
+  setContentDepth: (depth: ContentDepth) => void;
 
   // Accordion state (which items are expanded, per section)
   expandedAccordions: Record<string, string[]>;
@@ -43,7 +50,15 @@ interface IntroducerState {
 
 export const useIntroducerStore = create<IntroducerState>((set) => ({
   dashboardTab: 'overview',
-  setDashboardTab: (tab) => set({ dashboardTab: tab }),
+  setDashboardTab: (tab) =>
+    set((state) => {
+      const available = SECTION_DEPTH_MAP[tab] ?? ['essential'];
+      const depth = available.includes(state.contentDepth) ? state.contentDepth : 'essential';
+      return { dashboardTab: tab, contentDepth: depth };
+    }),
+
+  contentDepth: 'essential',
+  setContentDepth: (depth) => set({ contentDepth: depth }),
 
   expandedAccordions: {},
   toggleAccordion: (sectionId, itemId) =>

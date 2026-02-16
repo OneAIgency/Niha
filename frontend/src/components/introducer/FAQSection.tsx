@@ -4,17 +4,18 @@ import { Tabs } from '../common/Tabs';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
 import { AccordionItem } from './AccordionItem';
-import { SECTION_IDS, FAQ_CATEGORIES, FAQ_ITEMS } from './constants';
+import { SECTION_IDS, FAQ_CATEGORIES, FAQ_ITEMS, depthAtLeast } from './constants';
 
 export function FAQSection() {
   const ref = useSection(SECTION_IDS.FAQ);
-  const { activeTabs, setActiveTab } = useIntroducerStore();
+  const { activeTabs, setActiveTab, contentDepth } = useIntroducerStore();
   const activeCategory = activeTabs['faq'] ?? 'getting-started';
   const [search, setSearch] = useState('');
 
   const tabs = FAQ_CATEGORIES.map((c) => ({ id: c.id, label: c.label }));
 
   const filteredItems = FAQ_ITEMS.filter((item) => {
+    if (!depthAtLeast(contentDepth, item.depth)) return false;
     const matchesCategory = item.category === activeCategory;
     if (!search.trim()) return matchesCategory;
     const query = search.toLowerCase();

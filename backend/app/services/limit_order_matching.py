@@ -28,6 +28,7 @@ from app.models.models import (
     Order,
     OrderSide,
     OrderStatus,
+    PriceHistory,
     TicketStatus,
 )
 from app.services.ticket_service import TicketService
@@ -170,6 +171,15 @@ class LimitOrderMatcher:
             )
             db.add(trade)
             await db.flush()  # Get trade ID
+
+            # Persist trade price in price_history for chart data
+            db.add(PriceHistory(
+                certificate_type=incoming_order.certificate_type,
+                price=trade_price,
+                currency="EUR",
+                source="trade_execution",
+                recorded_at=trade.executed_at,
+            ))
 
             # Create audit ticket for trade execution
             buy_ticket_id = getattr(buy_order, 'ticket_id', None)
@@ -409,6 +419,15 @@ class LimitOrderMatcher:
                     executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 db.add(trade)
+
+                # Persist trade price in price_history for chart data
+                db.add(PriceHistory(
+                    certificate_type=certificate_type,
+                    price=trade_price,
+                    currency="EUR",
+                    source="trade_execution",
+                    recorded_at=trade.executed_at,
+                ))
 
                 # Update buy order
                 buy_order.filled_quantity = buy_order.filled_quantity + match_qty

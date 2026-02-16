@@ -1,4 +1,5 @@
-import { VALUE_PROPOSITIONS } from './constants';
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
+import { VALUE_PROPOSITIONS, depthAtLeast } from './constants';
 
 const iconBgMap = {
   emerald: 'bg-emerald-500/20',
@@ -13,9 +14,13 @@ const iconTextMap = {
 } as const;
 
 export function ValuePropositionCards() {
+  const { contentDepth } = useIntroducerStore();
+  const visibleProps = VALUE_PROPOSITIONS.filter((p) => depthAtLeast(contentDepth, p.depth));
+  const showExtended = depthAtLeast(contentDepth, 'advanced');
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {VALUE_PROPOSITIONS.map((prop) => (
+      {visibleProps.map((prop) => (
         <div
           key={prop.title}
           className="bg-navy-800/50 border border-navy-700 rounded-xl p-6 flex items-start gap-4"
@@ -30,6 +35,11 @@ export function ValuePropositionCards() {
             <div className="text-xs text-navy-400 mt-1 leading-relaxed">
               {prop.description}
             </div>
+            {showExtended && prop.extendedDescription && (
+              <div className="text-xs text-navy-500 mt-2 leading-relaxed border-t border-navy-700 pt-2">
+                {prop.extendedDescription}
+              </div>
+            )}
           </div>
         </div>
       ))}

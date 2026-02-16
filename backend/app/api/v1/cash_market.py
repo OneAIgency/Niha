@@ -29,7 +29,7 @@ def validate_price_step(price: Decimal) -> bool:
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, text
 from sqlalchemy.orm import joinedload
 
 from ...core.database import get_db
@@ -43,6 +43,7 @@ from ...models.models import (
     MarketType,
     Order,
     OrderStatus,
+    PriceHistory,
     Seller,
     TicketStatus,
     User,
@@ -59,6 +60,7 @@ from ...schemas.schemas import (
     MarketOrderRequest,
     MarketStatsResponse,
     MessageResponse,
+    OHLCCandle,
     OrderBookLevel,
     OrderBookResponse,
     OrderCreate,
@@ -182,6 +184,49 @@ async def get_recent_trades(
             executed_at=t.executed_at,
         )
         for t in trades
+    ]
+
+
+@router.get("/ohlc/{certificate_type}", response_model=List[OHLCCandle])
+async def get_ohlc(
+    certificate_type: CertificateType,
+    interval: int = Query(900, ge=60, le=2592000),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
+):
+    """
+    Get OHLC candlestick data aggregated from executed trades.
+    `interval` is bucket size in seconds (default 900 = 15m).
+    """
+    cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
+
+    result = await db.execute(
+        text("""
+            SELECT
+                FLOOR(EXTRACT(EPOCH FROM executed_at) / :interval)::bigint * :interval AS time,
+                (array_agg(price ORDER BY executed_at ASC))[1] AS open,
+                MAX(price) AS high,
+                MIN(price) AS low,
+                (array_agg(price ORDER BY executed_at DESC))[1] AS close,
+                SUM(quantity) AS volume
+            FROM cash_market_trades
+            WHERE certificate_type = :cert_type
+            GROUP BY time
+            ORDER BY time ASC
+        """),
+        {"interval": interval, "cert_type": cert_enum.value},
+    )
+    rows = result.fetchall()
+
+    return [
+        OHLCCandle(
+            time=int(row[0]),
+            open=float(row[1]),
+            high=float(row[2]),
+            low=float(row[3]),
+            close=float(row[4]),
+            volume=float(row[5]),
+        )
+        for row in rows
     ]
 
 
@@ -801,6 +846,15 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):  
         )
         db.add(trade)
 
+        # Persist trade price in price_history for chart data
+        db.add(PriceHistory(
+            certificate_type=CertTypeEnum.CEA,
+            price=Decimal(str(order_price_cny)),
+            currency="EUR",
+            source="trade_execution",
+            recorded_at=trade.executed_at,
+        ))
+
         # Update the sell order
         order.filled_quantity = Decimal(str(float(order.filled_quantity) + qty_to_buy))
         if order.filled_quantity >= order.quantity:
@@ -1057,6 +1111,21 @@ async def execute_market_order(
                 },
             )
         asyncio.create_task(_send_balance_update())
+
+    # Broadcast each trade so chart and activity feed update instantly
+    if result.success:
+        for fill in result.fills:
+            asyncio.create_task(client_ws_manager.broadcast_to_all({
+                "type": "trade_executed",
+                "data": {
+                    "id": "",
+                    "certificate_type": request.certificate_type.value,
+                    "price": float(fill.price),
+                    "quantity": int(round(float(fill.quantity))),
+                    "side": "BUY",
+                    "executed_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }))
 
     # Notify all connected clients that the order book changed (after any trade execution)
     asyncio.create_task(client_ws_manager.broadcast_to_all(

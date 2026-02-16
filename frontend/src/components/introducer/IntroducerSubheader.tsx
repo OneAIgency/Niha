@@ -1,14 +1,15 @@
-import { Briefcase, MessageCircle } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
 import { cn } from '../../utils';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { NAV_ITEMS } from './constants';
+import { ContentDepthSelector } from './ContentDepthSelector';
 
 /**
  * Tab navigation subheader for the Introducer Portal.
  * Click a button to switch the active dashboard tab (no scroll).
  */
 export function IntroducerSubheader() {
-  const { dashboardTab, setDashboardTab, openChat } = useIntroducerStore();
+  const { dashboardTab, setDashboardTab } = useIntroducerStore();
 
   return (
     <>
@@ -26,8 +27,9 @@ export function IntroducerSubheader() {
               </div>
             </div>
 
-            {/* Right: Tab nav + chat button */}
-            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+            {/* Right: Tab nav + depth selector + chat button */}
+            <div className="flex flex-wrap items-center gap-1">
+              {/* Nav pills */}
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = dashboardTab === item.id;
@@ -60,14 +62,10 @@ export function IntroducerSubheader() {
                 );
               })}
 
-              {/* Chat toggle */}
-              <button
-                onClick={openChat}
-                title="Ask AI Assistant"
-                className="subheader-nav-btn subheader-nav-btn-inactive ml-2 !text-emerald-400 hover:!bg-emerald-500/10"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </button>
+              {/* Divider + Depth selector */}
+              <div className="hidden lg:block border-l border-navy-700 h-6 mx-2" />
+              <ContentDepthSelector />
+
             </div>
           </div>
         </div>

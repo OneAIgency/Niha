@@ -1,7 +1,7 @@
 """AI Agent: config, knowledge sources, chunk embeddings with pgvector
 
 Revision ID: 2026_02_16_ai_agent
-Revises: 2026_02_13_source_primary
+Revises: 2026_02_13_introducer
 Create Date: 2026-02-16
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = "2026_02_16_ai_agent"
-down_revision: Union[str, None] = "2026_02_13_source_primary"
+down_revision: Union[str, None] = "2026_02_13_introducer"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -71,7 +71,7 @@ def upgrade() -> None:
         sa.Column("url", sa.String(512), nullable=True),
         sa.Column("content_hash", sa.String(64), nullable=True),
         sa.Column("chunk_count", sa.Integer(), server_default="0"),
-        sa.Column("status", sa.String(32), server_default="'pending'"),
+        sa.Column("status", sa.String(32), server_default=sa.text("'pending'")),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("indexed_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()")),
@@ -86,7 +86,7 @@ def upgrade() -> None:
         sa.Column("chunk_index", sa.Integer(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("token_count", sa.Integer(), server_default="0"),
-        sa.Column("metadata", JSONB, server_default="'{}'"),
+        sa.Column("metadata", JSONB, server_default=sa.text("'{}'::jsonb")),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()")),
     )
 

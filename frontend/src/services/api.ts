@@ -1710,6 +1710,16 @@ export const cashMarketApi = {
     return data;
   },
 
+  getOHLC: async (
+    certificateType: CertificateType,
+    interval: number = 900
+  ): Promise<{ time: number; open: number; high: number; low: number; close: number; volume: number }[]> => {
+    const { data } = await api.get(`/cash-market/ohlc/${certificateType}`, {
+      params: { interval },
+    });
+    return data;
+  },
+
   // CEA/EUA: quantity and volume fields are whole numbers only (no fractional certificates).
   placeOrder: async (order: {
     certificate_type: CertificateType;

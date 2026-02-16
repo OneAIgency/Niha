@@ -5,6 +5,7 @@ export interface ToggleOption {
   value: string;
   label: string;
   icon?: ReactNode;
+  disabled?: boolean;
   colorScheme?: 'default' | 'eua' | 'cea' | 'buy' | 'sell';
 }
 
@@ -20,24 +21,29 @@ interface ToggleGroupProps {
 
 const colorSchemes = {
   default: {
-    active: 'bg-navy-800 text-white',
+    active: 'bg-navy-600 text-white',
     inactive: 'bg-navy-800 text-navy-400 hover:bg-navy-700',
+    disabled: 'bg-navy-800 text-navy-600 cursor-not-allowed',
   },
   eua: {
     active: 'tab-toggle-item-active-eua',
     inactive: 'tab-toggle-item-inactive',
+    disabled: 'bg-navy-800 text-navy-600 cursor-not-allowed',
   },
   cea: {
     active: 'tab-toggle-item-active-cea',
     inactive: 'tab-toggle-item-inactive',
+    disabled: 'bg-navy-800 text-navy-600 cursor-not-allowed',
   },
   buy: {
     active: 'trade-tab-buy-active',
     inactive: 'trade-tab-buy-inactive',
+    disabled: 'bg-navy-800 text-navy-600 cursor-not-allowed',
   },
   sell: {
     active: 'trade-tab-sell-active',
     inactive: 'trade-tab-sell-inactive',
+    disabled: 'bg-navy-800 text-navy-600 cursor-not-allowed',
   },
 };
 
@@ -72,12 +78,17 @@ export function ToggleGroup({
         return (
           <button
             key={option.value}
-            onClick={() => onChange(option.value)}
+            onClick={() => !option.disabled && onChange(option.value)}
+            disabled={option.disabled}
             className={cn(
               'font-semibold transition-colors flex items-center justify-center gap-2',
               sizeStyles[size],
               fullWidth && 'flex-1',
-              isActive ? scheme.active : scheme.inactive
+              option.disabled
+                ? scheme.disabled
+                : isActive
+                  ? scheme.active
+                  : scheme.inactive
             )}
           >
             {option.icon}

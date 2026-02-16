@@ -33,6 +33,7 @@ from app.models.models import (
     Order,
     OrderSide,
     OrderStatus,
+    PriceHistory,
     TicketStatus,
     TransactionType,
 )
@@ -594,7 +595,10 @@ class AutoTradeExecutor:
 
         # 60 % correction toward ideal
         adjustment = deviation * Decimal("0.6")
-        new_price = best_price + adjustment
+        if side == OrderSide.SELL:
+            new_price = best_price - adjustment
+        else:
+            new_price = best_price + adjustment
 
         # Round to tick
         new_price = (new_price / tick_size).quantize(Decimal("1")) * tick_size
@@ -1011,6 +1015,15 @@ class AutoTradeExecutor:
             db.add(trade)
             await db.flush()
 
+            # Persist trade price in price_history for chart data
+            db.add(PriceHistory(
+                certificate_type=certificate_type,
+                price=trade_price,
+                currency="EUR",
+                source="auto_trade",
+                recorded_at=trade.executed_at,
+            ))
+
             # Create audit ticket for internal trade
             buy_ticket_id = getattr(buy_order, 'ticket_id', None)
             sell_ticket_id = getattr(sell_order, 'ticket_id', None)
@@ -1066,6 +1079,23 @@ class AutoTradeExecutor:
                 f"Internal trade executed: {match_qty} {certificate_type.value} @ {trade_price} "
                 f"(BUY {buy_order.id} <-> SELL {sell_order.id})"
             )
+
+            # Broadcast trade to all clients so chart + activity update in real-time
+            try:
+                from app.api.v1.client_ws import client_ws_manager
+                asyncio.create_task(client_ws_manager.broadcast_to_all({
+                    "type": "trade_executed",
+                    "data": {
+                        "id": str(trade.id),
+                        "certificate_type": certificate_type.value,
+                        "price": float(trade_price),
+                        "quantity": int(round(float(match_qty))),
+                        "side": "BUY",
+                        "executed_at": trade.executed_at.isoformat() if trade.executed_at else datetime.now(timezone.utc).isoformat(),
+                    },
+                }))
+            except Exception as ws_err:
+                logger.debug(f"WS broadcast failed for internal trade: {ws_err}")
 
             result["success"] = True
             result["trade_id"] = str(trade.id) if hasattr(trade, 'id') else None
@@ -1515,6 +1545,15 @@ class AutoTradeExecutor:
                 db.add(trade)
                 await db.flush()
 
+                # Persist trade price in price_history for chart data
+                db.add(PriceHistory(
+                    certificate_type=certificate_type,
+                    price=trade_price,
+                    currency="EUR",
+                    source="auto_trade",
+                    recorded_at=trade.executed_at,
+                ))
+
                 # Create audit ticket for trade execution
                 buy_ticket_id = getattr(buy_order, 'ticket_id', None)
                 sell_ticket_id = getattr(sell_order, 'ticket_id', None)
@@ -1579,6 +1618,15 @@ class AutoTradeExecutor:
         if trades_created > 0:
             await db.commit()
             logger.info(f"Created {trades_created} auto-trade matches for {certificate_type.value}")
+
+            # Broadcast orderbook_updated so activity feed refreshes
+            try:
+                from app.api.v1.client_ws import client_ws_manager
+                asyncio.create_task(client_ws_manager.broadcast_to_all(
+                    {"type": "orderbook_updated", "data": {"certificate_type": certificate_type.value}},
+                ))
+            except Exception:
+                pass
 
         return trades_created
 
@@ -1862,9 +1910,21 @@ class AutoTradeExecutor:
 
                 # If at capacity, shift to next available price level
                 if orders_at_price >= max_per_level:
-                    step = Decimal("0.1") if market_type != MarketType.SWAP else Decimal("0.0001")
+                    # Use tick_size from market settings instead of hardcoded step
+                    if market_settings and market_settings.tick_size:
+                        step = Decimal(str(market_settings.tick_size))
+                    else:
+                        step = Decimal("0.1") if market_type != MarketType.SWAP else Decimal("0.0001")
+
+                    # Dynamic range: cover full price_deviation_pct range
+                    if market_settings and market_settings.price_deviation_pct and price and step > 0:
+                        max_deviation = price * Decimal(str(market_settings.price_deviation_pct)) / Decimal("100")
+                        max_shifts = max(20, int(max_deviation / step) + 1)
+                    else:
+                        max_shifts = 50
+
                     shifted = False
-                    for shift in range(1, 20):  # Try up to 20 levels
+                    for shift in range(1, max_shifts):
                         if rule.side == OrderSide.BUY:
                             candidate = price - step * shift
                             if candidate <= Decimal("0"):
@@ -1888,6 +1948,35 @@ class AutoTradeExecutor:
                             break
 
                     if not shifted:
+                        # Fallback: execute internal trade to free capacity
+                        if market_settings and market_settings.internal_trade_volume_min is not None:
+                            logger.info(
+                                f"Rule {rule.name}: All price levels at max capacity — "
+                                f"executing internal trade to free capacity"
+                            )
+                            internal_result = await AutoTradeExecutor.execute_internal_trade(
+                                db, certificate_type, admin_user_id,
+                                market_settings=market_settings,
+                                market_key=market_key,
+                            )
+                            rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                            rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
+                            rule.execution_count = (rule.execution_count or 0) + 1
+                            await db.commit()
+
+                            if internal_result["success"]:
+                                result["success"] = True
+                                result["action"] = "internal_trade_capacity_relief"
+                                result["internal_trade"] = internal_result
+                                result["reason"] = "capacity_full_executed_internal_trade"
+                                logger.info(
+                                    f"Rule {rule.name}: Capacity relief trade: "
+                                    f"{internal_result['quantity']} @ {internal_result['price']}"
+                                )
+                            else:
+                                result["reason"] = f"all_price_levels_at_max_capacity_internal_failed: {internal_result['reason']}"
+                            return result
+
                         result["reason"] = "all_price_levels_at_max_capacity"
                         rule.next_execution_at = AutoTradeExecutor.calculate_next_execution_time(rule, _interval_var)
                         await db.commit()

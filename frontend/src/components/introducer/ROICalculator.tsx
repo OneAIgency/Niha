@@ -86,6 +86,7 @@ export function ROICalculator() {
                   value={String(calcInputs.nihaDiscount)}
                   onChange={(v) => setCalcInput('nihaDiscount', Number(v))}
                   size="sm"
+                  fullWidth
                 />
               </div>
             </div>
