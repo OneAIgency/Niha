@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
+  Bot,
   Database,
   RefreshCw,
   Play,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge, AlertBanner, NumberInput } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
+import { AIAgentTab } from '../components/settings/AIAgentTab';
 import { adminApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
@@ -259,11 +261,12 @@ const SCRAPE_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: '1h' },
 ];
 
-type SettingsTab = 'scraping' | 'exchange' | 'mail';
+type SettingsTab = 'scraping' | 'exchange' | 'mail' | 'ai-agent';
 const SETTINGS_TABS: { key: SettingsTab; label: string; icon: typeof Database }[] = [
   { key: 'scraping', label: 'Price Scraping', icon: Database },
   { key: 'exchange', label: 'Exchange Rate', icon: DollarSign },
   { key: 'mail', label: 'Mail Settings', icon: Mail },
+  { key: 'ai-agent', label: 'AI Agent', icon: Bot },
 ];
 
 export function SettingsPage() {
@@ -1417,6 +1420,13 @@ export function SettingsPage() {
                 )}
               </Card>
             )}
+          </motion.div>}
+
+          {activeTab === 'ai-agent' && <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <AIAgentTab />
           </motion.div>}
 
         </div>
