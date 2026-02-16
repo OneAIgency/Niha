@@ -11,15 +11,14 @@ import {
   FAQSection,
   ResourcesSection,
 } from '../components/introducer';
-import { useSection } from '../components/introducer/SectionRegistry';
 import { SECTION_IDS } from '../components/introducer/constants';
 import { ComparisonTable } from '../components/introducer/ComparisonTable';
+import { useIntroducerStore } from '../stores/useIntroducerStore';
 
 /** Markets: comparison table + tabbed deep-dive */
 function MarketsSection() {
-  const ref = useSection(SECTION_IDS.MARKETS);
   return (
-    <section ref={ref} id={SECTION_IDS.MARKETS}>
+    <section id={SECTION_IDS.MARKETS}>
       <h3 className="section-heading text-white mb-6">NIHA vs Direct EUA Purchase</h3>
       <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-6 mb-8">
         <ComparisonTable />
@@ -31,9 +30,8 @@ function MarketsSection() {
 
 /** Advantages: value props + client paths + timing */
 function AdvantagesSection() {
-  const ref = useSection(SECTION_IDS.ADVANTAGES);
   return (
-    <section ref={ref} id={SECTION_IDS.ADVANTAGES}>
+    <section id={SECTION_IDS.ADVANTAGES}>
       <h3 className="section-heading text-white mb-6">Why NIHA</h3>
       <ValuePropositionCards />
       <div className="mt-8">
@@ -46,17 +44,24 @@ function AdvantagesSection() {
   );
 }
 
+const TAB_COMPONENTS: Record<string, () => JSX.Element> = {
+  overview: () => <HeroMetrics />,
+  mechanism: () => <HowItWorksFlow />,
+  markets: () => <MarketsSection />,
+  advantages: () => <AdvantagesSection />,
+  legal: () => <LegalSection />,
+  calculator: () => <ROICalculator />,
+  resources: () => <ResourcesSection />,
+  faq: () => <FAQSection />,
+};
+
 export function IntroducerDashboardPage() {
+  const dashboardTab = useIntroducerStore((s) => s.dashboardTab);
+  const TabContent = TAB_COMPONENTS[dashboardTab] ?? TAB_COMPONENTS.overview;
+
   return (
     <IntroducerLayout>
-      <HeroMetrics />
-      <HowItWorksFlow />
-      <MarketsSection />
-      <AdvantagesSection />
-      <LegalSection />
-      <ROICalculator />
-      <ResourcesSection />
-      <FAQSection />
+      <TabContent />
     </IntroducerLayout>
   );
 }
