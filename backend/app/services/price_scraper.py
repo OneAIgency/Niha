@@ -428,11 +428,15 @@ class PriceScraper:
         content = result.get("content", "")
         soup = result.get("soup")
 
-        # Check for CSS selector in config
-        if config.get("css_selector") and soup:
-            element = soup.select_one(config["css_selector"])
-            if element:
-                return self._parse_price(element.get_text())
+        # Check for CSS selector in config (auto-parse HTML if soup not available)
+        if config.get("css_selector"):
+            if soup is None and content:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(content, "html.parser")
+            if soup:
+                element = soup.select_one(config["css_selector"])
+                if element:
+                    return self._parse_price(element.get_text())
 
         # Check for regex pattern in config
         if config.get("regex_pattern"):
@@ -945,11 +949,15 @@ class PriceScraper:
         content = result.get("content", "")
         soup = result.get("soup")
 
-        # Check for CSS selector in config
-        if config.get("css_selector") and soup:
-            element = soup.select_one(config["css_selector"])
-            if element:
-                return self._parse_price(element.get_text())
+        # Check for CSS selector in config (auto-parse HTML if soup not available)
+        if config.get("css_selector"):
+            if soup is None and content:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(content, "html.parser")
+            if soup:
+                element = soup.select_one(config["css_selector"])
+                if element:
+                    return self._parse_price(element.get_text())
 
         # Check for regex pattern in config
         if config.get("regex_pattern"):
@@ -1024,6 +1032,150 @@ class PriceScraper:
             except Exception:
                 pass  # Don't fail on update error during exception handling
             raise
+
+
+# ==================== Startup Seed ====================
+
+
+async def seed_default_sources(db) -> None:
+    """Ensure at least one active+primary source exists for both EUA and CEA.
+    Called once during application startup."""
+    from sqlalchemy import select, func
+
+    try:
+        for cert_type in (CertificateType.EUA, CertificateType.CEA):
+            # Check if any active source exists for this certificate type
+            count_result = await db.execute(
+                select(func.count())
+                .select_from(ScrapingSource)
+                .where(
+                    ScrapingSource.certificate_type == cert_type,
+                    ScrapingSource.is_active.is_(True),
+                )
+            )
+            active_count = count_result.scalar()
+
+            source_created = False
+            if active_count == 0:
+                # Create a default carboncredits.com source
+                source = ScrapingSource(
+                    name=f"CarbonCredits {cert_type.value}",
+                    url="https://carboncredits.com/wp-content/themes/fetchcarbonprices.php",
+                    certificate_type=cert_type,
+                    scrape_library=ScrapeLibrary.HTTPX,
+                    is_active=True,
+                    is_primary=True,
+                    scrape_interval_minutes=5,
+                )
+                db.add(source)
+                source_created = True
+                logger.info(
+                    "Seeded default %s scraping source: CarbonCredits %s",
+                    cert_type.value,
+                    cert_type.value,
+                )
+
+            # Ensure exactly one primary exists among active sources
+            # (skip if we just created one with is_primary=True)
+            if not source_created:
+                primary_result = await db.execute(
+                    select(func.count())
+                    .select_from(ScrapingSource)
+                    .where(
+                        ScrapingSource.certificate_type == cert_type,
+                        ScrapingSource.is_active.is_(True),
+                        ScrapingSource.is_primary.is_(True),
+                    )
+                )
+                primary_count = primary_result.scalar()
+
+                if primary_count == 0 and active_count > 0:
+                    # No primary set — promote the first active source
+                    first_result = await db.execute(
+                        select(ScrapingSource)
+                        .where(
+                            ScrapingSource.certificate_type == cert_type,
+                            ScrapingSource.is_active.is_(True),
+                        )
+                        .order_by(ScrapingSource.created_at.asc())
+                        .limit(1)
+                    )
+                    first_source = first_result.scalar_one_or_none()
+                    if first_source:
+                        first_source.is_primary = True
+                        logger.info(
+                            "Auto-promoted %s as primary %s source",
+                            first_source.name,
+                            cert_type.value,
+                        )
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+async def seed_default_exchange_rate_sources(db) -> None:
+    """Ensure at least one active+primary exchange rate source exists for EUR/CNY.
+    Called once during application startup."""
+    from sqlalchemy import select, func
+
+    try:
+        # Check if any active EUR/CNY source exists
+        count_result = await db.execute(
+            select(func.count())
+            .select_from(ExchangeRateSource)
+            .where(ExchangeRateSource.is_active.is_(True))
+        )
+        active_count = count_result.scalar()
+
+        source_created = False
+        if active_count == 0:
+            source = ExchangeRateSource(
+                name="ECB EUR/CNY",
+                from_currency="EUR",
+                to_currency="CNY",
+                url="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+                scrape_library=ScrapeLibrary.HTTPX,
+                is_active=True,
+                is_primary=True,
+                scrape_interval_minutes=60,
+            )
+            db.add(source)
+            source_created = True
+            logger.info("Seeded default exchange rate source: ECB EUR/CNY")
+
+        # Ensure a primary exists (skip if we just created one)
+        if not source_created:
+            primary_result = await db.execute(
+                select(func.count())
+                .select_from(ExchangeRateSource)
+                .where(
+                    ExchangeRateSource.is_active.is_(True),
+                    ExchangeRateSource.is_primary.is_(True),
+                )
+            )
+            primary_count = primary_result.scalar()
+
+            if primary_count == 0 and active_count > 0:
+                first_result = await db.execute(
+                    select(ExchangeRateSource)
+                    .where(ExchangeRateSource.is_active.is_(True))
+                    .order_by(ExchangeRateSource.created_at.asc())
+                    .limit(1)
+                )
+                first_source = first_result.scalar_one_or_none()
+                if first_source:
+                    first_source.is_primary = True
+                    logger.info(
+                        "Auto-promoted %s as primary exchange rate source",
+                        first_source.name,
+                    )
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
 
 # Singleton instance

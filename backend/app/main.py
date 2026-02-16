@@ -118,14 +118,22 @@ async def lifespan(app: FastAPI):
             # Wait 1 hour
             await asyncio.sleep(3600)
 
+    def _is_due(source, now):
+        """Check if a scraping source is due for a refresh based on its interval."""
+        last = getattr(source, "last_scrape_at", None) or getattr(source, "last_scraped_at", None)
+        if last is None:
+            return True
+        return (now - last).total_seconds() / 60 >= source.scrape_interval_minutes
+
     # Price scraping scheduler
     async def price_scraping_scheduler_loop():
-        """Run price scraping based on each source's configured interval"""
+        """Run price scraping based on each source's configured interval.
+        Failover: if primary source fails, try other active sources of the same type."""
         from datetime import datetime, timezone
 
         from sqlalchemy import select
 
-        from .models.models import ScrapingSource
+        from .models.models import CertificateType, ScrapingSource
         from .services.price_scraper import price_scraper
 
         # Wait 30 seconds on startup before first check
@@ -154,14 +162,12 @@ async def lifespan(app: FastAPI):
                         if not s.url or "carboncredits.com" not in s.url
                     ]
 
-                    # One request for all carboncredits.com sources if any is due
+                    # Track which cert types got a successful scrape this cycle
+                    scraped_cert_types: set = set()
+
+                    # --- Carboncredits group (shared fetch) ---
                     if carboncredits_sources:
-                        any_due = any(
-                            s.last_scrape_at is None
-                            or (now - s.last_scrape_at).total_seconds() / 60
-                            >= s.scrape_interval_minutes
-                            for s in carboncredits_sources
-                        )
+                        any_due = any(_is_due(s, now) for s in carboncredits_sources)
                         if any_due:
                             try:
                                 await price_scraper.refresh_carboncredits_sources(
@@ -169,6 +175,7 @@ async def lifespan(app: FastAPI):
                                 )
                                 for s in carboncredits_sources:
                                     if s.last_price is not None:
+                                        scraped_cert_types.add(s.certificate_type)
                                         logger.info(
                                             "Auto-scraped %s: %s",
                                             s.name,
@@ -180,32 +187,62 @@ async def lifespan(app: FastAPI):
                                     e,
                                 )
 
-                    for source in other_sources:
-                        if source.last_scrape_at is None:
-                            should_scrape = True
-                        else:
-                            minutes_since_last = (
-                                now - source.last_scrape_at
-                            ).total_seconds() / 60
-                            should_scrape = (
-                                minutes_since_last
-                                >= source.scrape_interval_minutes
-                            )
+                    # --- Non-carboncredits sources: primary first, then fallbacks ---
+                    for cert_type in (CertificateType.EUA, CertificateType.CEA):
+                        type_sources = [s for s in other_sources if s.certificate_type == cert_type]
+                        if not type_sources:
+                            continue
 
-                        if should_scrape:
+                        # Sort: primary first, then by created_at
+                        type_sources.sort(key=lambda s: (not s.is_primary, s.created_at))
+
+                        primary = type_sources[0] if type_sources[0].is_primary else None
+                        fallbacks = type_sources[1:] if primary else type_sources
+
+                        # Try primary first
+                        if primary and _is_due(primary, now):
                             try:
-                                await price_scraper.refresh_source(source, db)
+                                await price_scraper.refresh_source(primary, db)
+                                scraped_cert_types.add(cert_type)
                                 logger.info(
-                                    "Auto-scraped %s: %s",
-                                    source.name,
-                                    source.last_price,
+                                    "Auto-scraped %s (primary): %s",
+                                    primary.name,
+                                    primary.last_price,
                                 )
+                                continue  # Primary succeeded, skip fallbacks
                             except Exception as e:
                                 logger.warning(
-                                    "Auto-scrape failed for %s: %s",
-                                    source.name,
+                                    "Primary %s source %s failed: %s — trying fallbacks",
+                                    cert_type.value,
+                                    primary.name,
                                     e,
                                 )
+                        elif primary and not _is_due(primary, now):
+                            # Primary not due yet and had a previous success
+                            if primary.last_scrape_status and primary.last_scrape_status.value == "SUCCESS":
+                                continue  # Not due, skip
+
+                        # Failover: try fallback sources in order
+                        for fallback in fallbacks:
+                            if not _is_due(fallback, now) and cert_type in scraped_cert_types:
+                                continue
+                            try:
+                                await price_scraper.refresh_source(fallback, db)
+                                scraped_cert_types.add(cert_type)
+                                logger.info(
+                                    "Auto-scraped %s (fallback): %s",
+                                    fallback.name,
+                                    fallback.last_price,
+                                )
+                                break  # One successful fallback is enough
+                            except Exception as e:
+                                logger.warning(
+                                    "Fallback %s source %s also failed: %s",
+                                    cert_type.value,
+                                    fallback.name,
+                                    e,
+                                )
+
             except Exception as e:
                 logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
 
@@ -214,7 +251,8 @@ async def lifespan(app: FastAPI):
 
     # Exchange rate scraping scheduler
     async def exchange_rate_scraping_scheduler_loop():
-        """Run exchange rate scraping based on each source's configured interval"""
+        """Run exchange rate scraping based on each source's configured interval.
+        Failover: if primary source fails, try other active sources."""
         from datetime import datetime, timezone
 
         from sqlalchemy import select
@@ -234,35 +272,60 @@ async def lifespan(app: FastAPI):
                             ExchangeRateSource.is_active.is_(True)
                         )
                     )
-                    sources = result.scalars().all()
+                    sources = list(result.scalars().all())
 
-                    # Use naive UTC for comparison with DB timestamps
                     now = datetime.now(timezone.utc).replace(tzinfo=None)
-                    for source in sources:
-                        # Check if it's time to scrape based on configured interval
-                        if source.last_scraped_at is None:
-                            should_scrape = True
-                        else:
-                            minutes_since_last = (
-                                now - source.last_scraped_at
-                            ).total_seconds() / 60
-                            should_scrape = (
-                                minutes_since_last >= source.scrape_interval_minutes
-                            )
 
-                        if should_scrape:
+                    # Sort: primary first, then by created_at
+                    sources.sort(key=lambda s: (not s.is_primary, s.created_at))
+
+                    primary = sources[0] if sources and sources[0].is_primary else None
+                    fallbacks = sources[1:] if primary else sources
+
+                    scraped = False
+
+                    # Try primary first
+                    if primary and _is_due(primary, now):
+                        try:
+                            await price_scraper.refresh_exchange_rate_source(
+                                primary, db
+                            )
+                            scraped = True
+                            logger.info(
+                                "Auto-scraped exchange rate %s (primary): %s",
+                                primary.name,
+                                primary.last_rate,
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                "Primary exchange rate source %s failed: %s — trying fallbacks",
+                                primary.name,
+                                e,
+                            )
+                    elif primary and not _is_due(primary, now):
+                        if primary.last_scrape_status and primary.last_scrape_status.value == "SUCCESS":
+                            scraped = True  # Not due, already have good data
+
+                    # Failover: try fallback sources if primary failed
+                    if not scraped:
+                        for fallback in fallbacks:
+                            if not _is_due(fallback, now):
+                                continue
                             try:
                                 await price_scraper.refresh_exchange_rate_source(
-                                    source, db
+                                    fallback, db
                                 )
                                 logger.info(
-                                    f"Auto-scraped exchange rate {source.name}: "
-                                    f"{source.last_rate}"
+                                    "Auto-scraped exchange rate %s (fallback): %s",
+                                    fallback.name,
+                                    fallback.last_rate,
                                 )
+                                break  # One success is enough
                             except Exception as e:
                                 logger.warning(
-                                    f"Auto-scrape failed for exchange rate "
-                                    f"{source.name}: {e}"
+                                    "Fallback exchange rate source %s also failed: %s",
+                                    fallback.name,
+                                    e,
                                 )
             except Exception as e:
                 logger.error(
@@ -316,6 +379,20 @@ async def lifespan(app: FastAPI):
 
             # Check every 5 seconds for rules ready to execute (supports 10-20 sec intervals)
             await asyncio.sleep(5)
+
+    # Seed default scraping sources if none exist
+    try:
+        from .services.price_scraper import (
+            seed_default_exchange_rate_sources,
+            seed_default_sources,
+        )
+
+        async with AsyncSessionLocal() as db:
+            await seed_default_sources(db)
+            await seed_default_exchange_rate_sources(db)
+        logger.info("Scraping source seed check complete")
+    except Exception as e:
+        logger.error(f"Failed to seed scraping sources: {e}", exc_info=True)
 
     # Start background tasks
     processor_task = asyncio.create_task(settlement_processor_loop())

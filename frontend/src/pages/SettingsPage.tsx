@@ -138,8 +138,8 @@ function ActionsDropdown({ actions }: { actions: ActionItem[] }) {
 
 interface ChartPoint { price: number; recordedAt: string }
 
-function PriceHistoryChart({ sourceName, currency, points }: {
-  sourceName: string; currency: string; points: ChartPoint[];
+function PriceHistoryChart({ sourceName, currency, points, onReset }: {
+  sourceName: string; currency: string; points: ChartPoint[]; onReset?: () => void;
 }) {
   const [hover, setHover] = useState<{ x: number; y: number; point: ChartPoint } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -200,6 +200,15 @@ function PriceHistoryChart({ sourceName, currency, points }: {
         <span className="text-xs font-medium text-navy-200">{sourceName}</span>
         <span className="text-[10px] text-navy-500">{currency}</span>
         <span className="ml-auto text-[10px] text-navy-500">{points.length} pts</span>
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="ml-2 px-2 py-0.5 rounded text-[10px] font-medium bg-navy-700 text-navy-300 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+            title="Reset chart — delete all history and start fresh from current price"
+          >
+            Reset
+          </button>
+        )}
       </div>
       <svg
         ref={svgRef}
@@ -424,6 +433,17 @@ export function SettingsPage() {
       setTestResult({ sourceId, success: false });
     } finally {
       setTestingSource(null);
+    }
+  };
+
+  const handleResetHistory = async (sourceId: string) => {
+    if (!confirm('Reset chart? This deletes all history and starts fresh from the current price.')) return;
+    try {
+      await adminApi.resetScrapingSourceHistory(sourceId);
+      await loadHistories(sources, historyHours);
+    } catch (e) {
+      console.error('Reset history failed:', e);
+      setError(getApiErrorMessage(e));
     }
   };
 
@@ -1039,6 +1059,7 @@ export function SettingsPage() {
                       sourceName={s.name}
                       currency={priceHistories[s.id]?.currency ?? (s.certificateType === 'EUA' ? 'EUR' : 'CNY')}
                       points={priceHistories[s.id]?.points ?? []}
+                      onReset={() => handleResetHistory(s.id)}
                     />
                   ))}
                 </div>

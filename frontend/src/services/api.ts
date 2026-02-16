@@ -1088,6 +1088,11 @@ export const adminApi = {
     return data;
   },
 
+  resetScrapingSourceHistory: async (id: string): Promise<{ message: string; success: boolean }> => {
+    const { data } = await api.delete(`/admin/scraping-sources/${id}/history`);
+    return data;
+  },
+
   // Exchange Rate Sources
   getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
     const { data } = await api.get('/admin/exchange-rate-sources');

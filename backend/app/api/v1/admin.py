@@ -11,7 +11,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
@@ -1461,6 +1461,7 @@ async def get_scraping_sources(
             if s.scrape_library
             else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
+            "is_primary": s.is_primary,
             "scrape_interval_minutes": s.scrape_interval_minutes,
             "last_scrape_at": (s.last_scrape_at.isoformat() + "Z")
             if s.last_scrape_at
@@ -1514,6 +1515,7 @@ async def create_scraping_source(
         if source.scrape_library
         else ScrapeLibrary.HTTPX.value,
         "is_active": source.is_active,
+        "is_primary": source.is_primary,
         "scrape_interval_minutes": source.scrape_interval_minutes,
         "last_scrape_at": source.last_scrape_at.isoformat()
         if source.last_scrape_at
@@ -1579,6 +1581,22 @@ async def update_scraping_source(
         source.scrape_interval_minutes = update.scrape_interval_minutes
     if update.config is not None:
         source.config = update.config
+
+    # If we just unset primary, auto-promote another active source
+    if update.is_primary is False:
+        next_result = await db.execute(
+            select(ScrapingSource)
+            .where(
+                ScrapingSource.certificate_type == source.certificate_type,
+                ScrapingSource.is_active.is_(True),
+                ScrapingSource.id != source.id,
+            )
+            .order_by(ScrapingSource.created_at.asc())
+            .limit(1)
+        )
+        next_source = next_result.scalar_one_or_none()
+        if next_source:
+            next_source.is_primary = True
 
     await db.commit()
 
@@ -1746,6 +1764,44 @@ async def get_scraping_source_history(
     }
 
 
+@router.delete("/scraping-sources/{source_id}/history")
+async def reset_scraping_source_history(
+    source_id: str,
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all price history for a scraping source and seed a single point at current price."""
+    result = await db.execute(
+        select(ScrapingSource).where(ScrapingSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Scraping source not found")
+
+    try:
+        # Delete all history for this source
+        await db.execute(
+            delete(PriceHistory).where(PriceHistory.source == source.name)
+        )
+
+        # Seed a single point at the current price (if available)
+        if source.last_price is not None:
+            seed = PriceHistory(
+                certificate_type=source.certificate_type,
+                price=source.last_price,
+                currency="EUR" if source.certificate_type == CertificateType.EUA else "CNY",
+                source=source.name,
+            )
+            db.add(seed)
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {"message": "Price history reset", "success": True}
+
+
 # ==================== Exchange Rate Sources ====================
 
 
@@ -1892,6 +1948,23 @@ async def update_exchange_rate_source(
         source.scrape_interval_minutes = update_data.scrape_interval_minutes
     if update_data.config is not None:
         source.config = update_data.config
+
+    # If we just unset primary, auto-promote another active source
+    if update_data.is_primary is False:
+        next_result = await db.execute(
+            select(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source.from_currency,
+                ExchangeRateSource.to_currency == source.to_currency,
+                ExchangeRateSource.is_active.is_(True),
+                ExchangeRateSource.id != source.id,
+            )
+            .order_by(ExchangeRateSource.created_at.asc())
+            .limit(1)
+        )
+        next_source = next_result.scalar_one_or_none()
+        if next_source:
+            next_source.is_primary = True
 
     await db.commit()
     return MessageResponse(message="Exchange rate source updated successfully")
