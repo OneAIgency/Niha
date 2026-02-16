@@ -9,6 +9,7 @@ from .api.v1 import (
     admin,
     admin_fees,
     admin_logging,
+    ai_agent,
     assets,
     auth,
     backoffice,
@@ -433,6 +434,7 @@ app.include_router(deposits.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")
 app.include_router(withdrawals.router, prefix="/api/v1")
 app.include_router(introducer.router, prefix="/api/v1")
+app.include_router(ai_agent.router, prefix="/api/v1")
 
 
 @app.get("/")
