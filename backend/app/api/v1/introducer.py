@@ -14,8 +14,11 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
+from ...core.database import get_db
 from ...core.security import get_introducer_user
 from ...models.models import User
 
@@ -36,8 +39,8 @@ class ChatRequest(BaseModel):
 # Navigation tools the AI can call
 TOOLS = [
     {
-        "name": "scrollToSection",
-        "description": "Scroll the portal page to a specific content section. Use this when you reference a section so the user can see it.",
+        "name": "switchToTab",
+        "description": "Switch the portal to a specific content tab. Use this when you reference a section so the user can see it.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -167,18 +170,81 @@ NIHA: 8-12% savings, T+0 settlement, 24/7, zero market impact.
 - Never hallucinate regulatory details — say "I'd recommend checking with the legal team"
 """
 
+# Keep original prompt as fallback
+_DEFAULT_SYSTEM_PROMPT = SYSTEM_PROMPT
+
+
+async def _build_system_prompt(db: AsyncSession, role: str, last_message: str) -> str:
+    """Build system prompt from DB config + RAG knowledge chunks."""
+    from ...models.ai_agent import AIAgentConfig
+
+    result = await db.execute(
+        select(AIAgentConfig).where(AIAgentConfig.role == role)
+    )
+    config = result.scalar_one_or_none()
+
+    base_prompt = config.system_prompt if config and config.system_prompt else _DEFAULT_SYSTEM_PROMPT
+
+    # Try RAG retrieval (graceful failure if OpenAI not configured)
+    knowledge_section = ""
+    try:
+        from ...services.ai_knowledge_service import retrieve_relevant_chunks
+        chunks = await retrieve_relevant_chunks(db, last_message)
+        if chunks:
+            knowledge_section = "\n\n## Relevant Knowledge\n"
+            for c in chunks:
+                knowledge_section += f"\n[Source: {c['source_name']}]\n{c['content']}\n"
+    except Exception as e:
+        logger.warning("RAG retrieval skipped: %s", e)
+
+    restrictions = ""
+    if config and not config.allow_internet:
+        restrictions += "\nDo not cite external sources or URLs you haven't been given."
+    if config and not config.allow_off_knowledge:
+        restrictions += "\nOnly answer from the provided knowledge and your training data about carbon markets."
+
+    return base_prompt + knowledge_section + restrictions
+
 
 @router.post("/chat")
 async def introducer_chat(
     request: ChatRequest,
     current_user: User = Depends(get_introducer_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """AI chat endpoint for introducer portal. Streams responses via SSE."""
+    from ...models.ai_agent import AIAgentConfig
+
+    # Determine role
+    role = "ADMIN" if current_user.role and current_user.role.value == "ADMIN" else "INTRODUCER"
+
+    # Load config
+    result = await db.execute(
+        select(AIAgentConfig).where(AIAgentConfig.role == role)
+    )
+    config = result.scalar_one_or_none()
+
+    if config and not config.enabled:
+        raise HTTPException(status_code=403, detail="AI agent is disabled for your role")
+
     api_key = settings.ANTHROPIC_API_KEY
     if not api_key:
         raise HTTPException(status_code=503, detail="AI service not configured")
 
+    model = config.model if config else "claude-sonnet-4-20250514"
+    max_tokens = config.max_tokens if config else 2048
+    temperature = config.temperature if config else 0.7
+
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
+
+    # Build system prompt with RAG
+    last_user_msg = ""
+    for m in reversed(request.messages):
+        if m.role == "user":
+            last_user_msg = m.content
+            break
+
+    system_prompt = await _build_system_prompt(db, role, last_user_msg)
 
     async def event_stream() -> AsyncGenerator[str, None]:
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -192,9 +258,10 @@ async def introducer_chat(
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-sonnet-4-20250514",
-                        "max_tokens": 2048,
-                        "system": SYSTEM_PROMPT,
+                        "model": model,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "system": system_prompt,
                         "messages": messages,
                         "tools": TOOLS,
                         "stream": True,
