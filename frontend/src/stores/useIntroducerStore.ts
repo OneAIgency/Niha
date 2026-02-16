@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { SECTION_DEPTH_MAP } from '../components/introducer/constants';
 
 export interface ChatMsg {
   role: 'user' | 'assistant' | 'system';
@@ -50,12 +49,7 @@ interface IntroducerState {
 
 export const useIntroducerStore = create<IntroducerState>((set) => ({
   dashboardTab: 'overview',
-  setDashboardTab: (tab) =>
-    set((state) => {
-      const available = SECTION_DEPTH_MAP[tab] ?? ['essential'];
-      const depth = available.includes(state.contentDepth) ? state.contentDepth : 'essential';
-      return { dashboardTab: tab, contentDepth: depth };
-    }),
+  setDashboardTab: (tab) => set({ dashboardTab: tab, contentDepth: 'essential' }),
 
   contentDepth: 'essential',
   setContentDepth: (depth) => set({ contentDepth: depth }),
