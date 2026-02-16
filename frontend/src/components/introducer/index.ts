@@ -12,8 +12,6 @@ export { LegalSection } from './LegalSection';
 export { TimingSection } from './TimingSection';
 export { ROICalculator } from './ROICalculator';
 export { FAQSection } from './FAQSection';
-export { ResourcesSection } from './ResourcesSection';
-export { DocumentPanel } from './DocumentPanel';
 export { ChatPanel } from './ChatPanel';
 export { ChatFAB } from './ChatFAB';
 export { ContentDepthSelector } from './ContentDepthSelector';

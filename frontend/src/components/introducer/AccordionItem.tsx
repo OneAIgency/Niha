@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '../../utils';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
+import { RichText } from './RichText';
 
 interface AccordionItemProps {
   sectionId: string;
@@ -59,7 +60,7 @@ export function AccordionItem({ sectionId, itemId, title, children, defaultOpen 
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 text-sm text-navy-400 leading-relaxed">
-              {children}
+              {typeof children === 'string' ? <RichText text={children} /> : children}
             </div>
           </motion.div>
         )}

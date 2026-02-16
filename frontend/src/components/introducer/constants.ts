@@ -1,8 +1,7 @@
 import {
   Home, ArrowRightLeft, TrendingUp, Shield, Scale,
-  Calculator, FileText, HelpCircle,
+  Calculator, HelpCircle,
   Target, Globe, CheckCircle,
-  Swords, Hash, MessageSquare, Route, Clock,
 } from 'lucide-react';
 import type { ContentDepth } from '../../stores/useIntroducerStore';
 
@@ -29,7 +28,6 @@ export const SECTION_IDS = {
   ADVANTAGES: 'advantages',
   LEGAL: 'legal',
   CALCULATOR: 'calculator',
-  RESOURCES: 'resources',
   FAQ: 'faq',
 } as const;
 
@@ -43,7 +41,6 @@ export const SECTION_DEPTH_MAP: Record<string, ContentDepth[]> = {
   [SECTION_IDS.ADVANTAGES]: ['essential', 'advanced', 'expert'],
   [SECTION_IDS.LEGAL]: ['essential', 'advanced', 'expert'],
   [SECTION_IDS.CALCULATOR]: ['essential'],
-  [SECTION_IDS.RESOURCES]: ['essential'],
   [SECTION_IDS.FAQ]: ['essential', 'advanced', 'expert'],
 };
 
@@ -55,7 +52,6 @@ export const NAV_ITEMS = [
   { id: SECTION_IDS.ADVANTAGES, label: 'Why NIHA', icon: Shield },
   { id: SECTION_IDS.LEGAL, label: 'Legal Basis', icon: Scale },
   { id: SECTION_IDS.CALCULATOR, label: 'Calculator', icon: Calculator },
-  { id: SECTION_IDS.RESOURCES, label: 'Resources', icon: FileText },
   { id: SECTION_IDS.FAQ, label: 'FAQ', icon: HelpCircle },
 ] as const;
 
@@ -393,17 +389,106 @@ export const CLIENT_PATHS = [
 ];
 
 // ─── Legal Framework ───────────────────────────────────────
+
+export const LEGAL_SUMMARY_CARDS = [
+  {
+    label: 'National ETS (Shanghai)',
+    status: 'Closed',
+    statusColor: 'red' as const,
+    description: 'Closed to ALL foreign entities including HK — State Council Interim Regulations Art. 12',
+  },
+  {
+    label: 'Pilot Markets (Shenzhen/CEEX)',
+    status: 'Restricted',
+    statusColor: 'amber' as const,
+    description: 'Open to SAFE-authorized foreign institutional investors since 2014 — application required',
+  },
+  {
+    label: 'NIHA (Hong Kong)',
+    status: 'Authorized',
+    statusColor: 'emerald' as const,
+    description: 'GBA-zone entity with SAFE approval + exchange membership + NRA-RMB + EU Registry access',
+  },
+];
+
+export const NIHA_AUTHORIZATION_CHAIN = [
+  { step: 'SAFE', label: 'Foreign Exchange Clearance', detail: 'GBA FX pilot — carbon trading' },
+  { step: 'Exchange', label: 'Shenzhen/CEEX Membership', detail: 'Qualified institutional investor' },
+  { step: 'PBOC', label: 'NRA-RMB Account', detail: 'Cross-border RMB settlement' },
+  { step: 'PIPL', label: 'Data Compliance', detail: 'GBA Standard Contract' },
+  { step: 'EU', label: 'Union Registry Account', detail: 'EUA trading & delivery' },
+];
+
 export const LEGAL_ACCORDIONS = [
-  { id: 'eu-cant-buy', title: 'Why EU Entities Cannot Acquire CEA', content: 'China\'s national ETS is closed to foreign participants by State Council regulation. Pilot markets require: NRA-RMB bank account (months of setup), SAFE foreign exchange approval, exchange membership application, and ongoing compliance reporting — all with no established precedent for EU entities. The regulatory path is theoretically possible but practically prohibitive.', depth: 'essential' as ContentDepth },
-  { id: 'hk-jurisdiction', title: 'Why Hong Kong Is the Only Jurisdiction', content: 'Hong Kong uniquely combines: (1) Greater Bay Area zone providing access to Shenzhen pilot carbon market, (2) NRA-RMB banking that is routine for HK entities but months-long for EU entities, (3) Standard European market infrastructure for EU ETS access, (4) Core Climate Exchange adding local marketplace optionality. Singapore lacks GBA access. Dubai and London face the same Chinese market barriers as EU entities.', depth: 'essential' as ContentDepth },
-  { id: 'transaction-architecture', title: 'Transaction Architecture', content: 'Five-step custody flow: (1) Client funds EUR to NIHA escrow, (2) NIHA acquires CEA from Chinese counterparty via pilot market, (3) CEA held in NIHA custody account (required — registry accounts cannot be opened by non-Chinese entities), (4) NIHA executes CEA→EUA swap as principal, (5) EUA delivered to client\'s EU registry account. Each step has legal justification rooted in regulatory requirements.', depth: 'essential' as ContentDepth },
-  { id: 'regulatory-sources', title: 'Key Regulatory Sources', content: 'EU ETS Directive 2003/87/EC (consolidated), China\'s National ETS Management Measures (MEE Decree No. 19), Shenzhen Pilot Market Regulations, Hong Kong Securities and Futures Ordinance, Greater Bay Area Financial Cooperation Framework, EU CBAM Regulation 2023/956.', depth: 'essential' as ContentDepth },
+  // Essential — Core legal argument
+  {
+    id: 'national-vs-pilot',
+    title: 'National ETS vs Pilot Markets: Two Different Systems',
+    content: 'China operates two separate carbon trading systems with fundamentally different access rules. The National ETS (Shanghai SEEE) is closed by law to ALL foreign entities — including Hong Kong. Only ~3,500 onshore compliance entities (power, steel, cement, aluminium sectors) can trade national CEA under the State Council\'s Interim Regulations (May 2024). However, China also operates regional pilot markets — Shenzhen (since 2013), Guangdong/CEEX, Hubei, and others — that have been open to authorized foreign institutional investors since SAFE\'s August 2014 approval. NIHA accesses Chinese carbon credits through these pilot markets, not the national ETS. The price arbitrage works identically: all Chinese carbon credits (national and pilot) trade at Chinese price levels (~¥80-100/tonne, equivalent to ~€9-11/tonne) versus EU EUA at ~€81/tonne — a 7-10× differential.',
+    depth: 'essential' as ContentDepth,
+  },
+  {
+    id: 'eu-barriers',
+    title: 'Three Barriers Blocking EU Entities from Chinese Carbon',
+    content: 'Barrier 1 — National ETS Closed by Law: China\'s Interim Regulations on Carbon Emission Allowance Trading (State Council, effective May 2024) limit participation to "Key Emission Entities" — onshore companies covered by MRV requirements. The Shanghai SEEE explicitly prohibits brokerage services for foreign investors. No timeline exists for opening to other participants. Barrier 2 — Pilot Markets Practically Impossible: Even on pilot markets that technically allow foreign investors (Shenzhen, Guangdong/CEEX, Hubei), an EU entity would need: (1) NRA-RMB bank account at a Chinese bank — months of setup with no existing banking relationship, (2) SAFE foreign exchange approval — no precedent for EU-based applicants in carbon trading, (3) Exchange membership as qualified institutional investor — untested for EU entities, (4) PIPL data compliance — full CAC Security Assessment required, 6-12 months with no GBA exemption. No EU entity has ever successfully navigated this pathway. Barrier 3 — Legal Uncertainty: Chinese carbon credits are not classified as financial instruments, property rights, securities, or commodities under Chinese law. For an EU entity without local legal infrastructure, this undefined status creates unacceptable counterparty and insolvency risk.',
+    depth: 'essential' as ContentDepth,
+  },
+  {
+    id: 'why-hk',
+    title: 'Why Hong Kong — And Only Hong Kong — Can Bridge Both Markets',
+    content: 'Hong Kong is not mainland China, but it is part of the Greater Bay Area (GBA) — a special economic zone that provides privileged access no other foreign jurisdiction enjoys. Six specific advantages: (1) GBA Zone Access — part of the Guangdong-HK-Macao Greater Bay Area, with explicit carbon trading integration (HKEX Quadripartite MoU, September 2025), (2) Shenzhen Pilot Market Access — SAFE approved foreign investor participation on August 8, 2014, with no quota or currency restrictions for qualified investors, (3) NRA-RMB Banking — HK banks (HSBC, BoC HK, StanChart) routinely maintain cross-border RMB settlement accounts with Shenzhen/Guangdong branches, (4) EU ETS Access — non-EU entities can open Union Registry accounts for EUA trading (Directive 2003/87/EC Art. 19), (5) Common Law Jurisdiction — internationally recognized contract enforcement, ISDA/EFET-compatible legal framework, (6) Physical Proximity — 30 minutes from Shenzhen by high-speed rail, same time zone, shared economic infrastructure.',
+    depth: 'essential' as ContentDepth,
+  },
+  {
+    id: 'niha-authorizations',
+    title: 'Not Any HK Entity: NIHA\'s Required Authorizations',
+    content: 'Being a Hong Kong entity is necessary but not sufficient. Access to China\'s pilot carbon markets requires a specific set of authorizations that take months to obtain and demand ongoing compliance. NIHA must obtain and maintain: (1) SAFE Foreign Exchange Clearance — State Administration of Foreign Exchange approval for cross-border RMB transactions in carbon emissions trading, obtained under the GBA FX pilot program, (2) Shenzhen Emissions Exchange / CEEX Membership — application as qualified institutional investor, reviewed and approved by the exchange authority with corporate documentation and capital adequacy requirements, (3) NRA-RMB Bank Account — dedicated cross-border RMB settlement account at a Chinese bank branch, authorized by PBOC under the Administrative Measures on RMB Settlement Accounts of Foreign Institutions, (4) PIPL Data Compliance — GBA Standard Contract for cross-boundary data flow, a simplified pathway for GBA entities but still mandatory, (5) Ongoing Regulatory Reporting — compliance with pilot market trading rules, position reporting, and transaction transparency requirements. This authorization chain represents a significant first-mover advantage — a new competitor would need months of regulatory groundwork before executing a single trade.',
+    depth: 'essential' as ContentDepth,
+  },
+  {
+    id: 'transaction-architecture',
+    title: 'Transaction Architecture: The 5-Step Custody Flow',
+    content: 'Step 1 (Client Funds): EU entity deposits EUR into NIHA\'s segregated escrow account in Hong Kong — standard escrow under HK law, funds ring-fenced. Step 2 (Carbon Acquisition): NIHA acquires Chinese carbon credits from counterparties via Shenzhen/CEEX pilot market, paying in RMB through its NRA-RMB account. NIHA buys as principal — it owns the credits, not the EU client. Step 3 (Custody): Credits held in NIHA\'s registry account on the pilot exchange. The EU entity cannot hold them (no exchange account, no registry access, no NRA-RMB). Custody is a regulatory necessity, not a choice. Step 4 (Swap Execution): NIHA executes the economic swap — retires or sells the Chinese credits and delivers EUA from its EU ETS holdings at the agreed ratio. Step 5 (EUA Delivery): EUA transferred via Union Registry to the EU entity\'s account. The EU entity receives compliant EUA at 8-12% below market price. They never touch Chinese carbon credits and never interact with Chinese regulation.',
+    depth: 'essential' as ContentDepth,
+  },
   // Advanced
-  { id: 'carbon-connect', title: 'Greater Bay Area Carbon Connect', content: 'The GBA Carbon Connect scheme, announced in 2024, creates a framework for cross-boundary carbon trading within the Greater Bay Area (Hong Kong, Macau, Guangdong). While still in pilot phase, it provides the regulatory foundation for HK-based entities to participate in Shenzhen\'s pilot carbon market. NIHA\'s structure anticipates and leverages this framework. Key risk: if Carbon Connect evolves to allow direct EU-China access, NIHA\'s intermediary role could be disrupted — but current trajectory suggests years before any such direct access materializes.', depth: 'advanced' as ContentDepth },
-  { id: 'jurisdictions', title: 'Why Not Singapore, Dubai, or London?', content: 'Singapore: No Greater Bay Area access, no NRA-RMB banking pathway, and no pilot market participation framework. Climate Impact X (CIX) focuses on voluntary carbon, not compliance markets. Dubai: DEWA carbon credits are domestic. No Chinese market linkage exists or is planned. DIFC provides no advantage for carbon market access. London: Post-Brexit, UK operates a separate UK ETS. EU market access requires EU entity. Chinese market access faces same barriers as any European entity. Only Hong Kong sits at the intersection of Chinese market access (GBA), European market infrastructure (SWIFT, EUR banking), and carbon market expertise.', depth: 'advanced' as ContentDepth },
+  {
+    id: 'carbon-connect',
+    title: 'GBA Carbon Connect Framework (2024-2025)',
+    content: 'In September 2025, HKEX, Guangzhou Emissions Exchange, Shenzhen Green Exchange, and Macao International Carbon Emission Exchange signed the first quadripartite MoU for GBA carbon market collaboration. Core Climate (HKEX\'s carbon marketplace — the only platform globally settling in HKD, RMB, and USD) will collaborate with pilot markets on cross-boundary trade settlements on a trial basis. Critical distinction: Carbon Connect currently covers voluntary carbon credits and pilot market coordination — it does NOT create direct EU-China national ETS access. The more likely trajectory is that Carbon Connect formalizes and strengthens the cross-boundary trading that NIHA already facilitates, rather than bypassing it. Even if Carbon Connect eventually allows EU entities some form of access (years away at minimum), NIHA would retain its established bilateral relationships, execution infrastructure, EUR/CNY settlement expertise, and operational track record.',
+    depth: 'advanced' as ContentDepth,
+  },
+  {
+    id: 'jurisdictions',
+    title: 'Why Not Singapore, Dubai, or London?',
+    content: 'Singapore: No Greater Bay Area membership, no GBA FX pilot access, no preferential NRA-RMB banking pathway. A Singaporean company (Ginga Environment) was the first foreign entity to trade on Shenzhen\'s pilot in September 2014 — proving the pathway exists for foreign investors — but without GBA status, Singapore-based entities lack the cross-border banking depth and regulatory shortcuts HK enjoys. Climate Impact X (CIX) focuses on voluntary carbon, not compliance markets. Dubai: DEWA carbon credits are domestic only. No Chinese market linkage exists or is planned. DIFC provides zero advantage for carbon market access. London: Post-Brexit, UK operates a separate UK ETS. EU market access now requires EU entity presence. Chinese market access faces identical barriers as any European entity — 7-hour time zone gap, no GBA status, no NRA-RMB banking relationships. The London CNH (offshore RMB) pool exists but lacks direct Shenzhen branch connectivity. Only Hong Kong sits at the intersection of Chinese market access (GBA zone), European market infrastructure (SWIFT, EUR banking), and carbon regulatory expertise.',
+    depth: 'advanced' as ContentDepth,
+  },
+  {
+    id: 'why-principal',
+    title: 'Why NIHA Must Act as Principal, Not Broker',
+    content: 'A broker connects two parties to transact directly. But the EU entity and the Chinese entity operate in mutually exclusive regulatory regimes — they cannot transact with each other, legally or practically. The EU entity cannot receive or hold Chinese carbon credits: credits exist only in Chinese exchange registries, and opening an account requires exchange membership, NRA-RMB banking, and SAFE approval that no EU entity has obtained. The Chinese entity cannot deliver EUA: it has no Union Registry account and no pathway to EU ETS. A broker model fails because neither party can complete their side. NIHA must be the counterparty to both: buying Chinese credits from the Chinese entity as principal, and selling/delivering EUA to the EU entity as principal. The custody requirement exists because NIHA must legally own the Chinese credits to execute the swap — this mirrors how prime brokers hold securities for clients, with beneficial ownership documented but legal title with the intermediary.',
+    depth: 'advanced' as ContentDepth,
+  },
   // Expert
-  { id: 'custody-legal', title: 'Custody Flow Legal Justification', content: 'Step 1 (EUR deposit): Standard escrow arrangement under HK law. Funds held in segregated account at licensed bank. Step 2 (CEA acquisition): NIHA acquires as principal, not agent — required because foreign entities cannot hold Chinese carbon registry accounts. Legal basis: Shenzhen pilot market foreign participation regulations (2023 amendment). Step 3 (Custody): CEA held in NIHA\'s registry account. Beneficial ownership documented but legal title with NIHA — mirrors how prime brokers hold securities for clients. Step 4 (Swap execution): NIHA converts CEA economic value to EUA as principal transaction. Not a derivative under MiFID II because it\'s physical delivery of commodity. Step 5 (EUA delivery): Standard EU registry transfer. Client receives EUA with full provenance documentation.', depth: 'expert' as ContentDepth },
-  { id: 'citations', title: 'Detailed Regulatory Citations', content: 'EU ETS: Directive 2003/87/EC Art. 12 (transfer of allowances), Art. 19 (registries). Registry Regulation (EU) 2019/1122 Art. 15 (account types). China National ETS: MEE Decree No. 19 Art. 7 (covered entities — power sector), Art. 10 (allocation), Art. 14 (trading restrictions). Shenzhen Pilot: SZMO [2014] No. 3 Art. 29 (foreign institutional investors). GBA Framework: Outline Development Plan for GBA (2019) Section 6.3 (financial cooperation). CBAM: Regulation (EU) 2023/956 Art. 4 (scope), Art. 7 (CBAM certificates). HK SFO: Cap. 571 Part V (licensing), Schedule 5 (regulated activities — carbon not currently a "security" or "future" under SFO, but Core Climate Exchange operates under voluntary framework).', depth: 'expert' as ContentDepth },
+  {
+    id: 'custody-legal',
+    title: 'Custody Flow: Step-by-Step Legal Justification',
+    content: 'Step 1 (EUR Deposit): Standard escrow arrangement under Hong Kong law. Funds held in segregated account at licensed bank (ring-fenced from NIHA\'s operational capital). Legal basis: HK common law escrow principles + bank segregation requirements. Step 2 (Carbon Credit Acquisition): NIHA acquires as principal, not agent — required because foreign entities cannot hold Chinese carbon registry accounts. Legal basis: SAFE Official Reply to Shenzhen SAFE Branch (August 8, 2014) + SZMO [2014] No. 3 Art. 29 (qualified foreign institutional investors). Step 3 (Custody): Credits registered in NIHA\'s name on pilot exchange registry. Beneficial ownership documented in bilateral contract governed by HK law, but legal title with NIHA. This mirrors prime brokerage: the broker holds legal title to securities while the client retains beneficial ownership and economic exposure. Step 4 (Swap Execution): NIHA converts Chinese carbon credit economic value to EUA as principal transaction. Physical delivery of commodity — not a derivative under MiFID II (no cash settlement, actual EUA delivered). Not regulated under HK SFO Schedule 5 (carbon not classified as security or future). Step 5 (EUA Delivery): Standard EU registry transfer to client\'s Union Registry account. Open to non-EU entities under Directive 2003/87/EC Art. 19. Client receives EUA with full provenance documentation and compliance trail.',
+    depth: 'expert' as ContentDepth,
+  },
+  {
+    id: 'authorization-detail',
+    title: 'Complete Authorization Chain Across Five Jurisdictions',
+    content: 'NIHA\'s operational authorization spans five distinct regulatory domains. China — SAFE: State Administration of Foreign Exchange clearance for cross-border RMB transactions in carbon trading, obtained under the GBA FX pilot program that explicitly covers carbon emissions trading for GBA-zone entities. China — Exchange Authority: Shenzhen Emissions Exchange and/or CEEX (Guangdong) qualified institutional investor membership, requiring corporate documentation, capital adequacy demonstration, and exchange authority review and approval. China — PBOC: People\'s Bank of China NRA-RMB account authorization under the Administrative Measures on RMB Settlement Accounts of Foreign Institutions (October 2010), plus PBOC Notice on RMB Cross-Border Settlement specifically for Carbon Trading. China — CAC/PIPL: GBA Standard Contract for Cross-Boundary Flow of Personal Information (jointly issued by CAC, HK ITIB, and PCPD in 2024) — the simplified data compliance pathway available exclusively to GBA-registered entities. EU — Union Registry: EUA trading account opened via any EU national administrator under EU ETS Directive 2003/87/EC Art. 19, which explicitly permits non-EU entities to hold and trade EUA. Hong Kong — SFO: Carbon credits are not currently classified as "securities" or "futures" under the Securities and Futures Ordinance (Cap. 571 Schedule 5), meaning NIHA\'s carbon trading operations do not require Type 1, 2, or 9 SFC licensing.',
+    depth: 'expert' as ContentDepth,
+  },
+  {
+    id: 'citations',
+    title: 'Complete Regulatory Citation Index',
+    content: 'China National ETS: Interim Regulations on Carbon Emission Allowance Trading (State Council, effective May 1, 2024) — Art. 12 limits to Key Emission Entities. MEE Decree No. 19 Art. 7 (covered entities), Art. 10 (allocation), Art. 14 (trading restrictions). China Pilot Markets: SAFE Official Reply to Shenzhen SAFE Branch (August 8, 2014) — approves foreign investors, no quota/currency restrictions. SZMO [2014] No. 3 Art. 29 (foreign institutional investors). Hubei SAFE Interim Measures for FX Administration of Foreign Investors in Carbon Trading (2015). CEEX Guangdong membership regulations for qualified institutional investors. China Banking: PBOC Administrative Measures on RMB Settlement Accounts of Foreign Institutions (October 2010). PBOC Notice on RMB Cross-Border Settlement for Carbon Trading. China Data: GBA Standard Contract for Cross-Boundary Flow of Personal Information (CAC + HK ITIB + PCPD, 2024). EU ETS: Directive 2003/87/EC Art. 12 (transfer of allowances), Art. 19 (registries — open to non-EU entities). Registry Regulation (EU) 2019/1122 Art. 15 (account types). EU CBAM: Regulation (EU) 2023/956 Art. 4 (scope), Art. 7 (CBAM certificates). GBA Framework: Outline Development Plan for GBA (2019) Section 6.3 (financial cooperation). HKEX Quadripartite MoU with Guangzhou EE, Shenzhen Green Exchange, Macao ICE (September 2025). Hong Kong: Securities and Futures Ordinance Cap. 571 Part V (licensing), Schedule 5 (regulated activities — carbon not classified).',
+    depth: 'expert' as ContentDepth,
+  },
 ];
 
 // ─── Timing & Convergence ──────────────────────────────────
@@ -445,13 +530,13 @@ export const FAQ_CATEGORIES = [
 
 export const FAQ_ITEMS: { category: string; id: string; question: string; answer: string; depth: ContentDepth }[] = [
   // Essential (existing)
-  { category: 'getting-started', id: 'business-model', question: 'What is NIHA\'s core business model?', answer: 'NIHA operates the only cross-border bridge between the EU ETS and China ETS. We source CEA (China Emission Allowances) bilaterally from Chinese counterparties, execute a CEA→EUA swap, and deliver EUA to EU entities at an 8-12% discount versus direct market purchase. Our unique position in Hong Kong gives us simultaneous access to both markets — something no other entity can replicate.', depth: 'essential' },
+  { category: 'getting-started', id: 'business-model', question: 'What is NIHA\'s core business model?', answer: 'NIHA operates the only cross-border bridge between EU and Chinese carbon markets. As a SAFE-authorized Hong Kong entity with Shenzhen pilot exchange membership, NIHA sources Chinese carbon credits bilaterally from counterparties on pilot markets (not the closed national ETS), executes a carbon-credit-to-EUA swap as principal, and delivers EUA to EU entities at an 8-12% discount versus direct market purchase. Our unique GBA position in Hong Kong gives us simultaneous access to both markets — something no other entity can replicate.', depth: 'essential' },
   { category: 'getting-started', id: 'target-clients', question: 'Who are NIHA\'s target clients?', answer: 'Primary: EU entities with EUA compliance obligations (power generators, industrial installations, aviation operators). Secondary: Chinese entities with surplus CEA seeking EUR-denominated exits at better prices than domestic exchanges. Tertiary: Non-EU entities seeking CEA→EUA or EUA→CEA swaps for portfolio management.', depth: 'essential' },
-  { category: 'mechanism', id: 'swap-works', question: 'How does the CEA→EUA swap work?', answer: 'The client deposits EUR into NIHA\'s escrow account. NIHA bilaterally acquires CEA from Chinese counterparties via pilot market access. CEA is held in NIHA\'s custody account (required by regulation). NIHA then executes the swap as principal, converting CEA exposure into EUA. The EUA is delivered to the client\'s EU registry account. The entire process settles T+0.', depth: 'essential' },
-  { category: 'mechanism', id: 'custody-requirement', question: 'Why must NIHA hold CEA in custody?', answer: 'CEA registry accounts cannot be opened by non-Chinese entities. The swap mechanism requires NIHA (as a GBA-based entity with Chinese market access) to take beneficial ownership of CEA, execute the cross-border swap as principal, and then deliver EUA. NIHA cannot act as mere agent — regulatory requirements mandate it be the counterparty.', depth: 'essential' },
-  { category: 'mechanism', id: 'replication-barrier', question: 'What prevents someone from replicating NIHA\'s model?', answer: 'Five barriers: (1) Bilateral relationships with Chinese CEA holders — years to build, trust-based. (2) Cross-border regulatory expertise across EU and Chinese carbon law. (3) Swap execution infrastructure. (4) Network effects — sellers attract buyers and vice versa, creating a cold-start problem. (5) First-mover advantage with established operational track record.', depth: 'essential' },
-  { category: 'compliance', id: 'eu-cant-buy-cea', question: 'Why can\'t EU entities buy CEA directly?', answer: 'China\'s national ETS is closed to foreign participants by State Council regulation. Pilot markets require: NRA-RMB bank account (months of setup), SAFE FX approval, exchange membership, and ongoing compliance reporting — all with no precedent for EU entities. The path is theoretically possible but practically prohibitive.', depth: 'essential' },
-  { category: 'compliance', id: 'legal-sound', question: 'Is this structure legally sound?', answer: 'Yes. NIHA uses established, regulated pathways in each jurisdiction. The arbitrage exists because EU and China carbon markets are structurally disconnected — different registries, regulations, currencies, and access requirements. NIHA bridges this structural gap through Hong Kong\'s unique GBA position. There is no regulatory grey area being exploited.', depth: 'essential' },
+  { category: 'mechanism', id: 'swap-works', question: 'How does the carbon-credit-to-EUA swap work?', answer: 'Five steps: (1) The EU client deposits EUR into NIHA\'s segregated escrow account in Hong Kong. (2) NIHA acquires Chinese carbon credits from counterparties on Shenzhen/CEEX pilot markets using its NRA-RMB account, paying in RMB. (3) Credits are held in NIHA\'s registry account on the pilot exchange — required because the EU entity cannot hold Chinese carbon credits. (4) NIHA executes the economic swap: retires/sells the Chinese credits and delivers EUA from its EU ETS holdings. (5) EUA is transferred via Union Registry to the EU client\'s account at 8-12% below market price. The entire process settles T+0 and the EU entity never interacts with Chinese regulation.', depth: 'essential' },
+  { category: 'mechanism', id: 'custody-requirement', question: 'Why must NIHA hold carbon credits in custody?', answer: 'Chinese carbon credits exist only in exchange registry accounts — you need a trading membership to hold them. EU entities cannot open accounts on the national ETS (closed by law) or practically on pilot markets (no NRA-RMB banking, no SAFE approval, no exchange membership). NIHA, as a SAFE-authorized GBA entity with pilot exchange membership, holds the credits in its own registry account. Beneficial ownership is documented in the bilateral contract under HK law, but legal title stays with NIHA — mirroring how prime brokers hold securities for clients. NIHA must act as principal, not agent, because the EU entity and Chinese entity operate in mutually exclusive regulatory systems and cannot transact directly.', depth: 'essential' },
+  { category: 'mechanism', id: 'replication-barrier', question: 'What prevents someone from replicating NIHA\'s model?', answer: 'Six barriers: (1) Regulatory authorization — SAFE clearance, pilot exchange membership, NRA-RMB account, PIPL compliance each take months and require ongoing maintenance. (2) Bilateral relationships with Chinese carbon credit holders — years to build, trust-based, not transferable. (3) Cross-border regulatory expertise across EU and Chinese carbon law. (4) Swap execution infrastructure and operational track record. (5) Network effects — sellers attract buyers and vice versa, creating a cold-start problem for new entrants. (6) GBA jurisdictional advantage — only Hong Kong entities have the GBA zone access needed, and even among HK entities, the authorization process is a significant barrier.', depth: 'essential' },
+  { category: 'compliance', id: 'eu-cant-buy-cea', question: 'Why can\'t EU entities access Chinese carbon credits?', answer: 'Two separate barriers. First, China\'s national ETS (Shanghai SEEE) is closed to ALL foreign entities by State Council regulation — including Hong Kong entities. Second, the pilot markets (Shenzhen, Guangdong/CEEX, Hubei) that do allow foreign investors require: (1) NRA-RMB bank account at a Chinese bank — months of setup with no existing EU-China banking relationship, (2) SAFE foreign exchange approval — no precedent for EU applicants in carbon trading, (3) Exchange membership as qualified institutional investor — untested for EU entities. No EU entity has ever navigated this pathway. NIHA, as a GBA-zone Hong Kong entity, has completed all these steps through established HK-China banking and regulatory channels.', depth: 'essential' },
+  { category: 'compliance', id: 'legal-sound', question: 'Is this structure legally sound?', answer: 'Yes. NIHA operates through established, regulated pathways verified in each jurisdiction. In China: SAFE-approved foreign investor participation on Shenzhen pilot market (since August 2014, no quota/currency restrictions) + PBOC-authorized NRA-RMB account. In Hong Kong: carbon credits are not regulated as securities under the SFO, and GBA Standard Contracts cover cross-border data compliance. In the EU: Union Registry explicitly accepts non-EU entities for EUA trading (Directive 2003/87/EC Art. 19). The arbitrage exists because EU and Chinese carbon markets are structurally disconnected — not because of any regulatory grey area.', depth: 'essential' },
   { category: 'compliance', id: 'cbam-effect', question: 'How does EU CBAM affect the opportunity?', answer: 'CBAM (Carbon Border Adjustment Mechanism) took full effect January 2026. EU importers must buy CBAM certificates for embedded emissions in imported goods. This increases demand for carbon compliance solutions and makes NIHA\'s offering more relevant — entities facing both EUA and CBAM obligations have larger carbon costs where 8-12% savings become material.', depth: 'essential' },
   { category: 'pricing', id: 'why-not-direct', question: 'Why wouldn\'t an EU entity just buy EUA directly?', answer: 'They can and most do. But they pay full market price (€81/t) with visible market impact. Via NIHA: same EUA at 8-12% discount, zero market impact (off-exchange, dark pool), instant T+0 settlement, and 24/7 availability. For a 500,000 tonne order, that\'s €4-5M in savings.', depth: 'essential' },
   { category: 'pricing', id: 'chinese-sell-own', question: 'Why don\'t Chinese entities sell on their own exchange?', answer: 'Via NIHA they get ¥103-106 equivalent per tonne vs ¥97-99 domestically (after slippage). That\'s 5-8% better, plus EUR proceeds provide hard currency diversification. China\'s carbon market has only 4 hours of daily trading and severe Q4 liquidity concentration.', depth: 'essential' },
@@ -463,14 +548,4 @@ export const FAQ_ITEMS: { category: string; id: string; question: string; answer
   { category: 'compliance', id: 'carbon-connect-threat', question: 'Is GBA Carbon Connect a threat to NIHA?', answer: 'Carbon Connect is currently a pilot framework for cross-boundary carbon trading within the Greater Bay Area. It does NOT create direct EU-China access — it enables HK-Shenzhen linkages, which NIHA already uses. If Carbon Connect expanded to allow EU entities direct CEA access (highly unlikely in the medium term), NIHA would still retain advantages: bilateral relationship network, execution infrastructure, EUR/CNY settlement expertise, and established track record. The more likely scenario is that Carbon Connect strengthens NIHA\'s position by formalizing and legitimizing the cross-boundary carbon trading that NIHA already facilitates.', depth: 'expert' },
   { category: 'compliance', id: 'eu-hold-cea', question: 'Why can\'t an EU entity hold CEA directly?', answer: 'Multiple barriers: (1) No foreign access to China\'s national carbon registry system — accounts require Chinese business registration number. (2) Pilot market access requires NRA-RMB bank account — for EU entities, this takes 6-12 months and requires SAFE (State Administration of Foreign Exchange) approval with uncertain outcomes. (3) Even with a registry account, compliance with Chinese MRV (monitoring, reporting, verification) requirements adds ongoing operational burden. (4) No established precedent — no EU entity has successfully navigated this pathway. NIHA eliminates all of this: EU entities simply fund EUR and receive EUA.', depth: 'expert' },
   { category: 'pricing', id: 'detailed-path-examples', question: 'Can you show detailed numerical examples for each path?', answer: 'Path A (200K EUA steel plant): Direct cost €16.2M, via NIHA €14.58M, saving €1.62M/year. Path B (500K CEA power co): Domestic ¥49M, via NIHA ¥52M equivalent in EUR, benefit ¥3M + hard currency. Path C (50K EUA swap): Via exchanges ~4% total cost over 2-5 days, via NIHA ~1% cost same-day atomic swap. In all cases, the saving is structural (price gap between markets) not speculative (no directional bet). The 8-12% saving on Path A alone, applied to the ~€3B daily EU ETS volume, represents €240-360M of daily potential value creation.', depth: 'expert' },
-];
-
-// ─── Battle Cards / Resources ──────────────────────────────
-export const BATTLE_CARDS = [
-  { id: 'comparison', title: 'NIHA vs Direct EUA Purchase', type: 'Battle Card', typeColor: 'emerald' as const, audience: 'Client conversations', icon: Swords, description: 'Side-by-side comparison, key numbers, objection responses' },
-  { id: 'cheat-sheet', title: 'Key Numbers Cheat Sheet', type: 'Quick Reference', typeColor: 'blue' as const, audience: 'Before meetings', icon: Hash, description: 'All critical metrics on one scannable page' },
-  { id: 'objections', title: 'Objection Handling Guide', type: 'Battle Card', typeColor: 'emerald' as const, audience: 'Difficult questions', icon: MessageSquare, description: 'Top 10 objections with scripted responses' },
-  { id: 'visual-guide', title: 'How It Works — Visual Guide', type: 'One-Pager', typeColor: 'amber' as const, audience: 'Email to prospects', icon: Route, description: '5-step flow + value propositions, client-ready' },
-  { id: 'regulatory', title: 'Regulatory Summary', type: 'Reference', typeColor: 'blue' as const, audience: 'Compliance-focused buyers', icon: Scale, description: 'Legal framework, HK jurisdiction, CBAM context' },
-  { id: 'timing', title: 'Market Timing Brief', type: 'Brief', typeColor: 'amber' as const, audience: 'Urgency-building', icon: Clock, description: '2026 catalysts, convergence data, window analysis' },
 ];
