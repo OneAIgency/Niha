@@ -6,9 +6,9 @@ export interface ChatMsg {
 }
 
 interface IntroducerState {
-  // Navigation
-  activeSection: string;
-  setActiveSection: (section: string) => void;
+  // Dashboard tab navigation
+  dashboardTab: string;
+  setDashboardTab: (tab: string) => void;
 
   // Accordion state (which items are expanded, per section)
   expandedAccordions: Record<string, string[]>;
@@ -42,8 +42,8 @@ interface IntroducerState {
 }
 
 export const useIntroducerStore = create<IntroducerState>((set) => ({
-  activeSection: 'overview',
-  setActiveSection: (section) => set({ activeSection: section }),
+  dashboardTab: 'overview',
+  setDashboardTab: (tab) => set({ dashboardTab: tab }),
 
   expandedAccordions: {},
   toggleAccordion: (sectionId, itemId) =>
