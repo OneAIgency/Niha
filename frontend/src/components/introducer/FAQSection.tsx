@@ -5,6 +5,118 @@ import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
 import { AccordionItem } from './AccordionItem';
 import { SECTION_IDS, FAQ_CATEGORIES, FAQ_ITEMS, depthAtLeast } from './constants';
+import { MiniFlow, MiniCheckGrid, MiniBarChart, MiniScale } from './charts';
+import { RichText } from './RichText';
+
+function FAQAccordionContent({ id, answer }: { id: string; answer: string }) {
+  switch (id) {
+    case 'swap-works':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniFlow
+            title="The 5-Step Swap Process"
+            steps={[
+              { label: 'EU client deposits EUR', detail: 'Segregated escrow in HK' },
+              { label: 'NIHA acquires Chinese credits', detail: 'Via NRA-RMB on pilot market' },
+              { label: 'Credits held in custody', detail: 'NIHA registry account' },
+              { label: 'Swap execution', detail: 'Chinese credits → EUA' },
+              { label: 'EUA delivered to client', detail: 'Union Registry, T+0' },
+            ]}
+          />
+        </>
+      );
+    case 'eu-cant-buy-cea':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniCheckGrid
+            title="Access Barriers"
+            headers={['National ETS', 'Pilot Markets']}
+            rows={[
+              {
+                label: 'EU Entity',
+                values: [
+                  { text: 'Closed', status: 'no' },
+                  { text: 'No precedent', status: 'no' },
+                ],
+              },
+              {
+                label: 'NIHA',
+                values: [
+                  { text: 'Closed', status: 'no' },
+                  { text: 'Authorized', status: 'yes' },
+                ],
+              },
+            ]}
+          />
+        </>
+      );
+    case 'replication-barrier':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniBarChart
+            title="Barrier Strength (qualitative)"
+            bars={[
+              { label: 'Regulatory auth.', value: 95, color: 'rgb(248,113,113)' },
+              { label: 'Bilateral relationships', value: 90, color: 'rgb(248,113,113)' },
+              { label: 'Cross-border expertise', value: 80, color: 'rgb(251,191,36)' },
+              { label: 'Execution infrastructure', value: 75, color: 'rgb(251,191,36)' },
+              { label: 'Network effects', value: 85, color: 'rgb(248,113,113)' },
+              { label: 'GBA jurisdiction', value: 95, color: 'rgb(248,113,113)' },
+            ]}
+            maxValue={100}
+          />
+        </>
+      );
+    case 'detailed-path-examples':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniBarChart
+            title="Annual Savings by Path"
+            bars={[
+              { label: 'Path A (Steel)', value: 1620, displayValue: '€1.62M/yr', color: 'rgb(52,211,153)' },
+              { label: 'Path B (Power)', value: 500, displayValue: '¥3M + EUR', color: 'rgb(251,191,36)' },
+              { label: 'Path C (Trader)', value: 200, displayValue: '~3-5% improvement', color: 'rgb(96,165,250)' },
+            ]}
+          />
+        </>
+      );
+    case 'business-model':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniScale
+            title="Price Comparison"
+            left={{ label: 'Direct', value: '€81/t', numericValue: 81, color: 'rgb(248,113,113)' }}
+            right={{ label: 'Via NIHA', value: '€71-74/t', numericValue: 72.5, color: 'rgb(52,211,153)' }}
+            ratio="8-12% savings"
+          />
+        </>
+      );
+    case 'competitive-moat':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniBarChart
+            title="Five Moat Layers"
+            bars={[
+              { label: 'Geographic', value: 95, color: 'rgb(52,211,153)' },
+              { label: 'Regulatory', value: 90, color: 'rgb(52,211,153)' },
+              { label: 'Relationship', value: 85, color: 'rgb(251,191,36)' },
+              { label: 'Network', value: 80, color: 'rgb(251,191,36)' },
+              { label: 'First-mover', value: 75, color: 'rgb(96,165,250)' },
+            ]}
+            maxValue={100}
+          />
+        </>
+      );
+    default:
+      return <>{answer}</>;
+  }
+}
 
 export function FAQSection() {
   const ref = useSection(SECTION_IDS.FAQ);
@@ -61,7 +173,7 @@ export function FAQSection() {
               itemId={item.id}
               title={item.question}
             >
-              {item.answer}
+              <FAQAccordionContent id={item.id} answer={item.answer} />
             </AccordionItem>
           ))
         ) : (

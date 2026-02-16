@@ -2,6 +2,25 @@ import { ArrowRight } from 'lucide-react';
 import { cn } from '../../utils';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { CLIENT_PATHS, depthAtLeast } from './constants';
+import { MiniScale } from './charts';
+
+const PATH_SCALES: Record<string, { left: { label: string; value: string; numericValue: number; color: string }; right: { label: string; value: string; numericValue: number; color: string }; ratio: string }> = {
+  'path-a': {
+    left: { label: 'Direct', value: '€81/t', numericValue: 81, color: 'rgb(248, 113, 113)' },
+    right: { label: 'Via NIHA', value: '€71-74/t', numericValue: 72.5, color: 'rgb(52, 211, 153)' },
+    ratio: '8-12% savings',
+  },
+  'path-b': {
+    left: { label: 'Domestic', value: '¥97-99/t', numericValue: 98, color: 'rgb(248, 113, 113)' },
+    right: { label: 'Via NIHA', value: '¥103-106/t', numericValue: 104, color: 'rgb(52, 211, 153)' },
+    ratio: '5-8% better',
+  },
+  'path-c': {
+    left: { label: 'Exchanges', value: '2-4% cost', numericValue: 3, color: 'rgb(248, 113, 113)' },
+    right: { label: 'Via NIHA', value: '~1% cost', numericValue: 1, color: 'rgb(52, 211, 153)' },
+    ratio: 'Single atomic swap',
+  },
+};
 
 const borderColorMap = {
   emerald: 'border-t-emerald-500',
@@ -66,6 +85,11 @@ export function ClientPathsSection() {
                 {path.comparison.niha}
               </div>
             </div>
+
+            {/* Inline scale chart */}
+            {PATH_SCALES[path.id] && (
+              <MiniScale {...PATH_SCALES[path.id]} />
+            )}
 
             {/* Extended example (advanced) */}
             {showAdvanced && path.extendedExample && (

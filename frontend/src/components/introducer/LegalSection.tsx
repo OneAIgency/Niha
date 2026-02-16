@@ -9,6 +9,172 @@ import {
   depthAtLeast,
 } from './constants';
 import { AccordionItem } from './AccordionItem';
+import { MiniScale, MiniCheckGrid, MiniFlow, MiniTimeline } from './charts';
+import { RichText } from './RichText';
+
+function LegalAccordionContent({ id, content }: { id: string; content: string }) {
+  switch (id) {
+    case 'national-vs-pilot':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniScale
+            title="Market Access Comparison"
+            left={{ label: 'National', value: 'Closed to all foreign', numericValue: 0, color: 'rgb(248,113,113)' }}
+            right={{ label: 'Pilot', value: 'SAFE-authorized investors', numericValue: 70, color: 'rgb(251,191,36)' }}
+            ratio="Two different systems"
+          />
+        </>
+      );
+    case 'eu-barriers':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniCheckGrid
+            title="Access Feasibility"
+            headers={['National ETS', 'Pilot Markets']}
+            rows={[
+              { label: 'EU Entity', values: [{ text: 'Closed by law', status: 'no' }, { text: 'No precedent', status: 'no' }] },
+              { label: 'HK Entity', values: [{ text: 'Closed by law', status: 'no' }, { text: 'Months of setup', status: 'partial' }] },
+              { label: 'NIHA (GBA)', values: [{ text: 'Closed by law', status: 'no' }, { text: 'Authorized', status: 'yes' }] },
+            ]}
+          />
+        </>
+      );
+    case 'why-hk':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniCheckGrid
+            title="Jurisdiction Comparison"
+            headers={['Hong Kong', 'Singapore', 'Dubai', 'London']}
+            rows={[
+              { label: 'GBA Zone', values: [{ text: 'Yes', status: 'yes' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }] },
+              { label: 'NRA-RMB Banking', values: [{ text: 'Routine', status: 'yes' }, { text: 'Difficult', status: 'partial' }, { text: 'None', status: 'no' }, { text: 'CNH only', status: 'partial' }] },
+              { label: 'Pilot Market Access', values: [{ text: 'SAFE 2014', status: 'yes' }, { text: 'Possible', status: 'partial' }, { text: 'No linkage', status: 'no' }, { text: 'No GBA status', status: 'no' }] },
+              { label: 'EU ETS Access', values: [{ text: 'Yes', status: 'yes' }, { text: 'Yes', status: 'yes' }, { text: 'Yes', status: 'yes' }, { text: 'Yes (post-Brexit separate)', status: 'partial' }] },
+            ]}
+          />
+        </>
+      );
+    case 'niha-authorizations':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniFlow
+            title="Required Authorization Chain"
+            steps={[
+              { label: 'SAFE Foreign Exchange Clearance', detail: 'GBA FX pilot — carbon trading', color: 'rgb(52,211,153)' },
+              { label: 'Shenzhen/CEEX Exchange Membership', detail: 'Qualified institutional investor', color: 'rgb(52,211,153)' },
+              { label: 'PBOC NRA-RMB Account', detail: 'Cross-border RMB settlement', color: 'rgb(96,165,250)' },
+              { label: 'PIPL Data Compliance', detail: 'GBA Standard Contract', color: 'rgb(96,165,250)' },
+              { label: 'EU Union Registry Account', detail: 'EUA trading & delivery', color: 'rgb(251,191,36)' },
+            ]}
+          />
+        </>
+      );
+    case 'transaction-architecture':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniFlow
+            title="5-Step Custody Flow"
+            steps={[
+              { label: 'Client deposits EUR', detail: 'Segregated escrow, HK law', color: 'rgb(96,165,250)' },
+              { label: 'NIHA acquires Chinese credits', detail: 'Via NRA-RMB on pilot market', color: 'rgb(251,191,36)' },
+              { label: 'Credits held in custody', detail: 'NIHA registry account (principal)', color: 'rgb(251,191,36)' },
+              { label: 'Swap execution', detail: 'Chinese credits → EUA conversion', color: 'rgb(52,211,153)' },
+              { label: 'EUA delivered to client', detail: 'Union Registry transfer, T+0', color: 'rgb(52,211,153)' },
+            ]}
+          />
+        </>
+      );
+    case 'carbon-connect':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniTimeline
+            title="Carbon Connect Evolution"
+            events={[
+              { year: '2024', label: 'GBA carbon cooperation announced', detail: 'Policy framework established' },
+              { year: 'Sep 2025', label: 'Quadripartite MoU signed', detail: 'HKEX + 3 pilot exchanges', highlight: true },
+              { year: '2025-26', label: 'Trial phase begins', detail: 'Voluntary credits & pilot coordination' },
+              { year: '2027+', label: 'Potential expansion', detail: 'Direct access years away', color: 'rgb(100,116,139)' },
+            ]}
+          />
+        </>
+      );
+    case 'jurisdictions':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniCheckGrid
+            title="Why Not Other Jurisdictions?"
+            headers={['HK', 'Singapore', 'Dubai', 'London']}
+            rows={[
+              { label: 'GBA Access', values: [{ text: 'Yes', status: 'yes' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }] },
+              { label: 'China Carbon', values: [{ text: 'Pilot markets', status: 'yes' }, { text: 'Ginga precedent', status: 'partial' }, { text: 'None', status: 'no' }, { text: 'Blocked', status: 'no' }] },
+              { label: 'EUR Banking', values: [{ text: 'Yes', status: 'yes' }, { text: 'Yes', status: 'yes' }, { text: 'Limited', status: 'partial' }, { text: 'Yes', status: 'yes' }] },
+              { label: 'Time Zone', values: [{ text: '+0h from SZ', status: 'yes' }, { text: '+0h', status: 'yes' }, { text: '+4h', status: 'partial' }, { text: '+7h', status: 'no' }] },
+            ]}
+          />
+        </>
+      );
+    case 'why-principal':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniCheckGrid
+            title="Broker vs Principal Model"
+            headers={['Broker Model', 'Principal Model (NIHA)']}
+            rows={[
+              { label: 'EU holds CEA?', values: [{ text: 'Cannot — no registry', status: 'no' }, { text: 'NIHA holds as principal', status: 'yes' }] },
+              { label: 'CN delivers EUA?', values: [{ text: 'Cannot — no EU registry', status: 'no' }, { text: 'NIHA delivers', status: 'yes' }] },
+              { label: 'Direct transaction?', values: [{ text: 'Impossible across regimes', status: 'no' }, { text: 'Two bilateral trades', status: 'yes' }] },
+              { label: 'Legal certainty', values: [{ text: 'Undefined counterparty', status: 'no' }, { text: 'HK common law governs', status: 'yes' }] },
+            ]}
+          />
+        </>
+      );
+    case 'custody-legal':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniFlow
+            title="Legal Basis per Step"
+            steps={[
+              { label: 'EUR Deposit → Escrow', detail: 'HK common law escrow + bank segregation' },
+              { label: 'Carbon Acquisition → Principal', detail: 'SAFE 2014 + SZMO [2014] No. 3 Art. 29' },
+              { label: 'Custody → Registry', detail: 'Prime brokerage model — legal title with NIHA' },
+              { label: 'Swap → Physical delivery', detail: 'Not derivative under MiFID II; not SFO Schedule 5' },
+              { label: 'EUA Delivery → Union Registry', detail: 'Directive 2003/87/EC Art. 19' },
+            ]}
+          />
+        </>
+      );
+    case 'authorization-detail':
+      return (
+        <>
+          <RichText text={content} />
+          <MiniFlow
+            title="Five Jurisdictions"
+            steps={[
+              { label: 'China — SAFE', detail: 'FX clearance for carbon trading', color: 'rgb(248,113,113)' },
+              { label: 'China — Exchange Authority', detail: 'Qualified institutional investor membership', color: 'rgb(248,113,113)' },
+              { label: 'China — PBOC', detail: 'NRA-RMB account authorization', color: 'rgb(251,191,36)' },
+              { label: 'China — CAC/PIPL', detail: 'GBA Standard Contract', color: 'rgb(251,191,36)' },
+              { label: 'EU — Union Registry', detail: 'EUA trading account', color: 'rgb(96,165,250)' },
+              { label: 'Hong Kong — SFO', detail: 'Carbon not classified as security/future', color: 'rgb(52,211,153)' },
+            ]}
+          />
+        </>
+      );
+    case 'citations':
+      return <>{content}</>;
+    default:
+      return <>{content}</>;
+  }
+}
 
 const STATUS_COLORS = {
   red: { bg: 'border-red-500/30', text: 'text-red-400' },
@@ -71,7 +237,7 @@ export function LegalSection() {
       <div className="space-y-2">
         {visibleAccordions.map((item) => (
           <AccordionItem key={item.id} sectionId="legal" itemId={item.id} title={item.title}>
-            {item.content}
+            <LegalAccordionContent id={item.id} content={item.content} />
           </AccordionItem>
         ))}
       </div>

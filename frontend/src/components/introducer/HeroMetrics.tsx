@@ -3,12 +3,58 @@ import { useAuthStore } from '../../stores/useStore';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
 import { SECTION_IDS, HERO_METRICS, OVERVIEW_NARRATIVES, depthAtLeast } from './constants';
+import { MiniScale, MiniBarChart } from './charts';
 
 const colorMap = {
   emerald: 'text-emerald-400',
   amber: 'text-amber-400',
   blue: 'text-blue-400',
 } as const;
+
+function NarrativeContent({ id, content }: { id: string; content: string }) {
+  switch (id) {
+    case 'core-thesis':
+      return (
+        <>
+          <p className="text-sm text-navy-300 leading-relaxed">{content}</p>
+          <MiniScale
+            title="The Price Gap"
+            left={{ label: 'EU EUA', value: '€81/t', numericValue: 81, color: 'rgb(96, 165, 250)' }}
+            right={{ label: 'China CEA', value: '~€11/t', numericValue: 11, color: 'rgb(251, 191, 36)' }}
+            ratio="7-10× gap"
+          />
+        </>
+      );
+    case 'what-this-means':
+      return (
+        <>
+          <p className="text-sm text-navy-300 leading-relaxed">{content}</p>
+          <MiniBarChart
+            title="OTC as % of EU ETS Volume"
+            bars={[
+              { label: 'Exchange-traded', value: 75, displayValue: '75-85%', color: 'rgb(96, 165, 250)' },
+              { label: 'OTC / broker', value: 25, displayValue: '15-25%', color: 'rgb(52, 211, 153)' },
+            ]}
+            annotation="OTC segment = NIHA's primary target market"
+          />
+        </>
+      );
+    case 'otc-opportunity':
+      return (
+        <>
+          <p className="text-sm text-navy-300 leading-relaxed">{content}</p>
+          <MiniScale
+            title="Daily Volume Comparison"
+            left={{ label: 'EU ETS', value: '€3B+', numericValue: 3000, color: 'rgb(96, 165, 250)' }}
+            right={{ label: 'China ETS', value: '€9.5M', numericValue: 9.5, color: 'rgb(251, 191, 36)' }}
+            ratio="316× difference"
+          />
+        </>
+      );
+    default:
+      return <p className="text-sm text-navy-300 leading-relaxed">{content}</p>;
+  }
+}
 
 export function HeroMetrics() {
   const ref = useSection(SECTION_IDS.OVERVIEW);
@@ -59,7 +105,7 @@ export function HeroMetrics() {
               className="bg-navy-800/30 border border-navy-700 rounded-xl p-5"
             >
               <h4 className="text-sm font-semibold text-emerald-400 mb-2">{narrative.title}</h4>
-              <p className="text-sm text-navy-300 leading-relaxed">{narrative.content}</p>
+              <NarrativeContent id={narrative.id} content={narrative.content} />
             </div>
           ))}
         </div>

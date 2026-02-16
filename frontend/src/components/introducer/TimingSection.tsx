@@ -1,12 +1,174 @@
 import { cn } from '../../utils';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { AccordionItem } from './AccordionItem';
+import { MiniScale, MiniBarChart, MiniFlow, MiniTimeline, MiniCheckGrid } from './charts';
+import { RichText } from './RichText';
 import {
   TIMING_CATALYSTS,
   CONVERGENCE_TABLE,
   RISK_MITIGATIONS,
   depthAtLeast,
 } from './constants';
+
+function ConvergenceChart() {
+  const data = [
+    { year: '2024', eua: 67, cea: 12 },
+    { year: '2025', eua: 74, cea: 10 },
+    { year: '2026', eua: 81, cea: 11 },
+    { year: '2027', eua: 90, cea: 14 },
+    { year: '2028', eua: 100, cea: 17 },
+    { year: '2029', eua: 113, cea: 21 },
+    { year: '2030', eua: 126, cea: 25 },
+  ];
+  const maxY = 140;
+  const w = 280, h = 100, padL = 30, padR = 10, padT = 10, padB = 20;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
+
+  const toX = (i: number) => padL + (i / (data.length - 1)) * chartW;
+  const toY = (val: number) => padT + chartH - (val / maxY) * chartH;
+
+  const euaLine = data.map((d, i) => `${toX(i)},${toY(d.eua)}`).join(' ');
+  const ceaLine = data.map((d, i) => `${toX(i)},${toY(d.cea)}`).join(' ');
+  // Fill area between the two lines
+  const areaPoints = [
+    ...data.map((d, i) => `${toX(i)},${toY(d.eua)}`),
+    ...data.map((_d, i) => `${toX(data.length - 1 - i)},${toY(data[data.length - 1 - i].cea)}`),
+  ].join(' ');
+
+  return (
+    <div className="mb-4">
+      <div className="text-[10px] uppercase tracking-wider text-navy-500 mb-2">Price Convergence Forecast (€/tonne)</div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 160 }}>
+        {/* Grid lines */}
+        {[0, 50, 100].map((v) => (
+          <g key={v}>
+            <line x1={padL} y1={toY(v)} x2={w - padR} y2={toY(v)} stroke="rgb(51,65,85)" strokeWidth={0.5} strokeDasharray="2,2" />
+            <text x={padL - 4} y={toY(v) + 3} textAnchor="end" className="text-[7px] fill-navy-600">€{v}</text>
+          </g>
+        ))}
+        {/* Area between lines */}
+        <polygon points={areaPoints} fill="rgb(52,211,153)" opacity={0.08} />
+        {/* EUA line */}
+        <polyline points={euaLine} fill="none" stroke="rgb(96,165,250)" strokeWidth={1.5} />
+        {/* CEA line */}
+        <polyline points={ceaLine} fill="none" stroke="rgb(251,191,36)" strokeWidth={1.5} />
+        {/* Data points + year labels */}
+        {data.map((d, i) => (
+          <g key={d.year}>
+            <circle cx={toX(i)} cy={toY(d.eua)} r={2} fill="rgb(96,165,250)" />
+            <circle cx={toX(i)} cy={toY(d.cea)} r={2} fill="rgb(251,191,36)" />
+            <text x={toX(i)} y={h - 4} textAnchor="middle" className="text-[7px] fill-navy-500">{d.year}</text>
+          </g>
+        ))}
+        {/* Peak marker at 2026 */}
+        <text x={toX(2)} y={toY(81) - 6} textAnchor="middle" className="text-[7px] fill-emerald-400 font-semibold">★ Peak</text>
+      </svg>
+      <div className="flex items-center gap-4 mt-1">
+        <div className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-400 inline-block" /><span className="text-[9px] text-navy-500">EUA</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-400 inline-block" /><span className="text-[9px] text-navy-500">CEA</span></div>
+        <div className="flex items-center gap-1"><span className="w-3 h-1.5 bg-emerald-400/20 inline-block rounded-sm" /><span className="text-[9px] text-navy-500">NIHA opportunity zone</span></div>
+      </div>
+    </div>
+  );
+}
+
+function RiskAccordionContent({ id, mitigation }: { id: string; mitigation: string }) {
+  switch (id) {
+    case 'reg-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniCheckGrid
+            title="Pathway Legitimacy"
+            headers={['Status']}
+            rows={[
+              { label: 'SAFE Approval', values: [{ text: 'Established since 2014', status: 'yes' as const }] },
+              { label: 'Exchange Membership', values: [{ text: 'Qualified investor', status: 'yes' as const }] },
+              { label: 'NRA-RMB Account', values: [{ text: 'PBOC authorized', status: 'yes' as const }] },
+              { label: 'Grey-area exploitation', values: [{ text: 'None — legal pathways only', status: 'yes' as const }] },
+            ]}
+          />
+        </>
+      );
+    case 'cpty-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniFlow
+            title="Risk Mitigation Chain"
+            steps={[
+              { label: 'EUR Escrow', detail: 'Ring-fenced from operations' },
+              { label: 'Staged Settlement', detail: 'Partial deliveries reduce exposure' },
+              { label: 'Institutional Custody', detail: 'Exchange registry accounts' },
+            ]}
+          />
+        </>
+      );
+    case 'fx-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniScale
+            title="FX Exposure Window"
+            left={{ label: 'Exchange T+2', value: '48h exposed', numericValue: 48, color: 'rgb(248,113,113)' }}
+            right={{ label: 'NIHA T+0', value: 'Same-day', numericValue: 1, color: 'rgb(52,211,153)' }}
+          />
+        </>
+      );
+    case 'convergence-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniBarChart
+            title="Price Gap Compression"
+            horizontal={false}
+            bars={[
+              { label: '2026', value: 10, displayValue: '7-10×', color: 'rgb(251,191,36)' },
+              { label: '2028', value: 6, displayValue: '~6×', color: 'rgb(251,191,36)' },
+              { label: '2030', value: 5, displayValue: '~5×', color: 'rgb(100,116,139)' },
+            ]}
+            annotation="Savings remain material in EUR terms even as ratio compresses"
+          />
+        </>
+      );
+    case 'carbon-connect-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniTimeline
+            title="Carbon Connect Timeline"
+            events={[
+              { year: '2025', label: 'MoU signed', detail: 'Pilot phase begins' },
+              { year: '2026-27', label: 'Trial period', detail: 'Voluntary credits only' },
+              { year: '2028+', label: 'Potential expansion', detail: 'Direct access years away', color: 'rgb(100,116,139)' },
+            ]}
+          />
+        </>
+      );
+    case 'liquidity-risk':
+      return (
+        <>
+          <RichText text={mitigation} />
+          <MiniBarChart
+            title="Supply Pool Growth"
+            bars={[
+              { label: 'Power 2021', value: 2200, color: 'rgb(96,165,250)' },
+              { label: '+Steel/Cement 2024', value: 800, color: 'rgb(251,191,36)' },
+              { label: '+Aluminium 2025', value: 500, color: 'rgb(52,211,153)' },
+            ]}
+            annotation="Growing entity count = growing CEA supply"
+          />
+        </>
+      );
+    default:
+      return (
+        <>
+          <span className="text-emerald-400/80">Mitigation:</span> {mitigation}
+        </>
+      );
+  }
+}
 
 export function TimingSection() {
   const { contentDepth } = useIntroducerStore();
@@ -35,6 +197,7 @@ export function TimingSection() {
 
       {/* Convergence table */}
       <div className="bg-navy-800/30 border border-navy-700 rounded-xl p-4 mb-6">
+        <ConvergenceChart />
         <h5 className="text-xs uppercase tracking-wider text-navy-400 mb-3">Price Convergence Forecast</h5>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -78,7 +241,7 @@ export function TimingSection() {
       <div className="space-y-2">
         {visibleRisks.map((item) => (
           <AccordionItem key={item.id} sectionId="timing" itemId={item.id} title={`${item.risk}: ${item.description}`}>
-            <span className="text-emerald-400/80">Mitigation:</span> {item.mitigation}
+            <RiskAccordionContent id={item.id} mitigation={item.mitigation} />
           </AccordionItem>
         ))}
       </div>
