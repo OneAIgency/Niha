@@ -61,10 +61,11 @@ export function ChatPanel() {
 
   const executeTool = useCallback((toolName: string, toolInput: Record<string, string>) => {
     switch (toolName) {
-      case 'scrollToSection':
+      case 'switchToTab':
         if (toolInput.sectionId) {
-          registry.scrollToSection(toolInput.sectionId);
-          addChatMessage({ role: 'system', content: `Navigated to: ${getSectionLabel(toolInput.sectionId)}` });
+          const { setDashboardTab } = useIntroducerStore.getState();
+          setDashboardTab(toolInput.sectionId);
+          addChatMessage({ role: 'system', content: `Switched to: ${getSectionLabel(toolInput.sectionId)}` });
         }
         break;
       case 'expandAccordion':
