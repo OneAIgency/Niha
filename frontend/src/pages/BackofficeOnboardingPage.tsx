@@ -98,6 +98,8 @@ export function BackofficeOnboardingPage() {
     requestFlow: (r as { requestFlow?: string }).requestFlow ?? 'buyer',
     referredByUserId: (r as { referredByUserId?: string }).referredByUserId,
     referralCodeUsed: (r as { referralCodeUsed?: string }).referralCodeUsed,
+    introducerNdaStatus: (r as { introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' }).introducerNdaStatus,
+    introducerUserId: (r as { introducerUserId?: string }).introducerUserId,
     notes: r.notes,
     createdAt: r.createdAt,
   }));
@@ -219,6 +221,22 @@ export function BackofficeOnboardingPage() {
     }
   };
 
+  const handleOpenUserNDA = async (userId: string) => {
+    setActionLoading(`open-user-nda-${userId}`);
+    try {
+      await adminApi.openUserNDAInBrowser(userId);
+    } catch (err) {
+      logger.error('Failed to open user NDA', err);
+      setError(
+        err instanceof Error && err.message === 'POPUP_BLOCKED'
+          ? 'Allow pop-ups for this site and try again.'
+          : 'Failed to open NDA file'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleIpLookup = async (ip: string) => {
     if (!ip || ip === 'null' || ip === 'None') {
       setError('Invalid IP address');
@@ -261,6 +279,19 @@ export function BackofficeOnboardingPage() {
     } catch (err) {
       logger.error('Failed to send NDA', err);
       setError('Failed to send NDA to introducer');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveIntroducer = async (userId: string) => {
+    setActionLoading(`approve-introducer-${userId}`);
+    try {
+      await adminApi.approveIntroducerNDA(userId);
+      refreshContactRequests();
+    } catch (err) {
+      logger.error('Failed to approve introducer', err);
+      setError('Failed to approve introducer');
     } finally {
       setActionLoading(null);
     }
@@ -517,6 +548,7 @@ export function BackofficeOnboardingPage() {
           onReject={handleRejectRequest}
           onDelete={handleDeleteRequest}
           onOpenNDA={handleOpenNDA}
+          onOpenUserNDA={handleOpenUserNDA}
           onIpLookup={handleIpLookup}
           actionLoading={actionLoading}
         />
@@ -532,8 +564,10 @@ export function BackofficeOnboardingPage() {
           onReject={handleRejectRequest}
           onDelete={handleDeleteRequest}
           onOpenNDA={handleOpenNDA}
+          onOpenUserNDA={handleOpenUserNDA}
           onIpLookup={handleIpLookup}
           onSendNDA={handleSendNDA}
+          onApproveIntroducer={handleApproveIntroducer}
           actionLoading={actionLoading}
         />
       )}

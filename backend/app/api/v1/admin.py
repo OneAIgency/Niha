@@ -125,27 +125,49 @@ async def get_contact_requests(
     result = await db.execute(query)
     requests = result.scalars().all()
 
+    # Batch-fetch introducer users to compute NDA status (avoids N+1)
+    introducer_emails = [
+        r.contact_email for r in requests
+        if getattr(r, "request_flow", "buyer") == "introducer"
+    ]
+    introducer_user_map: dict = {}
+    if introducer_emails:
+        user_result = await db.execute(
+            select(User).where(User.email.in_(introducer_emails), User.role.in_([UserRole.TRODUCER, UserRole.INTRODUCER]))
+        )
+        for u in user_result.scalars().all():
+            introducer_user_map[u.email] = u
+
+    def _build_request_dict(r: ContactRequest) -> dict:
+        d = {
+            "id": str(r.id),
+            "entity_name": r.entity_name,
+            "contact_email": r.contact_email,
+            "contact_name": r.contact_name,
+            "contact_first_name": r.contact_first_name,
+            "contact_last_name": r.contact_last_name,
+            "position": r.position,
+            "nda_file_name": r.nda_file_name,
+            "submitter_ip": r.submitter_ip,
+            "user_role": r.user_role.value if r.user_role else "NDA",
+            "request_flow": getattr(r, "request_flow", "buyer"),
+            "notes": r.notes,
+            "created_at": (r.created_at.isoformat() + "Z") if r.created_at else None,
+        }
+        if d["request_flow"] == "introducer":
+            intro_user = introducer_user_map.get(r.contact_email)
+            if not intro_user:
+                d["introducer_nda_status"] = "not_sent"
+            elif not intro_user.nda_file_data:
+                d["introducer_nda_status"] = "sent"
+                d["introducer_user_id"] = str(intro_user.id)
+            else:
+                d["introducer_nda_status"] = "uploaded"
+                d["introducer_user_id"] = str(intro_user.id)
+        return d
+
     return {
-        "data": [
-            {
-                "id": str(r.id),
-                "entity_name": r.entity_name,
-                "contact_email": r.contact_email,
-                "contact_name": r.contact_name,
-                "contact_first_name": r.contact_first_name,
-                "contact_last_name": r.contact_last_name,
-                "position": r.position,
-                "nda_file_name": r.nda_file_name,
-                "submitter_ip": r.submitter_ip,
-                "user_role": r.user_role.value if r.user_role else "NDA",
-                "request_flow": getattr(r, "request_flow", "buyer"),
-                "notes": r.notes,
-                "created_at": (r.created_at.isoformat() + "Z")
-                if r.created_at
-                else None,
-            }
-            for r in requests
-        ],
+        "data": [_build_request_dict(r) for r in requests],
         "pagination": {
             "page": page,
             "per_page": per_page,
@@ -528,6 +550,33 @@ async def download_nda_file(
             )
 
     raise HTTPException(status_code=404, detail="No NDA file attached to this request")
+
+
+@router.get("/users/{user_id}/nda")
+async def download_user_nda(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Download NDA file uploaded by a user (stored on User model). Admin only."""
+    try:
+        uid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    user = await db.get(User, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.nda_file_data:
+        raise HTTPException(status_code=404, detail="No NDA file uploaded")
+
+    return Response(
+        content=user.nda_file_data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{user.nda_file_name or "nda.pdf"}"'
+        },
+    )
 
 
 @router.get("/ip-lookup/{ip_address}")
@@ -4600,7 +4649,7 @@ async def send_introducer_nda(
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """For introducer requests without NDA: create user as INTRODUCER(nda_signed=false), send invitation email."""
+    """For introducer requests without NDA: create user as TRODUCER(nda_signed=false), send invitation email."""
     from ...services.referral_codes import get_unique_referral_code
 
     result = await db.execute(
@@ -4632,7 +4681,7 @@ async def send_introducer_nda(
         email=contact_request.contact_email,
         first_name=contact_request.contact_first_name or "",
         last_name=contact_request.contact_last_name or "",
-        role=UserRole.INTRODUCER,
+        role=UserRole.TRODUCER,
         referral_code=referral_code,
         nda_signed=False,
         invitation_token=invitation_token,
@@ -4646,14 +4695,14 @@ async def send_introducer_nda(
 
     try:
         db.add(user)
-        contact_request.user_role = ContactStatus.KYC
+        # Keep user_role as NDA so the request stays visible in backoffice
         await db.commit()
         await db.refresh(user)
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "creating introducer (send NDA)", logger) from e
 
-    # Send invitation email
+    # Send NDA invitation email with PDF attachment
     try:
         mail_cfg = None
         if mail_row:
@@ -4661,11 +4710,23 @@ async def send_introducer_nda(
                 "provider": mail_row.provider.value,
                 "use_env_credentials": mail_row.use_env_credentials,
                 "from_email": mail_row.from_email,
-                "resend_api_key": mail_row.resend_api_key if not mail_row.use_env_credentials else None,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
                 "invitation_link_base_url": mail_row.invitation_link_base_url,
             }
-        await email_service.send_invitation(
-            user.email, user.first_name, user.invitation_token, mail_config=mail_cfg
+        nda_pdf_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf")
+        await email_service.send_introducer_nda_invitation(
+            user.email, user.first_name, user.invitation_token,
+            nda_pdf_path, expiry_days=invitation_expiry_days, mail_config=mail_cfg,
         )
     except Exception:
         logger.exception("Failed to send NDA email for introducer %s", user.email)
@@ -4673,8 +4734,10 @@ async def send_introducer_nda(
     asyncio.create_task(
         backoffice_ws_manager.broadcast("request_updated", {
             "id": str(contact_request.id),
-            "user_role": "KYC",
+            "user_role": "NDA",
             "request_flow": contact_request.request_flow,
+            "introducer_nda_status": "sent",
+            "introducer_user_id": str(user.id),
         })
     )
 
@@ -4687,19 +4750,71 @@ async def approve_introducer_nda(
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """Mark an INTRODUCER's NDA as signed after admin reviews the uploaded document."""
+    """Mark a TRODUCER's NDA as signed, upgrade to INTRODUCER, activate user, update ContactRequest, send confirmation."""
     result = await db.execute(
-        select(User).where(User.id == UUID(user_id), User.role == UserRole.INTRODUCER)
+        select(User).where(User.id == UUID(user_id), User.role == UserRole.TRODUCER)
     )
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="Introducer not found")
+        raise HTTPException(status_code=404, detail="Troducer not found")
+
+    # Find the associated contact request
+    cr_result = await db.execute(
+        select(ContactRequest).where(
+            ContactRequest.contact_email == user.email,
+            ContactRequest.request_flow == "introducer",
+        )
+    )
+    contact_request = cr_result.scalar_one_or_none()
 
     try:
+        user.role = UserRole.INTRODUCER
         user.nda_signed = True
+        user.is_active = True
+        if contact_request:
+            contact_request.user_role = ContactStatus.KYC
         await db.commit()
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "approving introducer NDA") from e
+
+    # Send confirmation email
+    try:
+        cfg_result = await db.execute(
+            select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+        )
+        mail_row = cfg_result.scalar_one_or_none()
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
+    except Exception:
+        logger.exception("Failed to send introducer approval email to %s", user.email)
+
+    # Broadcast WS event so request disappears from backoffice list
+    if contact_request:
+        asyncio.create_task(
+            backoffice_ws_manager.broadcast("request_updated", {
+                "id": str(contact_request.id),
+                "user_role": "KYC",
+                "request_flow": "introducer",
+            })
+        )
 
     return {"message": "NDA approved", "success": True}

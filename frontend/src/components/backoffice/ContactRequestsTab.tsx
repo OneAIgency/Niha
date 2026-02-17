@@ -3,31 +3,18 @@
  *
  * Displays and manages contact requests (join requests and NDA submissions) in compact list rows
  * (Entity, Name, Submitted + View / Approve & Create User / Reject / Delete). Each row shows entity_name and
- * contact_name (fallback "—" when missing). View opens ContactRequestViewModal with all fields and NDA
+ * contact_name (fallback "---" when missing). View opens ContactRequestViewModal with all fields and NDA
  * open-NDA button; onIpLookup is passed to the modal for the IP Lookup link. View/Approve/Reject/Delete
  * use aria-label fallbacks (entity_name ?? contact_email ?? id ?? 'contact request'). Real-time WebSocket updates.
  *
+ * For introducer requests, shows NDA lifecycle badges and conditional buttons based on introducerNdaStatus.
+ *
  * @component
- * @example
- * ```tsx
- * <ContactRequestsTab
- *   contactRequests={requests}
- *   loading={false}
- *   connectionStatus="connected"
- *   onRefresh={handleRefresh}
- *   onApprove={handleApprove}
- *   onReject={handleReject}
- *   onDelete={handleDelete}
- *   onOpenNDA={handleOpenNDA}
- *   onIpLookup={handleIpLookup}
- *   actionLoading={null}
- * />
- * ```
  */
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Eye, Trash2, Send } from 'lucide-react';
+import { Users, Eye, Trash2, Send, CheckCircle2 } from 'lucide-react';
 import { Button, Badge } from '../common';
 import { Typography } from '../common/Typography';
 import { clientStatusVariant } from '../../utils/roleBadge';
@@ -47,7 +34,9 @@ interface ContactRequestsTabProps {
   onDelete: (requestId: string) => void;
   onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup: (ip: string) => void;
+  onOpenUserNDA?: (userId: string) => Promise<void>;
   onSendNDA?: (requestId: string) => void;
+  onApproveIntroducer?: (userId: string) => void;
   actionLoading: string | null;
 }
 
@@ -60,8 +49,10 @@ export function ContactRequestsTab({
   onReject,
   onDelete,
   onOpenNDA,
+  onOpenUserNDA,
   onIpLookup,
   onSendNDA,
+  onApproveIntroducer,
   actionLoading,
 }: ContactRequestsTabProps) {
   // Suppress unused variable warnings for reserved parameters
@@ -94,6 +85,12 @@ export function ContactRequestsTab({
     }
   };
 
+  const isIntroducerWithStatus = (request: ContactRequest) =>
+    request.requestFlow === 'introducer' && request.introducerNdaStatus;
+
+  const ariaName = (request: ContactRequest) =>
+    request.entityName ?? request.contactEmail ?? request.id ?? 'contact request';
+
   return (
     <>
       <motion.div
@@ -113,14 +110,21 @@ export function ContactRequestsTab({
           ) : contactRequests.length > 0 ? (
             <div className="space-y-2">
               {contactRequests.map((request) => (
-                <div key={request.id} className="card_contact_request_list">
+                <div
+                  key={request.id}
+                  className={`card_contact_request_list ${
+                    request.introducerNdaStatus === 'uploaded'
+                      ? 'bg-emerald-500/5 border border-emerald-500/20 rounded-lg'
+                      : ''
+                  }`}
+                >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
                     <span className="flex items-center gap-1.5 shrink-0">
                       <Typography as="span" variant="sectionLabel" color="muted">
                         Entity:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary" className="font-medium">
-                        {request.entityName ?? '—'}
+                        {request.entityName ?? '---'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -128,7 +132,7 @@ export function ContactRequestsTab({
                         Name:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary">
-                        {[request.contactFirstName, request.contactLastName].filter(Boolean).join(' ') || request.contactName || '—'}
+                        {[request.contactFirstName, request.contactLastName].filter(Boolean).join(' ') || request.contactName || '---'}
                       </Typography>
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
@@ -136,71 +140,122 @@ export function ContactRequestsTab({
                         Submitted:
                       </Typography>
                       <Typography as="span" variant="bodySmall" color="primary">
-                        {request.createdAt ? formatDate(request.createdAt) : '—'}
+                        {request.createdAt ? formatDate(request.createdAt) : '---'}
                       </Typography>
                     </span>
                     <Badge
-                      variant={clientStatusVariant(request.userRole)}
+                      variant={request.requestFlow === 'introducer' ? clientStatusVariant('TRODUCER') : clientStatusVariant(request.userRole)}
                       className="shrink-0 text-xs"
                     >
-                      {request.userRole ?? '—'}
+                      {request.requestFlow === 'introducer' ? 'TRODUCER' : (request.userRole ?? '---')}
                     </Badge>
                     {request.referralCodeUsed ? (
                       <Badge variant="info" className="shrink-0 text-xs">Referred</Badge>
                     ) : request.requestFlow === 'introducer' ? (
                       <Badge variant="default" className="shrink-0 text-xs">Direct</Badge>
                     ) : null}
+                    {/* Introducer NDA status badge */}
+                    {request.introducerNdaStatus === 'sent' && (
+                      <Badge variant="warning" className="shrink-0 text-xs">NDA Sent</Badge>
+                    )}
+                    {request.introducerNdaStatus === 'uploaded' && (
+                      <Badge variant="success" className="shrink-0 text-xs">NDA Uploaded</Badge>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => setViewModalRequest(request)}
                       className="p-2 rounded-lg text-navy-400 hover:bg-navy-700 hover:text-navy-200 transition-colors"
-                      aria-label={`View details for ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
+                      aria-label={`View details for ${ariaName(request)}`}
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {(request.userRole === 'NDA' || request.userRole === 'new') && (
+
+                    {/* Introducer requests: conditional buttons based on NDA status */}
+                    {isIntroducerWithStatus(request) ? (
                       <>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleApproveClick(request)}
-                          loading={actionLoading === `approve-${request.id}`}
-                          aria-label={`Approve and create user for ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
-                        >
-                          Approve & Create User
-                        </Button>
-                        {onSendNDA && !request.ndaFileName && request.requestFlow === 'introducer' && (request.userRole === 'NDA' || request.userRole === 'new') && (
+                        {request.introducerNdaStatus === 'not_sent' && onSendNDA && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => onSendNDA(request.id)}
                             loading={actionLoading === `send-nda-${request.id}`}
-                            aria-label={`Send NDA to ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
+                            aria-label={`Send NDA to ${ariaName(request)}`}
                           >
                             <Send className="w-3.5 h-3.5 mr-1" />
                             Send NDA
                           </Button>
                         )}
+                        {request.introducerNdaStatus === 'uploaded' && onApproveIntroducer && request.introducerUserId && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onApproveIntroducer(request.introducerUserId!)}
+                            loading={actionLoading === `approve-introducer-${request.introducerUserId}`}
+                            aria-label={`Approve NDA for ${ariaName(request)}`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                            Approve NDA
+                          </Button>
+                        )}
+                        {/* Reject is available for all non-approved statuses */}
                         <Button
                           variant="secondary"
                           size="sm"
                           className="text-red-500 hover:bg-red-500/20"
                           onClick={() => onReject(request.id)}
                           loading={actionLoading === `reject-${request.id}`}
-                          aria-label={`Reject request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
+                          aria-label={`Reject request from ${ariaName(request)}`}
                         >
                           Reject
                         </Button>
                       </>
+                    ) : (
+                      /* Non-introducer (buyer) requests: original buttons */
+                      (request.userRole === 'NDA' || request.userRole === 'new') && (
+                        <>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleApproveClick(request)}
+                            loading={actionLoading === `approve-${request.id}`}
+                            aria-label={`Approve and create user for ${ariaName(request)}`}
+                          >
+                            Approve & Create User
+                          </Button>
+                          {onSendNDA && !request.ndaFileName && request.requestFlow === 'introducer' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onSendNDA(request.id)}
+                              loading={actionLoading === `send-nda-${request.id}`}
+                              aria-label={`Send NDA to ${ariaName(request)}`}
+                            >
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                              Send NDA
+                            </Button>
+                          )}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="text-red-500 hover:bg-red-500/20"
+                            onClick={() => onReject(request.id)}
+                            loading={actionLoading === `reject-${request.id}`}
+                            aria-label={`Reject request from ${ariaName(request)}`}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )
                     )}
+
                     <button
                       type="button"
                       onClick={() => handleDeleteClick(request)}
                       disabled={!!actionLoading}
                       className="p-2 rounded-lg text-navy-400 hover:bg-navy-700 hover:text-red-400 transition-colors disabled:opacity-50"
-                      aria-label={`Delete request from ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
+                      aria-label={`Delete request from ${ariaName(request)}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -246,8 +301,10 @@ export function ContactRequestsTab({
         isOpen={!!viewModalRequest}
         onClose={() => setViewModalRequest(null)}
         onOpenNDA={onOpenNDA}
+        onOpenUserNDA={onOpenUserNDA}
         onIpLookup={onIpLookup}
         openNDALoading={actionLoading === `open-${viewModalRequest?.id}`}
+        openUserNDALoading={actionLoading?.startsWith('open-user-nda-')}
       />
 
       {/* Delete Confirmation Modal */}

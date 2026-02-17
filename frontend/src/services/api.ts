@@ -353,7 +353,7 @@ export const contactApi = {
     contact_first_name: string;
     contact_last_name: string;
     position: string;
-    nda_file: File;
+    nda_file?: File;
   }): Promise<ContactRequestResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
@@ -361,7 +361,7 @@ export const contactApi = {
     formData.append('contact_first_name', request.contact_first_name);
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
-    formData.append('file', request.nda_file);
+    if (request.nda_file) formData.append('file', request.nda_file);
 
     const { data } = await api.post('/contact/introducer-nda-request', formData);
     return data;
@@ -949,6 +949,27 @@ export const adminApi = {
    */
   openNDAInBrowser: async (requestId: string, _fileName: string): Promise<void> => {
     const response = await api.get(`/admin/contact-requests/${requestId}/nda`, {
+      responseType: 'blob'
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) {
+      window.URL.revokeObjectURL(url);
+      throw new Error('POPUP_BLOCKED');
+    }
+    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+  },
+
+  /**
+   * Open User NDA PDF in a new browser tab. Fetches the file from the User model with auth,
+   * creates a blob URL, and opens it with noopener.
+   * @param userId - User UUID
+   * @throws Error with message 'POPUP_BLOCKED' if the browser blocks window.open
+   */
+  openUserNDAInBrowser: async (userId: string): Promise<void> => {
+    const response = await api.get(`/admin/users/${userId}/nda`, {
       responseType: 'blob'
     });
 
