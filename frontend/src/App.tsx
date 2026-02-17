@@ -47,6 +47,8 @@ const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ defaul
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const IntroducerPage = lazy(() => import('./pages/IntroducerPage').then(m => ({ default: m.IntroducerPage })));
 const IntroducerDashboardPage = lazy(() => import('./pages/IntroducerDashboardPage').then(m => ({ default: m.IntroducerDashboardPage })));
+const PreintroducerPage = lazy(() => import('./pages/PreintroducerPage').then(m => ({ default: m.PreintroducerPage })));
+const IntroducerSignNDAPage = lazy(() => import('./pages/IntroducerSignNDAPage').then(m => ({ default: m.IntroducerSignNDAPage })));
 const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -205,6 +207,19 @@ function RoleProtectedRoute({
 function AdminRoute({ children }: { children: React.ReactNode }) {
   return (
     <RoleProtectedRoute allowedRoles={['ADMIN']} redirectTo="/dashboard">
+      {children}
+    </RoleProtectedRoute>
+  );
+}
+
+/** INTRODUCER dashboard: redirects to /introducer/sign-nda if NDA not yet signed. */
+function IntroducerDashboardRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (user?.role === 'INTRODUCER' && user.ndaSigned === false) {
+    return <Navigate to="/introducer/sign-nda" replace />;
+  }
+  return (
+    <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -398,8 +413,24 @@ function App() {
             <Route
               path="/introducer/dashboard"
               element={
-                <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']} redirectTo="/introducer">
+                <IntroducerDashboardRoute>
                   <IntroducerDashboardPage />
+                </IntroducerDashboardRoute>
+              }
+            />
+            <Route
+              path="/preintroducer"
+              element={
+                <RoleProtectedRoute allowedRoles={['PREINTRODUCER', 'ADMIN']}>
+                  <PreintroducerPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/introducer/sign-nda"
+              element={
+                <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
+                  <IntroducerSignNDAPage />
                 </RoleProtectedRoute>
               }
             />

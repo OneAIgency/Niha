@@ -57,10 +57,10 @@ export function ValuePropositionCards() {
                 maxValue={100}
               />
             )}
-            {showExtended && prop.title === 'Instant Settlement' && (
+            {showExtended && prop.title === 'Faster Settlement' && (
               <MiniScale
-                left={{ label: 'Exchange', value: 'T+2 (48h)', numericValue: 48, color: 'rgb(248, 113, 113)' }}
-                right={{ label: 'NIHA', value: 'T+0 (instant)', numericValue: 0.5, color: 'rgb(52, 211, 153)' }}
+                left={{ label: 'Multi-leg exchange', value: '5-10 days', numericValue: 10, color: 'rgb(248, 113, 113)' }}
+                right={{ label: 'NIHA bilateral', value: 'T+2–T+5', numericValue: 3.5, color: 'rgb(52, 211, 153)' }}
               />
             )}
             {showExtended && prop.title === 'Regulatory Moat' && (

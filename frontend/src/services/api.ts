@@ -332,6 +332,7 @@ export const contactApi = {
     contact_last_name: string;
     position: string;
     nda_file: File;
+    referral_code?: string;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
@@ -340,6 +341,7 @@ export const contactApi = {
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
     formData.append('file', request.nda_file);
+    if (request.referral_code) formData.append('referral_code', request.referral_code);
 
     const { data } = await api.post('/contact/nda-request', formData);
     return data;
@@ -362,6 +364,39 @@ export const contactApi = {
     formData.append('file', request.nda_file);
 
     const { data } = await api.post('/contact/introducer-nda-request', formData);
+    return data;
+  },
+
+  validateCode: async (code: string): Promise<{ valid: boolean; type?: 'preintroducer' | 'introducer' }> => {
+    const formData = new FormData();
+    formData.append('code', code);
+    const { data } = await api.post('/contact/validate-code', formData);
+    return data;
+  },
+
+  submitIntroducerRequest: async (payload: {
+    contact_email: string;
+    contact_first_name: string;
+    contact_last_name: string;
+    entity_name?: string;
+    referral_code: string;
+    file?: File;
+  }): Promise<ContactRequestResponse> => {
+    const formData = new FormData();
+    formData.append('contact_email', payload.contact_email);
+    formData.append('contact_first_name', payload.contact_first_name);
+    formData.append('contact_last_name', payload.contact_last_name);
+    formData.append('entity_name', payload.entity_name || '');
+    formData.append('referral_code', payload.referral_code);
+    if (payload.file) formData.append('file', payload.file);
+    const { data } = await api.post('/contact/introducer-request', formData);
+    return data;
+  },
+
+  uploadIntroducerNDA: async (file: File): Promise<MessageResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post('/contact/introducer/upload-nda', formData);
     return data;
   },
 };
@@ -1090,6 +1125,27 @@ export const adminApi = {
 
   resetScrapingSourceHistory: async (id: string): Promise<{ message: string; success: boolean }> => {
     const { data } = await api.delete(`/admin/scraping-sources/${id}/history`);
+    return data;
+  },
+
+  // Referral / Introducer Management
+  createPreintroducer: async (payload: {
+    email: string; first_name: string; last_name: string;
+    mode: 'manual' | 'invitation'; password?: string;
+  }): Promise<{ message: string; success: boolean; user: { id: string; email: string; role: string; referral_code: string } }> => {
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([k, v]) => { if (v) params.set(k, v); });
+    const { data } = await api.post(`/admin/users/create-preintroducer?${params}`);
+    return data;
+  },
+
+  sendIntroducerNDA: async (requestId: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/introducer/${requestId}/send-nda`);
+    return data;
+  },
+
+  approveIntroducerNDA: async (userId: string): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/introducer/${userId}/approve-nda`);
     return data;
   },
 

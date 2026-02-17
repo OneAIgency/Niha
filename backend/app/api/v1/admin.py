@@ -380,6 +380,13 @@ async def create_user_from_contact_request(
 
         db.add(user)
 
+        # Generate referral code for INTRODUCER users
+        if is_introducer:
+            from ...services.referral_codes import get_unique_referral_code
+
+            user.referral_code = await get_unique_referral_code(db)
+            user.nda_signed = contact_request.nda_file_data is not None
+
         # Update contact request user_role to KYC (approved, user created)
         contact_request.user_role = ContactStatus.KYC
 
@@ -822,6 +829,12 @@ async def create_user(
         await db.flush()
         entity_id = entity.id
 
+    # Auto-generate referral code for PREINTRODUCER (safety net)
+    referral_code = None
+    if user_data.role == UserRole.PREINTRODUCER:
+        from ...services.referral_codes import get_unique_referral_code
+        referral_code = await get_unique_referral_code(db)
+
     # Create user with or without password
     if user_data.password:
         # Create user with password directly
@@ -833,6 +846,7 @@ async def create_user(
             role=user_data.role,
             entity_id=entity_id,
             position=user_data.position,
+            referral_code=referral_code,
             must_change_password=False,  # Password already set by admin
             is_active=True,
         )
@@ -846,6 +860,7 @@ async def create_user(
             role=user_data.role,
             entity_id=entity_id,
             position=user_data.position,
+            referral_code=referral_code,
             invitation_token=invitation_token,
             # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
             invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
@@ -4198,6 +4213,8 @@ async def update_my_role(
             entity_id=user.entity_id,
             is_active=user.is_active,
             must_change_password=user.must_change_password,
+            nda_signed=user.nda_signed,
+            referral_code=user.referral_code,
             last_login=user.last_login,
             created_at=user.created_at,
         )
@@ -4490,3 +4507,199 @@ async def settle_batch_now(
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "settle batch now") from e
+
+
+# ── Referral / Introducer Management ──────────────────────────────────────
+
+
+@router.post("/users/create-preintroducer")
+async def create_preintroducer(
+    email: str = Query(...),  # noqa: B008
+    first_name: str = Query(...),  # noqa: B008
+    last_name: str = Query(...),  # noqa: B008
+    mode: str = Query(...),  # noqa: B008
+    password: Optional[str] = Query(None),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Create a PREINTRODUCER user with auto-generated referral code."""
+    from ...services.referral_codes import get_unique_referral_code
+
+    existing = await db.execute(select(User).where(User.email == email.lower()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    referral_code = await get_unique_referral_code(db)
+
+    # Load mail config for invitation expiry
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 7
+    )
+
+    if mode == "manual":
+        if not password or len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password required (min 8 chars)")
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=hash_password(password),
+            role=UserRole.PREINTRODUCER,
+            referral_code=referral_code,
+            must_change_password=False,
+            is_active=True,
+            creation_method="manual",
+            created_by=admin_user.id,
+        )
+    else:
+        invitation_token = secrets.token_urlsafe(32)
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            role=UserRole.PREINTRODUCER,
+            referral_code=referral_code,
+            invitation_token=invitation_token,
+            invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            invitation_expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days),
+            must_change_password=True,
+            is_active=False,
+            creation_method="invitation",
+            created_by=admin_user.id,
+        )
+
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating preintroducer", logger) from e
+
+    return {
+        "message": "PREINTRODUCER created",
+        "success": True,
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "role": user.role.value,
+            "referral_code": user.referral_code,
+        },
+    }
+
+
+@router.post("/introducer/{request_id}/send-nda")
+async def send_introducer_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """For introducer requests without NDA: create user as INTRODUCER(nda_signed=false), send invitation email."""
+    from ...services.referral_codes import get_unique_referral_code
+
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    existing = await db.execute(select(User).where(User.email == contact_request.contact_email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Load mail config
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 14
+    )
+
+    invitation_token = secrets.token_urlsafe(32)
+    referral_code = await get_unique_referral_code(db)
+
+    user = User(
+        email=contact_request.contact_email,
+        first_name=contact_request.contact_first_name or "",
+        last_name=contact_request.contact_last_name or "",
+        role=UserRole.INTRODUCER,
+        referral_code=referral_code,
+        nda_signed=False,
+        invitation_token=invitation_token,
+        invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        invitation_expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days),
+        must_change_password=True,
+        is_active=False,
+        creation_method="invitation",
+        created_by=admin_user.id,
+    )
+
+    try:
+        db.add(user)
+        contact_request.user_role = ContactStatus.KYC
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating introducer (send NDA)", logger) from e
+
+    # Send invitation email
+    try:
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": mail_row.resend_api_key if not mail_row.use_env_credentials else None,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        await email_service.send_invitation(
+            user.email, user.first_name, user.invitation_token, mail_config=mail_cfg
+        )
+    except Exception:
+        logger.exception("Failed to send NDA email for introducer %s", user.email)
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "user_role": "KYC",
+            "request_flow": contact_request.request_flow,
+        })
+    )
+
+    return {"message": "NDA sent to introducer", "success": True}
+
+
+@router.put("/introducer/{user_id}/approve-nda")
+async def approve_introducer_nda(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark an INTRODUCER's NDA as signed after admin reviews the uploaded document."""
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id), User.role == UserRole.INTRODUCER)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Introducer not found")
+
+    try:
+        user.nda_signed = True
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "approving introducer NDA") from e
+
+    return {"message": "NDA approved", "success": True}

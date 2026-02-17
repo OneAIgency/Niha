@@ -18,7 +18,7 @@ const PATH_SCALES: Record<string, { left: { label: string; value: string; numeri
   'path-c': {
     left: { label: 'Exchanges', value: '2-4% cost', numericValue: 3, color: 'rgb(248, 113, 113)' },
     right: { label: 'Via NIHA', value: '~1% cost', numericValue: 1, color: 'rgb(52, 211, 153)' },
-    ratio: 'Single atomic swap',
+    ratio: 'Single bilateral swap',
   },
 };
 

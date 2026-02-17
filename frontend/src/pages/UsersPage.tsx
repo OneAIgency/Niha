@@ -156,28 +156,38 @@ export function UsersPage() {
 
     setSavingUser(true);
     try {
-      const userData: {
-        email: string;
-        firstName: string;
-        lastName: string;
-        role: UserRole;
-        password?: string;
-        position?: string;
-      } = {
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        role: newUser.role,
-      };
+      let created: User;
 
-      if (!useInvitation && newUser.password) {
-        userData.password = newUser.password;
-      }
-      if (newUser.position?.trim()) {
-        userData.position = newUser.position.trim();
+      if (newUser.role === 'PREINTRODUCER') {
+        // Use dedicated endpoint that auto-generates referral code
+        const result = await adminApi.createPreintroducer({
+          email: newUser.email,
+          first_name: newUser.firstName,
+          last_name: newUser.lastName,
+          mode: useInvitation ? 'invitation' : 'manual',
+          password: useInvitation ? undefined : newUser.password,
+        });
+        created = {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role as UserRole,
+          referralCode: result.user.referral_code,
+        } as User;
+      } else {
+        const userData: {
+          email: string; firstName: string; lastName: string;
+          role: UserRole; password?: string; position?: string;
+        } = {
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          role: newUser.role,
+        };
+        if (!useInvitation && newUser.password) userData.password = newUser.password;
+        if (newUser.position?.trim()) userData.position = newUser.position.trim();
+        created = await adminApi.createUser(userData);
       }
 
-      const created = await adminApi.createUser(userData);
       setUsers([created, ...users]);
       setShowCreateModal(false);
       setNewUser({ email: '', firstName: '', lastName: '', position: '', password: '', role: 'NDA' });
@@ -443,6 +453,8 @@ export function UsersPage() {
               <option value="all">All Roles</option>
               <option value="ADMIN">Admin</option>
               <option value="MM">MM (Market Maker)</option>
+              <option value="PREINTRODUCER">Pre-Introducer</option>
+              <option value="INTRODUCER">Introducer</option>
               <option value="NDA">NDA</option>
               <option value="KYC">KYC</option>
               <option value="APPROVED">Approved</option>

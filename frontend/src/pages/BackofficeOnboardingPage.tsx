@@ -96,6 +96,8 @@ export function BackofficeOnboardingPage() {
     submitterIp: r.submitterIp,
     userRole: ('userRole' in r ? r.userRole : (r as { status?: string }).status) ?? 'new',
     requestFlow: (r as { requestFlow?: string }).requestFlow ?? 'buyer',
+    referredByUserId: (r as { referredByUserId?: string }).referredByUserId,
+    referralCodeUsed: (r as { referralCodeUsed?: string }).referralCodeUsed,
     notes: r.notes,
     createdAt: r.createdAt,
   }));
@@ -249,6 +251,19 @@ export function BackofficeOnboardingPage() {
 
   const handleApproveRequest = async () => {
     refreshContactRequests();
+  };
+
+  const handleSendNDA = async (requestId: string) => {
+    setActionLoading(`send-nda-${requestId}`);
+    try {
+      await adminApi.sendIntroducerNDA(requestId);
+      refreshContactRequests();
+    } catch (err) {
+      logger.error('Failed to send NDA', err);
+      setError('Failed to send NDA to introducer');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDeleteRequest = async (requestId: string) => {
@@ -518,6 +533,7 @@ export function BackofficeOnboardingPage() {
           onDelete={handleDeleteRequest}
           onOpenNDA={handleOpenNDA}
           onIpLookup={handleIpLookup}
+          onSendNDA={handleSendNDA}
           actionLoading={actionLoading}
         />
       )}

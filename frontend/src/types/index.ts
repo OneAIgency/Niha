@@ -80,6 +80,7 @@ export interface SwapCalculation {
 export type UserRole =
   | 'ADMIN'
   | 'MM'
+  | 'PREINTRODUCER'
   | 'INTRODUCER'
   | 'NDA'
   | 'REJECTED'
@@ -104,6 +105,8 @@ export interface User {
   entityId?: string;
   mustChangePassword?: boolean;
   lastLogin?: string;
+  ndaSigned?: boolean;
+  referralCode?: string;
 }
 
 // Activity Log
@@ -282,6 +285,8 @@ export interface ContactRequestResponse {
   requestFlow?: string;
   notes?: string;
   createdAt: string;
+  referredByUserId?: string;
+  referralCodeUsed?: string;
 }
 
 // Contact Request update payload (admin API)

@@ -24,6 +24,10 @@ export interface ContactRequest {
   userRole: string;
   /** Request flow: 'buyer' (default) or 'introducer'. */
   requestFlow?: string;
+  /** UUID of the PREINTRODUCER who referred this request (if any). */
+  referredByUserId?: string;
+  /** Referral code used when submitting (if any). */
+  referralCodeUsed?: string;
   notes?: string;
   createdAt: string;
 }

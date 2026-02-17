@@ -9,7 +9,7 @@ import {
   depthAtLeast,
 } from './constants';
 import { AccordionItem } from './AccordionItem';
-import { MiniScale, MiniCheckGrid, MiniFlow, MiniTimeline } from './charts';
+import { MiniScale, MiniCheckGrid, MiniFlow, MiniTimeline, MiniBarChart } from './charts';
 import { RichText } from './RichText';
 
 function LegalAccordionContent({ id, content }: { id: string; content: string }) {
@@ -21,7 +21,7 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
           <MiniScale
             title="Market Access Comparison"
             left={{ label: 'National', value: 'Closed to all foreign', numericValue: 0, color: 'rgb(248,113,113)' }}
-            right={{ label: 'Pilot', value: 'SAFE-authorized investors', numericValue: 70, color: 'rgb(251,191,36)' }}
+            right={{ label: 'Pilot', value: 'Authorized institutional investors', numericValue: 70, color: 'rgb(251,191,36)' }}
             ratio="Two different systems"
           />
         </>
@@ -50,8 +50,8 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
             headers={['Hong Kong', 'Singapore', 'Dubai', 'London']}
             rows={[
               { label: 'GBA Zone', values: [{ text: 'Yes', status: 'yes' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }, { text: 'No', status: 'no' }] },
-              { label: 'NRA-RMB Banking', values: [{ text: 'Routine', status: 'yes' }, { text: 'Difficult', status: 'partial' }, { text: 'None', status: 'no' }, { text: 'CNH only', status: 'partial' }] },
-              { label: 'Pilot Market Access', values: [{ text: 'SAFE 2014', status: 'yes' }, { text: 'Possible', status: 'partial' }, { text: 'No linkage', status: 'no' }, { text: 'No GBA status', status: 'no' }] },
+              { label: 'Cross-border Settlement', values: [{ text: 'Established', status: 'yes' }, { text: 'Difficult', status: 'partial' }, { text: 'None', status: 'no' }, { text: 'CNH only', status: 'partial' }] },
+              { label: 'Pilot Market Access', values: [{ text: 'Established', status: 'yes' }, { text: 'Possible', status: 'partial' }, { text: 'No linkage', status: 'no' }, { text: 'No GBA status', status: 'no' }] },
               { label: 'EU ETS Access', values: [{ text: 'Yes', status: 'yes' }, { text: 'Yes', status: 'yes' }, { text: 'Yes', status: 'yes' }, { text: 'Yes (post-Brexit separate)', status: 'partial' }] },
             ]}
           />
@@ -64,11 +64,11 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
           <MiniFlow
             title="Required Authorization Chain"
             steps={[
-              { label: 'SAFE Foreign Exchange Clearance', detail: 'GBA FX pilot — carbon trading', color: 'rgb(52,211,153)' },
-              { label: 'Shenzhen/CEEX Exchange Membership', detail: 'Qualified institutional investor', color: 'rgb(52,211,153)' },
-              { label: 'PBOC NRA-RMB Account', detail: 'Cross-border RMB settlement', color: 'rgb(96,165,250)' },
-              { label: 'PIPL Data Compliance', detail: 'GBA Standard Contract', color: 'rgb(96,165,250)' },
-              { label: 'EU Union Registry Account', detail: 'EUA trading & delivery', color: 'rgb(251,191,36)' },
+              { label: 'Cross-border Trading Authorization', detail: 'Government-facilitated carbon trading pathway', color: 'rgb(52,211,153)' },
+              { label: 'Institutional Pilot Market Access', detail: 'Authorized participant via GBA framework', color: 'rgb(52,211,153)' },
+              { label: 'Cross-border Settlement', detail: 'RMB/EUR bilateral clearing channels', color: 'rgb(96,165,250)' },
+              { label: 'Data Governance Compliance', detail: 'GBA regulatory framework', color: 'rgb(96,165,250)' },
+              { label: 'EUA Delivery Capability', detail: 'European carbon market access', color: 'rgb(251,191,36)' },
             ]}
           />
         </>
@@ -80,11 +80,11 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
           <MiniFlow
             title="5-Step Custody Flow"
             steps={[
-              { label: 'Client deposits EUR', detail: 'Segregated escrow, HK law', color: 'rgb(96,165,250)' },
-              { label: 'NIHA acquires Chinese credits', detail: 'Via NRA-RMB on pilot market', color: 'rgb(251,191,36)' },
-              { label: 'Credits held in custody', detail: 'NIHA registry account (principal)', color: 'rgb(251,191,36)' },
+              { label: 'Client deposits EUR', detail: 'Segregated client account, HK law', color: 'rgb(96,165,250)' },
+              { label: 'NIHA acquires Chinese credits', detail: 'Via pilot market through GBA access', color: 'rgb(251,191,36)' },
+              { label: 'Credits registered through NIHA', detail: 'Institutional access (principal)', color: 'rgb(251,191,36)' },
               { label: 'Swap execution', detail: 'Chinese credits → EUA conversion', color: 'rgb(52,211,153)' },
-              { label: 'EUA delivered to client', detail: 'Union Registry transfer, T+0', color: 'rgb(52,211,153)' },
+              { label: 'EUA delivered to client', detail: 'EU registry, T+3–T+5', color: 'rgb(52,211,153)' },
             ]}
           />
         </>
@@ -143,11 +143,11 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
           <MiniFlow
             title="Legal Basis per Step"
             steps={[
-              { label: 'EUR Deposit → Escrow', detail: 'HK common law escrow + bank segregation' },
-              { label: 'Carbon Acquisition → Principal', detail: 'SAFE 2014 + SZMO [2014] No. 3 Art. 29' },
+              { label: 'EUR Deposit → Segregated Account', detail: 'HK law client fund protection + bank segregation' },
+              { label: 'Carbon Acquisition → Principal', detail: 'Government-facilitated GBA access framework' },
               { label: 'Custody → Registry', detail: 'Prime brokerage model — legal title with NIHA' },
               { label: 'Swap → Physical delivery', detail: 'Not derivative under MiFID II; not SFO Schedule 5' },
-              { label: 'EUA Delivery → Union Registry', detail: 'Directive 2003/87/EC Art. 19' },
+              { label: 'EUA Delivery → EU Registry', detail: 'European carbon market framework' },
             ]}
           />
         </>
@@ -159,20 +159,34 @@ function LegalAccordionContent({ id, content }: { id: string; content: string })
           <MiniFlow
             title="Five Jurisdictions"
             steps={[
-              { label: 'China — SAFE', detail: 'FX clearance for carbon trading', color: 'rgb(248,113,113)' },
-              { label: 'China — Exchange Authority', detail: 'Qualified institutional investor membership', color: 'rgb(248,113,113)' },
-              { label: 'China — PBOC', detail: 'NRA-RMB account authorization', color: 'rgb(251,191,36)' },
-              { label: 'China — CAC/PIPL', detail: 'GBA Standard Contract', color: 'rgb(251,191,36)' },
-              { label: 'EU — Union Registry', detail: 'EUA trading account', color: 'rgb(96,165,250)' },
-              { label: 'Hong Kong — SFO', detail: 'Carbon not classified as security/future', color: 'rgb(52,211,153)' },
+              { label: 'China — Trading Authorization', detail: 'Government-facilitated carbon access', color: 'rgb(248,113,113)' },
+              { label: 'China — Institutional Access', detail: 'Authorized participant on pilot exchanges', color: 'rgb(248,113,113)' },
+              { label: 'China — Settlement', detail: 'Cross-border clearing channels', color: 'rgb(251,191,36)' },
+              { label: 'China — Data Governance', detail: 'GBA compliance framework', color: 'rgb(251,191,36)' },
+              { label: 'EU — Carbon Market Access', detail: 'European allowance participation', color: 'rgb(96,165,250)' },
+              { label: 'Hong Kong — Regulatory Position', detail: 'Carbon not classified as financial instrument', color: 'rgb(52,211,153)' },
             ]}
           />
         </>
       );
     case 'citations':
-      return <>{content}</>;
+      return (
+        <>
+          <RichText text={content} />
+          <MiniBarChart
+            title="Regulatory Citations by Jurisdiction"
+            bars={[
+              { label: 'China (National ETS)', value: 3, displayValue: '3 refs', color: 'rgb(248,113,113)' },
+              { label: 'China (Pilot Markets)', value: 4, displayValue: '4 refs', color: 'rgb(251,191,36)' },
+              { label: 'China (Banking/Data)', value: 3, displayValue: '3 refs', color: 'rgb(251,191,36)' },
+              { label: 'EU ETS / CBAM', value: 4, displayValue: '4 refs', color: 'rgb(96,165,250)' },
+              { label: 'GBA / HK', value: 3, displayValue: '3 refs', color: 'rgb(52,211,153)' },
+            ]}
+          />
+        </>
+      );
     default:
-      return <>{content}</>;
+      return <RichText text={content} />;
   }
 }
 

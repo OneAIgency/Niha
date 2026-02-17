@@ -41,6 +41,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
+    PREINTRODUCER = "PREINTRODUCER"  # Pre-introducer; registered via referral code, limited access
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -283,6 +284,10 @@ class User(Base):
     invitation_expires_at = Column(DateTime, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     creation_method = Column(String(20), nullable=True)  # 'manual' or 'invitation'
+    referral_code = Column(String(16), unique=True, nullable=True, index=True)
+    nda_signed = Column(Boolean, default=True, server_default="true")
+    nda_file_data = Column(LargeBinary, nullable=True)
+    nda_file_name = Column(String(255), nullable=True)
     last_login = Column(DateTime)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -398,6 +403,8 @@ class ContactRequest(Base):
     request_flow = Column(String(32), default="buyer", nullable=False)  # 'buyer' | 'introducer'
     notes = Column(Text)
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    referred_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    referral_code_used = Column(String(16), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

@@ -74,6 +74,10 @@ export function Header() {
       links.push({ href: '/cash-market', label: 'CEA Cash', icon: null });
       links.push({ href: '/swap', label: 'Swap', icon: null });
       links.push({ href: '/onboarding', label: 'Onboarding', icon: null });
+      links.push({ href: '/introducer/dashboard', label: 'Introducer', icon: null });
+      links.push({ href: '/preintroducer', label: 'Pre-Intro', icon: null });
+    } else if (role === 'PREINTRODUCER') {
+      links.push({ href: '/preintroducer', label: 'Referral Code', icon: null });
     } else if (role === 'INTRODUCER') {
       links.push({ href: '/introducer/dashboard', label: 'Introducer Portal', icon: null });
     } else {

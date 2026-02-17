@@ -5,7 +5,7 @@ import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSection } from './SectionRegistry';
 import { AccordionItem } from './AccordionItem';
 import { SECTION_IDS, FAQ_CATEGORIES, FAQ_ITEMS, depthAtLeast } from './constants';
-import { MiniFlow, MiniCheckGrid, MiniBarChart, MiniScale } from './charts';
+import { MiniFlow, MiniCheckGrid, MiniBarChart, MiniScale, MiniTimeline } from './charts';
 import { RichText } from './RichText';
 
 function FAQAccordionContent({ id, answer }: { id: string; answer: string }) {
@@ -17,11 +17,11 @@ function FAQAccordionContent({ id, answer }: { id: string; answer: string }) {
           <MiniFlow
             title="The 5-Step Swap Process"
             steps={[
-              { label: 'EU client deposits EUR', detail: 'Segregated escrow in HK' },
-              { label: 'NIHA acquires Chinese credits', detail: 'Via NRA-RMB on pilot market' },
-              { label: 'Credits held in custody', detail: 'NIHA registry account' },
+              { label: 'EU client deposits EUR', detail: 'Segregated client account in HK' },
+              { label: 'NIHA acquires Chinese credits', detail: 'Via pilot market through GBA access' },
+              { label: 'Credits registered through NIHA', detail: 'Institutional market access' },
               { label: 'Swap execution', detail: 'Chinese credits → EUA' },
-              { label: 'EUA delivered to client', detail: 'Union Registry, T+0' },
+              { label: 'EUA delivered to client', detail: 'EU registry, T+3–T+5' },
             ]}
           />
         </>
@@ -113,8 +113,153 @@ function FAQAccordionContent({ id, answer }: { id: string; answer: string }) {
           />
         </>
       );
+    case 'target-clients':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniBarChart
+            title="Client Segments by Priority"
+            bars={[
+              { label: 'EU Compliance (EUA buyers)', value: 70, displayValue: 'Primary', color: 'rgb(52,211,153)' },
+              { label: 'CN Surplus (CEA sellers)', value: 50, displayValue: 'Secondary', color: 'rgb(251,191,36)' },
+              { label: 'Non-EU Swaps (portfolio)', value: 30, displayValue: 'Tertiary', color: 'rgb(96,165,250)' },
+            ]}
+            maxValue={100}
+          />
+        </>
+      );
+    case 'custody-requirement':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniFlow
+            title="Why Custody is Required"
+            steps={[
+              { label: 'Credits exist in CN registries', detail: 'Institutional access required' },
+              { label: 'EU entity cannot open account', detail: 'No government-facilitated pathway available' },
+              { label: 'NIHA registers as principal', detail: 'Exclusive GBA access arrangements' },
+              { label: 'Beneficial ownership documented', detail: 'HK law bilateral contract' },
+            ]}
+          />
+        </>
+      );
+    case 'legal-sound':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniCheckGrid
+            title="Regulatory Status by Jurisdiction"
+            headers={['Status', 'Basis']}
+            rows={[
+              { label: 'China (Pilot)', values: [{ text: 'Authorized', status: 'yes' as const }, { text: 'Government-facilitated access', status: 'yes' as const }] },
+              { label: 'Hong Kong', values: [{ text: 'Not regulated', status: 'yes' as const }, { text: 'Carbon ≠ financial instrument', status: 'yes' as const }] },
+              { label: 'EU', values: [{ text: 'Open access', status: 'yes' as const }, { text: 'Established regulatory framework', status: 'yes' as const }] },
+            ]}
+          />
+        </>
+      );
+    case 'cbam-effect':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniTimeline
+            title="CBAM Implementation"
+            events={[
+              { year: '2023', label: 'CBAM regulation adopted', detail: 'Reporting obligations begin' },
+              { year: '2026', label: 'Full CBAM effect', detail: 'Certificates required for imports' },
+              { year: '2034', label: 'Free allocation ends', detail: 'Full EUA cost for all installations' },
+            ]}
+          />
+        </>
+      );
+    case 'why-not-direct':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniScale
+            title="500,000 Tonne Order Comparison"
+            left={{ label: 'Direct exchange', value: '€40.5M', numericValue: 40.5, color: 'rgb(248,113,113)' }}
+            right={{ label: 'Via NIHA', value: '€36-37M', numericValue: 36.5, color: 'rgb(52,211,153)' }}
+            ratio="€4-5M saved"
+          />
+        </>
+      );
+    case 'chinese-sell-own':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniScale
+            title="CEA Sale: Domestic vs NIHA"
+            left={{ label: 'Domestic exchange', value: '¥97-99/t', numericValue: 98, color: 'rgb(248,113,113)' }}
+            right={{ label: 'Via NIHA', value: '¥103-106/t', numericValue: 104, color: 'rgb(52,211,153)' }}
+            ratio="5-8% better + EUR"
+          />
+        </>
+      );
+    case 'settlement-terms':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniFlow
+            title="Settlement Timeline"
+            steps={[
+              { label: 'Counterparties reserve certificates', detail: 'Pre-trade commitment' },
+              { label: 'Trade agreement signed', detail: 'T (trade date)' },
+              { label: 'CEA delivered to NIHA', detail: 'T+2 to T+3' },
+              { label: 'EUA delivered to client', detail: 'T+3 to T+5' },
+            ]}
+          />
+        </>
+      );
+    case 'hk-access-china':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniCheckGrid
+            title="GBA Access Requirements"
+            headers={['Pathway', 'NIHA Status']}
+            rows={[
+              { label: 'GBA-zone incorporation', values: [{ text: 'Required', status: 'partial' as const }, { text: 'Established', status: 'yes' as const }] },
+              { label: 'Cross-border settlement', values: [{ text: 'Required', status: 'partial' as const }, { text: 'Established', status: 'yes' as const }] },
+              { label: 'Institutional market access', values: [{ text: 'Required', status: 'partial' as const }, { text: 'Established', status: 'yes' as const }] },
+              { label: 'Ongoing compliance', values: [{ text: 'Ongoing', status: 'partial' as const }, { text: 'Active', status: 'yes' as const }] },
+            ]}
+          />
+        </>
+      );
+    case 'carbon-connect-threat':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniTimeline
+            title="Carbon Connect Evolution"
+            events={[
+              { year: '2024', label: 'GBA Standard Contract', detail: 'Data compliance framework' },
+              { year: 'Sep 2025', label: 'Quadripartite MoU', detail: 'HKEX + 3 exchanges' },
+              { year: '2026+', label: 'Pilot coordination', detail: 'Cross-boundary settlements' },
+              { year: 'Future', label: 'Potential EU access', detail: 'Years away at minimum' },
+            ]}
+          />
+        </>
+      );
+    case 'eu-hold-cea':
+      return (
+        <>
+          <RichText text={answer} />
+          <MiniBarChart
+            title="Barriers to EU Entity Holding CEA"
+            bars={[
+              { label: 'No registry access', value: 95, color: 'rgb(248,113,113)' },
+              { label: 'Settlement requirement', value: 90, color: 'rgb(248,113,113)' },
+              { label: 'MRV compliance burden', value: 70, color: 'rgb(251,191,36)' },
+              { label: 'No precedent exists', value: 95, color: 'rgb(248,113,113)' },
+            ]}
+            maxValue={100}
+          />
+        </>
+      );
     default:
-      return <>{answer}</>;
+      return <RichText text={answer} />;
   }
 }
 
@@ -146,7 +291,7 @@ export function FAQSection() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-500" />
         <input
           type="text"
-          placeholder="Search questions..."
+          placeholder="Search confidential briefing..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full bg-navy-900/50 border border-navy-700 rounded-lg pl-10 pr-3 py-2 text-sm text-white placeholder:text-navy-600 focus:border-emerald-500/50 focus:outline-none"

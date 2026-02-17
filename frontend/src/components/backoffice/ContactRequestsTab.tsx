@@ -27,7 +27,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Eye, Trash2 } from 'lucide-react';
+import { Users, Eye, Trash2, Send } from 'lucide-react';
 import { Button, Badge } from '../common';
 import { Typography } from '../common/Typography';
 import { clientStatusVariant } from '../../utils/roleBadge';
@@ -47,6 +47,7 @@ interface ContactRequestsTabProps {
   onDelete: (requestId: string) => void;
   onOpenNDA: (requestId: string) => Promise<void>;
   onIpLookup: (ip: string) => void;
+  onSendNDA?: (requestId: string) => void;
   actionLoading: string | null;
 }
 
@@ -60,6 +61,7 @@ export function ContactRequestsTab({
   onDelete,
   onOpenNDA,
   onIpLookup,
+  onSendNDA,
   actionLoading,
 }: ContactRequestsTabProps) {
   // Suppress unused variable warnings for reserved parameters
@@ -143,6 +145,11 @@ export function ContactRequestsTab({
                     >
                       {request.userRole ?? '—'}
                     </Badge>
+                    {request.referralCodeUsed ? (
+                      <Badge variant="info" className="shrink-0 text-xs">Referred</Badge>
+                    ) : request.requestFlow === 'introducer' ? (
+                      <Badge variant="default" className="shrink-0 text-xs">Direct</Badge>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     <button
@@ -164,6 +171,18 @@ export function ContactRequestsTab({
                         >
                           Approve & Create User
                         </Button>
+                        {onSendNDA && !request.ndaFileName && request.requestFlow === 'introducer' && (request.userRole === 'NDA' || request.userRole === 'new') && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onSendNDA(request.id)}
+                            loading={actionLoading === `send-nda-${request.id}`}
+                            aria-label={`Send NDA to ${request.entityName ?? request.contactEmail ?? request.id ?? 'contact request'}`}
+                          >
+                            <Send className="w-3.5 h-3.5 mr-1" />
+                            Send NDA
+                          </Button>
+                        )}
                         <Button
                           variant="secondary"
                           size="sm"

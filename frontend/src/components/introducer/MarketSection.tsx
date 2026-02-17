@@ -204,7 +204,7 @@ function ChinaETSAccordionContent({ id, content }: { id: string; content: string
             headers={['National ETS', 'Pilot Markets']}
             rows={[
               { label: 'EU Entities', values: [{ text: 'Blocked', status: 'no' }, { text: 'Practically impossible', status: 'no' }] },
-              { label: 'HK Entities', values: [{ text: 'Blocked', status: 'no' }, { text: 'SAFE authorization', status: 'partial' }] },
+              { label: 'HK Entities', values: [{ text: 'Blocked', status: 'no' }, { text: 'Government-facilitated', status: 'partial' }] },
               { label: 'NIHA (GBA)', values: [{ text: 'Blocked', status: 'no' }, { text: 'Authorized', status: 'yes' }] },
             ]}
           />

@@ -83,9 +83,9 @@ function RiskAccordionContent({ id, mitigation }: { id: string; mitigation: stri
             title="Pathway Legitimacy"
             headers={['Status']}
             rows={[
-              { label: 'SAFE Approval', values: [{ text: 'Established since 2014', status: 'yes' as const }] },
-              { label: 'Exchange Membership', values: [{ text: 'Qualified investor', status: 'yes' as const }] },
-              { label: 'NRA-RMB Account', values: [{ text: 'PBOC authorized', status: 'yes' as const }] },
+              { label: 'Cross-border Authorization', values: [{ text: 'Government-facilitated', status: 'yes' as const }] },
+              { label: 'Institutional Market Access', values: [{ text: 'Established via GBA', status: 'yes' as const }] },
+              { label: 'Settlement Capability', values: [{ text: 'Bilateral clearing active', status: 'yes' as const }] },
               { label: 'Grey-area exploitation', values: [{ text: 'None — legal pathways only', status: 'yes' as const }] },
             ]}
           />
@@ -98,9 +98,9 @@ function RiskAccordionContent({ id, mitigation }: { id: string; mitigation: stri
           <MiniFlow
             title="Risk Mitigation Chain"
             steps={[
-              { label: 'EUR Escrow', detail: 'Ring-fenced from operations' },
+              { label: 'Client Fund Protection', detail: 'Segregated from operations' },
               { label: 'Staged Settlement', detail: 'Partial deliveries reduce exposure' },
-              { label: 'Institutional Custody', detail: 'Exchange registry accounts' },
+              { label: 'Institutional Custody', detail: 'Government-facilitated registry access' },
             ]}
           />
         </>
@@ -112,7 +112,7 @@ function RiskAccordionContent({ id, mitigation }: { id: string; mitigation: stri
           <MiniScale
             title="FX Exposure Window"
             left={{ label: 'Exchange T+2', value: '48h exposed', numericValue: 48, color: 'rgb(248,113,113)' }}
-            right={{ label: 'NIHA T+0', value: 'Same-day', numericValue: 1, color: 'rgb(52,211,153)' }}
+            right={{ label: 'NIHA bilateral', value: 'Price locked T+0', numericValue: 1, color: 'rgb(52,211,153)' }}
           />
         </>
       );

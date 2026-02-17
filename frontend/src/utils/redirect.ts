@@ -30,8 +30,16 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/login';
   }
 
-  // INTRODUCER: introducer dashboard
+  // PREINTRODUCER: referral code page
+  if (role === 'PREINTRODUCER') {
+    return '/preintroducer';
+  }
+
+  // INTRODUCER: check nda_signed → sign-nda or dashboard
   if (role === 'INTRODUCER') {
+    if ('ndaSigned' in userOrRole && (userOrRole as User).ndaSigned === false) {
+      return '/introducer/sign-nda';
+    }
     return '/introducer/dashboard';
   }
 

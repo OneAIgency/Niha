@@ -84,10 +84,20 @@ export function CreateUserModal({
             </label>
             <select
               value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+              onChange={(e) => {
+                const role = e.target.value as UserRole;
+                const updates: Partial<typeof newUser> = { role };
+                if (role === 'PREINTRODUCER') {
+                  updates.position = 'Pre-Introducer';
+                  setUseInvitation(false);
+                }
+                setNewUser({ ...newUser, ...updates });
+              }}
               className="w-full form-select"
             >
               <option value="MM">MM (Market Maker)</option>
+              <option value="PREINTRODUCER">Pre-Introducer</option>
+              <option value="INTRODUCER">Introducer</option>
               <option value="NDA">NDA</option>
               <option value="REJECTED">Rejected</option>
               <option value="KYC">KYC</option>
@@ -105,20 +115,22 @@ export function CreateUserModal({
 
           {/* Password or Invitation Toggle */}
           <div className="p-4 bg-navy-700/50 rounded-lg space-y-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="useInvitation"
-                checked={useInvitation}
-                onChange={(e) => setUseInvitation(e.target.checked)}
-                className="w-4 h-4 text-emerald-500 rounded"
-              />
-              <label htmlFor="useInvitation" className="text-sm text-navy-200">
-                Send invitation email instead of setting password
-              </label>
-            </div>
+            {newUser.role !== 'PREINTRODUCER' && (
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="useInvitation"
+                  checked={useInvitation}
+                  onChange={(e) => setUseInvitation(e.target.checked)}
+                  className="w-4 h-4 text-emerald-500 rounded"
+                />
+                <label htmlFor="useInvitation" className="text-sm text-navy-200">
+                  Send invitation email instead of setting password
+                </label>
+              </div>
+            )}
 
-            {!useInvitation && (
+            {(!useInvitation || newUser.role === 'PREINTRODUCER') && (
               <Input
                 label="Password"
                 type="password"
@@ -129,9 +141,11 @@ export function CreateUserModal({
             )}
 
             <p className="text-xs text-navy-400">
-              {useInvitation
-                ? 'An invitation email will be sent to the user to set up their password.'
-                : 'The user will be able to login immediately with this password.'}
+              {newUser.role === 'PREINTRODUCER'
+                ? 'Admin sets the password. No invitation email will be sent.'
+                : useInvitation
+                  ? 'An invitation email will be sent to the user to set up their password.'
+                  : 'The user will be able to login immediately with this password.'}
             </p>
           </div>
         </div>
@@ -143,7 +157,7 @@ export function CreateUserModal({
             variant="primary"
             onClick={onSubmit}
             loading={saving}
-            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || (!useInvitation && newUser.password.length < 8)}
+            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || ((!useInvitation || newUser.role === 'PREINTRODUCER') && newUser.password.length < 8)}
           >
             {useInvitation ? (
               <>

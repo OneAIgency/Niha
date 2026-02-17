@@ -185,6 +185,8 @@ class UserResponse(BaseModel):
     entity_id: Optional[UUID]
     is_active: bool = True
     must_change_password: bool = False
+    nda_signed: bool = True
+    referral_code: Optional[str] = None
     last_login: Optional[datetime]
     created_at: Optional[datetime]
 
