@@ -401,6 +401,37 @@ export const contactApi = {
   },
 };
 
+// ─── Introducer Portal API ────────────────────────────────
+export const introducerApi = {
+  /** Send a referral invitation to a potential client */
+  sendInvitation: async (data: {
+    email: string;
+    first_name?: string;
+    personal_note?: string;
+  }) => {
+    const { data: result } = await api.post('/introducer/invitations', data);
+    return result;
+  },
+
+  /** List all invitations sent by the current introducer */
+  getInvitations: async () => {
+    const { data } = await api.get('/introducer/invitations');
+    return data;
+  },
+
+  /** Get commission earnings summary */
+  getCommissionSummary: async () => {
+    const { data } = await api.get('/introducer/commissions/summary');
+    return data;
+  },
+
+  /** List individual commission entries */
+  getCommissions: async (params?: { limit?: number; offset?: number }) => {
+    const { data } = await api.get('/introducer/commissions', { params });
+    return data;
+  },
+};
+
 // Prices API
 export const pricesApi = {
   getCurrent: async (): Promise<Prices> => {
