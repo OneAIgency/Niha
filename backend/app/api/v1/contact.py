@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
@@ -154,12 +155,14 @@ async def create_nda_request(
     position: str = Form(...),  # noqa: B008
     file: UploadFile = File(...),  # noqa: B008
     referral_code: Optional[str] = Form(None),  # noqa: B008
+    invite_token: Optional[str] = Form(None),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Submit an NDA request with signed NDA document.
     Only PDF files allowed. Stores PDF binary in database.
     Optional referral_code for buyer path from introducer code.
+    Optional invite_token from referral invitation link.
     """
     # Capture submitter IP address
     submitter_ip = get_client_ip(request)
@@ -212,6 +215,24 @@ async def create_nda_request(
         await db.rollback()
         raise handle_database_error(e, "creating NDA contact request", logger) from e
 
+    # If this request came from a referral invitation, validate the token
+    if invite_token:
+        try:
+            from ...services.invitation_service import validate_invitation_token
+
+            invitation = await validate_invitation_token(db, invite_token)
+            if invitation:
+                await db.commit()
+                logger.info(
+                    "Invitation token validated for NDA request: email=%s",
+                    contact_email,
+                )
+        except Exception:
+            logger.warning(
+                "Failed to validate invitation token for %s (non-blocking)",
+                contact_email,
+            )
+
     # Broadcast new NDA request to backoffice
     # (same shape as get_contact_requests / request_updated)
     asyncio.create_task(
@@ -254,25 +275,33 @@ async def create_introducer_nda_request(
     contact_first_name: str = Form(...),  # noqa: B008
     contact_last_name: str = Form(...),  # noqa: B008
     position: str = Form(...),  # noqa: B008
-    file: UploadFile = File(...),  # noqa: B008
+    file: Optional[UploadFile] = File(None),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Submit an NDA request for the Introducer flow.
     Same payload as nda-request; creates ContactRequest with request_flow='introducer'.
+    PDF attachment is optional.
     """
     submitter_ip = get_client_ip(request)
 
     if "@" not in contact_email or "." not in contact_email:
         raise HTTPException(status_code=400, detail="Invalid email format")
 
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in ALLOWED_NDA_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    nda_file_name = None
+    nda_file_data = None
+    nda_file_mime_type = None
 
-    content = await file.read()
-    if len(content) > MAX_NDA_SIZE:
-        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    if file and file.filename:
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in ALLOWED_NDA_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+        content = await file.read()
+        if len(content) > MAX_NDA_SIZE:
+            raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+        nda_file_name = file.filename
+        nda_file_data = content
+        nda_file_mime_type = "application/pdf"
 
     contact = ContactRequest(
         entity_name=entity_name,
@@ -280,9 +309,9 @@ async def create_introducer_nda_request(
         contact_first_name=contact_first_name,
         contact_last_name=contact_last_name,
         position=position,
-        nda_file_name=file.filename,
-        nda_file_data=content,
-        nda_file_mime_type="application/pdf",
+        nda_file_name=nda_file_name,
+        nda_file_data=nda_file_data,
+        nda_file_mime_type=nda_file_mime_type,
         submitter_ip=submitter_ip,
         user_role=ContactStatus.NDA,
         request_flow="introducer",
@@ -424,9 +453,9 @@ async def upload_introducer_nda(
     current_user: User = Depends(get_current_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """Authenticated: INTRODUCER with nda_signed=false uploads their signed NDA."""
-    if current_user.role != UserRole.INTRODUCER:
-        raise HTTPException(status_code=403, detail="Only INTRODUCER users can upload NDA")
+    """Authenticated: TRODUCER (or INTRODUCER) with nda_signed=false uploads their signed NDA."""
+    if current_user.role not in (UserRole.TRODUCER, UserRole.INTRODUCER):
+        raise HTTPException(status_code=403, detail="Only TRODUCER/INTRODUCER users can upload NDA")
     if current_user.nda_signed:
         raise HTTPException(status_code=400, detail="NDA already signed")
 
@@ -438,21 +467,40 @@ async def upload_introducer_nda(
     if len(content) > MAX_NDA_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-    # Store NDA file on user record
-    current_user.nda_file_data = content
-    current_user.nda_file_name = file.filename
+    # Re-fetch user in the active db session (current_user is detached from
+    # get_current_user's own AsyncSessionLocal — modifying it won't persist).
+    user = await db.get(User, current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.nda_file_data = content
+    user.nda_file_name = file.filename
     await db.commit()
 
-    # Notify backoffice
-    asyncio.create_task(
-        backoffice_ws_manager.broadcast("introducer_nda_uploaded", {
-            "user_id": str(current_user.id),
-            "email": current_user.email,
-            "first_name": current_user.first_name,
-            "last_name": current_user.last_name,
-            "file_name": file.filename,
-        })
-    )
+    # Notify backoffice — send request_updated so the existing WS handler picks it up
+    contact_req = (
+        await db.execute(
+            select(ContactRequest).where(
+                ContactRequest.contact_email == current_user.email,
+                ContactRequest.request_flow == "introducer",
+            )
+        )
+    ).scalar_one_or_none()
+
+    if contact_req:
+        asyncio.create_task(
+            backoffice_ws_manager.broadcast("request_updated", {
+                "id": str(contact_req.id),
+                "entity_name": contact_req.entity_name,
+                "contact_email": contact_req.contact_email,
+                "contact_name": contact_req.contact_name,
+                "contact_first_name": contact_req.contact_first_name,
+                "contact_last_name": contact_req.contact_last_name,
+                "user_role": contact_req.user_role.value if contact_req.user_role else "NDA",
+                "request_flow": contact_req.request_flow,
+                "introducer_nda_status": "uploaded",
+                "introducer_user_id": str(current_user.id),
+            })
+        )
 
     return {"message": "NDA uploaded successfully. Awaiting admin review.", "success": True}
 

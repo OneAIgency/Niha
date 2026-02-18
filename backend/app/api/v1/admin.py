@@ -421,6 +421,19 @@ async def create_user_from_contact_request(
         await db.rollback()
         raise handle_database_error(e, "create user from contact request", logger) from e
 
+    # Update referral invitation status if this user was referred
+    if contact_request.referred_by_user_id:
+        try:
+            from ...services.invitation_service import mark_invitation_registered
+
+            await mark_invitation_registered(db, contact_request.contact_email, user.id)
+            await db.commit()
+        except Exception:
+            logger.warning(
+                "Failed to mark invitation registered for %s (non-blocking)",
+                contact_request.contact_email,
+            )
+
     # Send invitation email if applicable
     if mode == "invitation":
         try:
