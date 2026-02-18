@@ -12,6 +12,7 @@ export { LegalSection } from './LegalSection';
 export { TimingSection } from './TimingSection';
 export { ROICalculator } from './ROICalculator';
 export { FAQSection } from './FAQSection';
+export { ReferralsSection } from './ReferralsSection';
 export { ChatPanel } from './ChatPanel';
 export { ChatFAB } from './ChatFAB';
 export { ContentDepthSelector } from './ContentDepthSelector';

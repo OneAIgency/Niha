@@ -9,6 +9,7 @@ import {
   LegalSection,
   ROICalculator,
   FAQSection,
+  ReferralsSection,
 } from '../components/introducer';
 import { SECTION_IDS } from '../components/introducer/constants';
 import { ComparisonTable } from '../components/introducer/ComparisonTable';
@@ -50,6 +51,7 @@ const TAB_COMPONENTS: Record<string, () => JSX.Element> = {
   advantages: () => <AdvantagesSection />,
   legal: () => <LegalSection />,
   calculator: () => <ROICalculator />,
+  referrals: () => <ReferralsSection />,
   faq: () => <FAQSection />,
 };
 

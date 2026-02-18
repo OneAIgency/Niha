@@ -1,6 +1,6 @@
 import {
   Home, ArrowRightLeft, TrendingUp, Shield, Scale,
-  Calculator, HelpCircle,
+  Calculator, HelpCircle, UserPlus,
   Target, Globe, CheckCircle,
 } from 'lucide-react';
 import type { ContentDepth } from '../../stores/useIntroducerStore';
@@ -28,6 +28,7 @@ export const SECTION_IDS = {
   ADVANTAGES: 'advantages',
   LEGAL: 'legal',
   CALCULATOR: 'calculator',
+  REFERRALS: 'referrals',
   FAQ: 'faq',
 } as const;
 
@@ -41,6 +42,7 @@ export const SECTION_DEPTH_MAP: Record<string, ContentDepth[]> = {
   [SECTION_IDS.ADVANTAGES]: ['essential', 'advanced', 'expert'],
   [SECTION_IDS.LEGAL]: ['essential', 'advanced', 'expert'],
   [SECTION_IDS.CALCULATOR]: ['essential'],
+  [SECTION_IDS.REFERRALS]: ['essential'],
   [SECTION_IDS.FAQ]: ['essential', 'advanced', 'expert'],
 };
 
@@ -52,6 +54,7 @@ export const NAV_ITEMS = [
   { id: SECTION_IDS.ADVANTAGES, label: 'Why NIHA', icon: Shield },
   { id: SECTION_IDS.LEGAL, label: 'Legal Basis', icon: Scale },
   { id: SECTION_IDS.CALCULATOR, label: 'Calculator', icon: Calculator },
+  { id: SECTION_IDS.REFERRALS, label: 'Referrals', icon: UserPlus },
   { id: SECTION_IDS.FAQ, label: 'FAQ', icon: HelpCircle },
 ] as const;
 
