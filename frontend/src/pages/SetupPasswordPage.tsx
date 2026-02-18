@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Check, X, Loader2, XCircle, Eye, EyeOff, Lock } from 'lucide-react';
-import { authApi } from '../services/api';
+import { Check, X, Loader2, XCircle, Eye, EyeOff, Lock, Upload, FileText, CheckCircle2 } from 'lucide-react';
+import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { getPostLoginRedirect } from '../utils/redirect';
 import { logger } from '../utils/logger';
@@ -25,6 +25,12 @@ export function SetupPasswordPage() {
     lastName: string;
   } | null>(null);
   const [error, setError] = useState('');
+
+  // NDA upload step state
+  const [step, setStep] = useState<'password' | 'nda' | 'done'>('password');
+  const [ndaFile, setNdaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const ndaRef = useRef<HTMLInputElement>(null);
 
   // Password validation
   const hasMinLength = password.length >= 8;
@@ -83,8 +89,16 @@ export function SetupPasswordPage() {
         timestamp: new Date().toISOString()
       });
 
-      // Store auth and redirect to the appropriate page based on user role
+      // Store auth (user is now logged in)
       setAuth(user, access_token);
+
+      // If TRODUCER (intermediate introducer), show NDA upload step
+      if (user.role === 'TRODUCER') {
+        setStep('nda');
+        return;
+      }
+
+      // All other roles: navigate normally
       const target = getPostLoginRedirect(user);
       logger.debug('[SetupPasswordPage] Auth set, redirecting to', target);
       navigate(target, { replace: true });
@@ -94,6 +108,32 @@ export function SetupPasswordPage() {
       setError(error.response?.data?.detail || 'Failed to set password. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNdaUpload = async () => {
+    if (!ndaFile) return;
+    setUploading(true);
+    setError('');
+    try {
+      await contactApi.uploadIntroducerNDA(ndaFile);
+      // Clear auth state — TRODUCER cannot login until admin approves
+      useAuthStore.getState().logout();
+      setStep('done');
+    } catch {
+      setError('Failed to upload NDA. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setNdaFile(file);
+      setError('');
+    } else if (file) {
+      setError('Please upload a PDF file.');
     }
   };
 
@@ -133,6 +173,129 @@ export function SetupPasswordPage() {
           >
             Go to Login
           </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Step: NDA Upload
+  if (step === 'nda') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Upload className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">
+              Upload Signed NDA
+            </h1>
+            <p className="text-navy-400 mt-2">
+              Upload the NDA document signed by you to complete your account setup
+            </p>
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center">
+                <Check className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sm text-emerald-400">Password</span>
+            </div>
+            <div className="flex-1 h-px bg-emerald-600" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center">
+                <span className="text-xs font-bold text-white">2</span>
+              </div>
+              <span className="text-sm text-emerald-400 font-medium">Upload NDA</span>
+            </div>
+          </div>
+
+          {/* File upload area */}
+          <div
+            onClick={() => ndaRef.current?.click()}
+            className="border-2 border-dashed border-navy-600 hover:border-emerald-500/50 rounded-xl p-8 text-center cursor-pointer transition-colors"
+          >
+            <input
+              ref={ndaRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {ndaFile ? (
+              <div className="flex items-center justify-center gap-3">
+                <FileText className="w-8 h-8 text-emerald-400" />
+                <div className="text-left">
+                  <p className="text-white font-medium">{ndaFile.name}</p>
+                  <p className="text-navy-400 text-sm">{(ndaFile.size / 1024).toFixed(0)} KB</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-10 h-10 text-navy-500 mx-auto mb-3" />
+                <p className="text-navy-300 font-medium">Click to upload signed NDA</p>
+                <p className="text-navy-500 text-sm mt-1">PDF files only</p>
+              </>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded-lg">
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="button"
+            onClick={handleNdaUpload}
+            disabled={!ndaFile || uploading}
+            className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              'Upload NDA & Complete Setup'
+            )}
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Step: Done (NDA uploaded, awaiting approval — no login until admin approves)
+  if (step === 'done') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-navy-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+        >
+          <div className="w-16 h-16 bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            NDA Uploaded Successfully
+          </h1>
+          <p className="text-navy-400">
+            Your signed NDA has been submitted for review. You will receive
+            a confirmation email once it's approved and your Introducer
+            Dashboard will be activated.
+          </p>
+          <p className="text-navy-500 text-sm mt-4">
+            You may close this page. No further action is required.
+          </p>
         </motion.div>
       </div>
     );

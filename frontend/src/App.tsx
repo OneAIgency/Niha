@@ -212,10 +212,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** INTRODUCER dashboard: redirects to /introducer/sign-nda if NDA not yet signed. */
+/** INTRODUCER dashboard: only approved INTRODUCERs and ADMINs. TRODUCERs go to sign-nda. */
 function IntroducerDashboardRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-  if (user?.role === 'INTRODUCER' && user.ndaSigned === false) {
+  if (user?.role === 'TRODUCER') {
     return <Navigate to="/introducer/sign-nda" replace />;
   }
   return (
@@ -429,7 +429,7 @@ function App() {
             <Route
               path="/introducer/sign-nda"
               element={
-                <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
+                <RoleProtectedRoute allowedRoles={['TRODUCER', 'INTRODUCER', 'ADMIN']}>
                   <IntroducerSignNDAPage />
                 </RoleProtectedRoute>
               }

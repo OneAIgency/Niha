@@ -97,6 +97,7 @@ export function CreateUserModal({
             >
               <option value="MM">MM (Market Maker)</option>
               <option value="PREINTRODUCER">Pre-Introducer</option>
+              <option value="TRODUCER">Troducer</option>
               <option value="INTRODUCER">Introducer</option>
               <option value="NDA">NDA</option>
               <option value="REJECTED">Rejected</option>

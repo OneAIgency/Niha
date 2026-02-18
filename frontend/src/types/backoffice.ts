@@ -28,6 +28,10 @@ export interface ContactRequest {
   referredByUserId?: string;
   /** Referral code used when submitting (if any). */
   referralCodeUsed?: string;
+  /** Introducer NDA lifecycle status: not_sent, sent, uploaded. */
+  introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded';
+  /** User ID of the linked INTRODUCER user (if created). */
+  introducerUserId?: string;
   notes?: string;
   createdAt: string;
 }

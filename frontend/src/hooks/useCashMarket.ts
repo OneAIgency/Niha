@@ -57,7 +57,14 @@ export function useCashMarket(
         prevOrderBookRef.current = obJson;
       }
 
-      setRecentTrades(tradesData);
+      // Deduplicate by trade ID (auto-trade can produce rapid duplicates)
+      const seen = new Set<string>();
+      const uniqueTrades = tradesData.filter((t) => {
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      });
+      setRecentTrades(uniqueTrades);
       setMyOrders(ordersData);
       setBalances({
         eur: balancesData.eurBalance,
@@ -110,8 +117,9 @@ export function useCashMarket(
       const detail = (e as CustomEvent<{ trade: import('../types').CashMarketTrade }>).detail;
       if (!detail?.trade) return;
       setRecentTrades((prev) => {
-        const next = [detail.trade, ...prev];
-        return next.slice(0, 20);
+        // Skip if already present (WS + poll race)
+        if (prev.some((t) => t.id === detail.trade.id)) return prev;
+        return [detail.trade, ...prev].slice(0, 20);
       });
     };
     window.addEventListener('nihao:tradeExecuted', handler);

@@ -35,11 +35,13 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/preintroducer';
   }
 
-  // INTRODUCER: check nda_signed → sign-nda or dashboard
+  // TRODUCER: intermediate introducer, always go to sign-nda page
+  if (role === 'TRODUCER') {
+    return '/introducer/sign-nda';
+  }
+
+  // INTRODUCER: full access to dashboard
   if (role === 'INTRODUCER') {
-    if ('ndaSigned' in userOrRole && (userOrRole as User).ndaSigned === false) {
-      return '/introducer/sign-nda';
-    }
     return '/introducer/dashboard';
   }
 

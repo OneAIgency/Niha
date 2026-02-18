@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -205,14 +205,15 @@ interface RecentTradesTickerProps {
 
 function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProps) {
   /** Use backend side when available; otherwise infer from price vs mid (trade at ask = BUY, at bid = SELL). */
-  const isBuy = (trade: CashMarketTrade) => {
+  const isBuy = useCallback((trade: CashMarketTrade) => {
     if (trade.side === 'BUY' || trade.side === 'SELL') return trade.side === 'BUY';
     if (bestBid != null && bestAsk != null) {
       const mid = (bestBid + bestAsk) / 2;
       return trade.price >= mid;
     }
     return true;
-  };
+  }, [bestBid, bestAsk]);
+
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
@@ -230,42 +231,55 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
     }
   };
 
+  // Build HTML once per trade-set and inject via ref to avoid React re-renders
+  // that reset the CSS animation. We update content only when trade IDs change.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const prevTradeIdsRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!scrollRef.current || trades.length === 0) return;
+
+    const tradeIds = trades.map((t) => t.id).join(',');
+    if (tradeIds === prevTradeIdsRef.current) return;
+    prevTradeIdsRef.current = tradeIds;
+
+    // Build the inner HTML for one copy of the trades
+    const buildCopy = () =>
+      trades
+        .map((trade) => {
+          const buy = isBuy(trade);
+          const bgClass = buy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]';
+          const priceColor = buy ? 'text-emerald-400' : 'text-red-400';
+          const time = trade.executedAt ? formatTime(trade.executedAt) : '-';
+          return `<div class="flex items-center gap-3 px-3 py-1 rounded shrink-0 ${bgClass}">
+            <span class="font-mono font-medium text-xs tabular-nums ${priceColor}">€${trade.price.toFixed(1)}</span>
+            <span class="text-xs font-mono text-white tabular-nums">${Math.round(trade.quantity).toLocaleString()}</span>
+            <span class="text-xs text-navy-500 tabular-nums">${time}</span>
+          </div>`;
+        })
+        .join('');
+
+    const copy = buildCopy();
+    // Two copies for seamless loop
+    scrollRef.current.innerHTML =
+      `<div class="flex items-center gap-x-2 shrink-0 px-2">${copy}</div>` +
+      `<div class="flex items-center gap-x-2 shrink-0 px-2">${copy}</div>`;
+  }, [trades, isBuy]);
+
+  if (trades.length === 0) {
+    return (
+      <div className="overflow-hidden">
+        <div className="py-2 px-4 text-xs text-navy-500">No recent trades</div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden">
-      {trades.length === 0 ? (
-        <div className="py-2 px-4 text-xs text-navy-500">No recent trades</div>
-      ) : (
-        <div className="flex items-center min-w-max py-1.5 ticker-scroll">
-            {/* Duplicate content for seamless right-to-left loop */}
-            {[1, 2].map((copy) => (
-              <div key={copy} className="flex items-center gap-x-2 shrink-0 px-2">
-                {trades.map((trade) => {
-                  const buy = isBuy(trade);
-                  return (
-                  <div
-                    key={`${copy}-${trade.id}`}
-                    className={`flex items-center gap-3 px-3 py-1 rounded transition-colors shrink-0 hover:bg-navy-700/50 ${
-                      buy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]'
-                    }`}
-                  >
-                    <span className={`font-mono font-medium text-xs tabular-nums ${
-                      buy ? 'text-emerald-400' : 'text-red-400'
-                    }`}>
-                      €{trade.price.toFixed(1)}
-                    </span>
-                    <span className="text-xs font-mono text-white tabular-nums">
-                      {Math.round(trade.quantity).toLocaleString()}
-                    </span>
-                    <span className="text-xs text-navy-500 tabular-nums">
-                      {trade.executedAt ? formatTime(trade.executedAt) : '-'}
-                    </span>
-                  </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
+      <div
+        ref={scrollRef}
+        className="flex items-center min-w-max py-1.5 ticker-scroll"
+      />
     </div>
   );
 }
@@ -328,12 +342,12 @@ function RecentTradesActivity({ trades, bestBid, bestAsk }: RecentTradesActivity
           <div className="py-3 px-4 text-xs text-navy-500">No recent trades</div>
         ) : (
           <div className="flex flex-col">
-            {trades.map((trade) => {
+            {trades.map((trade, idx) => {
               const buy = isBuy(trade);
               const totalEur = trade.price * trade.quantity;
               return (
                 <div
-                  key={trade.id}
+                  key={`${trade.id}-${idx}`}
                   className={`grid grid-cols-[3rem_1fr_5rem_5.5rem_4rem] gap-x-1 items-center px-3 py-1.5 border-b border-navy-700/30 ${
                     buy ? 'bg-emerald-500/[0.05]' : 'bg-red-500/[0.04]'
                   }`}

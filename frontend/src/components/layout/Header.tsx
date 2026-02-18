@@ -78,6 +78,8 @@ export function Header() {
       links.push({ href: '/preintroducer', label: 'Pre-Intro', icon: null });
     } else if (role === 'PREINTRODUCER') {
       links.push({ href: '/preintroducer', label: 'Referral Code', icon: null });
+    } else if (role === 'TRODUCER') {
+      links.push({ href: '/introducer/sign-nda', label: 'Upload NDA', icon: null });
     } else if (role === 'INTRODUCER') {
       links.push({ href: '/introducer/dashboard', label: 'Introducer Portal', icon: null });
     } else {

@@ -76,11 +76,12 @@ export interface SwapCalculation {
 }
 
 // User Types
-/** Full onboarding flow: NDA → KYC → … → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity). */
+/** Full onboarding flow: NDA → KYC → … → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity). TRODUCER = intermediate introducer (NDA pending). */
 export type UserRole =
   | 'ADMIN'
   | 'MM'
   | 'PREINTRODUCER'
+  | 'TRODUCER'
   | 'INTRODUCER'
   | 'NDA'
   | 'REJECTED'

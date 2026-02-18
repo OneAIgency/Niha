@@ -158,6 +158,8 @@ docker compose logs backend | grep "Settlement processor"
 docker compose exec db psql -U niha_user -d niha_carbon
 ```
 
+**Introducer simulation (dev only)**: On `/introducer`, a "Simulează cerere introducer" button (visible in dev mode) pre-fills the form with sample data for quick testing. Introducer requests do not require a PDF attachment.
+
 ## Known Technical Debt
 
 - [ ] Token storage should migrate to httpOnly cookies (XSS risk) - `frontend/src/services/api.ts:86-94`

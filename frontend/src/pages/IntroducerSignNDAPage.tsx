@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, CheckCircle } from 'lucide-react';
-import { contactApi, usersApi } from '../services/api';
+import { contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 
 export function IntroducerSignNDAPage() {
@@ -10,8 +9,6 @@ export function IntroducerSignNDAPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
-  const { setAuth, token } = useAuthStore();
 
   const handleUpload = async () => {
     if (!file) return;
@@ -19,13 +16,8 @@ export function IntroducerSignNDAPage() {
     setError('');
     try {
       await contactApi.uploadIntroducerNDA(file);
-      // Refetch user to get updated ndaSigned status
-      try {
-        const updatedUser = await usersApi.getProfile();
-        if (token) setAuth(updatedUser, token);
-      } catch {
-        // Non-critical — user state will refresh on next login
-      }
+      // Clear auth — TRODUCER cannot login until admin approves
+      useAuthStore.getState().logout();
       setSuccess(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
@@ -41,15 +33,13 @@ export function IntroducerSignNDAPage() {
           <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto" />
           <h2 className="text-lg font-semibold text-white">NDA Uploaded</h2>
           <p className="text-sm text-navy-400">
-            Your signed NDA has been submitted for review. You'll receive access to the
-            Introducer Dashboard once approved.
+            Your signed NDA has been submitted for review. You will receive
+            a confirmation email once it's approved and your Introducer
+            Dashboard will be activated.
           </p>
-          <button
-            onClick={() => navigate('/login', { replace: true })}
-            className="mt-4 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            Back to Login
-          </button>
+          <p className="text-xs text-navy-500 mt-2">
+            You may close this page. No further action is required.
+          </p>
         </div>
       </div>
     );
