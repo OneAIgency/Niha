@@ -4782,6 +4782,7 @@ async def approve_introducer_nda(
 
     try:
         user.role = UserRole.INTRODUCER
+        user.commission_rate = Decimal("0.010000")  # Default 1%
         user.nda_signed = True
         user.is_active = True
         if contact_request:
@@ -4831,3 +4832,142 @@ async def approve_introducer_nda(
         )
 
     return {"message": "NDA approved", "success": True}
+
+
+# ==================== Commission Management ====================
+
+
+@router.get("/commissions")
+async def list_all_commissions(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    status: str | None = Query(None),
+    limit: int = Query(50, le=200),
+):
+    """List all commissions across all introducers. Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    query = (
+        select(CommissionLedger)
+        .order_by(CommissionLedger.created_at.desc())
+        .limit(limit)
+    )
+    if status:
+        query = query.where(CommissionLedger.status == CommissionStatus(status))
+    result = await db.execute(query)
+    entries = result.scalars().all()
+
+    # Get introducer and referred user info
+    response = []
+    for e in entries:
+        introducer = await db.get(User, e.introducer_user_id)
+        referred = await db.get(User, e.referred_user_id)
+        response.append(
+            {
+                "id": str(e.id),
+                "introducer_user_id": str(e.introducer_user_id),
+                "introducer_name": (
+                    f"{introducer.first_name} {introducer.last_name}".strip()
+                    if introducer
+                    else "Unknown"
+                ),
+                "referred_user_id": str(e.referred_user_id),
+                "referred_name": (
+                    f"{referred.first_name} {referred.last_name}".strip()
+                    if referred
+                    else "Unknown"
+                ),
+                "trade_eur_value": f"{e.trade_eur_value:.2f}",
+                "commission_rate": str(e.commission_rate),
+                "commission_eur": f"{e.commission_eur:.2f}",
+                "status": e.status.value,
+                "trade_executed_at": e.trade_executed_at.isoformat() + "Z",
+                "created_at": e.created_at.isoformat() + "Z",
+                "confirmed_at": (
+                    (e.confirmed_at.isoformat() + "Z") if e.confirmed_at else None
+                ),
+                "paid_at": (e.paid_at.isoformat() + "Z") if e.paid_at else None,
+                "notes": e.notes,
+            }
+        )
+
+    return response
+
+
+@router.put("/commissions/{commission_id}/confirm")
+async def confirm_commission(
+    commission_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Confirm a pending commission (PENDING -> CONFIRMED). Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    entry = await db.get(CommissionLedger, UUID(commission_id))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    if entry.status != CommissionStatus.PENDING:
+        raise HTTPException(
+            status_code=400, detail=f"Commission is {entry.status.value}, not pending"
+        )
+
+    entry.status = CommissionStatus.CONFIRMED
+    entry.confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    entry.confirmed_by = admin_user.id
+    await db.commit()
+
+    return {"message": "Commission confirmed", "success": True}
+
+
+@router.put("/commissions/{commission_id}/mark-paid")
+async def mark_commission_paid(
+    commission_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark a confirmed commission as paid (CONFIRMED -> PAID). Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    entry = await db.get(CommissionLedger, UUID(commission_id))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    if entry.status != CommissionStatus.CONFIRMED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Commission is {entry.status.value}, not confirmed",
+        )
+
+    entry.status = CommissionStatus.PAID
+    entry.paid_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+
+    return {"message": "Commission marked as paid", "success": True}
+
+
+@router.put("/users/{user_id}/commission-rate")
+async def set_commission_rate(
+    user_id: str,
+    body: dict,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Set per-introducer commission rate. Admin only."""
+    user = await db.get(User, UUID(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    rate_str = body.get("rate")
+    if rate_str is None:
+        raise HTTPException(status_code=400, detail="Missing 'rate' in body")
+
+    try:
+        rate = Decimal(rate_str)
+        if rate < 0 or rate > 1:
+            raise ValueError("Rate must be between 0 and 1")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid rate: {e}") from e
+
+    user.commission_rate = rate
+    await db.commit()
+
+    return {"message": f"Commission rate set to {rate}", "success": True}
