@@ -181,6 +181,11 @@ class LimitOrderMatcher:
                 recorded_at=trade.executed_at,
             ))
 
+            # Commission tracking for the buyer side
+            if buy_order.entity_id:
+                from app.services.commission_service import maybe_create_commission
+                await maybe_create_commission(db, trade, buy_order.entity_id)
+
             # Create audit ticket for trade execution
             buy_ticket_id = getattr(buy_order, 'ticket_id', None)
             sell_ticket_id = getattr(sell_order, 'ticket_id', None)
@@ -428,6 +433,11 @@ class LimitOrderMatcher:
                     source="trade_execution",
                     recorded_at=trade.executed_at,
                 ))
+
+                # Commission tracking for the buyer side
+                if buy_order.entity_id:
+                    from app.services.commission_service import maybe_create_commission
+                    await maybe_create_commission(db, trade, buy_order.entity_id)
 
                 # Update buy order
                 buy_order.filled_quantity = buy_order.filled_quantity + match_qty

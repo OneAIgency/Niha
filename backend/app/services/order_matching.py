@@ -634,6 +634,10 @@ async def execute_market_buy_order(
             recorded_at=trade.executed_at,
         ))
 
+        # Commission tracking — lazy import to avoid circular deps
+        from .commission_service import maybe_create_commission
+        await maybe_create_commission(db, trade, entity_id)
+
         logger.info(
             f"Trade executed: buyer_order={buy_order.id}, seller_order={sell_order.id}, "
             f"qty={fill.quantity}, price={fill.price} EUR, cost={fill.cost_eur} EUR"
