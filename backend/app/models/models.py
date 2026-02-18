@@ -37,10 +37,11 @@ class KYCStatus(str, enum.Enum):
 
 
 class UserRole(str, enum.Enum):
-    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity)."""
+    """Unified with ContactStatus; full onboarding flow NDA → EUA. MM = Market Maker (admin-created only). INTRODUCER = Introducer flow (no entity). TRODUCER = intermediate introducer (NDA pending)."""
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
-    INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
+    INTRODUCER = "INTRODUCER"  # Introducer flow; approved, NDA signed, full access
+    TRODUCER = "TRODUCER"  # Intermediate introducer; NDA sent but not yet approved
     PREINTRODUCER = "PREINTRODUCER"  # Pre-introducer; registered via referral code, limited access
     NDA = "NDA"
     REJECTED = "REJECTED"
@@ -285,6 +286,8 @@ class User(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     creation_method = Column(String(20), nullable=True)  # 'manual' or 'invitation'
     referral_code = Column(String(16), unique=True, nullable=True, index=True)
+    # Per-introducer commission rate (NULL = use platform default 1%)
+    commission_rate = Column(Numeric(8, 6), nullable=True)
     nda_signed = Column(Boolean, default=True, server_default="true")
     nda_file_data = Column(LargeBinary, nullable=True)
     nda_file_name = Column(String(255), nullable=True)
@@ -407,6 +410,128 @@ class ContactRequest(Base):
     referral_code_used = Column(String(16), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+# ─── Referral Invitation Status ───────────────────────────
+class InvitationStatus(str, enum.Enum):
+    PENDING = "pending"       # Sent, not yet acted on
+    CLICKED = "clicked"       # Link clicked but not registered
+    REGISTERED = "registered" # Recipient created an account
+    EXPIRED = "expired"       # Token expired without action
+
+
+class CommissionStatus(str, enum.Enum):
+    PENDING = "pending"       # Accrued, not yet confirmed
+    CONFIRMED = "confirmed"   # Admin confirmed, ready to pay
+    PAID = "paid"             # Paid out to introducer
+    REVERSED = "reversed"     # Trade reversed/cancelled
+
+
+class ReferralInvitation(Base):
+    """Tracks invitations sent by INTRODUCER users to potential clients."""
+    __tablename__ = "referral_invitations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    introducer_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    invited_email = Column(String(255), nullable=False, index=True)
+    invited_first_name = Column(String(100), nullable=True)
+    personal_note = Column(String(200), nullable=True)
+    token_hash = Column(String(64), nullable=False, unique=True)
+    expires_at = Column(DateTime, nullable=False)
+    status = Column(
+        SQLEnum(InvitationStatus),
+        default=InvitationStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+
+    # Outcome tracking
+    clicked_at = Column(DateTime, nullable=True)
+    registered_at = Column(DateTime, nullable=True)
+    registered_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=False,
+    )
+
+    # Relationships
+    introducer = relationship("User", foreign_keys=[introducer_user_id])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "introducer_user_id", "invited_email",
+            name="uq_introducer_invite_email",
+        ),
+    )
+
+
+class CommissionLedger(Base):
+    """Immutable commission events for introducer earnings.
+
+    One row per qualifying CEA buy trade. Append-only: corrections
+    use a REVERSED row + new corrected row, never UPDATE.
+    """
+    __tablename__ = "commission_ledger"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Who earns the commission
+    introducer_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+
+    # Which referred client generated this
+    referred_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    referred_entity_id = Column(
+        UUID(as_uuid=True), ForeignKey("entities.id"), nullable=False, index=True
+    )
+
+    # The trade that triggered this commission
+    cash_market_trade_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("cash_market_trades.id"),
+        nullable=False,
+        unique=True,  # One commission per trade
+        index=True,
+    )
+
+    # Financial snapshot at time of trade (never recalculate)
+    trade_eur_value = Column(Numeric(18, 2), nullable=False)
+    commission_rate = Column(Numeric(8, 6), nullable=False)  # e.g. 0.010000 = 1%
+    commission_eur = Column(Numeric(18, 2), nullable=False)
+
+    status = Column(
+        SQLEnum(CommissionStatus),
+        default=CommissionStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+
+    trade_executed_at = Column(DateTime, nullable=False)
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        nullable=False,
+        index=True,
+    )
+    confirmed_at = Column(DateTime, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    confirmed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    introducer = relationship("User", foreign_keys=[introducer_user_id])
+    referred_user = relationship("User", foreign_keys=[referred_user_id])
+    trade = relationship("CashMarketTrade")
 
 
 class Certificate(Base):
