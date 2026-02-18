@@ -67,6 +67,35 @@ async def _check_rate_limit(ip: str) -> None:
         logger.warning("Redis unavailable for rate limiting, allowing request")
 
 
+@router.get("/invitation/{token}")
+async def get_invitation_info(
+    token: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Public endpoint to get basic invitation info (for pre-filling the contact form)."""
+    from ...services.invitation_service import validate_invitation_token
+
+    invitation = await validate_invitation_token(db, token)
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invalid or expired invitation")
+
+    # Get introducer name
+    introducer = await db.get(User, invitation.introducer_user_id)
+    introducer_name = (
+        f"{introducer.first_name} {introducer.last_name}".strip()
+        if introducer
+        else "An introducer"
+    )
+
+    await db.commit()
+
+    return {
+        "invited_email": invitation.invited_email,
+        "invited_first_name": invitation.invited_first_name,
+        "introducer_name": introducer_name,
+    }
+
+
 @router.post("/validate-code")
 async def validate_code(
     request: Request,
@@ -276,12 +305,14 @@ async def create_introducer_nda_request(
     contact_last_name: str = Form(...),  # noqa: B008
     position: str = Form(...),  # noqa: B008
     file: Optional[UploadFile] = File(None),  # noqa: B008
+    referral_code: Optional[str] = Form(None),  # noqa: B008
+    invite_token: Optional[str] = Form(None),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Submit an NDA request for the Introducer flow.
     Same payload as nda-request; creates ContactRequest with request_flow='introducer'.
-    PDF attachment is optional.
+    PDF attachment is optional. Optional referral_code and invite_token from invitation links.
     """
     submitter_ip = get_client_ip(request)
 
@@ -303,6 +334,13 @@ async def create_introducer_nda_request(
         nda_file_data = content
         nda_file_mime_type = "application/pdf"
 
+    # Consume referral code if provided
+    referred_by_user_id = None
+    if referral_code:
+        from ...services.referral_codes import consume_referral_code
+
+        referred_by_user_id = await consume_referral_code(db, referral_code.strip())
+
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
@@ -315,6 +353,8 @@ async def create_introducer_nda_request(
         submitter_ip=submitter_ip,
         user_role=ContactStatus.NDA,
         request_flow="introducer",
+        referred_by_user_id=referred_by_user_id,
+        referral_code_used=referral_code.strip() if referral_code and referred_by_user_id else None,
     )
 
     try:
@@ -324,6 +364,24 @@ async def create_introducer_nda_request(
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "creating Introducer NDA contact request", logger) from e
+
+    # If this request came from a referral invitation, validate the token
+    if invite_token:
+        try:
+            from ...services.invitation_service import validate_invitation_token
+
+            invitation = await validate_invitation_token(db, invite_token)
+            if invitation:
+                await db.commit()
+                logger.info(
+                    "Invitation token validated for introducer NDA request: email=%s",
+                    contact_email,
+                )
+        except Exception:
+            logger.warning(
+                "Failed to validate invitation token for %s (non-blocking)",
+                contact_email,
+            )
 
     asyncio.create_task(
         backoffice_ws_manager.broadcast(

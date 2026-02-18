@@ -354,6 +354,8 @@ export const contactApi = {
     contact_last_name: string;
     position: string;
     nda_file?: File;
+    referral_code?: string;
+    invite_token?: string;
   }): Promise<ContactRequestResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
@@ -362,8 +364,19 @@ export const contactApi = {
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
     if (request.nda_file) formData.append('file', request.nda_file);
+    if (request.referral_code) formData.append('referral_code', request.referral_code);
+    if (request.invite_token) formData.append('invite_token', request.invite_token);
 
     const { data } = await api.post('/contact/introducer-nda-request', formData);
+    return data;
+  },
+
+  getInvitationInfo: async (token: string): Promise<{
+    invitedEmail: string;
+    invitedFirstName: string | null;
+    introducerName: string;
+  }> => {
+    const { data } = await api.get(`/contact/invitation/${token}`);
     return data;
   },
 

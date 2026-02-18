@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Building2, User, Briefcase, CheckCircle, Upload, FileText, Loader2 } from 'lucide-react';
+import { Mail, Lock, Building2, User, Briefcase, CheckCircle, Loader2 } from 'lucide-react';
 import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { isValidEmail, sanitizeEmail, sanitizeString } from '../utils';
@@ -20,7 +20,11 @@ import {
  */
 export function IntroducerPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth, user, _hasHydrated } = useAuthStore();
+
+  const inviteToken = searchParams.get('invite');
+  const refCode = searchParams.get('ref');
 
   const [mode, setMode] = useState<'initial' | 'enter' | 'nda'>('initial');
   const [email, setEmail] = useState('');
@@ -30,10 +34,39 @@ export function IntroducerPage() {
   const isSubmittingRef = useRef(false);
   const [requestSent, setRequestSent] = useState(false);
   const [ndaAmbientActive, setNdaAmbientActive] = useState(false);
+  const [invitationInfo, setInvitationInfo] = useState<{
+    invitedEmail: string;
+    invitedFirstName: string | null;
+    introducerName: string;
+  } | null>(null);
+  const [referralCode, setReferralCode] = useState('');
+
+  // Fetch invitation info when landing with invite token
+  useEffect(() => {
+    if (inviteToken) {
+      contactApi.getInvitationInfo(inviteToken)
+        .then(res => {
+          setInvitationInfo(res);
+          // Pre-fill form fields from invitation data
+          if (res.invitedEmail) setEmail(res.invitedEmail);
+          if (res.invitedFirstName) setContactFirstName(res.invitedFirstName);
+          // Auto-switch to NDA mode so the form is visible
+          setMode('nda');
+        })
+        .catch(() => {
+          // Invalid/expired invitation — don't block the form
+        });
+    }
+    if (refCode) {
+      setReferralCode(refCode);
+    }
+  }, [inviteToken, refCode]);
 
   useEffect(() => {
     if (!_hasHydrated || !user) return;
-    if (user.role === 'INTRODUCER') {
+    if (user.role === 'TRODUCER') {
+      navigate('/introducer/sign-nda', { replace: true });
+    } else if (user.role === 'INTRODUCER') {
       navigate('/introducer/dashboard', { replace: true });
     }
   }, [_hasHydrated, user, navigate]);
@@ -51,8 +84,6 @@ export function IntroducerPage() {
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
   const [position, setPosition] = useState('');
-  const [ndaFile, setNdaFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -121,14 +152,6 @@ export function IntroducerPage() {
       setError('Position is required');
       return;
     }
-    if (!ndaFile) {
-      setError('Please upload a signed NDA document');
-      return;
-    }
-    if (!ndaFile.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF files are allowed');
-      return;
-    }
 
     setLoading(true);
     try {
@@ -138,7 +161,8 @@ export function IntroducerPage() {
         contact_first_name: sanitizedFirstName,
         contact_last_name: sanitizedLastName,
         position: sanitizedPosition,
-        nda_file: ndaFile,
+        referral_code: referralCode || undefined,
+        invite_token: inviteToken || undefined,
       });
       setRequestSent(true);
     } catch {
@@ -148,16 +172,14 @@ export function IntroducerPage() {
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.name.toLowerCase().endsWith('.pdf')) {
-        setError('Only PDF files are allowed');
-        return;
-      }
-      setNdaFile(file);
-      setError('');
-    }
+  const handleSimulate = () => {
+    setMode('nda');
+    setEntity('Acme Carbon Consulting Ltd');
+    setEmail('sim-introducer@acme-carbon.example.com');
+    setContactFirstName('Sim');
+    setContactLastName('Test');
+    setPosition('Sustainability Director');
+    setError('');
   };
 
   if (requestSent) {
@@ -170,7 +192,6 @@ export function IntroducerPage() {
       setContactFirstName('');
       setContactLastName('');
       setPosition('');
-      setNdaFile(null);
     };
 
     return (
@@ -276,6 +297,15 @@ export function IntroducerPage() {
               >
                 NDA
               </button>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={handleSimulate}
+                  className="w-full py-2 px-4 rounded border border-amber-500/30 text-amber-400/70 hover:bg-amber-500/10 text-xs tracking-wider transition-colors"
+                >
+                  Simulează cerere introducer
+                </button>
+              )}
             </motion.div>
           )}
 
@@ -358,8 +388,24 @@ export function IntroducerPage() {
               className="space-y-5"
             >
               <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
-                Submit your signed NDA to request introducer access
+                Request introducer access
               </p>
+              {invitationInfo && (
+                <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-2">
+                  <p className="text-emerald-400 text-sm font-medium">
+                    You were invited by {invitationInfo.introducerName}
+                  </p>
+                </div>
+              )}
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={handleSimulate}
+                  className="w-full py-1.5 text-amber-400/60 hover:text-amber-400/90 text-xs tracking-wider transition-colors"
+                >
+                  Simulează cerere
+                </button>
+              )}
 
               <div className="space-y-3">
                 <div className="relative">
@@ -414,32 +460,6 @@ export function IntroducerPage() {
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
                   />
                 </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`w-full py-3.5 px-4 bg-white/5 border rounded-lg cursor-pointer transition-colors flex items-center gap-3 ${
-                    ndaFile ? 'border-emerald-500/50' : 'border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  {ndaFile ? (
-                    <>
-                      <FileText className="w-4 h-4 text-emerald-400/70" />
-                      <span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 text-white/30" />
-                      <span className="text-white/30 font-light">Upload Signed NDA (PDF)</span>
-                    </>
-                  )}
-                </div>
               </div>
 
               {error && (
@@ -469,7 +489,6 @@ export function IntroducerPage() {
                 onClick={() => {
                   setMode('initial');
                   setError('');
-                  setNdaFile(null);
                 }}
                 className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
               >
