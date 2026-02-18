@@ -243,6 +243,32 @@ async def lifespan(app: FastAPI):
                                     e,
                                 )
 
+                    # Warm Redis cache after scrape cycle so header reflects latest prices
+                    try:
+                        eua_eur = None
+                        cea_eur = None
+                        all_sources = carboncredits_sources + other_sources
+                        for s in all_sources:
+                            if s.certificate_type == CertificateType.EUA and s.is_primary and s.last_price is not None:
+                                eua_eur = float(s.last_price)
+                            elif s.certificate_type == CertificateType.CEA and s.is_primary and getattr(s, "last_price_eur", None) is not None:
+                                cea_eur = float(s.last_price_eur)
+                        if eua_eur is not None and cea_eur is not None:
+                            from .core.security import RedisManager
+
+                            await RedisManager.cache_prices(
+                                {
+                                    "eua_eur": str(eua_eur),
+                                    "cea_eur": str(cea_eur),
+                                    "eua_change": "0",
+                                    "cea_change": "0",
+                                    "updated_at": now.isoformat(),
+                                }
+                            )
+                            logger.info("Cache warmed: EUA=%.2f EUR, CEA=%.2f EUR", eua_eur, cea_eur)
+                    except Exception as e:
+                        logger.warning("Failed to warm price cache: %s", e)
+
             except Exception as e:
                 logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
 

@@ -702,9 +702,16 @@ class PriceScraper:
         return None
 
     async def get_current_prices(self) -> Dict:
-        """Get current carbon prices with realistic variance - ALL IN EUR"""
+        """Get current carbon prices - ALL IN EUR.
 
-        # Prefer cache to avoid duplicate requests (0026); then try shared fetch
+        Priority chain:
+        1. Redis cache (10 min TTL, warmed by scheduler + this method)
+        2. DB primary scraping sources (admin-configured, authoritative)
+        3. Direct carboncredits.com fetch (legacy fallback)
+        4. Simulated prices (last resort)
+        """
+
+        # 1. Redis cache — fast path
         cached = await RedisManager.get_cached_prices()
         if cached and "eua_eur" in cached and "cea_eur" in cached:
             return {
@@ -723,27 +730,38 @@ class PriceScraper:
                 ),
             }
 
-        web_prices = await self.fetch_prices_from_web()
+        # 2. DB primary sources — authoritative prices from admin-configured scrapers
+        eua_eur = None
+        cea_eur = None
+        try:
+            eua_eur, cea_eur = await self._read_prices_from_db()
+        except Exception as e:
+            logger.warning("Failed to read prices from DB: %s", e)
 
-        if web_prices and web_prices.get("eua"):
-            eua_eur = web_prices["eua"]
-            cea_cny = web_prices.get("cea", 100.0)  # CEA fetched in CNY
-        else:
-            # No cache and no successful fetch (e.g. 429/backoff) – use simulated
+        # 3. Fallback to direct carboncredits.com fetch if DB has no prices
+        if eua_eur is None or cea_eur is None:
+            web_prices = await self.fetch_prices_from_web()
+            if web_prices and web_prices.get("eua"):
+                if eua_eur is None:
+                    eua_eur = web_prices["eua"]
+                if cea_eur is None:
+                    cea_cny = web_prices.get("cea", 100.0)
+                    cea_eur = float(
+                        await currency_service.convert(
+                            amount=Decimal(str(cea_cny)),
+                            from_currency="CNY",
+                            to_currency="EUR",
+                        )
+                    )
+
+        # 4. Last resort — simulated prices
+        if eua_eur is None:
             eua_eur = self._apply_variance(self.BASE_EUA_EUR)
-            cea_cny = 100.0  # Fallback CEA in CNY
+        if cea_eur is None:
+            cea_eur = self._apply_variance(self.BASE_CEA_EUR)
 
-        # Convert CEA from CNY to EUR using currency service
-        cea_eur = float(
-            await currency_service.convert(
-                amount=Decimal(str(cea_cny)), from_currency="CNY", to_currency="EUR"
-            )
-        )
-
-        # Calculate 24h change (simulated if not available)
         eua_change = round(random.uniform(-3, 3), 2)
         cea_change = round(random.uniform(-2, 2), 2)
-
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         prices = {
@@ -760,7 +778,7 @@ class PriceScraper:
             "updated_at": now.isoformat(),
         }
 
-        # Cache the prices (EUR only)
+        # Warm Redis cache
         await RedisManager.cache_prices(
             {
                 "eua_eur": str(eua_eur),
@@ -772,10 +790,55 @@ class PriceScraper:
         )
 
         self.last_eua_price = eua_eur
-        self.last_cea_price = cea_eur  # Now storing EUR
+        self.last_cea_price = cea_eur
         self.last_update = now
 
         return prices
+
+    async def _read_prices_from_db(self):
+        """Read latest prices from primary active scraping sources.
+
+        Returns (eua_eur, cea_eur) — either may be None if no source found.
+        """
+        from sqlalchemy import select
+
+        from ..core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(ScrapingSource).where(
+                    ScrapingSource.is_active.is_(True),
+                )
+            )
+            sources = list(result.scalars().all())
+
+        eua_eur = None
+        cea_eur = None
+
+        # Find primary source for each type, fallback to any active source
+        for cert_type, attr in [
+            (CertificateType.EUA, "eua"),
+            (CertificateType.CEA, "cea"),
+        ]:
+            type_sources = [s for s in sources if s.certificate_type == cert_type]
+            if not type_sources:
+                continue
+            # Prefer primary, then first with a price
+            type_sources.sort(key=lambda s: (not s.is_primary, s.last_price is None))
+            source = type_sources[0]
+            if source.last_price is None:
+                continue
+
+            if cert_type == CertificateType.EUA:
+                eua_eur = float(source.last_price)
+            else:
+                # CEA: prefer pre-computed EUR, else use raw price (already EUR for some)
+                if source.last_price_eur is not None:
+                    cea_eur = float(source.last_price_eur)
+                else:
+                    cea_eur = float(source.last_price)
+
+        return eua_eur, cea_eur
 
     async def get_price_trend_async(self, hours: int = 24) -> Dict:
         """Get historical price data from database for charts.
