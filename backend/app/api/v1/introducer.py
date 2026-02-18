@@ -11,9 +11,9 @@ import logging
 from typing import AsyncGenerator
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -320,3 +320,197 @@ async def introducer_chat(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ─── Referral Invitation & Commission Endpoints ──────────────
+
+
+class SendInvitationRequest(BaseModel):
+    email: EmailStr
+    first_name: str | None = None
+    personal_note: str | None = Field(None, max_length=200)
+
+
+@router.post("/invitations")
+async def send_invitation(
+    body: SendInvitationRequest,
+    current_user: User = Depends(get_introducer_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a referral invitation to a potential client. INTRODUCER or ADMIN only."""
+    from ...services.invitation_service import create_invitation
+
+    try:
+        invitation, raw_token = await create_invitation(
+            db,
+            introducer=current_user,
+            invited_email=body.email,
+            invited_first_name=body.first_name,
+            personal_note=body.personal_note,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Build invitation URL with token + referral code
+    from ...models.models import MailConfig
+
+    mail_config_result = await db.execute(select(MailConfig).limit(1))
+    mail_config_row = mail_config_result.scalar_one_or_none()
+
+    # Convert MailConfig model to dict for email service
+    mail_config_dict = None
+    if mail_config_row:
+        mail_config_dict = {
+            "provider": mail_config_row.provider.value,
+            "use_env_credentials": mail_config_row.use_env_credentials,
+            "from_email": mail_config_row.from_email,
+            "resend_api_key": mail_config_row.resend_api_key,
+            "smtp_host": mail_config_row.smtp_host,
+            "smtp_port": mail_config_row.smtp_port,
+            "smtp_use_tls": mail_config_row.smtp_use_tls,
+            "smtp_username": mail_config_row.smtp_username,
+            "smtp_password": mail_config_row.smtp_password,
+            "invitation_link_base_url": mail_config_row.invitation_link_base_url,
+        }
+
+    raw_base = (mail_config_row.invitation_link_base_url if mail_config_row else None) or ""
+    from ...services.email_service import _strip_path
+
+    base_url = _strip_path(raw_base.strip()) if raw_base.strip() else "http://localhost:5173"
+    invitation_url = f"{base_url}/contact?invite={raw_token}&ref={current_user.referral_code}"
+
+    # Send email
+    from ...services.email_service import EmailService
+
+    email_svc = EmailService()
+    introducer_name = (
+        f"{current_user.first_name} {current_user.last_name}".strip()
+        or current_user.email
+    )
+    await email_svc.send_referral_invitation(
+        to_email=body.email,
+        introducer_name=introducer_name,
+        invited_first_name=body.first_name,
+        personal_note=body.personal_note,
+        invitation_url=invitation_url,
+        mail_config=mail_config_dict,
+    )
+
+    await db.commit()
+
+    return {
+        "id": str(invitation.id),
+        "invited_email": invitation.invited_email,
+        "status": invitation.status.value,
+        "created_at": invitation.created_at.isoformat() + "Z",
+    }
+
+
+@router.get("/invitations")
+async def list_invitations(
+    current_user: User = Depends(get_introducer_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all invitations sent by the current introducer."""
+    from ...models.models import ReferralInvitation
+
+    result = await db.execute(
+        select(ReferralInvitation)
+        .where(ReferralInvitation.introducer_user_id == current_user.id)
+        .order_by(ReferralInvitation.created_at.desc())
+    )
+    invitations = result.scalars().all()
+
+    return [
+        {
+            "id": str(inv.id),
+            "invited_email": inv.invited_email,
+            "invited_first_name": inv.invited_first_name,
+            "status": inv.status.value,
+            "created_at": inv.created_at.isoformat() + "Z",
+            "clicked_at": (inv.clicked_at.isoformat() + "Z")
+            if inv.clicked_at
+            else None,
+            "registered_at": (inv.registered_at.isoformat() + "Z")
+            if inv.registered_at
+            else None,
+        }
+        for inv in invitations
+    ]
+
+
+@router.get("/commissions/summary")
+async def get_commission_summary(
+    current_user: User = Depends(get_introducer_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get commission earnings summary for the current introducer."""
+    from sqlalchemy import func as sqlfunc
+
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    # Aggregate by status
+    result = await db.execute(
+        select(
+            CommissionLedger.status,
+            sqlfunc.sum(CommissionLedger.commission_eur).label("total"),
+            sqlfunc.count(CommissionLedger.id).label("count"),
+        )
+        .where(CommissionLedger.introducer_user_id == current_user.id)
+        .group_by(CommissionLedger.status)
+    )
+    rows = result.all()
+
+    summary = {
+        "pending": {"total": "0.00", "count": 0},
+        "confirmed": {"total": "0.00", "count": 0},
+        "paid": {"total": "0.00", "count": 0},
+    }
+    for row in rows:
+        status_key = row.status.value if hasattr(row.status, "value") else row.status
+        if status_key in summary:
+            summary[status_key] = {
+                "total": f"{row.total:.2f}" if row.total else "0.00",
+                "count": row.count,
+            }
+
+    lifetime = sum(float(v["total"]) for v in summary.values())
+
+    return {
+        "lifetime_eur": f"{lifetime:.2f}",
+        "commission_rate": str(current_user.commission_rate or "0.010000"),
+        **summary,
+    }
+
+
+@router.get("/commissions")
+async def list_commissions(
+    current_user: User = Depends(get_introducer_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """List individual commission entries for the current introducer."""
+    from ...models.models import CommissionLedger
+
+    result = await db.execute(
+        select(CommissionLedger)
+        .where(CommissionLedger.introducer_user_id == current_user.id)
+        .order_by(CommissionLedger.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    entries = result.scalars().all()
+
+    return [
+        {
+            "id": str(e.id),
+            "trade_eur_value": f"{e.trade_eur_value:.2f}",
+            "commission_rate": str(e.commission_rate),
+            "commission_eur": f"{e.commission_eur:.2f}",
+            "status": e.status.value,
+            "trade_executed_at": e.trade_executed_at.isoformat() + "Z",
+            "created_at": e.created_at.isoformat() + "Z",
+        }
+        for e in entries
+    ]

@@ -1,16 +1,127 @@
 import asyncio
 import logging
 import os
+import re
 import smtplib
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _strip_path(url: str) -> str:
+    """Strip path from a URL, keeping only scheme://host:port."""
+    parsed = urlparse(url.strip().rstrip("/"))
+    return urlunparse((parsed.scheme, parsed.netloc, "", "", "", ""))
+
+
+def _inline_css(html: str) -> str:
+    """Inline <style> block CSS into element style= attributes for email client compatibility.
+
+    Handles the subset of CSS used in _base.html (simple selectors: tag, .class, tag.class).
+    Falls back to returning the original HTML if anything goes wrong.
+    """
+    try:
+        # Extract <style> content
+        style_match = re.search(r"<style[^>]*>(.*?)</style>", html, re.DOTALL)
+        if not style_match:
+            return html
+
+        css_text = style_match.group(1)
+
+        # Parse CSS rules into a list of (selector, declarations)
+        rules: list[tuple[str, str]] = []
+        for match in re.finditer(
+            r"([^{]+)\{([^}]+)\}", css_text
+        ):
+            selector = match.group(1).strip()
+            declarations = match.group(2).strip()
+            # Skip @keyframes, @media, etc.
+            if selector.startswith("@") or selector.startswith("*"):
+                continue
+            rules.append((selector, declarations))
+
+        # Convert selectors to regex-based replacements on the HTML
+        for selector, declarations in rules:
+            decl = declarations.replace("\n", " ").strip().rstrip(";")
+
+            # Compound selectors (e.g. ".callout.info .callout-title") — skip complex ones
+            if " " in selector and "." in selector.split(" ", 1)[1]:
+                # e.g. ".callout.info .callout-title" — too complex for simple inlining, skip
+                pass
+
+            # .parent .child (descendant)
+            elif " " in selector:
+                # Skip descendant selectors for simplicity
+                pass
+
+            # tag.class (e.g. "p.text-muted" or "div.logo")
+            elif "." in selector and not selector.startswith("."):
+                tag, cls = selector.split(".", 1)
+                # Multi-class: .a.b
+                classes = cls.split(".")
+                pattern = rf'(<{tag}\b[^>]*class="[^"]*\b{re.escape(classes[0])}\b[^"]*"[^>]*)>'
+                html = re.sub(
+                    pattern,
+                    lambda m: _merge_style(m.group(1), decl) + ">",
+                    html,
+                )
+
+            # Multi-class selector (e.g. ".callout.success")
+            elif selector.startswith(".") and "." in selector[1:]:
+                classes = selector[1:].split(".")
+                # Match elements that have ALL of these classes
+                first_cls = classes[0]
+                pattern = rf'(<[a-zA-Z][a-zA-Z0-9]*\b[^>]*class="[^"]*\b{re.escape(first_cls)}\b[^"]*"[^>]*)>'
+                def _multi_class_replacer(m, cls_list=classes, d=decl):
+                    tag_str = m.group(1)
+                    cls_match = re.search(r'class="([^"]*)"', tag_str)
+                    if cls_match:
+                        tag_classes = cls_match.group(1).split()
+                        if all(c in tag_classes for c in cls_list):
+                            return _merge_style(tag_str, d) + ">"
+                    return m.group(0)
+                html = re.sub(pattern, _multi_class_replacer, html)
+
+            # Single class (e.g. ".btn-primary")
+            elif selector.startswith("."):
+                cls = selector[1:]
+                pattern = rf'(<[a-zA-Z][a-zA-Z0-9]*\b[^>]*class="[^"]*\b{re.escape(cls)}\b[^"]*"[^>]*)>'
+                html = re.sub(
+                    pattern,
+                    lambda m, d=decl: _merge_style(m.group(1), d) + ">",
+                    html,
+                )
+
+            # Tag selector (e.g. "body", "h1", "p")
+            elif re.match(r"^[a-zA-Z][a-zA-Z0-9]*$", selector):
+                pattern = rf"(<{selector}\b[^>]*)>"
+                html = re.sub(
+                    pattern,
+                    lambda m, d=decl: _merge_style(m.group(1), d) + ">",
+                    html,
+                )
+
+        return html
+    except Exception:
+        logger.debug("CSS inlining failed, returning original HTML", exc_info=True)
+        return html
+
+
+def _merge_style(tag_str: str, new_decl: str) -> str:
+    """Merge new CSS declarations into an element's existing style attribute."""
+    existing = re.search(r'style="([^"]*)"', tag_str)
+    if existing:
+        combined = existing.group(1).rstrip(";") + "; " + new_decl
+        return re.sub(r'style="[^"]*"', f'style="{combined}"', tag_str)
+    return tag_str + f' style="{new_decl}"'
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "templates", "emails")
 
@@ -94,6 +205,22 @@ TEMPLATE_SAMPLE_DATA: Dict[str, Dict[str, Any]] = {
     "aml_review_started.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR"},
     "trading_activated.html": {"name": "John Doe", "amount": "50,000.00", "currency": "EUR"},
     "test_email.html": {"provider": "SMTP"},
+    "introducer_nda_invitation.html": {
+        "name": "Jane Smith",
+        "setup_url": "https://app.nihaogroup.com/setup-password?token=abc123",
+        "expiry_days": 14,
+    },
+    "introducer_approved.html": {
+        "name": "Jane Smith",
+        "dashboard_url": "https://app.nihaogroup.com/introducer/dashboard",
+    },
+    "referral_invitation.html": {
+        "introducer_name": "Jane Smith",
+        "invited_name": "John",
+        "personal_note": "I think NIHA would be a great fit for your carbon compliance needs.",
+        "invitation_url": "https://app.nihaogroup.com/contact?invite=abc123&ref=REF-JANE",
+        "expiry_days": 7,
+    },
 }
 
 
@@ -193,10 +320,8 @@ class EmailService:
         """
         name = first_name or "there"
         if mail_config:
-            base_url = (
-                (mail_config.get("invitation_link_base_url") or "").rstrip("/")
-                or "http://localhost:5173"
-            )
+            raw = (mail_config.get("invitation_link_base_url") or "").strip()
+            base_url = _strip_path(raw) if raw else "http://localhost:5173"
             setup_url = f"{base_url}/setup-password?token={invitation_token}"
             subject = (
                 mail_config.get("invitation_subject")
@@ -218,6 +343,72 @@ class EmailService:
         subject = "Welcome to Nihao Carbon Trading Platform"
         html = self._render_template("invitation.html", name=name, setup_url=setup_url)
         return await self._send_email(to_email, subject, html)
+
+    async def send_introducer_nda_invitation(
+        self,
+        to_email: str,
+        first_name: str,
+        invitation_token: str,
+        nda_pdf_path: str,
+        expiry_days: int = 14,
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send NDA invitation email with attached PDF to introducer."""
+        name = first_name or "there"
+        raw = (mail_config or {}).get("invitation_link_base_url", "") or ""
+        base_url = _strip_path(raw.strip()) if raw.strip() else "http://localhost:5173"
+        setup_url = f"{base_url}/setup-password?token={invitation_token}"
+        subject = "Introducer Programme - NDA & Account Setup - Nihao Group"
+        html = self._render_template(
+            "introducer_nda_invitation.html",
+            name=name, setup_url=setup_url, expiry_days=expiry_days,
+        )
+        attachments = None
+        try:
+            with open(nda_pdf_path, "rb") as f:
+                attachments = [{"filename": "Nihao_Group_NDA.pdf", "content": f.read()}]
+        except FileNotFoundError:
+            logger.error(f"NDA PDF not found at {nda_pdf_path}")
+        return await self._send_email(
+            to_email, subject, html, mail_config=mail_config, attachments=attachments,
+        )
+
+    async def send_introducer_approved(
+        self, to_email: str, first_name: str = "",
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send confirmation email when introducer NDA is approved."""
+        name = first_name or "there"
+        raw = (mail_config or {}).get("invitation_link_base_url", "") or ""
+        base_url = _strip_path(raw.strip()) if raw.strip() else "http://localhost:5173"
+        dashboard_url = f"{base_url}/introducer/dashboard"
+        subject = "NDA Approved - Welcome to the Introducer Programme - Nihao Group"
+        html = self._render_template(
+            "introducer_approved.html", name=name, dashboard_url=dashboard_url,
+        )
+        return await self._send_email(to_email, subject, html, mail_config=mail_config)
+
+    async def send_referral_invitation(
+        self,
+        to_email: str,
+        introducer_name: str,
+        invited_first_name: str | None,
+        personal_note: str | None,
+        invitation_url: str,
+        expiry_days: int = 7,
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send referral invitation email from an introducer to a potential client."""
+        context = {
+            "introducer_name": introducer_name,
+            "invited_name": invited_first_name or "there",
+            "personal_note": personal_note,
+            "invitation_url": invitation_url,
+            "expiry_days": expiry_days,
+        }
+        subject = f"{introducer_name} invited you to NIHA — Carbon Credit Trading Platform"
+        html = self._render_template("referral_invitation.html", **context)
+        return await self._send_email(to_email, subject, html, mail_config=mail_config)
 
     async def send_account_approved(self, to_email: str, first_name: str) -> bool:
         """Send email when user account is approved"""
@@ -583,8 +774,15 @@ class EmailService:
         html: str,
         from_email: Optional[str] = None,
         mail_config: Optional[Dict[str, Any]] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> bool:
-        """Send email via Resend, SMTP (from config), or log in dev mode."""
+        """Send email via Resend, SMTP (from config), or log in dev mode.
+
+        attachments: list of {"filename": str, "content": bytes}
+        """
+        # Inline CSS for email client compatibility (Gmail etc. strip <style> tags)
+        html = _inline_css(html)
+
         # Auto-load DB mail config if none provided
         if mail_config is None:
             mail_config = await self._get_db_mail_config()
@@ -592,7 +790,7 @@ class EmailService:
         from_addr = from_email or (mail_config or {}).get("from_email") or self.from_email
 
         if mail_config and mail_config.get("provider") == "smtp":
-            return await self._send_via_smtp(to, subject, html, from_addr, mail_config)
+            return await self._send_via_smtp(to, subject, html, from_addr, mail_config, attachments)
 
         api_key = self.api_key
         if mail_config and mail_config.get("provider") == "resend":
@@ -611,12 +809,19 @@ class EmailService:
             import resend
 
             resend.api_key = api_key
-            params = {
+            params: Dict[str, Any] = {
                 "from": from_addr,
                 "to": [to],
                 "subject": subject,
                 "html": html,
             }
+            if attachments:
+                import base64
+
+                params["attachments"] = [
+                    {"filename": a["filename"], "content": base64.b64encode(a["content"]).decode()}
+                    for a in attachments
+                ]
             resend.Emails.send(params)
             logger.info(f"Email sent successfully to {to}")
             return True
@@ -631,6 +836,7 @@ class EmailService:
         html: str,
         from_addr: str,
         mail_config: Dict[str, Any],
+        attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> bool:
         """Send email via SMTP using config. Runs sync smtplib in thread."""
         host = mail_config.get("smtp_host") or "localhost"
@@ -640,11 +846,16 @@ class EmailService:
         password = mail_config.get("smtp_password")
 
         def _do_send() -> None:
-            msg = MIMEMultipart("alternative")
+            msg = MIMEMultipart("mixed")
             msg["Subject"] = subject
             msg["From"] = from_addr
             msg["To"] = to
             msg.attach(MIMEText(html, "html"))
+            if attachments:
+                for att in attachments:
+                    part = MIMEApplication(att["content"], Name=att["filename"])
+                    part["Content-Disposition"] = f'attachment; filename="{att["filename"]}"'
+                    msg.attach(part)
             if use_tls:
                 with smtplib.SMTP(host, port) as server:
                     server.starttls()
