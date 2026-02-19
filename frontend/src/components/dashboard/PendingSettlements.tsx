@@ -9,6 +9,7 @@ import {
   Package,
   Calendar,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { Card } from '../common';
 import { SettlementDetails } from './SettlementDetails';
@@ -101,6 +102,29 @@ export function PendingSettlements() {
     }
   };
 
+  const downloadCsv = () => {
+    const headers = ['Reference', 'Type', 'Status', 'Asset', 'Quantity', 'Price (EUR)', 'Total Value (EUR)', 'Expected Settlement', 'Progress %'];
+    const rows = settlements.map(s => [
+      s.batchReference,
+      s.settlementType === 'CEA_PURCHASE' ? 'CEA Purchase' : 'Swap CEA→EUA',
+      getStatusLabel(s.status),
+      s.assetType,
+      s.quantity,
+      s.price,
+      s.totalValueEur,
+      s.expectedSettlementDate ? new Date(s.expectedSettlementDate).toISOString().split('T')[0] : '',
+      s.progressPercent ?? 0,
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `settlements-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const calculateDaysRemaining = (expectedDate: string) => {
     const expected = new Date(expectedDate);
     const now = new Date();
@@ -166,12 +190,22 @@ export function PendingSettlements() {
               ({settlements.length})
             </span>
           </h3>
-          <button
-            onClick={fetchSettlements}
-            className="text-sm text-navy-400 hover:text-white transition-colors"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadCsv}
+              className="flex items-center gap-1 text-sm text-navy-400 hover:text-white transition-colors"
+              title="Download as CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+            <button
+              onClick={fetchSettlements}
+              className="text-sm text-navy-400 hover:text-white transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
