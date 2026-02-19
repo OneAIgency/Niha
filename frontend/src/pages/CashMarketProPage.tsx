@@ -19,7 +19,7 @@ import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/Inline
 import { CEAPriceChart } from '../components/cash-market/CEAPriceChart';
 import { NewsIntelligenceFeed } from '../components/cash-market/NewsIntelligenceFeed';
 import { EnvironmentalImpact } from '../components/cash-market/EnvironmentalImpact';
-import { MarketPulseTimeline } from '../components/cash-market/MarketPulseTimeline';
+import { MyOrders } from '../components/cash-market/MyOrders';
 import type {
   OrderBookLevel,
   CashMarketTrade,
@@ -414,6 +414,7 @@ export function CashMarketProPage() {
   const {
     orderBook,
     recentTrades,
+    myOrders,
     balances,
     loading,
     error,
@@ -474,6 +475,19 @@ export function CashMarketProPage() {
     setOrderResult(null);
     navigate('/dashboard');
   }, [navigate]);
+
+  const [cancellingOrder, setCancellingOrder] = useState(false);
+  const handleCancelOrder = useCallback(async (orderId: string) => {
+    setCancellingOrder(true);
+    try {
+      await cashMarketApi.cancelOrder(orderId);
+      await refresh();
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+    } finally {
+      setCancellingOrder(false);
+    }
+  }, [refresh]);
 
   // Safe defaults - handle both null orderBook and undefined properties
   const safeOrderBook = {
@@ -606,8 +620,15 @@ export function CashMarketProPage() {
                 </div>
               </div>
 
-              {/* Row 2: Activity (3/12) | News (3/12) | Impact (3/12) | Pulse+Timeline (3/12) */}
+              {/* Row 2: My Orders (3/12) | Activity (3/12) | News (3/12) | Impact (3/12) */}
               <div className="grid grid-cols-12 gap-2" style={{ flex: '4 1 0%', minHeight: 0 }}>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <MyOrders
+                    orders={myOrders}
+                    onCancelOrder={handleCancelOrder}
+                    isLoading={cancellingOrder}
+                  />
+                </div>
                 <div className="col-span-3 min-h-0 flex flex-col">
                   <RecentTradesActivity
                     trades={recentTrades}
@@ -620,12 +641,6 @@ export function CashMarketProPage() {
                 </div>
                 <div className="col-span-3 min-h-0 flex flex-col">
                   <EnvironmentalImpact />
-                </div>
-                <div className="col-span-3 min-h-0 flex flex-col">
-                  <MarketPulseTimeline
-                    bids={safeOrderBook.bids}
-                    asks={safeOrderBook.asks}
-                  />
                 </div>
               </div>
             </div>
