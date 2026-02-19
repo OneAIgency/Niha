@@ -278,6 +278,142 @@ async def delete_entity_override(
 
 
 # =============================================================================
+# Introducer Commission Defaults & Overrides
+# =============================================================================
+
+
+@router.get("/introducer-defaults")
+async def get_introducer_defaults(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """Get the platform default introducer commission rate."""
+    from ...services.commission_service import get_default_commission_rate
+
+    rate = await get_default_commission_rate(db)
+    return {"commission_rate": str(rate)}
+
+
+@router.put("/introducer-defaults")
+async def update_introducer_defaults(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_admin_user),
+):
+    """Update the platform default introducer commission rate."""
+    from ...models.models import PlatformSetting
+
+    rate_str = body.get("commission_rate")
+    if rate_str is None:
+        raise HTTPException(status_code=400, detail="Missing 'commission_rate' in body")
+
+    try:
+        rate = Decimal(rate_str)
+        if rate < 0 or rate > Decimal("1"):
+            raise ValueError("Rate must be between 0 and 1")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid rate: {e}") from e
+
+    result = await db.execute(
+        select(PlatformSetting).where(PlatformSetting.key == "introducer_commission_rate")
+    )
+    setting = result.scalar_one_or_none()
+
+    if setting:
+        setting.value = str(rate)
+        setting.updated_by = admin.id
+    else:
+        db.add(
+            PlatformSetting(
+                key="introducer_commission_rate", value=str(rate), updated_by=admin.id
+            )
+        )
+
+    await db.commit()
+    return {"commission_rate": str(rate)}
+
+
+@router.get("/introducer-overrides")
+async def get_introducer_overrides(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """List introducers with custom commission rates (different from default)."""
+    from ...models.models import UserRole
+    from ...services.commission_service import get_default_commission_rate
+
+    result = await db.execute(
+        select(User)
+        .where(User.role.in_([UserRole.INTRODUCER, UserRole.PREINTRODUCER, UserRole.TRODUCER]))
+        .where(User.commission_rate.isnot(None))
+        .where(User.is_active.is_(True))
+        .order_by(User.email)
+    )
+    users = result.scalars().all()
+    default_rate = await get_default_commission_rate(db)
+
+    return [
+        {
+            "user_id": str(u.id),
+            "email": u.email,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "commission_rate": str(u.commission_rate),
+        }
+        for u in users
+        if u.commission_rate != default_rate
+    ]
+
+
+@router.get("/search-clients")
+async def search_clients(
+    q: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_admin_user),
+):
+    """Search entities and introducer users by name/email."""
+    from ...models.models import UserRole
+
+    if not q or len(q.strip()) < 2:
+        return {"entities": [], "introducers": []}
+
+    term = f"%{q.strip()}%"
+
+    # Search entities by name
+    entity_result = await db.execute(select(Entity).where(Entity.name.ilike(term)).limit(10))
+    entities = entity_result.scalars().all()
+
+    # Search introducer users by email or name
+    user_result = await db.execute(
+        select(User)
+        .where(User.role.in_([UserRole.INTRODUCER, UserRole.PREINTRODUCER, UserRole.TRODUCER]))
+        .where(User.is_active.is_(True))
+        .where(
+            (User.email.ilike(term))
+            | (User.first_name.ilike(term))
+            | (User.last_name.ilike(term))
+        )
+        .limit(10)
+    )
+    users = user_result.scalars().all()
+
+    return {
+        "entities": [{"id": str(e.id), "name": e.name, "type": "entity"} for e in entities],
+        "introducers": [
+            {
+                "id": str(u.id),
+                "email": u.email,
+                "first_name": u.first_name,
+                "last_name": u.last_name,
+                "type": "introducer",
+                "commission_rate": str(u.commission_rate) if u.commission_rate else None,
+            }
+            for u in users
+        ],
+    }
+
+
+# =============================================================================
 # Fee Calculation Helper
 # =============================================================================
 
