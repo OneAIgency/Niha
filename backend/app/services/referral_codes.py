@@ -85,11 +85,7 @@ async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
         return None
 
     owner_id = user.id
-    # TRODUCER: single-use code — set to None (no regeneration)
-    # PREINTRODUCER / INTRODUCER: regenerate code for next referral
-    if user.role == UserRole.TRODUCER:
-        user.referral_code = None
-    else:
-        user.referral_code = await get_unique_referral_code(db)
+    # All roles: regenerate code for next referral
+    user.referral_code = await get_unique_referral_code(db)
     # Don't commit here -- caller manages the transaction
     return owner_id
