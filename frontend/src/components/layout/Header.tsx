@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
+import { Menu, X, LogOut, User, UserPlus, Settings, Briefcase, ChevronDown, Palette } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, Button, PriceTicker } from '../common';
 import { useAuthStore, useUIStore } from '../../stores/useStore';
+import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { usePrices } from '../../hooks/usePrices';
 import { getEffectiveRole } from '../../utils/effectiveRole';
 import { cn } from '../../utils';
@@ -26,6 +27,7 @@ export function Header() {
   const { isAuthenticated, user, simulatedRole, logout } = useAuthStore();
   const { prices } = usePrices();
   const { theme } = useUIStore();
+  const setDashboardTab = useIntroducerStore((s) => s.setDashboardTab);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -65,7 +67,7 @@ export function Header() {
     }
     if (!role) return [];
 
-    const links: { href: string; label: string; icon: LucideIcon | null }[] = [];
+    const links: { href: string; label: string; icon: LucideIcon | null; highlight?: boolean }[] = [];
 
     // ADMIN superuser: show ALL navigation options
     if (isAdmin) {
@@ -82,6 +84,7 @@ export function Header() {
       links.push({ href: '/troducer', label: 'Troducer Code', icon: null });
     } else if (role === 'INTRODUCER') {
       links.push({ href: '/introducer/dashboard', label: 'Introducer Portal', icon: null });
+      links.push({ href: '/introducer/dashboard', label: 'Referrals', icon: UserPlus, highlight: true });
     } else {
 
       // Regular users: show only their allowed sections
@@ -135,6 +138,21 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => {
               const Icon = link.icon;
+
+              if (link.highlight) {
+                return (
+                  <Link
+                    key={`${link.href}-${link.label}`}
+                    to={link.href}
+                    onClick={() => setDashboardTab('referrals')}
+                    className="text-sm font-medium transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 hover:text-emerald-300"
+                  >
+                    {Icon && <Icon className="w-4 h-4" />}
+                    {link.label}
+                  </Link>
+                );
+              }
+
               return (
                 <Link
                   key={link.href}
@@ -325,6 +343,21 @@ export function Header() {
             <nav className="flex flex-col gap-4">
               {navLinks.map((link) => {
                 const Icon = link.icon;
+
+                if (link.highlight) {
+                  return (
+                    <Link
+                      key={`${link.href}-${link.label}`}
+                      to={link.href}
+                      onClick={() => { setMobileMenuOpen(false); setDashboardTab('referrals'); }}
+                      className="text-lg font-medium flex items-center gap-2 px-3 py-1.5 rounded-full w-fit bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                    >
+                      {Icon && <Icon className="w-5 h-5" />}
+                      {link.label}
+                    </Link>
+                  );
+                }
+
                 return (
                   <Link
                     key={link.href}
