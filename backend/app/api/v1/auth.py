@@ -287,14 +287,6 @@ async def password_login(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is disabled"
         )
 
-    # TRODUCER cannot login — must wait for admin approval after NDA review
-    if user.role == UserRole.TRODUCER:
-        await log_auth_attempt(user.id, False, "troducer_pending_approval")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your NDA is under review. You will receive an email once your account is approved.",
-        )
-
     # Log successful authentication
     await log_auth_attempt(user.id, True)
 
