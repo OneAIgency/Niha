@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
   Search,
@@ -10,6 +10,9 @@ import {
   RefreshCw,
   Trash2,
   Eye,
+  CheckSquare,
+  X,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button, Card, Badge, ConfirmationModal, Skeleton } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
@@ -93,6 +96,11 @@ export function UsersPage() {
   // Deactivation confirmation modal state
   const [deactivateUser, setDeactivateUser] = useState<UserWithEntity | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRole, setBulkRole] = useState<UserRole>('NDA');
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Add Asset modal state
   const [addAssetUser, setAddAssetUser] = useState<{ id: string; entityId: string; entityName: string } | null>(null);
@@ -258,6 +266,56 @@ export function UsersPage() {
       setDeactivateUser(null);
     }
   };
+
+  // Bulk operations
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === users.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map(u => u.id)));
+    }
+  };
+
+  const handleBulkRoleChange = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await adminApi.bulkChangeRole(Array.from(selectedIds), bulkRole);
+      setSelectedIds(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Bulk role change failed:', error);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await adminApi.bulkDeactivate(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      loadUsers();
+    } catch (error) {
+      console.error('Bulk deactivate failed:', error);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Clear selection when filters/page change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [roleFilter, pagination.page, searchQuery]);
 
   const openEditModal = (user: UserWithEntity) => {
     setEditingUser(user);
@@ -500,6 +558,14 @@ export function UsersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-navy-700">
+                <th className="py-4 px-2 w-10">
+                  <input
+                    type="checkbox"
+                    checked={users.length > 0 && selectedIds.size === users.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-navy-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
+                  />
+                </th>
                 <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   User
                 </th>
@@ -527,8 +593,16 @@ export function UsersPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="hover:bg-navy-800/50"
+                  className={cn("hover:bg-navy-800/50", selectedIds.has(user.id) && "bg-emerald-500/5")}
                 >
+                  <td className="py-4 px-2 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(user.id)}
+                      onChange={() => toggleSelect(user.id)}
+                      className="rounded border-navy-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0"
+                    />
+                  </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -685,6 +759,60 @@ export function UsersPage() {
           </div>
         )}
       </Card>
+
+      {/* Bulk Action Bar */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl bg-navy-800 border border-navy-600 shadow-2xl shadow-black/40"
+          >
+            <div className="flex items-center gap-2 text-sm text-navy-300 mr-2">
+              <CheckSquare className="w-4 h-4 text-emerald-400" />
+              <span className="font-medium text-white">{selectedIds.size}</span> selected
+            </div>
+            <div className="w-px h-6 bg-navy-600" />
+            <select
+              value={bulkRole}
+              onChange={(e) => setBulkRole(e.target.value as UserRole)}
+              className="form-select text-sm py-1.5 bg-navy-700 border-navy-600"
+            >
+              <option value="NDA">NDA</option>
+              <option value="KYC">KYC</option>
+              <option value="APPROVED">Approved</option>
+              <option value="FUNDING">Funding</option>
+              <option value="AML">AML</option>
+              <option value="CEA">CEA</option>
+              <option value="CEA_SETTLE">CEA Settle</option>
+              <option value="SWAP">Swap</option>
+              <option value="EUA_SETTLE">EUA Settle</option>
+              <option value="EUA">EUA</option>
+            </select>
+            <Button variant="primary" size="sm" onClick={handleBulkRoleChange} disabled={bulkLoading}>
+              Change Role
+            </Button>
+            <div className="w-px h-6 bg-navy-600" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBulkDeactivate}
+              disabled={bulkLoading}
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <ShieldAlert className="w-4 h-4 mr-1" />
+              Deactivate
+            </Button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-1 p-1 rounded hover:bg-navy-700 text-navy-400 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Create User Modal */}
       <CreateUserModal
