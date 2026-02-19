@@ -49,7 +49,7 @@ export function LoginPage() {
   const [ndaFile, setNdaFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [referralCode, setReferralCode] = useState('');
-  const [codeType, setCodeType] = useState<'preintroducer' | 'introducer' | null>(null);
+  const [codeType, setCodeType] = useState<'preintroducer' | 'troducer' | 'introducer' | null>(null);
   const [codeError, setCodeError] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
 
@@ -256,7 +256,7 @@ export function LoginPage() {
         return;
       }
       setCodeType(result.type);
-      if (result.type === 'preintroducer') {
+      if (result.type === 'preintroducer' || result.type === 'troducer') {
         setMode('introducer-form');
       } else {
         setMode('buyer-form');

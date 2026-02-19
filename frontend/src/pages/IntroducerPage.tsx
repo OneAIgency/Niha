@@ -66,8 +66,10 @@ export function IntroducerPage() {
           if (res.valid && res.type === 'introducer') {
             // Code belongs to an introducer → the invitee is a buyer
             setCodeType('buyer');
+          } else if (res.valid && res.type === 'troducer') {
+            setCodeType('troducer');
           }
-          // 'preintroducer' and 'troducer' codes → introducer registration flow (default)
+          // 'preintroducer' codes → introducer registration flow (default)
         })
         .catch(() => {
           // Validation failed — default to introducer flow
@@ -147,7 +149,7 @@ export function IntroducerPage() {
     const sanitizedPosition = sanitizeString(position);
 
     if (!sanitizedEmail || !isValidEmail(sanitizedEmail)) {
-      setError('Please enter a valid corporate email');
+      setError('Please enter a valid email');
       return;
     }
     if (!sanitizedFirstName.trim()) {
@@ -458,7 +460,7 @@ export function IntroducerPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                   <input
                     type="email"
-                    placeholder="Corporate Email"
+                    placeholder={codeType === 'troducer' ? 'Email' : 'Corporate Email'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
