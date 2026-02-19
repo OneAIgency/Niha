@@ -158,6 +158,11 @@ export function useBackofficeRealtime() {
           }
         }
         break;
+
+      // System Health Events
+      case 'system_health_update':
+        window.dispatchEvent(new CustomEvent('nihao:system_health_update', { detail: message.data }));
+        break;
     }
   }, [setConnectionStatus, addContactRequest, updateContactRequest, addKYCDocument, updateKYCDocument, removeKYCDocument]);
 
