@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports helper functions alongside component */
 import { InputHTMLAttributes, forwardRef, useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '../../utils';
 

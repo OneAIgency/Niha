@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports hooks alongside providers */
 import { ReactNode, useState, useEffect, createContext, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';

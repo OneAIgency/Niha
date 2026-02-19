@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- exports helper functions alongside component */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

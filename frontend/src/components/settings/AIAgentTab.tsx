@@ -56,7 +56,7 @@ function APIKeysSection({ onError }: { onError: (msg: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { loadKeys(); }, []);
+  useEffect(() => { loadKeys(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once on mount
 
   const loadKeys = async () => {
     try {
@@ -127,7 +127,7 @@ function AgentConfigSection({ onError }: { onError: (msg: string) => void }) {
     allowInternet: false, allowOffKnowledge: false, enabled: true,
   });
 
-  useEffect(() => { loadConfigs(); }, []);
+  useEffect(() => { loadConfigs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once on mount
 
   const loadConfigs = async () => {
     try {
@@ -251,7 +251,7 @@ function KnowledgeBaseSection({ onError }: { onError: (msg: string) => void }) {
   const [urlName, setUrlName] = useState('');
   const [urlValue, setUrlValue] = useState('');
 
-  useEffect(() => { loadSources(); }, []);
+  useEffect(() => { loadSources(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once on mount
 
   const loadSources = async () => {
     try { setSources(await aiAgentApi.getKnowledgeSources()); }
