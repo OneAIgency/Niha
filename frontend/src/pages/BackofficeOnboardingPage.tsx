@@ -297,6 +297,45 @@ export function BackofficeOnboardingPage() {
     }
   };
 
+  const handleSendBuyerNDA = async (requestId: string) => {
+    setActionLoading(requestId);
+    try {
+      await adminApi.sendBuyerNDA(requestId);
+      await refreshContactRequests();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send NDA';
+      console.error('Failed to send buyer NDA:', msg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAcceptNDA = async (requestId: string) => {
+    setActionLoading(requestId);
+    try {
+      await adminApi.acceptNDA(requestId);
+      await refreshContactRequests();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to accept NDA';
+      console.error('Failed to accept NDA:', msg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveBuyerNDA = async (userId: string) => {
+    setActionLoading(userId);
+    try {
+      await adminApi.approveIntroducerNDA(userId);
+      await refreshContactRequests();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to approve NDA';
+      console.error('Failed to approve buyer NDA:', msg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDeleteRequest = async (requestId: string) => {
     setActionLoading(`delete-${requestId}`);
     try {
@@ -550,6 +589,9 @@ export function BackofficeOnboardingPage() {
           onOpenNDA={handleOpenNDA}
           onOpenUserNDA={handleOpenUserNDA}
           onIpLookup={handleIpLookup}
+          onSendBuyerNDA={handleSendBuyerNDA}
+          onAcceptNDA={handleAcceptNDA}
+          onApproveBuyerNDA={handleApproveBuyerNDA}
           actionLoading={actionLoading}
         />
       )}
