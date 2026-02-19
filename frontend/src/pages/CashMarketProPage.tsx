@@ -569,8 +569,13 @@ export function CashMarketProPage() {
         />
       )}
 
+      {/* Mobile notice */}
+      <div className="md:hidden px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 text-center">
+        <p className="text-xs text-amber-400">For the best trading experience, use a desktop or landscape tablet. Scroll horizontally to view all panels.</p>
+      </div>
+
       {/* Content — full page, flex to footer */}
-      <div className="bg-navy-900 flex flex-col flex-1 min-h-0 px-4 py-4">
+      <div className="bg-navy-900 flex flex-col flex-1 min-h-0 px-4 py-4 overflow-x-auto">
           {loading && !orderBook ? (
             <div className="flex flex-col gap-2 flex-1 min-h-0">
               {/* Skeleton Row 1: Order Book | Chart | Order Form */}

@@ -310,7 +310,7 @@ export function CeaSwapMarketPage() {
                 <div className="h-1 bg-gradient-to-r from-emerald-500 via-blue-400 to-emerald-500" />
 
                 {/* Header */}
-                <div className="px-8 pt-8 pb-4">
+                <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4">
                   <div className="flex items-center gap-4 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
                       <ArrowRightLeft className="w-6 h-6 text-emerald-400" />
@@ -323,7 +323,7 @@ export function CeaSwapMarketPage() {
                 </div>
 
                 {/* Status */}
-                <div className="px-8 pb-6">
+                <div className="px-4 sm:px-8 pb-6">
                   <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                     <Clock className="w-4 h-4 text-emerald-400" />
                     <span className="text-sm font-medium text-emerald-400">Available after CEA purchase</span>
@@ -331,7 +331,7 @@ export function CeaSwapMarketPage() {
                 </div>
 
                 {/* Visual swap preview */}
-                <div className="px-8 pb-6">
+                <div className="px-4 sm:px-8 pb-6">
                   <div className="flex items-center justify-center gap-4 py-6 bg-navy-700/50 border border-navy-600 rounded-xl">
                     <div className="text-center">
                       <div className="w-10 h-10 mx-auto rounded-lg bg-amber-500/20 flex items-center justify-center mb-2">
@@ -350,7 +350,7 @@ export function CeaSwapMarketPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 pb-8">
+                <div className="px-4 sm:px-8 pb-6 sm:pb-8">
                   <div className="flex items-start gap-3 px-4 py-3 bg-navy-700/30 border border-navy-600/50 rounded-xl">
                     <Shield className="w-4 h-4 text-navy-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-navy-400 leading-relaxed">
