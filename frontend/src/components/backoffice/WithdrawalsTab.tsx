@@ -76,8 +76,8 @@ export const WithdrawalsTab: React.FC = () => {
       setPendingWithdrawals(pending);
       setProcessingWithdrawals(processing);
       setStats(statsData);
-    } catch (err) {
-      setError('Failed to load withdrawals');
+    } catch (err: any) {
+      setError(err.message || 'Failed to load withdrawals');
       console.error(err);
     } finally {
       setLoading(false);
@@ -101,8 +101,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to approve withdrawal');
       }
-    } catch (err) {
-      setError('Failed to approve withdrawal');
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve withdrawal');
     } finally {
       setActionLoading(false);
     }
@@ -122,8 +122,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to complete withdrawal');
       }
-    } catch (err) {
-      setError('Failed to complete withdrawal');
+    } catch (err: any) {
+      setError(err.message || 'Failed to complete withdrawal');
     } finally {
       setActionLoading(false);
     }
@@ -143,8 +143,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to reject withdrawal');
       }
-    } catch (err) {
-      setError('Failed to reject withdrawal');
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject withdrawal');
     } finally {
       setActionLoading(false);
     }

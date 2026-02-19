@@ -103,9 +103,9 @@ export function SystemHealthPage() {
       setSettlementMetrics(metricsRes);
       setSettlementAlerts(alertsRes.alerts ?? []);
       setProcessors(processorsRes.processors ?? []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching system health data:', err);
-      setError('Failed to load system health data');
+      setError(err.message || 'Failed to load system health data');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

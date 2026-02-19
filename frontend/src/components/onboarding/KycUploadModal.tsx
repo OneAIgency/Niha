@@ -143,9 +143,9 @@ export default function KycUploadModal({
       const docs = status.documents || [];
       // API response uses camelCase (documentType, fileName)
       setUploadedDocs(docs);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load documents:', err);
-      setError('Failed to load documents');
+      setError(err.message || 'Failed to load documents');
     } finally {
       setLoading(false);
     }

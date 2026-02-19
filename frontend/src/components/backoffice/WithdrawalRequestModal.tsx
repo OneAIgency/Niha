@@ -133,8 +133,8 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
       } else {
         setError(result.error || 'Failed to submit withdrawal request');
       }
-    } catch (err) {
-      setError('An error occurred while submitting the request');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while submitting the request');
     } finally {
       setLoading(false);
     }

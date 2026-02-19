@@ -45,8 +45,8 @@ export function ContactPage() {
       const sanitizedData = sanitizeFormData(formData);
       await contactApi.submitRequest(sanitizedData);
       setSubmitted(true);
-    } catch (err) {
-      setErrors({ submit: 'Failed to submit request. Please try again.' });
+    } catch (err: any) {
+      setErrors({ submit: err.message || 'Failed to submit request. Please try again.' });
     } finally {
       setLoading(false);
     }

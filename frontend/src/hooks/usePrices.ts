@@ -21,9 +21,9 @@ export function usePrices() {
           setPrices(data);
         }
         return true; // Success
-      } catch (err) {
+      } catch (err: any) {
         if (isMounted) {
-          setError('Failed to fetch prices');
+          setError(err.message || 'Failed to fetch prices');
         }
         console.error('Price fetch error:', err);
         return false; // Failed

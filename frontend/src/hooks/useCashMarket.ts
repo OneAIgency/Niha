@@ -72,10 +72,10 @@ export function useCashMarket(
         eua: balancesData.euaBalance,
       });
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       if (isMountedRef.current) {
         console.error('Cash market fetch error:', err);
-        setError('Failed to fetch market data');
+        setError(err.message || 'Failed to fetch market data');
       }
     } finally {
       if (isMountedRef.current) {
