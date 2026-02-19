@@ -26,6 +26,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_COMMISSION_RATE = Decimal("0.010000")
 
 
+async def get_default_commission_rate(db: AsyncSession) -> Decimal:
+    """Get the platform default commission rate from DB settings."""
+    from ..models.models import PlatformSetting
+
+    result = await db.execute(
+        select(PlatformSetting).where(PlatformSetting.key == "introducer_commission_rate")
+    )
+    setting = result.scalar_one_or_none()
+    if setting:
+        return Decimal(setting.value)
+    return DEFAULT_COMMISSION_RATE  # Fallback to hardcoded constant
+
+
 async def maybe_create_commission(
     db: AsyncSession,
     trade: CashMarketTrade,
@@ -62,7 +75,8 @@ async def maybe_create_commission(
 
     # 4. Calculate commission
     trade_eur = trade.price * trade.quantity
-    rate = introducer.commission_rate or DEFAULT_COMMISSION_RATE
+    default_rate = await get_default_commission_rate(db)
+    rate = introducer.commission_rate or default_rate
     commission = (trade_eur * rate).quantize(Decimal("0.01"))
 
     if commission <= 0:
