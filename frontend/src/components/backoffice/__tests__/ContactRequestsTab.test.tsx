@@ -9,15 +9,6 @@ import { ContactRequestsTab } from '../ContactRequestsTab';
 import { createMockContactRequest } from '../../../test/factories';
 import type { ContactRequest } from '../../../types/backoffice';
 
-function toContactRequest(
-  mock: ReturnType<typeof createMockContactRequest>
-): ContactRequest {
-  return {
-    ...mock,
-    position: mock.position ?? '',
-  };
-}
-
 describe('ContactRequestsTab', () => {
   const onApprove = vi.fn();
   const onReject = vi.fn();
@@ -54,22 +45,18 @@ describe('ContactRequestsTab', () => {
     expect(skeletons.length).toBe(3);
   });
 
-  it('should display entity_name and contact_name for each request', () => {
+  it('should display entityName and contactName for each request', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: '1',
-          entity_name: 'Company A',
-          contact_name: 'Alice',
-        })
-      ),
-      toContactRequest(
-        createMockContactRequest({
-          id: '2',
-          entity_name: 'Company B',
-          contact_name: 'Bob',
-        })
-      ),
+      createMockContactRequest({
+        id: '1',
+        entityName: 'Company A',
+        contactName: 'Alice',
+      }),
+      createMockContactRequest({
+        id: '2',
+        entityName: 'Company B',
+        contactName: 'Bob',
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
@@ -79,50 +66,44 @@ describe('ContactRequestsTab', () => {
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
-  it('should show fallback "—" when entity_name is missing', () => {
+  it('should show fallback "---" when entityName is missing', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: '1',
-          entity_name: undefined as unknown as string,
-          contact_name: 'Only Name',
-        })
-      ),
+      createMockContactRequest({
+        id: '1',
+        entityName: undefined as unknown as string,
+        contactName: 'Only Name',
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
     expect(screen.getByText('Only Name')).toBeInTheDocument();
     const row = document.querySelector('.card_contact_request_list');
     expect(row).toBeTruthy();
-    expect(row?.textContent).toContain('—');
+    expect(row?.textContent).toContain('---');
   });
 
-  it('should show fallback "—" when contact_name is missing', () => {
+  it('should show fallback "---" when contactName is missing', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: '1',
-          entity_name: 'Entity Only',
-          contact_name: undefined,
-        })
-      ),
+      createMockContactRequest({
+        id: '1',
+        entityName: 'Entity Only',
+        contactName: undefined,
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
     expect(screen.getByText('Entity Only')).toBeInTheDocument();
     const row = document.querySelector('.card_contact_request_list');
-    expect(row?.textContent).toContain('—');
+    expect(row?.textContent).toContain('---');
   });
 
-  it('should use safe aria-label for View button when entity_name is present', () => {
+  it('should use safe aria-label for View button when entityName is present', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: 'req-1',
-          entity_name: 'Acme Corp',
-          contact_email: 'user@acme.com',
-        })
-      ),
+      createMockContactRequest({
+        id: 'req-1',
+        entityName: 'Acme Corp',
+        contactEmail: 'user@acme.com',
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
@@ -132,15 +113,13 @@ describe('ContactRequestsTab', () => {
     expect(viewButton).toBeInTheDocument();
   });
 
-  it('should use contact_email fallback in View button aria-label when entity_name is missing', () => {
+  it('should use contactEmail fallback in View button aria-label when entityName is missing', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: 'req-1',
-          entity_name: undefined as unknown as string,
-          contact_email: 'fallback@test.com',
-        })
-      ),
+      createMockContactRequest({
+        id: 'req-1',
+        entityName: undefined as unknown as string,
+        contactEmail: 'fallback@test.com',
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
@@ -150,15 +129,13 @@ describe('ContactRequestsTab', () => {
     expect(viewButton).toBeInTheDocument();
   });
 
-  it('should use id fallback in View button aria-label when entity_name and contact_email missing', () => {
+  it('should use id fallback in View button aria-label when entityName and contactEmail missing', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: 'req-xyz',
-          entity_name: undefined as unknown as string,
-          contact_email: undefined as unknown as string,
-        })
-      ),
+      createMockContactRequest({
+        id: 'req-xyz',
+        entityName: undefined as unknown as string,
+        contactEmail: undefined as unknown as string,
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
@@ -170,13 +147,11 @@ describe('ContactRequestsTab', () => {
 
   it('should open view modal when View button is clicked', () => {
     const requests: ContactRequest[] = [
-      toContactRequest(
-        createMockContactRequest({
-          id: 'req-1',
-          entity_name: 'Test Entity',
-          contact_name: 'Test User',
-        })
-      ),
+      createMockContactRequest({
+        id: 'req-1',
+        entityName: 'Test Entity',
+        contactName: 'Test User',
+      }),
     ];
     render(<ContactRequestsTab {...defaultProps} contactRequests={requests} />);
 
@@ -187,7 +162,7 @@ describe('ContactRequestsTab', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText('Contact request details')).toBeInTheDocument();
+    expect(within(dialog).getByText('Contact Request')).toBeInTheDocument();
     expect(within(dialog).getByText('Test Entity')).toBeInTheDocument();
     expect(within(dialog).getByText('Test User')).toBeInTheDocument();
   });

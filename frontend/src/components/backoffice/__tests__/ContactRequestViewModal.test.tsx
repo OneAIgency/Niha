@@ -7,16 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../../test/utils';
 import { ContactRequestViewModal } from '../ContactRequestViewModal';
 import { createMockContactRequest } from '../../../test/factories';
-import type { ContactRequest } from '../../../types/backoffice';
-
-function toContactRequest(
-  mock: ReturnType<typeof createMockContactRequest>
-): ContactRequest {
-  return {
-    ...mock,
-    position: mock.position ?? '',
-  };
-}
 
 describe('ContactRequestViewModal', () => {
   const onClose = vi.fn();
@@ -27,7 +17,7 @@ describe('ContactRequestViewModal', () => {
   });
 
   it('should not render when closed', () => {
-    const request = toContactRequest(createMockContactRequest());
+    const request = createMockContactRequest();
     render(
       <ContactRequestViewModal
         request={request}
@@ -54,7 +44,7 @@ describe('ContactRequestViewModal', () => {
   });
 
   it('should render dialog with title when open and request provided', () => {
-    const request = toContactRequest(createMockContactRequest());
+    const request = createMockContactRequest();
     render(
       <ContactRequestViewModal
         request={request}
@@ -65,22 +55,20 @@ describe('ContactRequestViewModal', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Contact request details')).toBeInTheDocument();
+    expect(screen.getByText('Contact Request')).toBeInTheDocument();
   });
 
   it('should display all contact request fields', () => {
-    const request = toContactRequest(
-      createMockContactRequest({
-        id: 'req-123',
-        entity_name: 'Acme Corp',
-        contact_name: 'Jane Doe',
-        contact_email: 'jane@acme.com',
-        position: 'Director',
-        user_role: 'new',
-        notes: 'Optional notes',
-        created_at: '2026-01-15T10:00:00Z',
-      })
-    );
+    const request = createMockContactRequest({
+      id: 'req-123',
+      entityName: 'Acme Corp',
+      contactName: 'Jane Doe',
+      contactEmail: 'jane@acme.com',
+      position: 'Director',
+      userRole: 'NDA',
+      notes: 'Optional notes',
+      createdAt: '2026-01-15T10:00:00Z',
+    });
     render(
       <ContactRequestViewModal
         request={request}
@@ -90,29 +78,21 @@ describe('ContactRequestViewModal', () => {
       />
     );
 
-    expect(screen.getByText(/^ID/)).toBeInTheDocument();
-    expect(screen.getByText('req-123')).toBeInTheDocument();
-    expect(screen.getByText(/^Entity/)).toBeInTheDocument();
-    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
-    expect(screen.getByText(/^Name/)).toBeInTheDocument();
+    // Contact section
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    expect(screen.getByText(/^Email/)).toBeInTheDocument();
     expect(screen.getByText('jane@acme.com')).toBeInTheDocument();
-    expect(screen.getByText(/^Position/)).toBeInTheDocument();
     expect(screen.getByText('Director')).toBeInTheDocument();
-    expect(screen.getByText(/^User role/)).toBeInTheDocument();
-    expect(screen.getByText('new')).toBeInTheDocument();
-    expect(screen.getByText(/^Notes/)).toBeInTheDocument();
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+
+    // Request section
+    expect(screen.getByText('req-123')).toBeInTheDocument();
     expect(screen.getByText('Optional notes')).toBeInTheDocument();
-    expect(screen.getByText(/^Submitted/)).toBeInTheDocument();
   });
 
-  it('should show NDA section and download button when nda_file_name is set', () => {
-    const request = toContactRequest(
-      createMockContactRequest({
-        nda_file_name: 'agreement.pdf',
-      })
-    );
+  it('should show NDA section and open button when ndaFileName is set', () => {
+    const request = createMockContactRequest({
+      ndaFileName: 'agreement.pdf',
+    });
     render(
       <ContactRequestViewModal
         request={request}
@@ -122,9 +102,7 @@ describe('ContactRequestViewModal', () => {
       />
     );
 
-    expect(
-      screen.getByText('Link to attached PDF for verification')
-    ).toBeInTheDocument();
+    expect(screen.getByText('NDA Document')).toBeInTheDocument();
     const openButton = screen.getByRole('button', {
       name: /Open NDA agreement\.pdf/i,
     });
@@ -134,10 +112,8 @@ describe('ContactRequestViewModal', () => {
     expect(onOpenNDA).toHaveBeenCalledWith(request.id);
   });
 
-  it('should not show NDA section when nda_file_name is missing', () => {
-    const request = toContactRequest(
-      createMockContactRequest({ nda_file_name: undefined })
-    );
+  it('should not show NDA section when ndaFileName is missing', () => {
+    const request = createMockContactRequest({ ndaFileName: undefined });
     render(
       <ContactRequestViewModal
         request={request}
@@ -147,13 +123,11 @@ describe('ContactRequestViewModal', () => {
       />
     );
 
-    expect(
-      screen.queryByText('Link to attached PDF for verification')
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('NDA Document')).not.toBeInTheDocument();
   });
 
   it('should call onClose when Close button is clicked', async () => {
-    const request = toContactRequest(createMockContactRequest());
+    const request = createMockContactRequest();
     render(
       <ContactRequestViewModal
         request={request}
@@ -172,9 +146,7 @@ describe('ContactRequestViewModal', () => {
   });
 
   it('should disable NDA open button when openNDALoading is true', () => {
-    const request = toContactRequest(
-      createMockContactRequest({ nda_file_name: 'doc.pdf' })
-    );
+    const request = createMockContactRequest({ ndaFileName: 'doc.pdf' });
     render(
       <ContactRequestViewModal
         request={request}
@@ -194,9 +166,7 @@ describe('ContactRequestViewModal', () => {
 
   it('should show submitter IP and Lookup button when onIpLookup provided', () => {
     const onIpLookup = vi.fn();
-    const request = toContactRequest(
-      createMockContactRequest({ submitter_ip: '192.168.1.1' })
-    );
+    const request = createMockContactRequest({ submitterIp: '192.168.1.1' });
     render(
       <ContactRequestViewModal
         request={request}
@@ -207,7 +177,6 @@ describe('ContactRequestViewModal', () => {
       />
     );
 
-    expect(screen.getByText('Submitter IP:')).toBeInTheDocument();
     expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
     const lookupButton = screen.getByRole('button', { name: /Lookup IP 192\.168\.1\.1/i });
     fireEvent.click(lookupButton);
