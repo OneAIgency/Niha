@@ -24,7 +24,7 @@ import {
 import { Button, Card, Badge, AlertBanner, NumberInput, PageLoadingState } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { AIAgentTab } from '../components/settings/AIAgentTab';
-import { adminApi } from '../services/api';
+import { adminApi, exchangeRatesApi } from '../services/api';
 import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
 /**
@@ -333,6 +333,9 @@ export function SettingsPage() {
   // Exchange rate history charts
   const [exchangeRateHistories, setExchangeRateHistories] = useState<Record<string, { points: ChartPoint[]; pair: string }>>({});
   const [exchangeRateHistoryHours, setExchangeRateHistoryHours] = useState(24);
+  // Aggregated history for long periods (30d/90d/1y) from public API
+  const [aggregatedHistory, setAggregatedHistory] = useState<{ points: ChartPoint[]; pair: string } | null>(null);
+  const [aggregatedPeriod, setAggregatedPeriod] = useState<string | null>(null);
 
   // Mail & Auth settings
   const [_mailSettings, setMailSettings] = useState<MailSettings | null>(null);
@@ -1218,28 +1221,63 @@ export function SettingsPage() {
                       Rate History
                     </h3>
                     <div className="flex gap-1">
-                      {[6, 12, 24, 48, 168].map(h => (
-                        <button key={h} onClick={() => setExchangeRateHistoryHours(h)}
+                      {/* Short periods: per-source via admin API */}
+                      {([
+                        { label: '6h', hours: 6 },
+                        { label: '12h', hours: 12 },
+                        { label: '24h', hours: 24 },
+                        { label: '48h', hours: 48 },
+                        { label: '7d', hours: 168 },
+                      ] as const).map(({ label, hours }) => (
+                        <button key={label} onClick={() => { setExchangeRateHistoryHours(hours); setAggregatedPeriod(null); }}
                           className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                            exchangeRateHistoryHours === h
+                            exchangeRateHistoryHours === hours && !aggregatedPeriod
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-navy-700 text-navy-400 hover:text-navy-200'
                           }`}>
-                          {h < 24 ? `${h}h` : `${h / 24}d`}
+                          {label}
+                        </button>
+                      ))}
+                      {/* Long periods: aggregated via public API */}
+                      {(['30d', '90d', '1y'] as const).map(p => (
+                        <button key={p} onClick={async () => {
+                          setAggregatedPeriod(p);
+                          try {
+                            const data = await exchangeRatesApi.getHistory({ period: p });
+                            setAggregatedHistory({
+                              points: data.points.map(pt => ({ price: pt.rate, recordedAt: pt.recordedAt })),
+                              pair: data.pair,
+                            });
+                          } catch { setAggregatedHistory(null); }
+                        }}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                            aggregatedPeriod === p
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-navy-700 text-navy-400 hover:text-navy-200'
+                          }`}>
+                          {p}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div className="grid gap-4">
-                    {exchangeRateSources.map(s => (
+                    {aggregatedPeriod && aggregatedHistory ? (
                       <PriceHistoryChart
-                        key={s.id}
-                        sourceName={s.name}
-                        currency={exchangeRateHistories[s.id]?.pair ?? `${s.fromCurrency}/${s.toCurrency}`}
-                        points={exchangeRateHistories[s.id]?.points ?? []}
-                        onReset={() => handleResetExchangeRateHistory(s.id)}
+                        sourceName={`All sources (${aggregatedPeriod})`}
+                        currency={aggregatedHistory.pair}
+                        points={aggregatedHistory.points}
                       />
-                    ))}
+                    ) : (
+                      exchangeRateSources.map(s => (
+                        <PriceHistoryChart
+                          key={s.id}
+                          sourceName={s.name}
+                          currency={exchangeRateHistories[s.id]?.pair ?? `${s.fromCurrency}/${s.toCurrency}`}
+                          points={exchangeRateHistories[s.id]?.points ?? []}
+                          onReset={() => handleResetExchangeRateHistory(s.id)}
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
               )}
