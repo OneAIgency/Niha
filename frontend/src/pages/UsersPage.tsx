@@ -11,7 +11,7 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react';
-import { Button, Card, Badge, ConfirmationModal } from '../components/common';
+import { Button, Card, Badge, ConfirmationModal, Skeleton } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { AddAssetModal, EditAssetModal } from '../components/backoffice';
 import {
@@ -415,9 +415,27 @@ export function UsersPage() {
   if (loading && users.length === 0) {
     return (
       <BackofficeLayout>
-        <div className="flex items-center justify-center py-24">
-          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-        </div>
+        <Card className="mb-6">
+          <div className="flex gap-4 mb-4">
+            <Skeleton variant="rectangular" height={36} width="40%" />
+            <Skeleton variant="rectangular" height={36} width="20%" />
+          </div>
+        </Card>
+        <Card>
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-navy-700 last:border-0">
+                <Skeleton variant="circular" width={36} height={36} />
+                <div className="flex-1 space-y-1">
+                  <Skeleton variant="text" width="30%" />
+                  <Skeleton variant="text" width="50%" />
+                </div>
+                <Skeleton variant="rectangular" width={60} height={22} className="rounded-full" />
+                <Skeleton variant="rectangular" width={80} height={22} />
+              </div>
+            ))}
+          </div>
+        </Card>
       </BackofficeLayout>
     );
   }

@@ -12,7 +12,7 @@ import {
   Leaf
 } from 'lucide-react';
 import { swapsApi, cashMarketApi, usersApi } from '../services/api';
-import { Subheader, AlertBanner } from '../components/common';
+import { Subheader, AlertBanner, Skeleton } from '../components/common';
 import { useAuthStore } from '../stores/useStore';
 import { getEffectiveRole } from '../utils/effectiveRole';
 import type { SwapCalculation } from '../types';
@@ -405,8 +405,42 @@ export function CeaSwapMarketPage() {
       {/* Main Content */}
       <div className="page-container py-6">
         {isLoading && !swapRate ? (
-          <div className="flex items-center justify-center h-96">
-            <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
+          <div className="space-y-6">
+            {/* Skeleton: Swap Visualization */}
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-8">
+              <div className="flex items-center justify-center gap-8">
+                <div className="text-center space-y-3">
+                  <Skeleton variant="rectangular" width={96} height={96} className="mx-auto rounded-2xl" />
+                  <Skeleton variant="text" width="60%" className="mx-auto" />
+                  <Skeleton variant="text" width="40%" className="mx-auto" />
+                </div>
+                <div className="flex flex-col items-center space-y-2">
+                  <Skeleton variant="text" width={120} />
+                  <Skeleton variant="rectangular" width={48} height={48} className="rounded-full" />
+                  <Skeleton variant="rectangular" width={160} height={40} className="rounded-xl" />
+                </div>
+                <div className="text-center space-y-3">
+                  <Skeleton variant="rectangular" width={96} height={96} className="mx-auto rounded-2xl" />
+                  <Skeleton variant="text" width="60%" className="mx-auto" />
+                  <Skeleton variant="text" width="40%" className="mx-auto" />
+                </div>
+              </div>
+            </div>
+            {/* Skeleton: Order Book + History */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 space-y-2">
+                <Skeleton variant="text" width="30%" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} variant="rectangular" height={28} />
+                ))}
+              </div>
+              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 space-y-2">
+                <Skeleton variant="text" width="30%" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} variant="rectangular" height={28} />
+                ))}
+              </div>
+            </div>
           </div>
         ) : swapError && !swapRate ? (
           <div className="flex flex-col items-center justify-center h-96 text-center">

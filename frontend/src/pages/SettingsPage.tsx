@@ -21,7 +21,7 @@ import {
   MoreHorizontal,
   TrendingUp,
 } from 'lucide-react';
-import { Button, Card, Badge, AlertBanner, NumberInput } from '../components/common';
+import { Button, Card, Badge, AlertBanner, NumberInput, PageLoadingState } from '../components/common';
 import { BackofficeLayout } from '../components/layout';
 import { AIAgentTab } from '../components/settings/AIAgentTab';
 import { adminApi } from '../services/api';
@@ -848,9 +848,9 @@ export function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-      </div>
+      <BackofficeLayout>
+        <PageLoadingState text="Loading settings..." />
+      </BackofficeLayout>
     );
   }
 

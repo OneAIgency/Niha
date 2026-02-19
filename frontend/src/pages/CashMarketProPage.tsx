@@ -10,7 +10,7 @@ import {
   FileText,
   TrendingUp,
 } from 'lucide-react';
-import { Subheader, Modal } from '../components/common';
+import { Subheader, Modal, Skeleton } from '../components/common';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi, usersApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
@@ -572,8 +572,36 @@ export function CashMarketProPage() {
       {/* Content — full page, flex to footer */}
       <div className="bg-navy-900 flex flex-col flex-1 min-h-0 px-4 py-4">
           {loading && !orderBook ? (
-            <div className="flex items-center justify-center h-96">
-              <RefreshCw className="w-8 h-8 text-amber-500 animate-spin" />
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              {/* Skeleton Row 1: Order Book | Chart | Order Form */}
+              <div className="grid grid-cols-12 gap-2" style={{ flex: '5 1 0%', minHeight: 0 }}>
+                <div className="col-span-5 rounded-lg border border-navy-700/50 bg-navy-800/30 p-3 space-y-2">
+                  <Skeleton variant="text" width="40%" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} variant="rectangular" height={20} />
+                  ))}
+                </div>
+                <div className="col-span-4 rounded-lg border border-navy-700/50 bg-navy-800/30 p-3">
+                  <Skeleton variant="rectangular" height="100%" />
+                </div>
+                <div className="col-span-3 rounded-lg border border-navy-700/50 bg-navy-800/30 p-3 space-y-3">
+                  <Skeleton variant="text" width="60%" />
+                  <Skeleton variant="rectangular" height={36} />
+                  <Skeleton variant="rectangular" height={36} />
+                  <Skeleton variant="rectangular" height={40} />
+                </div>
+              </div>
+              {/* Skeleton Row 2: My Orders | Activity | News | Impact */}
+              <div className="grid grid-cols-12 gap-2" style={{ flex: '3 1 0%', minHeight: 0 }}>
+                {[3, 3, 3, 3].map((span, i) => (
+                  <div key={i} className={`col-span-${span} rounded-lg border border-navy-700/50 bg-navy-800/30 p-3 space-y-2`}>
+                    <Skeleton variant="text" width="50%" />
+                    <Skeleton variant="rectangular" height={20} />
+                    <Skeleton variant="rectangular" height={20} />
+                    <Skeleton variant="rectangular" height={20} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : error && !orderBook ? (
             <div className="flex flex-col items-center justify-center h-96 text-center">

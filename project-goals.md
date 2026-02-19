@@ -36,7 +36,7 @@ NIHA Carbon Trading Platform is functional with:
 - [x] Real-time order book updates via WebSocket
 - [x] Order history view
 - [x] Trade confirmation modal
-- [ ] Price alerts system
+- [x] Price alerts system
 
 #### 3. Settlement Dashboard Enhancements
 - [x] Visual timeline improvements
