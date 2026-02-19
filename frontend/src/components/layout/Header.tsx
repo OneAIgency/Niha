@@ -340,7 +340,31 @@ export function Header() {
                   </Link>
                 );
               })}
-              {!isAuthenticated && (
+              {isAuthenticated ? (
+                <>
+                  <div className={cn('border-t pt-4 mt-2', isDark ? 'border-navy-700' : 'border-navy-200')}>
+                    <Link to="/profile" className={cn('text-lg font-medium flex items-center gap-2', isDark ? 'text-navy-200' : 'text-navy-700')} onClick={() => setMobileMenuOpen(false)}>
+                      <User className="w-5 h-5" /> Profile
+                    </Link>
+                  </div>
+                  {isRealAdmin && (
+                    <>
+                      <Link to="/settings" className={cn('text-lg font-medium flex items-center gap-2', isDark ? 'text-navy-200' : 'text-navy-700')} onClick={() => setMobileMenuOpen(false)}>
+                        <Settings className="w-5 h-5" /> Settings
+                      </Link>
+                      <Link to="/backoffice" className={cn('text-lg font-medium flex items-center gap-2', isDark ? 'text-navy-200' : 'text-navy-700')} onClick={() => setMobileMenuOpen(false)}>
+                        <Briefcase className="w-5 h-5" /> Backoffice
+                      </Link>
+                    </>
+                  )}
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                    className="text-lg font-medium flex items-center gap-2 text-red-500"
+                  >
+                    <LogOut className="w-5 h-5" /> Logout
+                  </button>
+                </>
+              ) : (
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" className="w-full">
                     Enter Platform

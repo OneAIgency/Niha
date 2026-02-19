@@ -674,7 +674,7 @@ export function DashboardPage() {
                 <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
 
                 {/* Header */}
-                <div className="px-8 pt-8 pb-4">
+                <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4">
                   <div className="flex items-center gap-4 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
                       <Shield className="w-6 h-6 text-amber-400" />
@@ -687,7 +687,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Status badge */}
-                <div className="px-8 pb-6">
+                <div className="px-4 sm:px-8 pb-6">
                   <div className="flex items-center gap-2 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
@@ -699,7 +699,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Deposit details */}
-                <div className="px-8 pb-6">
+                <div className="px-4 sm:px-8 pb-6">
                   <div className="space-y-4">
                     {/* Approved Amount */}
                     <div className="bg-navy-700/50 border border-navy-700 rounded-xl p-5">
@@ -759,7 +759,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 pb-8">
+                <div className="px-4 sm:px-8 pb-6 sm:pb-8">
                   <div className="flex items-start gap-3 px-4 py-3 bg-navy-700/30 border border-navy-700/50 rounded-xl">
                     <Clock className="w-4 h-4 text-navy-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-navy-400 leading-relaxed">
