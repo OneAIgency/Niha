@@ -98,7 +98,7 @@ export function BackofficeOnboardingPage() {
     requestFlow: (r as { requestFlow?: string }).requestFlow ?? 'buyer',
     referredByUserId: (r as { referredByUserId?: string }).referredByUserId,
     referralCodeUsed: (r as { referralCodeUsed?: string }).referralCodeUsed,
-    introducerNdaStatus: (r as { introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' }).introducerNdaStatus,
+    introducerNdaStatus: (r as { introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' | 'attached' }).introducerNdaStatus,
     introducerUserId: (r as { introducerUserId?: string }).introducerUserId,
     notes: r.notes,
     createdAt: r.createdAt,

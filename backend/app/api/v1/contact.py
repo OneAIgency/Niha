@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import (
@@ -20,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.database import get_db
 from ...core.exceptions import handle_database_error
 from ...core.security import RedisManager, get_current_user
-from ...models.models import ContactRequest, ContactStatus, User, UserRole
+from ...models.models import ContactRequest, ContactStatus, MailConfig, MailProvider, User, UserRole
 from ...schemas.schemas import (
     ContactRequestCreate,
     ContactRequestResponse,
@@ -428,6 +430,102 @@ async def create_introducer_nda_request(
         await email_service.send_contact_followup(contact_email, entity_name)
     except Exception:
         pass
+
+    # Auto-create TRODUCER user + send NDA email when introducer flow with no NDA
+    if (
+        request_flow in ("introducer",)
+        and not nda_file_name
+        and referred_by_user_id
+    ):
+        try:
+            from ...services.referral_codes import get_unique_referral_code
+
+            existing = await db.execute(
+                select(User).where(User.email == contact_email.lower())
+            )
+            if not existing.scalar_one_or_none():
+                cfg_result = await db.execute(
+                    select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+                )
+                mail_row = cfg_result.scalar_one_or_none()
+                invitation_expiry_days = (
+                    mail_row.invitation_token_expiry_days
+                    if mail_row and mail_row.invitation_token_expiry_days is not None
+                    else 14
+                )
+
+                invitation_token = secrets.token_urlsafe(32)
+                referral_code_new = await get_unique_referral_code(db)
+
+                new_user = User(
+                    email=contact_email.lower(),
+                    first_name=contact_first_name,
+                    last_name=contact_last_name,
+                    role=UserRole.TRODUCER,
+                    referral_code=referral_code_new,
+                    nda_signed=False,
+                    invitation_token=invitation_token,
+                    invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    invitation_expires_at=(
+                        datetime.now(timezone.utc).replace(tzinfo=None)
+                        + timedelta(days=invitation_expiry_days)
+                    ),
+                    must_change_password=True,
+                    is_active=False,
+                    creation_method="invitation",
+                )
+                db.add(new_user)
+                await db.commit()
+                await db.refresh(new_user)
+
+                # Send NDA invitation email
+                mail_cfg = None
+                if mail_row:
+                    mail_cfg = {
+                        "provider": mail_row.provider.value,
+                        "use_env_credentials": mail_row.use_env_credentials,
+                        "from_email": mail_row.from_email,
+                        "resend_api_key": (
+                            mail_row.resend_api_key
+                            if not mail_row.use_env_credentials
+                            and mail_row.provider == MailProvider.RESEND
+                            else None
+                        ),
+                        "smtp_host": mail_row.smtp_host,
+                        "smtp_port": mail_row.smtp_port,
+                        "smtp_use_tls": mail_row.smtp_use_tls,
+                        "smtp_username": mail_row.smtp_username,
+                        "smtp_password": mail_row.smtp_password,
+                        "invitation_link_base_url": mail_row.invitation_link_base_url,
+                    }
+                nda_pdf_path = os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf"
+                )
+                await email_service.send_introducer_nda_invitation(
+                    new_user.email,
+                    new_user.first_name,
+                    new_user.invitation_token,
+                    nda_pdf_path,
+                    expiry_days=invitation_expiry_days,
+                    mail_config=mail_cfg,
+                )
+
+                asyncio.create_task(
+                    backoffice_ws_manager.broadcast("request_updated", {
+                        "id": str(contact.id),
+                        "introducer_nda_status": "sent",
+                        "introducer_user_id": str(new_user.id),
+                    })
+                )
+                logger.info(
+                    "Auto-created TRODUCER user and sent NDA for %s (referred by %s)",
+                    contact_email, referred_by_user_id,
+                )
+        except Exception:
+            logger.exception(
+                "Failed to auto-create user/send NDA for %s (non-blocking)",
+                contact_email,
+            )
 
     return contact
 

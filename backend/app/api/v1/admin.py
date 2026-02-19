@@ -156,14 +156,22 @@ async def get_contact_requests(
         }
         if d["request_flow"] == "introducer":
             intro_user = introducer_user_map.get(r.contact_email)
-            if not intro_user:
-                d["introducer_nda_status"] = "not_sent"
-            elif not intro_user.nda_file_data:
-                d["introducer_nda_status"] = "sent"
-                d["introducer_user_id"] = str(intro_user.id)
+            if intro_user:
+                if intro_user.nda_file_data:
+                    d["introducer_nda_status"] = "uploaded"
+                    d["introducer_user_id"] = str(intro_user.id)
+                else:
+                    d["introducer_nda_status"] = "sent"
+                    d["introducer_user_id"] = str(intro_user.id)
+            elif r.nda_file_name:
+                # NDA was uploaded with the initial form submission
+                d["introducer_nda_status"] = "attached"
             else:
-                d["introducer_nda_status"] = "uploaded"
-                d["introducer_user_id"] = str(intro_user.id)
+                d["introducer_nda_status"] = "not_sent"
+            if r.referred_by_user_id:
+                d["referred_by_user_id"] = str(r.referred_by_user_id)
+            if r.referral_code_used:
+                d["referral_code_used"] = r.referral_code_used
         return d
 
     return {
@@ -408,6 +416,7 @@ async def create_user_from_contact_request(
 
             user.referral_code = await get_unique_referral_code(db)
             user.nda_signed = contact_request.nda_file_data is not None
+            user.commission_rate = Decimal("0.010000")  # Default 1%
 
         # Update contact request user_role to KYC (approved, user created)
         contact_request.user_role = ContactStatus.KYC

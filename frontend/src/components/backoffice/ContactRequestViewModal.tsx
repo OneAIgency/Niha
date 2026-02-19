@@ -170,7 +170,10 @@ export function ContactRequestViewModal({
 
   // NDA section logic
   const hasBuyerNDA = !!showingRequest.ndaFileName;
-  const hasIntroducerNDA = isIntroducer && showingRequest.introducerNdaStatus === 'uploaded' && !!showingRequest.introducerUserId;
+  const hasIntroducerNDA = isIntroducer && (
+    (showingRequest.introducerNdaStatus === 'uploaded' && !!showingRequest.introducerUserId) ||
+    showingRequest.introducerNdaStatus === 'attached'
+  );
   const introducerNDAPending = isIntroducer && showingRequest.introducerNdaStatus === 'sent';
   const showNDASection = hasBuyerNDA || hasIntroducerNDA || introducerNDAPending;
 
@@ -274,8 +277,8 @@ export function ContactRequestViewModal({
                 </button>
               )}
 
-              {/* Introducer signed NDA (from User model) */}
-              {hasIntroducerNDA && onOpenUserNDA && (
+              {/* Introducer signed NDA (from User model) — only when user exists */}
+              {hasIntroducerNDA && onOpenUserNDA && showingRequest.introducerUserId && (
                 <button
                   type="button"
                   onClick={() => onOpenUserNDA(showingRequest.introducerUserId!)}
@@ -286,6 +289,23 @@ export function ContactRequestViewModal({
                   <FileText className="w-4 h-4 shrink-0" />
                   <span className="flex-1 text-left truncate text-xs">
                     {openUserNDALoading ? 'Opening…' : 'View Signed NDA'}
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0 text-emerald-500/60" />
+                </button>
+              )}
+
+              {/* Attached NDA (uploaded with form, no user yet) — use contact request NDA viewer */}
+              {hasIntroducerNDA && !showingRequest.introducerUserId && (
+                <button
+                  type="button"
+                  onClick={() => onOpenNDA(showingRequest.id)}
+                  disabled={openNDALoading}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-600/40 bg-emerald-900/10 text-emerald-300 hover:bg-emerald-900/20 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="View Attached NDA"
+                >
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span className="flex-1 text-left truncate text-xs">
+                    {openNDALoading ? 'Opening…' : 'View Attached NDA'}
                   </span>
                   <ExternalLink className="w-3.5 h-3.5 shrink-0 text-emerald-500/60" />
                 </button>

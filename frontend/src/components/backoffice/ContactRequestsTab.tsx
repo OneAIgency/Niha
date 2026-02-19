@@ -144,10 +144,16 @@ export function ContactRequestsTab({
                       </Typography>
                     </span>
                     <Badge
-                      variant={request.requestFlow === 'introducer' ? clientStatusVariant('TRODUCER') : clientStatusVariant(request.userRole)}
+                      variant={request.requestFlow === 'introducer'
+                        ? clientStatusVariant(request.introducerNdaStatus === 'attached' || request.introducerNdaStatus === 'uploaded' ? 'INTRODUCER' : 'PREINTRODUCER')
+                        : clientStatusVariant(request.userRole)}
                       className="shrink-0 text-xs"
                     >
-                      {request.requestFlow === 'introducer' ? 'TRODUCER' : (request.userRole ?? '---')}
+                      {request.requestFlow === 'introducer'
+                        ? (request.introducerNdaStatus === 'attached' || request.introducerNdaStatus === 'uploaded'
+                          ? 'INTRODUCER'
+                          : 'PREINTRODUCER')
+                        : (request.userRole ?? '---')}
                     </Badge>
                     {request.referralCodeUsed ? (
                       <Badge variant="info" className="shrink-0 text-xs">Referred</Badge>
@@ -160,6 +166,9 @@ export function ContactRequestsTab({
                     )}
                     {request.introducerNdaStatus === 'uploaded' && (
                       <Badge variant="success" className="shrink-0 text-xs">NDA Uploaded</Badge>
+                    )}
+                    {request.introducerNdaStatus === 'attached' && (
+                      <Badge variant="success" className="shrink-0 text-xs">NDA Attached</Badge>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -185,6 +194,18 @@ export function ContactRequestsTab({
                           >
                             <Send className="w-3.5 h-3.5 mr-1" />
                             Send NDA
+                          </Button>
+                        )}
+                        {request.introducerNdaStatus === 'attached' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleApproveClick(request)}
+                            loading={actionLoading === `approve-${request.id}`}
+                            aria-label={`Approve and create introducer for ${ariaName(request)}`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                            Approve & Create Introducer
                           </Button>
                         )}
                         {request.introducerNdaStatus === 'uploaded' && onApproveIntroducer && request.introducerUserId && (
@@ -286,6 +307,7 @@ export function ContactRequestsTab({
             ndaFileName: approveModalRequest.ndaFileName,
             submitterIp: approveModalRequest.submitterIp,
             userRole: approveModalRequest.userRole,
+            requestFlow: approveModalRequest.requestFlow,
             notes: approveModalRequest.notes,
             createdAt: approveModalRequest.createdAt,
           }}
