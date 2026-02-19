@@ -5,9 +5,19 @@ import re
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+
+
+def is_carboncredits_url(url: str) -> bool:
+    """Safely check if a URL belongs to carboncredits.com (exact domain match)."""
+    try:
+        host = urlparse(url).hostname or ""
+        return host == "carboncredits.com" or host.endswith(".carboncredits.com")
+    except Exception:
+        return False
 
 from ..core.security import RedisManager
 from ..models.models import (
@@ -221,7 +231,7 @@ class PriceScraper:
         config = source.config or {}
 
         # Special handling for carboncredits.com - use their API endpoint
-        if "carboncredits.com" in url:
+        if is_carboncredits_url(url):
             return await self._scrape_carboncredits(source)
 
         # Generic scraping based on library

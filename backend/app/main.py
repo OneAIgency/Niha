@@ -152,14 +152,16 @@ async def lifespan(app: FastAPI):
 
                     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+                    from .services.price_scraper import is_carboncredits_url
+
                     # Partition: carboncredits.com uses one shared fetch per cycle (0026)
                     carboncredits_sources = [
                         s for s in sources
-                        if s.url and "carboncredits.com" in s.url
+                        if s.url and is_carboncredits_url(s.url)
                     ]
                     other_sources = [
                         s for s in sources
-                        if not s.url or "carboncredits.com" not in s.url
+                        if not s.url or not is_carboncredits_url(s.url)
                     ]
 
                     # Track which cert types got a successful scrape this cycle

@@ -1748,7 +1748,9 @@ async def refresh_scraping_source(
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
     try:
-        if source.url and "carboncredits.com" in source.url:
+        from ...services.price_scraper import is_carboncredits_url
+
+        if source.url and is_carboncredits_url(source.url):
             # One request updates all carboncredits.com sources (0026)
             all_cc = await db.execute(
                 select(ScrapingSource).where(
