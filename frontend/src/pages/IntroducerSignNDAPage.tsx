@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, CheckCircle } from 'lucide-react';
 import { contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 
 export function IntroducerSignNDAPage() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -40,6 +42,12 @@ export function IntroducerSignNDAPage() {
           <p className="text-xs text-navy-500 mt-2">
             You may close this page. No further action is required.
           </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="mt-4 px-6 py-2 rounded-lg bg-navy-800 hover:bg-navy-700 text-sm text-navy-300 hover:text-white transition-colors"
+          >
+            Back to Login
+          </button>
         </div>
       </div>
     );
