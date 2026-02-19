@@ -184,16 +184,6 @@ export function IntroducerPage() {
     }
   };
 
-  const handleSimulate = () => {
-    setMode('nda');
-    setEntity('Acme Carbon Consulting Ltd');
-    setEmail('sim-introducer@acme-carbon.example.com');
-    setContactFirstName('Sim');
-    setContactLastName('Test');
-    setPosition('Sustainability Director');
-    setError('');
-  };
-
   if (requestSent) {
     const resetNda = () => {
       setRequestSent(false);
@@ -310,15 +300,6 @@ export function IntroducerPage() {
               >
                 NDA
               </button>
-              {import.meta.env.DEV && (
-                <button
-                  type="button"
-                  onClick={handleSimulate}
-                  className="w-full py-2 px-4 rounded border border-amber-500/30 text-amber-400/70 hover:bg-amber-500/10 text-xs tracking-wider transition-colors"
-                >
-                  Simulează cerere introducer
-                </button>
-              )}
             </motion.div>
           )}
 
@@ -429,16 +410,6 @@ export function IntroducerPage() {
                   </p>
                 </div>
               )}
-              {import.meta.env.DEV && (
-                <button
-                  type="button"
-                  onClick={handleSimulate}
-                  className="w-full py-1.5 text-amber-400/60 hover:text-amber-400/90 text-xs tracking-wider transition-colors"
-                >
-                  Simulează cerere
-                </button>
-              )}
-
               <div className="space-y-3">
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
