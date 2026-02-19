@@ -179,8 +179,8 @@ function ProfessionalOrderBook({
                 className={`flex gap-1 px-2 py-1 text-[11px] font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 transition-colors whitespace-nowrap ${rowBg}`}
               >
                 <div className={`absolute left-0 top-0 bottom-0 ${depthBg} transition-all`} style={{ width: `${depthPct}%` }} />
-                <div className={`relative z-10 flex-1 min-w-0 truncate ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-red-400'}`}>{formatPrice(ask.price)}</div>
-                <div className={`relative z-10 flex-1 min-w-0 truncate text-right ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-white'}`}>{formatQuantity(ask.quantity)}</div>
+                <div className={`relative z-10 flex-1 min-w-0 truncate ${isHighlighted ? 'text-yellow-300 font-semibold' : 'text-red-400'}`}>{formatPrice(ask.price)}</div>
+                <div className={`relative z-10 flex-1 min-w-0 truncate text-right ${isHighlighted ? 'text-yellow-300 font-semibold' : 'text-white'}`}>{formatQuantity(ask.quantity)}</div>
                 <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatQuantity(ask.cumulativeQuantity)}</div>
                 <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatEur(ask.cumulativeValue)}</div>
                 <div className="relative z-10 flex-1 min-w-0 truncate text-right text-navy-400">{ask.orderCount}</div>
