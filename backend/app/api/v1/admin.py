@@ -5119,6 +5119,58 @@ async def approve_introducer_nda(
     return {"message": "NDA approved", "success": True}
 
 
+@router.put("/contact-requests/{request_id}/accept-nda")
+async def accept_contact_request_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark a contact request's NDA as accepted by admin after review."""
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    if contact_request.user_role != ContactStatus.NDA:
+        raise HTTPException(status_code=400, detail="Contact request must be in NDA status to accept NDA")
+
+    # Check NDA file exists (either on ContactRequest or on linked user)
+    has_nda = bool(contact_request.nda_file_data)
+    if not has_nda:
+        user_result = await db.execute(
+            select(User).where(
+                User.email == contact_request.contact_email.lower(),
+                User.role == UserRole.PRE_NDA,
+            )
+        )
+        linked_user = user_result.scalar_one_or_none()
+        if linked_user and linked_user.nda_file_data:
+            has_nda = True
+
+    if not has_nda:
+        raise HTTPException(status_code=400, detail="No NDA document found to accept")
+
+    try:
+        contact_request.nda_accepted = True
+        contact_request.nda_accepted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        contact_request.nda_accepted_by = admin_user.id
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "accepting NDA", logger) from e
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "nda_accepted": True,
+        })
+    )
+
+    return {"message": "NDA accepted", "success": True}
+
+
 # ==================== Commission Management ====================
 
 
