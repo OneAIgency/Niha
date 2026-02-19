@@ -41,16 +41,16 @@ async def extract_text_from_pdf(file_path: str) -> str:
 
 async def extract_text_from_url(url: str) -> str:
     """Fetch and extract text from a URL."""
-    import re
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(url)
         resp.raise_for_status()
         content = resp.text
         if "<html" in content.lower() or "<body" in content.lower():
-            content = re.sub(r"<script[^>]*>.*?</script>", "", content, flags=re.DOTALL)
-            content = re.sub(r"<style[^>]*>.*?</style>", "", content, flags=re.DOTALL)
-            content = re.sub(r"<[^>]+>", " ", content)
-            content = re.sub(r"\s+", " ", content).strip()
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(content, "html.parser")
+            for tag in soup(["script", "style"]):
+                tag.decompose()
+            content = soup.get_text(separator=" ", strip=True)
         return content
 
 
