@@ -668,6 +668,12 @@ async def upload_introducer_nda(
     ).scalar_one_or_none()
 
     if contact_req:
+        # If PRE_NDA buyer, transition ContactRequest from PRE_NDA to NDA
+        if current_user.role == UserRole.PRE_NDA:
+            contact_req.user_role = ContactStatus.NDA
+            await db.commit()
+
+        nda_status_key = "buyer_nda_status" if flow == "buyer" else "introducer_nda_status"
         asyncio.create_task(
             backoffice_ws_manager.broadcast("request_updated", {
                 "id": str(contact_req.id),
@@ -678,7 +684,7 @@ async def upload_introducer_nda(
                 "contact_last_name": contact_req.contact_last_name,
                 "user_role": contact_req.user_role.value if contact_req.user_role else "NDA",
                 "request_flow": contact_req.request_flow,
-                "introducer_nda_status": "uploaded",
+                nda_status_key: "uploaded",
                 "introducer_user_id": str(current_user.id),
             })
         )

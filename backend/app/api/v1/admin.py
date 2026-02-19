@@ -138,6 +138,32 @@ async def get_contact_requests(
         for u in user_result.scalars().all():
             introducer_user_map[u.email] = u
 
+    # Batch-fetch referrer users (introducers who referred buyers)
+    referrer_ids = [
+        r.referred_by_user_id for r in requests
+        if r.referred_by_user_id
+    ]
+    referrer_map: dict = {}
+    if referrer_ids:
+        ref_result = await db.execute(
+            select(User).where(User.id.in_(referrer_ids))
+        )
+        for u in ref_result.scalars().all():
+            referrer_map[u.id] = u
+
+    # Batch-fetch buyer PRE_NDA/NDA users (to compute buyer_nda_status)
+    buyer_emails = [
+        r.contact_email for r in requests
+        if getattr(r, "request_flow", "buyer") == "buyer"
+    ]
+    buyer_user_map: dict = {}
+    if buyer_emails:
+        bu_result = await db.execute(
+            select(User).where(User.email.in_(buyer_emails), User.role.in_([UserRole.PRE_NDA, UserRole.NDA]))
+        )
+        for u in bu_result.scalars().all():
+            buyer_user_map[u.email.lower()] = u
+
     def _build_request_dict(r: ContactRequest) -> dict:
         d = {
             "id": str(r.id),
@@ -168,10 +194,35 @@ async def get_contact_requests(
                 d["introducer_nda_status"] = "attached"
             else:
                 d["introducer_nda_status"] = "not_sent"
-            if r.referred_by_user_id:
-                d["referred_by_user_id"] = str(r.referred_by_user_id)
-            if r.referral_code_used:
-                d["referral_code_used"] = r.referral_code_used
+
+        # Always include referred_by info and nda_accepted
+        if r.referred_by_user_id:
+            d["referred_by_user_id"] = str(r.referred_by_user_id)
+            referrer = referrer_map.get(r.referred_by_user_id)
+            if referrer:
+                d["introducer_name"] = f"{referrer.first_name or ''} {referrer.last_name or ''}".strip()
+        if r.referral_code_used:
+            d["referral_code_used"] = r.referral_code_used
+        d["nda_accepted"] = bool(r.nda_accepted)
+
+        # Buyer NDA status (for buyer requests)
+        if d["request_flow"] == "buyer":
+            buyer_user = buyer_user_map.get(r.contact_email.lower())
+            if r.user_role == ContactStatus.PRE_NDA:
+                if buyer_user:
+                    d["buyer_nda_status"] = "sent"
+                    d["buyer_user_id"] = str(buyer_user.id)
+                else:
+                    d["buyer_nda_status"] = "not_sent"
+            elif r.user_role == ContactStatus.NDA:
+                if r.nda_file_data:
+                    d["buyer_nda_status"] = "attached"  # NDA uploaded with form
+                elif buyer_user and buyer_user.nda_file_data:
+                    d["buyer_nda_status"] = "uploaded"  # User uploaded after send-nda
+                    d["buyer_user_id"] = str(buyer_user.id)
+                else:
+                    d["buyer_nda_status"] = "no_nda"
+
         return d
 
     return {
@@ -333,9 +384,22 @@ async def create_user_from_contact_request(
     if not contact_request:
         raise HTTPException(status_code=404, detail="Contact request not found")
 
-    # Check email uniqueness
-    existing = await db.execute(select(User).where(User.email == email.lower()))
-    if existing.scalar_one_or_none():
+    # For buyer requests with NDA: require nda_accepted before creating user
+    if (
+        contact_request.request_flow == "buyer"
+        and contact_request.user_role == ContactStatus.NDA
+        and not contact_request.nda_accepted
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="NDA must be accepted before creating user. Review the NDA document first.",
+        )
+
+    # Check if user already exists
+    existing_result = await db.execute(select(User).where(User.email == email.lower()))
+    existing_user = existing_result.scalar_one_or_none()
+
+    if existing_user and existing_user.role not in (UserRole.PRE_NDA, UserRole.NDA):
         raise HTTPException(
             status_code=400, detail="User with this email already exists"
         )
@@ -368,47 +432,61 @@ async def create_user_from_contact_request(
 
         user_role_val = UserRole.INTRODUCER if is_introducer else UserRole.KYC
 
-        if mode == "manual":
-            if not password or len(password) < 8:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Password required and must be at least 8 characters",
+        if existing_user and existing_user.role in (UserRole.PRE_NDA, UserRole.NDA):
+            # Upgrade existing PRE_NDA/NDA user to KYC
+            existing_user.role = user_role_val
+            existing_user.entity_id = entity_id_val
+            existing_user.first_name = first_name
+            existing_user.last_name = last_name
+            existing_user.position = position
+            existing_user.is_active = True
+            existing_user.nda_signed = True
+            if mode == "manual" and password:
+                existing_user.password_hash = hash_password(password)
+                existing_user.must_change_password = False
+            user = existing_user
+        else:
+            if mode == "manual":
+                if not password or len(password) < 8:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Password required and must be at least 8 characters",
+                    )
+
+                user = User(
+                    email=email.lower(),
+                    first_name=first_name,
+                    last_name=last_name,
+                    password_hash=hash_password(password),
+                    role=user_role_val,
+                    entity_id=entity_id_val,
+                    position=position,
+                    must_change_password=False,
+                    is_active=True,
+                    creation_method="manual",
+                    created_by=admin_user.id,
+                )
+            else:
+                invitation_token = secrets.token_urlsafe(32)
+                user = User(
+                    email=email.lower(),
+                    first_name=first_name,
+                    last_name=last_name,
+                    role=user_role_val,
+                    entity_id=entity_id_val,
+                    position=position,
+                    invitation_token=invitation_token,
+                    invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    invitation_expires_at=(
+                        datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
+                    ),
+                    must_change_password=True,
+                    is_active=False,
+                    creation_method="invitation",
+                    created_by=admin_user.id,
                 )
 
-            user = User(
-                email=email.lower(),
-                first_name=first_name,
-                last_name=last_name,
-                password_hash=hash_password(password),
-                role=user_role_val,
-                entity_id=entity_id_val,
-                position=position,
-                must_change_password=False,
-                is_active=True,
-                creation_method="manual",
-                created_by=admin_user.id,
-            )
-        else:
-            invitation_token = secrets.token_urlsafe(32)
-            user = User(
-                email=email.lower(),
-                first_name=first_name,
-                last_name=last_name,
-                role=user_role_val,
-                entity_id=entity_id_val,
-                position=position,
-                invitation_token=invitation_token,
-                invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                invitation_expires_at=(
-                    datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
-                ),
-                must_change_password=True,
-                is_active=False,
-                creation_method="invitation",
-                created_by=admin_user.id,
-            )
-
-        db.add(user)
+            db.add(user)
 
         # Generate referral code for INTRODUCER users
         if is_introducer:
