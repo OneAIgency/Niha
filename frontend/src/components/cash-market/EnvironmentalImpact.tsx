@@ -32,6 +32,7 @@ function MiniGauge({ pct, color }: { pct: number; color: string }) {
   const dashOffset = circ * (1 - Math.min(pct, 1));
   return (
     <svg width={44} height={44} className="shrink-0">
+      {/* eslint-disable-next-line no-restricted-syntax -- SVG inline stroke requires hex */}
       <circle cx={22} cy={22} r={r} fill="none" stroke="#1e293b" strokeWidth={stroke} />
       <circle
         cx={22} cy={22} r={r} fill="none"
@@ -96,7 +97,7 @@ export function EnvironmentalImpact() {
     return () => { mounted = false; window.removeEventListener('nihao:tradeExecuted', handler); };
   }, []);
 
-  const GAUGE_COLORS = ['#34d399', '#4ade80', '#2dd4bf', '#22d3ee'];
+  const GAUGE_COLORS = ['#34d399', '#4ade80', '#2dd4bf', '#22d3ee']; // eslint-disable-line no-restricted-syntax -- SVG gauge colors
 
   return (
     <div className="rounded-lg border border-navy-700/50 overflow-hidden flex flex-col flex-1 min-h-0 bg-navy-800/30 widget-accent-green">

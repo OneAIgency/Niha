@@ -297,7 +297,7 @@ export function ThemePage() {
                 </div>
                 <div className="mt-3 p-2 rounded bg-navy-900/50 border border-navy-700">
                   <p className="text-xs text-navy-500 font-mono">
-                    &lt;Subheader icon=&#123;...&#125; title="..." description="..."&gt;<br />
+                    &lt;Subheader icon=&#123;...&#125; title=&quot;...&quot; description=&quot;...&quot;&gt;<br />
                     &nbsp;&nbsp;&#123;/* right side content */&#125;<br />
                     &lt;/Subheader&gt;
                   </p>
@@ -441,7 +441,7 @@ export function ThemePage() {
                 <p className="text-sm text-amber-300 font-medium">When to Use</p>
                 <p className="text-xs text-amber-400/80 mt-1">
                   Use SubSubHeader for <strong>page-specific</strong> filters and actions (e.g., Backoffice tabs, Order filters).
-                  Don't put page-specific content in the main Subheader — that's for title and navigation only.
+                  Don&apos;t put page-specific content in the main Subheader — that&apos;s for title and navigation only.
                 </p>
               </div>
             </div>

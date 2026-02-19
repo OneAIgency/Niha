@@ -34,7 +34,7 @@ export function IntroducerSignNDAPage() {
           <h2 className="text-lg font-semibold text-white">NDA Uploaded</h2>
           <p className="text-sm text-navy-400">
             Your signed NDA has been submitted for review. You will receive
-            a confirmation email once it's approved and your Introducer
+            a confirmation email once it&apos;s approved and your Introducer
             Dashboard will be activated.
           </p>
           <p className="text-xs text-navy-500 mt-2">

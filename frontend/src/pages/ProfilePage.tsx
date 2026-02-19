@@ -113,6 +113,14 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  // Load balances on mount for admin
+  useEffect(() => {
+    if (isAdmin && user?.entityId) {
+      loadBalances();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, user?.entityId]);
+
   // Early return if user is not loaded yet (after all hooks)
   if (!user) {
     return (
@@ -249,13 +257,6 @@ export function ProfilePage() {
       setIsLoadingBalances(false);
     }
   };
-
-  // Load balances on mount for admin
-  useEffect(() => {
-    if (isAdmin && user?.entityId) {
-      loadBalances();
-    }
-  }, [isAdmin, user?.entityId]);
 
   /**
    * Change admin role for testing

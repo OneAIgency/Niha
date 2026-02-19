@@ -304,7 +304,7 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
           {rules.length === 0 ? (
             <div className="p-6 rounded-xl border-2 border-dashed border-navy-600 text-center">
               <p className="text-navy-400 text-sm">
-                No rules configured.<br />Click "Add Rule" to create one.
+                No rules configured.<br />Click &quot;Add Rule&quot; to create one.
               </p>
             </div>
           ) : (

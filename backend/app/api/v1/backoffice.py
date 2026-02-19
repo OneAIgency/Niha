@@ -111,7 +111,22 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint for real-time backoffice updates.
     Sends heartbeat every 30 seconds to keep connection alive.
     Events are pushed when contact requests or other backoffice data changes.
+    Requires a valid admin JWT token via ?token= query param.
     """
+    # Authenticate: require valid admin JWT
+    from ...core.security import verify_token
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001, reason="Missing token")
+        return
+    payload = verify_token(token)
+    if not payload:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+    if payload.get("role") != "ADMIN":
+        await websocket.close(code=4003, reason="Admin access required")
+        return
+
     await backoffice_ws_manager.connect(websocket)
 
     try:

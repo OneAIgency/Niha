@@ -619,7 +619,7 @@ async def modify_order_price(
     order.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Create audit ticket for order modification
-    ticket = await TicketService.create_ticket(
+    await TicketService.create_ticket(
         db=db,
         action_type="ORDER_MODIFIED",
         entity_type="Order",

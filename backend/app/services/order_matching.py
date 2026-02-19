@@ -74,7 +74,7 @@ async def get_effective_fee_rate(
                 and_(
                     EntityFeeOverride.entity_id == entity_id,
                     EntityFeeOverride.market == market,
-                    EntityFeeOverride.is_active == True,
+                    EntityFeeOverride.is_active.is_(True),
                 )
             )
         )
