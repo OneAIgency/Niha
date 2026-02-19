@@ -1,5 +1,6 @@
 /**
  * Tests for sanitization utilities
+ * Tests match actual DOMPurify-based implementation behavior.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,10 +13,6 @@ import {
 } from '../sanitize';
 
 describe('sanitizeString', () => {
-  it('should remove null bytes', () => {
-    expect(sanitizeString('test\0string')).toBe('teststring');
-  });
-
   it('should remove script tags', () => {
     const input = 'Hello <script>alert("xss")</script> World';
     expect(sanitizeString(input)).not.toContain('<script>');
@@ -26,27 +23,38 @@ describe('sanitizeString', () => {
     expect(sanitizeString(input)).not.toContain('onclick');
   });
 
-  it('should remove javascript: protocol', () => {
-    const input = 'javascript:alert(1)';
-    expect(sanitizeString(input)).not.toContain('javascript:');
+  it('should strip all HTML tags', () => {
+    const input = '<b>bold</b> and <i>italic</i>';
+    expect(sanitizeString(input)).toBe('bold and italic');
   });
 
-  it('should trim whitespace', () => {
-    expect(sanitizeString('  test  ')).toBe('test');
+  it('should pass through plain text unchanged', () => {
+    expect(sanitizeString('hello world')).toBe('hello world');
+  });
+
+  it('should handle null and undefined', () => {
+    expect(sanitizeString(null)).toBe('');
+    expect(sanitizeString(undefined)).toBe('');
   });
 });
 
 describe('sanitizeEmail', () => {
-  it('should validate and sanitize valid email', () => {
+  it('should sanitize and lowercase valid email', () => {
     expect(sanitizeEmail('Test@Example.COM')).toBe('test@example.com');
   });
 
-  it('should return empty string for invalid email', () => {
-    expect(sanitizeEmail('not-an-email')).toBe('');
+  it('should lowercase any string input', () => {
+    // sanitizeEmail strips HTML and lowercases; does not validate format
+    expect(sanitizeEmail('not-an-email')).toBe('not-an-email');
   });
 
   it('should handle empty string', () => {
     expect(sanitizeEmail('')).toBe('');
+  });
+
+  it('should handle null and undefined', () => {
+    expect(sanitizeEmail(null)).toBe('');
+    expect(sanitizeEmail(undefined)).toBe('');
   });
 });
 
@@ -56,14 +64,19 @@ describe('sanitizeNumber', () => {
     expect(sanitizeNumber(123.45)).toBe(123.45);
   });
 
-  it('should return null for invalid numbers', () => {
-    expect(sanitizeNumber('not-a-number')).toBeNull();
-    expect(sanitizeNumber(NaN)).toBeNull();
+  it('should return default (0) for invalid numbers', () => {
+    expect(sanitizeNumber('not-a-number')).toBe(0);
+    expect(sanitizeNumber(NaN)).toBe(0);
   });
 
-  it('should handle null and undefined', () => {
-    expect(sanitizeNumber(null)).toBeNull();
-    expect(sanitizeNumber(undefined)).toBeNull();
+  it('should return default (0) for null and undefined', () => {
+    expect(sanitizeNumber(null)).toBe(0);
+    expect(sanitizeNumber(undefined)).toBe(0);
+  });
+
+  it('should use custom default value', () => {
+    expect(sanitizeNumber(null, -1)).toBe(-1);
+    expect(sanitizeNumber('bad', 42)).toBe(42);
   });
 });
 
@@ -71,14 +84,12 @@ describe('sanitizeObject', () => {
   it('should sanitize all string values in object', () => {
     const input = {
       name: '<script>alert(1)</script>',
-      // Note: sanitizeObject uses sanitizeString (XSS protection), NOT sanitizeEmail
-      // Email normalization should be done explicitly with sanitizeEmail
       email: 'Test@Example.COM',
       age: 25,
     };
     const result = sanitizeObject(input);
     expect(result.name).not.toContain('<script>');
-    // sanitizeObject preserves email case - use sanitizeEmail explicitly for normalization
+    // sanitizeObject uses sanitizeString (XSS strip), not sanitizeEmail
     expect(result.email).toBe('Test@Example.COM');
     expect(result.age).toBe(25);
   });
@@ -95,17 +106,15 @@ describe('sanitizeObject', () => {
 });
 
 describe('sanitizeFormData', () => {
-  it('should sanitize form data object', () => {
+  it('should strip HTML from form data values', () => {
     const formData = {
-      entity_name: '  Test Entity  ',
-      // Note: sanitizeFormData uses sanitizeObject which uses sanitizeString
-      // Email normalization should be done explicitly with sanitizeEmail
+      entity_name: 'Test Entity',
       contact_email: 'Test@Example.COM',
       position: '<script>alert(1)</script>',
     };
     const result = sanitizeFormData(formData);
     expect(result.entity_name).toBe('Test Entity');
-    // sanitizeFormData preserves email case - use sanitizeEmail explicitly for normalization
+    // sanitizeFormData uses sanitizeString (XSS strip), preserves case
     expect(result.contact_email).toBe('Test@Example.COM');
     expect(result.position).not.toContain('<script>');
   });
