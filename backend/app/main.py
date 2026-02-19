@@ -25,6 +25,7 @@ from .api.v1 import (
     prices,
     settlement,
     swaps,
+    system_health,
     users,
     withdrawals,
 )
@@ -88,6 +89,20 @@ async def lifespan(app: FastAPI):
                         logger.info(
                             f"Settlement monitoring cycle completed: "
                             f"{result.get('alert_count', 0)} alerts detected"
+                        )
+                        # Broadcast health update to backoffice admins
+                        from .api.v1.backoffice import backoffice_ws_manager as _bo_ws
+                        from .services.processor_registry import get_all_statuses as _get_statuses
+
+                        asyncio.create_task(
+                            _bo_ws.broadcast(
+                                "system_health_update",
+                                {
+                                    "alert_count": result.get("alert_count", 0),
+                                    "critical_alerts": result.get("critical_alerts", 0),
+                                    "processors": _get_statuses(),
+                                },
+                            )
                         )
                     else:
                         logger.error(
@@ -680,6 +695,7 @@ app.include_router(withdrawals.router, prefix="/api/v1")
 app.include_router(introducer.router, prefix="/api/v1")
 app.include_router(ai_agent.router, prefix="/api/v1")
 app.include_router(exchange_rates.router, prefix="/api/v1")
+app.include_router(system_health.router, prefix="/api/v1")
 
 
 @app.get("/")
