@@ -66,3 +66,19 @@ backend/niha.db
 
 # Plans and docs (local only)
 docs/plans/
+
+# Screenshots (testing artifacts)
+*.png
+*.jpeg
+
+# Business documents (not code)
+*.pptx
+*.pdf
+NIHA_*.html
+NIHA_*.md
+misc/
+Niha/
+
+# Temp / lock files
+*.tmp
+.~lock.*
