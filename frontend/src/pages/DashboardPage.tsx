@@ -30,6 +30,7 @@ import {
   Skeleton,
   Subheader,
   AlertBanner,
+  showToast,
   type Column,
   type Tab,
 } from '../components/common';
@@ -440,13 +441,23 @@ export function DashboardPage() {
       fetchBalance();
     };
 
+    const handleSettlementToast = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      const ref = detail?.batch_reference || detail?.batchReference || '';
+      const status = detail?.status || '';
+      const label = status.replace(/_/g, ' ').toLowerCase();
+      showToast('info', `${ref ? ref + ' — ' : ''}${label || 'status changed'}`, 'Settlement Updated');
+    };
+
     window.addEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
     window.addEventListener('nihao:depositUpdated', handleBalanceUpdate as EventListener);
     window.addEventListener('nihao:settlementUpdated', handleBalanceUpdate as EventListener);
+    window.addEventListener('nihao:settlementUpdated', handleSettlementToast as EventListener);
     return () => {
       window.removeEventListener('nihao:balanceUpdated', handleBalanceUpdate as EventListener);
       window.removeEventListener('nihao:depositUpdated', handleBalanceUpdate as EventListener);
       window.removeEventListener('nihao:settlementUpdated', handleBalanceUpdate as EventListener);
+      window.removeEventListener('nihao:settlementUpdated', handleSettlementToast as EventListener);
     };
   }, [fetchBalance]);
 

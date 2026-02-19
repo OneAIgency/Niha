@@ -112,10 +112,19 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
 
     const currentStageIndex = stages.findIndex(s => s.status === settlement?.status);
 
+    // Build a map of status → timestamp from the timeline
+    const timelineMap = new Map<string, string>();
+    settlement?.timeline?.forEach(entry => {
+      if (!timelineMap.has(entry.status)) {
+        timelineMap.set(entry.status, entry.createdAt);
+      }
+    });
+
     return stages.map((stage, index) => ({
       ...stage,
       completed: index <= currentStageIndex,
       current: index === currentStageIndex,
+      timestamp: timelineMap.get(stage.status) || null,
     }));
   };
 
@@ -228,6 +237,11 @@ export function SettlementDetails({ settlementId, onClose }: SettlementDetailsPr
                       >
                         {stage.label}
                       </span>
+                      {stage.timestamp && (
+                        <span className="mt-0.5 text-[10px] text-navy-500">
+                          {new Date(stage.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </span>
+                      )}
                     </div>
                     {index < stages.length - 1 && (
                       <div
