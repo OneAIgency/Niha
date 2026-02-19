@@ -200,13 +200,14 @@ async def create_nda_request(
     contact_first_name: str = Form(...),  # noqa: B008
     contact_last_name: str = Form(...),  # noqa: B008
     position: str = Form(...),  # noqa: B008
-    file: UploadFile = File(...),  # noqa: B008
+    file: Optional[UploadFile] = File(None),  # noqa: B008
     referral_code: Optional[str] = Form(None),  # noqa: B008
     invite_token: Optional[str] = Form(None),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Submit an NDA request with signed NDA document.
+    Submit an NDA request (direct path, no access code).
+    NDA file is optional: if uploaded → role NDA, if not → role PRE_NDA.
     Only PDF files allowed. Stores PDF binary in database.
     Optional referral_code for buyer path from introducer code.
     Optional invite_token from referral invitation link.
@@ -218,17 +219,21 @@ async def create_nda_request(
     if "@" not in contact_email or "." not in contact_email:
         raise HTTPException(status_code=400, detail="Invalid email format")
 
-    # Validate file extension
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in ALLOWED_NDA_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    # Process NDA file if provided
+    nda_file_name = None
+    nda_file_data = None
+    nda_file_mime_type = None
 
-    # Read file content
-    content = await file.read()
-
-    # Validate file size
-    if len(content) > MAX_NDA_SIZE:
-        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+    if file and file.filename:
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in ALLOWED_NDA_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+        content = await file.read()
+        if len(content) > MAX_NDA_SIZE:
+            raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+        nda_file_name = file.filename
+        nda_file_data = content
+        nda_file_mime_type = "application/pdf"
 
     # Consume referral code if provided (buyer path from introducer code)
     referred_by_user_id = None
@@ -237,18 +242,21 @@ async def create_nda_request(
 
         referred_by_user_id = await consume_referral_code(db, referral_code.strip())
 
-    # Create contact request with NDA - store PDF binary in database (user_role = NDA, request_flow = buyer)
+    # Determine role: NDA if file uploaded, PRE_NDA if not
+    contact_user_role = ContactStatus.NDA if nda_file_name else ContactStatus.PRE_NDA
+
+    # Create contact request - store PDF binary in database
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
         contact_first_name=contact_first_name,
         contact_last_name=contact_last_name,
         position=position,
-        nda_file_name=file.filename,
-        nda_file_data=content,  # Store binary in database
-        nda_file_mime_type="application/pdf",
+        nda_file_name=nda_file_name,
+        nda_file_data=nda_file_data,
+        nda_file_mime_type=nda_file_mime_type,
         submitter_ip=submitter_ip,
-        user_role=ContactStatus.NDA,
+        user_role=contact_user_role,
         request_flow="buyer",
         referred_by_user_id=referred_by_user_id,
         referral_code_used=referral_code.strip() if referral_code and referred_by_user_id else None,

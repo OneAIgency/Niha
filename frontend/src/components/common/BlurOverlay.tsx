@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Lock, Mail } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 interface BlurOverlayProps {
   show: boolean;
@@ -11,8 +11,8 @@ interface BlurOverlayProps {
 export function BlurOverlay({
   show,
   title = 'Account Not Funded',
-  message = 'Fund your account to access this feature. Contact our support team to complete your account setup.',
-  showContactButton = true,
+  message = 'Fund your account to access this feature.',
+  showContactButton = false,
 }: BlurOverlayProps) {
   if (!show) return null;
 
@@ -41,13 +41,9 @@ export function BlurOverlay({
         </p>
 
         {showContactButton && (
-          <a
-            href="mailto:support@nihaogroup.com"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
-          >
-            <Mail className="w-5 h-5" />
+          <span className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl">
             Contact Support
-          </a>
+          </span>
         )}
       </motion.div>
     </motion.div>

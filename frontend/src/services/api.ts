@@ -333,7 +333,7 @@ export const contactApi = {
     contact_first_name: string;
     contact_last_name: string;
     position: string;
-    nda_file: File;
+    nda_file?: File;
     referral_code?: string;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
@@ -342,7 +342,7 @@ export const contactApi = {
     formData.append('contact_first_name', request.contact_first_name);
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
-    formData.append('file', request.nda_file);
+    if (request.nda_file) formData.append('file', request.nda_file);
     if (request.referral_code) formData.append('referral_code', request.referral_code);
 
     const { data } = await api.post('/contact/nda-request', formData);
