@@ -307,12 +307,14 @@ async def create_introducer_nda_request(
     file: Optional[UploadFile] = File(None),  # noqa: B008
     referral_code: Optional[str] = Form(None),  # noqa: B008
     invite_token: Optional[str] = Form(None),  # noqa: B008
+    request_flow: str = Form("introducer"),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
     Submit an NDA request for the Introducer flow.
     Same payload as nda-request; creates ContactRequest with request_flow='introducer'.
     PDF attachment is optional. Optional referral_code and invite_token from invitation links.
+    When request_flow='buyer', the request appears in the Buyer tab (for introducer-invited clients).
     """
     submitter_ip = get_client_ip(request)
 
@@ -352,7 +354,7 @@ async def create_introducer_nda_request(
         nda_file_mime_type=nda_file_mime_type,
         submitter_ip=submitter_ip,
         user_role=ContactStatus.NDA,
-        request_flow="introducer",
+        request_flow=request_flow if request_flow in ("introducer", "buyer") else "introducer",
         referred_by_user_id=referred_by_user_id,
         referral_code_used=referral_code.strip() if referral_code and referred_by_user_id else None,
     )
