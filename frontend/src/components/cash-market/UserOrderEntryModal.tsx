@@ -279,7 +279,7 @@ export function UserOrderEntryModal({
                 label="Limit Price (EUR)"
                 value={limitPrice}
                 onChange={setLimitPrice}
-                placeholder={bestAskPrice ? `${bestAskPrice.toFixed(1)}` : '0.0'}
+                placeholder={bestAskPrice ? `${bestAskPrice.toFixed(2)}` : '0.00'}
                 suffix="EUR"
                 decimals={2}
               />

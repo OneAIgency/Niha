@@ -84,7 +84,7 @@ export function OrderBook({
             </span>
             {spread !== null && bestBid !== null && (
               <span className="text-navy-500 text-xs">
-                ({((spread / bestBid) * 100).toFixed(1)}%)
+                ({((spread / bestBid) * 100).toFixed(2)}%)
               </span>
             )}
           </div>
