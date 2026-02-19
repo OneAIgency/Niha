@@ -359,7 +359,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once on mount
 
   const loadData = async () => {
     try {
