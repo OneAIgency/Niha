@@ -312,7 +312,7 @@ async def update_introducer_defaults(
         if rate < 0 or rate > Decimal("1"):
             raise ValueError("Rate must be between 0 and 1")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid rate: {e}") from e
+        raise HTTPException(status_code=400, detail="Invalid rate. Must be a number between 0 and 1.") from e
 
     result = await db.execute(
         select(PlatformSetting).where(PlatformSetting.key == "introducer_commission_rate")

@@ -740,7 +740,7 @@ async def ip_whois_lookup(
         raise HTTPException(status_code=504, detail="IP lookup timed out") from e
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"IP lookup failed: {str(e)}"
+            status_code=502, detail="IP lookup service unavailable. Please try again later."
         ) from e
 
 
@@ -3187,7 +3187,7 @@ async def refresh_cea_market(
     except Exception as e:
         await db.rollback()
         logger.exception(f"Error refreshing CEA market: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to refresh CEA market: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to refresh CEA market. Please try again.")
 
 
 @router.post("/auto-trade-market-settings/refresh-swap")
@@ -3354,7 +3354,7 @@ async def refresh_swap_market(
     except Exception as e:
         await db.rollback()
         logger.exception(f"Error refreshing SWAP market: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to refresh SWAP market: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to refresh SWAP market. Please try again.")
 
 
 @router.post("/auto-trade-market-settings/place-random-order")
@@ -3755,7 +3755,7 @@ async def place_random_order(
     except Exception as e:
         await db.rollback()
         logger.exception(f"Error placing random order: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to place random order: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to place random order. Please try again.")
 
 
 async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
@@ -4126,7 +4126,7 @@ async def place_random_swap_order(
     except Exception as e:
         await db.rollback()
         logger.exception(f"Error placing random swap order: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to place random swap order: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to place random swap order. Please try again.")
 
 
 @router.get("/auto-trade-market-settings/mm-activity")
@@ -5380,7 +5380,7 @@ async def set_commission_rate(
         if rate < 0 or rate > 1:
             raise ValueError("Rate must be between 0 and 1")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid rate: {e}") from e
+        raise HTTPException(status_code=400, detail="Invalid rate. Must be a number between 0 and 1.") from e
 
     user.commission_rate = rate
     await db.commit()

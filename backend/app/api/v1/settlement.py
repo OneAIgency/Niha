@@ -196,7 +196,7 @@ async def get_settlement_details(
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Settlement not found.") from e
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:
@@ -315,7 +315,7 @@ async def get_settlement_timeline_endpoint(
     try:
         settlement, history = await get_settlement_timeline(db, settlement_batch_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Settlement not found.") from e
 
     # Verify ownership
     if settlement.entity_id != current_user.entity_id:

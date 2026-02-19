@@ -349,7 +349,7 @@ async def send_invitation(
             personal_note=body.personal_note,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request. Please check your input.")
 
     # Build invitation URL with token + referral code
     from ...models.models import MailConfig

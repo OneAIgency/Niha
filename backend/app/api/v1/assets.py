@@ -149,7 +149,7 @@ async def debit_assets(
             notes=request.notes or f"Admin debit: {request.amount} {asset_type.value}",
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to debit: {str(e)}") from e
+        raise HTTPException(status_code=400, detail="Failed to debit. Insufficient balance or invalid amount.") from e
 
     await db.commit()
 

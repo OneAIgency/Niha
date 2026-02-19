@@ -300,7 +300,7 @@ async def report_deposit(
         await db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create deposit: {str(e)}"
+            detail="Failed to create deposit. Please try again or contact support."
         )
 
     # Capture after state
