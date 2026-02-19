@@ -361,6 +361,12 @@ async def create_introducer_nda_request(
 
         referred_by_user_id = await consume_referral_code(db, referral_code.strip())
 
+    # Determine user_role based on whether NDA was uploaded
+    if request_flow == "buyer" and not nda_file_name and referred_by_user_id:
+        contact_user_role = ContactStatus.PRE_NDA
+    else:
+        contact_user_role = ContactStatus.NDA
+
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
@@ -371,7 +377,7 @@ async def create_introducer_nda_request(
         nda_file_data=nda_file_data,
         nda_file_mime_type=nda_file_mime_type,
         submitter_ip=submitter_ip,
-        user_role=ContactStatus.NDA,
+        user_role=contact_user_role,
         request_flow=request_flow if request_flow in ("introducer", "buyer") else "introducer",
         referred_by_user_id=referred_by_user_id,
         referral_code_used=referral_code.strip() if referral_code and referred_by_user_id else None,
@@ -627,9 +633,9 @@ async def upload_introducer_nda(
     current_user: User = Depends(get_current_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """Authenticated: TRODUCER (or INTRODUCER) with nda_signed=false uploads their signed NDA."""
-    if current_user.role not in (UserRole.TRODUCER, UserRole.INTRODUCER):
-        raise HTTPException(status_code=403, detail="Only TRODUCER/INTRODUCER users can upload NDA")
+    """Authenticated: TRODUCER, INTRODUCER, or PRE_NDA with nda_signed=false uploads their signed NDA."""
+    if current_user.role not in (UserRole.TRODUCER, UserRole.INTRODUCER, UserRole.PRE_NDA):
+        raise HTTPException(status_code=403, detail="Only TRODUCER/INTRODUCER/PRE_NDA users can upload NDA")
     if current_user.nda_signed:
         raise HTTPException(status_code=400, detail="NDA already signed")
 
@@ -651,16 +657,23 @@ async def upload_introducer_nda(
     await db.commit()
 
     # Notify backoffice — send request_updated so the existing WS handler picks it up
+    flow = "buyer" if current_user.role == UserRole.PRE_NDA else "introducer"
     contact_req = (
         await db.execute(
             select(ContactRequest).where(
                 ContactRequest.contact_email == current_user.email,
-                ContactRequest.request_flow == "introducer",
+                ContactRequest.request_flow == flow,
             )
         )
     ).scalar_one_or_none()
 
     if contact_req:
+        # If PRE_NDA buyer, transition ContactRequest from PRE_NDA to NDA
+        if current_user.role == UserRole.PRE_NDA:
+            contact_req.user_role = ContactStatus.NDA
+            await db.commit()
+
+        nda_status_key = "buyer_nda_status" if flow == "buyer" else "introducer_nda_status"
         asyncio.create_task(
             backoffice_ws_manager.broadcast("request_updated", {
                 "id": str(contact_req.id),
@@ -671,7 +684,7 @@ async def upload_introducer_nda(
                 "contact_last_name": contact_req.contact_last_name,
                 "user_role": contact_req.user_role.value if contact_req.user_role else "NDA",
                 "request_flow": contact_req.request_flow,
-                "introducer_nda_status": "uploaded",
+                nda_status_key: "uploaded",
                 "introducer_user_id": str(current_user.id),
             })
         )

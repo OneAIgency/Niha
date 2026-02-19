@@ -42,6 +42,7 @@ class UserRole(str, enum.Enum):
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     INTRODUCER = "INTRODUCER"  # Introducer flow; approved, NDA signed, full access
     TRODUCER = "TRODUCER"  # Intermediate introducer; NDA sent but not yet approved
+    PRE_NDA = "PRE_NDA"  # Pre-NDA buyer; registered without NDA, must upload signed NDA
     PREINTRODUCER = "PREINTRODUCER"  # Pre-introducer; registered via referral code, limited access
     NDA = "NDA"
     REJECTED = "REJECTED"
@@ -89,7 +90,8 @@ class ScrapeLibrary(str, enum.Enum):
 
 
 class ContactStatus(str, enum.Enum):
-    """Same values as UserRole where applicable; NDA, REJECTED, KYC for contact requests."""
+    """Same values as UserRole where applicable; PRE_NDA, NDA, REJECTED, KYC for contact requests."""
+    PRE_NDA = "PRE_NDA"
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
@@ -408,6 +410,9 @@ class ContactRequest(Base):
     agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     referred_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     referral_code_used = Column(String(16), nullable=True)
+    nda_accepted = Column(Boolean, default=False)
+    nda_accepted_at = Column(DateTime, nullable=True)
+    nda_accepted_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

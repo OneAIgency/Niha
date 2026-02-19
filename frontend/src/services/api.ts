@@ -1256,6 +1256,16 @@ export const adminApi = {
     return data;
   },
 
+  sendBuyerNDA: async (requestId: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/buyer/${requestId}/send-nda`);
+    return data;
+  },
+
+  acceptNDA: async (requestId: string): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/contact-requests/${requestId}/accept-nda`);
+    return data;
+  },
+
   // Exchange Rate Sources
   getExchangeRateSources: async (): Promise<ExchangeRateSource[]> => {
     const { data } = await api.get('/admin/exchange-rate-sources');

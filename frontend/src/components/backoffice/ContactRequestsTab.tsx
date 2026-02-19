@@ -37,6 +37,9 @@ interface ContactRequestsTabProps {
   onOpenUserNDA?: (userId: string) => Promise<void>;
   onSendNDA?: (requestId: string) => void;
   onApproveIntroducer?: (userId: string) => void;
+  onSendBuyerNDA?: (requestId: string) => void;
+  onAcceptNDA?: (requestId: string) => Promise<void>;
+  onApproveBuyerNDA?: (userId: string) => void;
   actionLoading: string | null;
 }
 
@@ -53,6 +56,9 @@ export function ContactRequestsTab({
   onIpLookup,
   onSendNDA,
   onApproveIntroducer,
+  onSendBuyerNDA,
+  onAcceptNDA,
+  onApproveBuyerNDA,
   actionLoading,
 }: ContactRequestsTabProps) {
   // Suppress unused variable warnings for reserved parameters
@@ -113,7 +119,7 @@ export function ContactRequestsTab({
                 <div
                   key={request.id}
                   className={`card_contact_request_list ${
-                    request.introducerNdaStatus === 'uploaded'
+                    request.introducerNdaStatus === 'uploaded' || request.buyerNdaStatus === 'uploaded'
                       ? 'bg-emerald-500/5 border border-emerald-500/20 rounded-lg'
                       : ''
                   }`}
@@ -169,6 +175,17 @@ export function ContactRequestsTab({
                     )}
                     {request.introducerNdaStatus === 'attached' && (
                       <Badge variant="success" className="shrink-0 text-xs">NDA Attached</Badge>
+                    )}
+                    {/* Buyer NDA status badges */}
+                    {request.requestFlow === 'buyer' && request.buyerNdaStatus === 'sent' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        NDA Sent
+                      </span>
+                    )}
+                    {request.requestFlow === 'buyer' && request.buyerNdaStatus === 'uploaded' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                        NDA Uploaded
+                      </span>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -233,9 +250,64 @@ export function ContactRequestsTab({
                         </Button>
                       </>
                     ) : (
-                      /* Non-introducer (buyer) requests: original buttons */
-                      (request.userRole === 'NDA' || request.userRole === 'new') && (
-                        <>
+                      /* Non-introducer (buyer) requests: conditional buttons based on role & NDA status */
+                      <>
+                        {/* PRE_NDA status: buyer without NDA */}
+                        {request.userRole === 'PRE_NDA' && (
+                          <>
+                            {(!request.buyerNdaStatus || request.buyerNdaStatus === 'not_sent') && onSendBuyerNDA && (
+                              <button
+                                onClick={() => onSendBuyerNDA(request.id)}
+                                disabled={actionLoading === request.id}
+                                className="px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-colors disabled:opacity-50"
+                                aria-label={`Send NDA to ${ariaName(request)}`}
+                              >
+                                Send NDA
+                              </button>
+                            )}
+                            {request.buyerNdaStatus === 'sent' && (
+                              <span className="px-2.5 py-1 text-xs font-medium text-blue-400">
+                                NDA Sent
+                              </span>
+                            )}
+                            {request.buyerNdaStatus === 'uploaded' && request.buyerUserId && onApproveBuyerNDA && (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => onApproveBuyerNDA(request.buyerUserId!)}
+                                loading={actionLoading === `approve-buyer-nda-${request.buyerUserId}`}
+                                aria-label={`Approve buyer NDA for ${ariaName(request)}`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                Approve NDA
+                              </Button>
+                            )}
+                          </>
+                        )}
+
+                        {/* NDA status: buyer with NDA */}
+                        {request.userRole === 'NDA' && (
+                          <>
+                            {request.ndaAccepted ? (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleApproveClick(request)}
+                                loading={actionLoading === `approve-${request.id}`}
+                                aria-label={`Approve and create user for ${ariaName(request)}`}
+                              >
+                                Approve & Create User
+                              </Button>
+                            ) : (
+                              <span className="px-2.5 py-1 text-xs italic text-navy-400">
+                                Review NDA in details
+                              </span>
+                            )}
+                          </>
+                        )}
+
+                        {/* Legacy 'new' status: keep original approve button */}
+                        {request.userRole === 'new' && (
                           <Button
                             variant="primary"
                             size="sm"
@@ -245,18 +317,10 @@ export function ContactRequestsTab({
                           >
                             Approve & Create User
                           </Button>
-                          {onSendNDA && !request.ndaFileName && request.requestFlow === 'introducer' && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => onSendNDA(request.id)}
-                              loading={actionLoading === `send-nda-${request.id}`}
-                              aria-label={`Send NDA to ${ariaName(request)}`}
-                            >
-                              <Send className="w-3.5 h-3.5 mr-1" />
-                              Send NDA
-                            </Button>
-                          )}
+                        )}
+
+                        {/* Reject is available for all buyer states */}
+                        {(request.userRole === 'PRE_NDA' || request.userRole === 'NDA' || request.userRole === 'new') && (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -267,8 +331,8 @@ export function ContactRequestsTab({
                           >
                             Reject
                           </Button>
-                        </>
-                      )
+                        )}
+                      </>
                     )}
 
                     <button
@@ -327,6 +391,8 @@ export function ContactRequestsTab({
         onIpLookup={onIpLookup}
         openNDALoading={actionLoading === `open-${viewModalRequest?.id}`}
         openUserNDALoading={actionLoading?.startsWith('open-user-nda-')}
+        onAcceptNDA={onAcceptNDA}
+        acceptNDALoading={actionLoading === viewModalRequest?.id}
       />
 
       {/* Delete Confirmation Modal */}

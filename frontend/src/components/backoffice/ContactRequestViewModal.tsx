@@ -21,6 +21,8 @@ interface ContactRequestViewModalProps {
   onIpLookup?: (ip: string) => void;
   openNDALoading?: boolean;
   openUserNDALoading?: boolean;
+  onAcceptNDA?: (requestId: string) => Promise<void>;
+  acceptNDALoading?: boolean;
 }
 
 const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -82,9 +84,12 @@ export function ContactRequestViewModal({
   onIpLookup,
   openNDALoading = false,
   openUserNDALoading = false,
+  onAcceptNDA,
+  acceptNDALoading = false,
 }: ContactRequestViewModalProps) {
   const [exiting, setExiting] = useState(false);
   const [closingRequest, setClosingRequest] = useState<ContactRequest | null>(null);
+  const [ndaViewed, setNdaViewed] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -113,6 +118,11 @@ export function ContactRequestViewModal({
   useEffect(() => {
     if (isOpen && request) setExiting(false);
   }, [isOpen, request]);
+
+  // Reset NDA viewed tracking when modal opens with new request
+  useEffect(() => {
+    if (isOpen) setNdaViewed(false);
+  }, [isOpen, request?.id]);
 
   // Escape to close
   useEffect(() => {
@@ -175,7 +185,8 @@ export function ContactRequestViewModal({
     showingRequest.introducerNdaStatus === 'attached'
   );
   const introducerNDAPending = isIntroducer && showingRequest.introducerNdaStatus === 'sent';
-  const showNDASection = hasBuyerNDA || hasIntroducerNDA || introducerNDAPending;
+  const hasBuyerUploadedNDA = showingRequest.requestFlow === 'buyer' && !!showingRequest.buyerUserId && showingRequest.buyerNdaStatus === 'uploaded';
+  const showNDASection = hasBuyerNDA || hasIntroducerNDA || introducerNDAPending || hasBuyerUploadedNDA || !!showingRequest.ndaAccepted;
 
   return (
     <div
@@ -257,6 +268,13 @@ export function ContactRequestViewModal({
             )}
           </SectionCard>
 
+          {/* ── Referral Card ── */}
+          {showingRequest.introducerName && (
+            <SectionCard title="Referral">
+              <DetailRow icon={User} label="Introduced by" value={showingRequest.introducerName} />
+            </SectionCard>
+          )}
+
           {/* ── NDA Document Card ── */}
           {showNDASection && (
             <SectionCard title="NDA Document">
@@ -264,7 +282,7 @@ export function ContactRequestViewModal({
               {hasBuyerNDA && (
                 <button
                   type="button"
-                  onClick={() => onOpenNDA(showingRequest.id)}
+                  onClick={async () => { await onOpenNDA(showingRequest.id); setNdaViewed(true); }}
                   disabled={openNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-navy-600 bg-navy-900/50 text-navy-200 hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={`Open NDA ${showingRequest.ndaFileName}`}
@@ -281,7 +299,7 @@ export function ContactRequestViewModal({
               {hasIntroducerNDA && onOpenUserNDA && showingRequest.introducerUserId && (
                 <button
                   type="button"
-                  onClick={() => onOpenUserNDA(showingRequest.introducerUserId!)}
+                  onClick={async () => { await onOpenUserNDA(showingRequest.introducerUserId!); setNdaViewed(true); }}
                   disabled={openUserNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-600/40 bg-emerald-900/10 text-emerald-300 hover:bg-emerald-900/20 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="View Signed NDA"
@@ -298,7 +316,7 @@ export function ContactRequestViewModal({
               {hasIntroducerNDA && !showingRequest.introducerUserId && (
                 <button
                   type="button"
-                  onClick={() => onOpenNDA(showingRequest.id)}
+                  onClick={async () => { await onOpenNDA(showingRequest.id); setNdaViewed(true); }}
                   disabled={openNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-600/40 bg-emerald-900/10 text-emerald-300 hover:bg-emerald-900/20 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="View Attached NDA"
@@ -316,6 +334,40 @@ export function ContactRequestViewModal({
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-600/30 bg-amber-900/10 text-xs text-amber-400">
                   <FileText className="w-4 h-4 shrink-0" />
                   NDA sent — awaiting upload from introducer
+                </div>
+              )}
+
+              {/* Buyer uploaded NDA (referred buyer flow) */}
+              {showingRequest.requestFlow === 'buyer' && showingRequest.buyerUserId && showingRequest.buyerNdaStatus === 'uploaded' && onOpenUserNDA && (
+                <button
+                  type="button"
+                  onClick={async () => { await onOpenUserNDA(showingRequest.buyerUserId!); setNdaViewed(true); }}
+                  disabled={openUserNDALoading}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors text-sm"
+                >
+                  <FileText size={14} />
+                  <span>{openUserNDALoading ? 'Opening...' : 'View Uploaded NDA'}</span>
+                  <ExternalLink size={12} className="ml-auto opacity-60" />
+                </button>
+              )}
+
+              {/* Accept NDA button — shown after admin views NDA, only for NDA role, only if not yet accepted */}
+              {showingRequest.userRole === 'NDA' && !showingRequest.ndaAccepted && ndaViewed && onAcceptNDA && (
+                <button
+                  type="button"
+                  onClick={() => onAcceptNDA(showingRequest.id)}
+                  disabled={acceptNDALoading}
+                  className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {acceptNDALoading ? 'Accepting...' : 'Accept NDA'}
+                </button>
+              )}
+
+              {/* NDA accepted badge */}
+              {showingRequest.ndaAccepted && (
+                <div className="mt-2 flex items-center gap-1.5 text-emerald-400 text-xs">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span>NDA Accepted</span>
                 </div>
               )}
             </SectionCard>

@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header info">&#x1F4DD;</div>
+<h1>Welcome, {{ name }}</h1>
+<p>You have been invited to join the Nihao Group carbon trading platform.
+To complete your registration, you need to review and sign the attached
+Non-Disclosure Agreement.</p>
+
+<div class="callout info">
+    <p class="callout-title">What You Need to Do</p>
+    <p><strong>1.</strong> Download the attached NDA (PDF)<br>
+    <strong>2.</strong> Review and countersign the document<br>
+    <strong>3.</strong> Click the button below to create your password and upload the signed NDA</p>
+</div>
+
+<a href="{{ setup_url }}" class="btn btn-primary">Set Up Password &amp; Upload Signed NDA</a>
+
+<p style="margin-top: 20px; font-size: 13px; color: #64748b;">
+Once you upload the signed NDA, our team will review it. Upon approval,
+your account will be activated and you can continue with the onboarding process.</p>
+
+<div class="callout warning" style="margin-top: 20px;">
+    <p>This link expires in <strong>{{ expiry_days }} days</strong>.
+    If you did not request this, please disregard this email.</p>
+</div>
+{% endblock %}

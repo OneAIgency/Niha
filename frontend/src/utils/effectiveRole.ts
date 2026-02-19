@@ -6,6 +6,7 @@ export const USER_ROLES: UserRole[] = [
   'MM',
   'PREINTRODUCER',
   'TRODUCER',
+  'PRE_NDA',
   'INTRODUCER',
   'NDA',
   'REJECTED',

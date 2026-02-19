@@ -388,6 +388,50 @@ class EmailService:
         )
         return await self._send_email(to_email, subject, html, mail_config=mail_config)
 
+    async def send_pre_nda_invitation(
+        self,
+        to_email: str,
+        first_name: str,
+        invitation_token: str,
+        nda_pdf_path: str,
+        expiry_days: int = 14,
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send NDA invitation email with attached PDF to a PRE_NDA buyer."""
+        name = first_name or "there"
+        raw = (mail_config or {}).get("invitation_link_base_url", "") or ""
+        base_url = _strip_path(raw.strip()) if raw.strip() else "http://localhost:5173"
+        setup_url = f"{base_url}/setup-password?token={invitation_token}"
+        subject = "Complete Your Registration - NDA Required - Nihao Group"
+        html = self._render_template(
+            "pre_nda_invitation.html",
+            name=name, setup_url=setup_url, expiry_days=expiry_days,
+        )
+        attachments = None
+        try:
+            with open(nda_pdf_path, "rb") as f:
+                attachments = [{"filename": "Nihao_Group_NDA.pdf", "content": f.read()}]
+        except FileNotFoundError:
+            logger.error(f"NDA PDF not found at {nda_pdf_path}")
+        return await self._send_email(
+            to_email, subject, html, mail_config=mail_config, attachments=attachments,
+        )
+
+    async def send_pre_nda_approved(
+        self, to_email: str, first_name: str = "",
+        mail_config: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Send confirmation email when a PRE_NDA buyer's NDA is approved."""
+        name = first_name or "there"
+        raw = (mail_config or {}).get("invitation_link_base_url", "") or ""
+        base_url = _strip_path(raw.strip()) if raw.strip() else "http://localhost:5173"
+        login_url = f"{base_url}/login"
+        subject = "NDA Approved - Welcome to Nihao Group"
+        html = self._render_template(
+            "pre_nda_approved.html", name=name, login_url=login_url,
+        )
+        return await self._send_email(to_email, subject, html, mail_config=mail_config)
+
     async def send_referral_invitation(
         self,
         to_email: str,

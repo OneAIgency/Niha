@@ -24,7 +24,8 @@ describe('clientStatusVariant', () => {
     expect(clientStatusVariant('MM')).toBe('info');
   });
 
-  it('returns warning for KYC and NDA', () => {
+  it('returns warning for PRE_NDA, KYC and NDA', () => {
+    expect(clientStatusVariant('PRE_NDA')).toBe('warning');
     expect(clientStatusVariant('KYC')).toBe('warning');
     expect(clientStatusVariant('NDA')).toBe('warning');
   });

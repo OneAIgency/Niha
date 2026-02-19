@@ -32,6 +32,14 @@ export interface ContactRequest {
   introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' | 'attached';
   /** User ID of the linked INTRODUCER user (if created). */
   introducerUserId?: string;
+  /** Buyer NDA lifecycle status for referred buyers */
+  buyerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' | 'attached' | 'no_nda';
+  /** User ID of the linked PRE_NDA/NDA buyer user (if created via Send NDA) */
+  buyerUserId?: string;
+  /** Whether admin has accepted/reviewed the NDA document */
+  ndaAccepted?: boolean;
+  /** Name of the Introducer who referred this buyer (resolved from referredByUserId) */
+  introducerName?: string;
   notes?: string;
   createdAt: string;
 }

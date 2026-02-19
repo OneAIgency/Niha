@@ -138,6 +138,32 @@ async def get_contact_requests(
         for u in user_result.scalars().all():
             introducer_user_map[u.email] = u
 
+    # Batch-fetch referrer users (introducers who referred buyers)
+    referrer_ids = [
+        r.referred_by_user_id for r in requests
+        if r.referred_by_user_id
+    ]
+    referrer_map: dict = {}
+    if referrer_ids:
+        ref_result = await db.execute(
+            select(User).where(User.id.in_(referrer_ids))
+        )
+        for u in ref_result.scalars().all():
+            referrer_map[u.id] = u
+
+    # Batch-fetch buyer PRE_NDA/NDA users (to compute buyer_nda_status)
+    buyer_emails = [
+        r.contact_email for r in requests
+        if getattr(r, "request_flow", "buyer") == "buyer"
+    ]
+    buyer_user_map: dict = {}
+    if buyer_emails:
+        bu_result = await db.execute(
+            select(User).where(User.email.in_(buyer_emails), User.role.in_([UserRole.PRE_NDA, UserRole.NDA]))
+        )
+        for u in bu_result.scalars().all():
+            buyer_user_map[u.email.lower()] = u
+
     def _build_request_dict(r: ContactRequest) -> dict:
         d = {
             "id": str(r.id),
@@ -168,10 +194,35 @@ async def get_contact_requests(
                 d["introducer_nda_status"] = "attached"
             else:
                 d["introducer_nda_status"] = "not_sent"
-            if r.referred_by_user_id:
-                d["referred_by_user_id"] = str(r.referred_by_user_id)
-            if r.referral_code_used:
-                d["referral_code_used"] = r.referral_code_used
+
+        # Always include referred_by info and nda_accepted
+        if r.referred_by_user_id:
+            d["referred_by_user_id"] = str(r.referred_by_user_id)
+            referrer = referrer_map.get(r.referred_by_user_id)
+            if referrer:
+                d["introducer_name"] = f"{referrer.first_name or ''} {referrer.last_name or ''}".strip()
+        if r.referral_code_used:
+            d["referral_code_used"] = r.referral_code_used
+        d["nda_accepted"] = bool(r.nda_accepted)
+
+        # Buyer NDA status (for buyer requests)
+        if d["request_flow"] == "buyer":
+            buyer_user = buyer_user_map.get(r.contact_email.lower())
+            if r.user_role == ContactStatus.PRE_NDA:
+                if buyer_user:
+                    d["buyer_nda_status"] = "sent"
+                    d["buyer_user_id"] = str(buyer_user.id)
+                else:
+                    d["buyer_nda_status"] = "not_sent"
+            elif r.user_role == ContactStatus.NDA:
+                if r.nda_file_data:
+                    d["buyer_nda_status"] = "attached"  # NDA uploaded with form
+                elif buyer_user and buyer_user.nda_file_data:
+                    d["buyer_nda_status"] = "uploaded"  # User uploaded after send-nda
+                    d["buyer_user_id"] = str(buyer_user.id)
+                else:
+                    d["buyer_nda_status"] = "no_nda"
+
         return d
 
     return {
@@ -333,9 +384,22 @@ async def create_user_from_contact_request(
     if not contact_request:
         raise HTTPException(status_code=404, detail="Contact request not found")
 
-    # Check email uniqueness
-    existing = await db.execute(select(User).where(User.email == email.lower()))
-    if existing.scalar_one_or_none():
+    # For buyer requests with NDA: require nda_accepted before creating user
+    if (
+        contact_request.request_flow == "buyer"
+        and contact_request.user_role == ContactStatus.NDA
+        and not contact_request.nda_accepted
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="NDA must be accepted before creating user. Review the NDA document first.",
+        )
+
+    # Check if user already exists
+    existing_result = await db.execute(select(User).where(User.email == email.lower()))
+    existing_user = existing_result.scalar_one_or_none()
+
+    if existing_user and existing_user.role not in (UserRole.PRE_NDA, UserRole.NDA):
         raise HTTPException(
             status_code=400, detail="User with this email already exists"
         )
@@ -368,47 +432,61 @@ async def create_user_from_contact_request(
 
         user_role_val = UserRole.INTRODUCER if is_introducer else UserRole.KYC
 
-        if mode == "manual":
-            if not password or len(password) < 8:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Password required and must be at least 8 characters",
+        if existing_user and existing_user.role in (UserRole.PRE_NDA, UserRole.NDA):
+            # Upgrade existing PRE_NDA/NDA user to KYC
+            existing_user.role = user_role_val
+            existing_user.entity_id = entity_id_val
+            existing_user.first_name = first_name
+            existing_user.last_name = last_name
+            existing_user.position = position
+            existing_user.is_active = True
+            existing_user.nda_signed = True
+            if mode == "manual" and password:
+                existing_user.password_hash = hash_password(password)
+                existing_user.must_change_password = False
+            user = existing_user
+        else:
+            if mode == "manual":
+                if not password or len(password) < 8:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Password required and must be at least 8 characters",
+                    )
+
+                user = User(
+                    email=email.lower(),
+                    first_name=first_name,
+                    last_name=last_name,
+                    password_hash=hash_password(password),
+                    role=user_role_val,
+                    entity_id=entity_id_val,
+                    position=position,
+                    must_change_password=False,
+                    is_active=True,
+                    creation_method="manual",
+                    created_by=admin_user.id,
+                )
+            else:
+                invitation_token = secrets.token_urlsafe(32)
+                user = User(
+                    email=email.lower(),
+                    first_name=first_name,
+                    last_name=last_name,
+                    role=user_role_val,
+                    entity_id=entity_id_val,
+                    position=position,
+                    invitation_token=invitation_token,
+                    invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    invitation_expires_at=(
+                        datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
+                    ),
+                    must_change_password=True,
+                    is_active=False,
+                    creation_method="invitation",
+                    created_by=admin_user.id,
                 )
 
-            user = User(
-                email=email.lower(),
-                first_name=first_name,
-                last_name=last_name,
-                password_hash=hash_password(password),
-                role=user_role_val,
-                entity_id=entity_id_val,
-                position=position,
-                must_change_password=False,
-                is_active=True,
-                creation_method="manual",
-                created_by=admin_user.id,
-            )
-        else:
-            invitation_token = secrets.token_urlsafe(32)
-            user = User(
-                email=email.lower(),
-                first_name=first_name,
-                last_name=last_name,
-                role=user_role_val,
-                entity_id=entity_id_val,
-                position=position,
-                invitation_token=invitation_token,
-                invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                invitation_expires_at=(
-                    datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
-                ),
-                must_change_password=True,
-                is_active=False,
-                creation_method="invitation",
-                created_by=admin_user.id,
-            )
-
-        db.add(user)
+            db.add(user)
 
         # Generate referral code for INTRODUCER users
         if is_introducer:
@@ -921,8 +999,8 @@ async def create_user(
         from ...services.referral_codes import get_unique_referral_code
         referral_code = await get_unique_referral_code(db)
 
-    # TRODUCER created by admin: mark NDA as signed (no NDA required)
-    nda_signed = user_data.role == UserRole.TRODUCER
+    # TRODUCER/INTRODUCER created by admin: mark NDA as signed (no NDA required)
+    nda_signed = user_data.role in (UserRole.TRODUCER, UserRole.INTRODUCER)
 
     # Create user with or without password
     if user_data.password:
@@ -4926,32 +5004,145 @@ async def send_introducer_nda(
     return {"message": "NDA sent to introducer", "success": True}
 
 
+@router.post("/buyer/{request_id}/send-nda")
+async def send_buyer_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """For buyer requests without NDA (PRE_NDA): create PRE_NDA user, send NDA invitation email."""
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    if contact_request.user_role != ContactStatus.PRE_NDA:
+        raise HTTPException(status_code=400, detail="Contact request is not in PRE_NDA status")
+
+    # Check user doesn't already exist
+    existing = await db.execute(select(User).where(User.email == contact_request.contact_email.lower()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Load mail config
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 14
+    )
+
+    invitation_token = secrets.token_urlsafe(32)
+
+    user = User(
+        email=contact_request.contact_email.lower(),
+        first_name=contact_request.contact_first_name or "",
+        last_name=contact_request.contact_last_name or "",
+        role=UserRole.PRE_NDA,
+        nda_signed=False,
+        invitation_token=invitation_token,
+        invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        invitation_expires_at=(
+            datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
+        ),
+        must_change_password=True,
+        is_active=False,
+        creation_method="invitation",
+        created_by=admin_user.id,
+    )
+
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating PRE_NDA buyer (send NDA)", logger) from e
+
+    # Send PRE_NDA invitation email with NDA PDF
+    try:
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        nda_pdf_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf"
+        )
+        await email_service.send_pre_nda_invitation(
+            user.email, user.first_name, user.invitation_token,
+            nda_pdf_path, expiry_days=invitation_expiry_days, mail_config=mail_cfg,
+        )
+    except Exception:
+        logger.exception("Failed to send NDA email for buyer %s", user.email)
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "user_role": "PRE_NDA",
+            "request_flow": "buyer",
+            "buyer_nda_status": "sent",
+            "buyer_user_id": str(user.id),
+        })
+    )
+
+    return {"message": "NDA sent to buyer", "success": True}
+
+
 @router.put("/introducer/{user_id}/approve-nda")
 async def approve_introducer_nda(
     user_id: str,
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """Mark a TRODUCER's NDA as signed, upgrade to INTRODUCER, activate user, update ContactRequest, send confirmation."""
+    """Mark a TRODUCER or PRE_NDA user's NDA as signed, upgrade accordingly, activate user, update ContactRequest, send confirmation."""
     result = await db.execute(
-        select(User).where(User.id == UUID(user_id), User.role == UserRole.TRODUCER)
+        select(User).where(
+            User.id == UUID(user_id),
+            User.role.in_([UserRole.TRODUCER, UserRole.PRE_NDA]),
+        )
     )
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="Troducer not found")
+        raise HTTPException(status_code=404, detail="Troducer/PRE_NDA user not found")
+
+    is_pre_nda = user.role == UserRole.PRE_NDA
+    request_flow = "buyer" if is_pre_nda else "introducer"
 
     # Find the associated contact request
     cr_result = await db.execute(
         select(ContactRequest).where(
             ContactRequest.contact_email == user.email,
-            ContactRequest.request_flow == "introducer",
+            ContactRequest.request_flow == request_flow,
         )
     )
     contact_request = cr_result.scalar_one_or_none()
 
     try:
-        user.role = UserRole.INTRODUCER
-        user.commission_rate = Decimal("0.010000")  # Default 1%
+        if is_pre_nda:
+            user.role = UserRole.NDA
+        else:
+            user.role = UserRole.INTRODUCER
+            user.commission_rate = Decimal("0.010000")  # Default 1%
         user.nda_signed = True
         user.is_active = True
         if contact_request:
@@ -4959,7 +5150,7 @@ async def approve_introducer_nda(
         await db.commit()
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "approving introducer NDA") from e
+        raise handle_database_error(e, "approving NDA") from e
 
     # Send confirmation email
     try:
@@ -4986,9 +5177,12 @@ async def approve_introducer_nda(
                 "smtp_password": mail_row.smtp_password,
                 "invitation_link_base_url": mail_row.invitation_link_base_url,
             }
-        await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
+        if is_pre_nda:
+            await email_service.send_pre_nda_approved(user.email, user.first_name, mail_config=mail_cfg)
+        else:
+            await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
     except Exception:
-        logger.exception("Failed to send introducer approval email to %s", user.email)
+        logger.exception("Failed to send NDA approval email to %s", user.email)
 
     # Broadcast WS event so request disappears from backoffice list
     if contact_request:
@@ -4996,11 +5190,63 @@ async def approve_introducer_nda(
             backoffice_ws_manager.broadcast("request_updated", {
                 "id": str(contact_request.id),
                 "user_role": "KYC",
-                "request_flow": "introducer",
+                "request_flow": request_flow,
             })
         )
 
     return {"message": "NDA approved", "success": True}
+
+
+@router.put("/contact-requests/{request_id}/accept-nda")
+async def accept_contact_request_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark a contact request's NDA as accepted by admin after review."""
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    if contact_request.user_role != ContactStatus.NDA:
+        raise HTTPException(status_code=400, detail="Contact request must be in NDA status to accept NDA")
+
+    # Check NDA file exists (either on ContactRequest or on linked user)
+    has_nda = bool(contact_request.nda_file_data)
+    if not has_nda:
+        user_result = await db.execute(
+            select(User).where(
+                User.email == contact_request.contact_email.lower(),
+                User.role == UserRole.PRE_NDA,
+            )
+        )
+        linked_user = user_result.scalar_one_or_none()
+        if linked_user and linked_user.nda_file_data:
+            has_nda = True
+
+    if not has_nda:
+        raise HTTPException(status_code=400, detail="No NDA document found to accept")
+
+    try:
+        contact_request.nda_accepted = True
+        contact_request.nda_accepted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        contact_request.nda_accepted_by = admin_user.id
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "accepting NDA", logger) from e
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "nda_accepted": True,
+        })
+    )
+
+    return {"message": "NDA accepted", "success": True}
 
 
 # ==================== Commission Management ====================
