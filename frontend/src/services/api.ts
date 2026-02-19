@@ -197,8 +197,24 @@ api.interceptors.response.use(
       message = data.message;
     } else if (typeof data === 'string') {
       message = data;
+    } else if (error.response?.status) {
+      // Status-code-based fallback messages when backend sends no specific message
+      const statusMessages: Record<number, string> = {
+        400: 'Invalid request. Please check your input and try again.',
+        403: 'You don\'t have permission for this action.',
+        404: 'The requested resource was not found.',
+        409: 'This action conflicts with existing data. Please refresh and try again.',
+        422: 'Please check your input — some fields are invalid.',
+        429: 'Too many requests. Please wait a moment and try again.',
+        500: 'Something went wrong on our end. Please try again or contact support.',
+        502: 'Service temporarily unavailable. Please try again in a moment.',
+        503: 'Service temporarily unavailable. Please try again in a moment.',
+      };
+      message = statusMessages[error.response.status] || `Request failed (${error.response.status}). Please try again.`;
+    } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      message = 'Unable to connect to the server. Please check your internet connection.';
     } else {
-      message = error.message || 'An error occurred';
+      message = error.message || 'An unexpected error occurred. Please try again.';
     }
     const standardizedError = {
       message,
