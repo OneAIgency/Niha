@@ -4926,6 +4926,110 @@ async def send_introducer_nda(
     return {"message": "NDA sent to introducer", "success": True}
 
 
+@router.post("/buyer/{request_id}/send-nda")
+async def send_buyer_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """For buyer requests without NDA (PRE_NDA): create PRE_NDA user, send NDA invitation email."""
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    if contact_request.user_role != ContactStatus.PRE_NDA:
+        raise HTTPException(status_code=400, detail="Contact request is not in PRE_NDA status")
+
+    # Check user doesn't already exist
+    existing = await db.execute(select(User).where(User.email == contact_request.contact_email.lower()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Load mail config
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 14
+    )
+
+    invitation_token = secrets.token_urlsafe(32)
+
+    user = User(
+        email=contact_request.contact_email.lower(),
+        first_name=contact_request.contact_first_name or "",
+        last_name=contact_request.contact_last_name or "",
+        role=UserRole.PRE_NDA,
+        nda_signed=False,
+        invitation_token=invitation_token,
+        invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        invitation_expires_at=(
+            datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
+        ),
+        must_change_password=True,
+        is_active=False,
+        creation_method="invitation",
+        created_by=admin_user.id,
+    )
+
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating PRE_NDA buyer (send NDA)", logger) from e
+
+    # Send PRE_NDA invitation email with NDA PDF
+    try:
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        nda_pdf_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf"
+        )
+        await email_service.send_pre_nda_invitation(
+            user.email, user.first_name, user.invitation_token,
+            nda_pdf_path, expiry_days=invitation_expiry_days, mail_config=mail_cfg,
+        )
+    except Exception:
+        logger.exception("Failed to send NDA email for buyer %s", user.email)
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "user_role": "PRE_NDA",
+            "request_flow": "buyer",
+            "buyer_nda_status": "sent",
+            "buyer_user_id": str(user.id),
+        })
+    )
+
+    return {"message": "NDA sent to buyer", "success": True}
+
+
 @router.put("/introducer/{user_id}/approve-nda")
 async def approve_introducer_nda(
     user_id: str,
