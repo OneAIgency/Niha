@@ -72,6 +72,9 @@ import type {
   AddAssetApiRequest,
   ExchangeRatePeriod,
   ExchangeRateHistoryResponse,
+  ProcessorStatus,
+  SettlementMetrics,
+  SettlementAlert,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -564,7 +567,7 @@ export interface ClientWebSocketMessage {
 
 // Backoffice Realtime Types
 export interface BackofficeWebSocketMessage {
-  type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted' | 'new_ticket' | 'newTicket';
+  type: 'connected' | 'heartbeat' | 'new_request' | 'request_updated' | 'request_removed' | 'kyc_document_uploaded' | 'kyc_document_reviewed' | 'kyc_document_deleted' | 'new_ticket' | 'newTicket' | 'system_health_update';
   data?: Record<string, unknown>;
   message?: string;
   timestamp: string;
@@ -2690,6 +2693,33 @@ export const exchangeRatesApi = {
         period: params?.period,
       },
     });
+    return data;
+  },
+};
+
+// =============================================================================
+// System Health API
+// =============================================================================
+
+export const systemHealthApi = {
+  getProcessors: async (): Promise<{ processors: ProcessorStatus[] }> => {
+    const { data } = await api.get('/admin/system-health/processors');
+    return data;
+  },
+
+  getSettlementMetrics: async (): Promise<SettlementMetrics> => {
+    const { data } = await api.get('/settlement/monitoring/metrics');
+    return data;
+  },
+
+  getSettlementAlerts: async (): Promise<{
+    alerts: SettlementAlert[];
+    count: number;
+    criticalCount: number;
+    errorCount: number;
+    warningCount: number;
+  }> => {
+    const { data } = await api.get('/settlement/monitoring/alerts');
     return data;
   },
 };

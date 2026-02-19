@@ -9,11 +9,12 @@ import {
   UserPlus,
   Percent,
   Settings,
+  HeartPulse,
 } from 'lucide-react';
 import { Subheader, SubSubHeader, SubheaderNavButton } from '../common';
 import { cn } from '../../utils';
 
-type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/fee-settings' | '/backoffice/auto-trade' | '/backoffice/logging' | '/users' | '/settings';
+type BackofficeRoute = '/backoffice' | '/backoffice/onboarding' | '/backoffice/onboarding/requests' | '/backoffice/onboarding/kyc' | '/backoffice/onboarding/deposits' | '/backoffice/market-makers' | '/backoffice/fee-settings' | '/backoffice/auto-trade' | '/backoffice/system-health' | '/backoffice/logging' | '/users' | '/settings';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -81,6 +82,12 @@ const ROUTE_CONFIG: Record<BackofficeRoute, RouteConfig> = {
     iconColor: 'text-emerald-500',
     description: 'Automated market making control',
   },
+  '/backoffice/system-health': {
+    icon: HeartPulse,
+    iconBg: 'bg-emerald-500/20',
+    iconColor: 'text-emerald-500',
+    description: 'System health monitoring and processor status',
+  },
   '/backoffice/logging': {
     icon: Activity,
     iconBg: 'bg-amber-500/20',
@@ -106,6 +113,7 @@ const BACKOFFICE_NAV = [
   { to: '/backoffice/market-makers', label: 'Market Makers', icon: Bot },
 { to: '/backoffice/fee-settings', label: 'Fees', icon: Percent },
   { to: '/backoffice/auto-trade', label: 'Auto Trade', icon: Activity },
+  { to: '/backoffice/system-health', label: 'Health', icon: HeartPulse },
   { to: '/backoffice/logging', label: 'Audit Logging', icon: FileText },
   { to: '/users', label: 'Users', icon: Users },
   { to: '/settings', label: 'Settings', icon: Settings },

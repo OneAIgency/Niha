@@ -25,6 +25,7 @@ from .api.v1 import (
     prices,
     settlement,
     swaps,
+    system_health,
     users,
     withdrawals,
 )
@@ -52,6 +53,16 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    from .services.processor_registry import register_processor, report_run
+
+    # Register background processors
+    register_processor("settlement_processor", 3600)
+    register_processor("settlement_monitoring", 3600)
+    register_processor("price_scraper", 60)
+    register_processor("exchange_rate_scraper", 60)
+    register_processor("auto_trade_executor", 5)
+    register_processor("deposit_hold_processor", 3600)
+
     # Start settlement processor background task
     async def settlement_processor_loop():
         """Run settlement processor every hour"""
@@ -59,8 +70,10 @@ async def lifespan(app: FastAPI):
             try:
                 await SettlementProcessor.process_pending_settlements()
                 await SettlementProcessor.check_overdue_settlements()
+                report_run("settlement_processor")
             except Exception as e:
                 logger.error(f"Settlement processor error: {e}", exc_info=True)
+                report_run("settlement_processor", success=False, error=str(e))
 
             # Wait 1 hour
             await asyncio.sleep(3600)
@@ -77,12 +90,28 @@ async def lifespan(app: FastAPI):
                             f"Settlement monitoring cycle completed: "
                             f"{result.get('alert_count', 0)} alerts detected"
                         )
+                        # Broadcast health update to backoffice admins
+                        from .api.v1.backoffice import backoffice_ws_manager as _bo_ws
+                        from .services.processor_registry import get_all_statuses as _get_statuses
+
+                        asyncio.create_task(
+                            _bo_ws.broadcast(
+                                "system_health_update",
+                                {
+                                    "alert_count": result.get("alert_count", 0),
+                                    "critical_alerts": result.get("critical_alerts", 0),
+                                    "processors": _get_statuses(),
+                                },
+                            )
+                        )
                     else:
                         logger.error(
                             f"Settlement monitoring cycle failed: {result.get('error')}"
                         )
+                report_run("settlement_monitoring")
             except Exception as e:
                 logger.error(f"Settlement monitoring error: {e}", exc_info=True)
+                report_run("settlement_monitoring", success=False, error=str(e))
 
             # Wait 1 hour
             await asyncio.sleep(3600)
@@ -113,8 +142,10 @@ async def lifespan(app: FastAPI):
                             logger.info(
                                 f"Auto-cleared {cleared} deposit(s) with expired holds"
                             )
+                report_run("deposit_hold_processor")
             except Exception as e:
                 logger.error(f"Deposit hold processor error: {e}", exc_info=True)
+                report_run("deposit_hold_processor", success=False, error=str(e))
 
             # Wait 1 hour
             await asyncio.sleep(3600)
@@ -281,8 +312,10 @@ async def lifespan(app: FastAPI):
                     except Exception as e:
                         logger.warning("Price alert check failed: %s", e)
 
+                report_run("price_scraper")
             except Exception as e:
                 logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
+                report_run("price_scraper", success=False, error=str(e))
 
             # Check every 60 seconds
             await asyncio.sleep(60)
@@ -365,10 +398,12 @@ async def lifespan(app: FastAPI):
                                     fallback.name,
                                     e,
                                 )
+                report_run("exchange_rate_scraper")
             except Exception as e:
                 logger.error(
                     f"Exchange rate scraping scheduler error: {e}", exc_info=True
                 )
+                report_run("exchange_rate_scraper", success=False, error=str(e))
 
             # Check every 60 seconds
             await asyncio.sleep(60)
@@ -412,8 +447,10 @@ async def lifespan(app: FastAPI):
                             logger.info(
                                 f"Auto-trade cycle: {successes}/{len(results)} orders placed"
                             )
+                report_run("auto_trade_executor")
             except Exception as e:
                 logger.error(f"Auto-trade executor error: {e}", exc_info=True)
+                report_run("auto_trade_executor", success=False, error=str(e))
 
             # Check every 5 seconds for rules ready to execute (supports 10-20 sec intervals)
             await asyncio.sleep(5)
@@ -658,6 +695,7 @@ app.include_router(withdrawals.router, prefix="/api/v1")
 app.include_router(introducer.router, prefix="/api/v1")
 app.include_router(ai_agent.router, prefix="/api/v1")
 app.include_router(exchange_rates.router, prefix="/api/v1")
+app.include_router(system_health.router, prefix="/api/v1")
 
 
 @app.get("/")
