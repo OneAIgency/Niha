@@ -332,6 +332,7 @@ export const contactApi = {
     contact_last_name: string;
     position: string;
     nda_file: File;
+    referral_code?: string;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
@@ -340,8 +341,106 @@ export const contactApi = {
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
     formData.append('file', request.nda_file);
+    if (request.referral_code) formData.append('referral_code', request.referral_code);
 
     const { data } = await api.post('/contact/nda-request', formData);
+    return data;
+  },
+
+  submitIntroducerNDARequest: async (request: {
+    entity_name: string;
+    contact_email: string;
+    contact_first_name: string;
+    contact_last_name: string;
+    position: string;
+    nda_file?: File;
+    referral_code?: string;
+    invite_token?: string;
+  }): Promise<ContactRequestResponse> => {
+    const formData = new FormData();
+    formData.append('entity_name', request.entity_name);
+    formData.append('contact_email', request.contact_email);
+    formData.append('contact_first_name', request.contact_first_name);
+    formData.append('contact_last_name', request.contact_last_name);
+    formData.append('position', request.position);
+    if (request.nda_file) formData.append('file', request.nda_file);
+    if (request.referral_code) formData.append('referral_code', request.referral_code);
+    if (request.invite_token) formData.append('invite_token', request.invite_token);
+
+    const { data } = await api.post('/contact/introducer-nda-request', formData);
+    return data;
+  },
+
+  getInvitationInfo: async (token: string): Promise<{
+    invitedEmail: string;
+    invitedFirstName: string | null;
+    introducerName: string;
+  }> => {
+    const { data } = await api.get(`/contact/invitation/${token}`);
+    return data;
+  },
+
+  validateCode: async (code: string): Promise<{ valid: boolean; type?: 'preintroducer' | 'introducer' }> => {
+    const formData = new FormData();
+    formData.append('code', code);
+    const { data } = await api.post('/contact/validate-code', formData);
+    return data;
+  },
+
+  submitIntroducerRequest: async (payload: {
+    contact_email: string;
+    contact_first_name: string;
+    contact_last_name: string;
+    entity_name?: string;
+    referral_code: string;
+    file?: File;
+  }): Promise<ContactRequestResponse> => {
+    const formData = new FormData();
+    formData.append('contact_email', payload.contact_email);
+    formData.append('contact_first_name', payload.contact_first_name);
+    formData.append('contact_last_name', payload.contact_last_name);
+    formData.append('entity_name', payload.entity_name || '');
+    formData.append('referral_code', payload.referral_code);
+    if (payload.file) formData.append('file', payload.file);
+    const { data } = await api.post('/contact/introducer-request', formData);
+    return data;
+  },
+
+  uploadIntroducerNDA: async (file: File): Promise<MessageResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post('/contact/introducer/upload-nda', formData);
+    return data;
+  },
+};
+
+// ─── Introducer Portal API ────────────────────────────────
+export const introducerApi = {
+  /** Send a referral invitation to a potential client */
+  sendInvitation: async (data: {
+    email: string;
+    first_name?: string;
+    personal_note?: string;
+  }) => {
+    const { data: result } = await api.post('/introducer/invitations', data);
+    return result;
+  },
+
+  /** List all invitations sent by the current introducer */
+  getInvitations: async () => {
+    const { data } = await api.get('/introducer/invitations');
+    return data;
+  },
+
+  /** Get commission earnings summary */
+  getCommissionSummary: async () => {
+    const { data } = await api.get('/introducer/commissions/summary');
+    return data;
+  },
+
+  /** List individual commission entries */
+  getCommissions: async (params?: { limit?: number; offset?: number }) => {
+    const { data } = await api.get('/introducer/commissions', { params });
     return data;
   },
 };
@@ -414,7 +513,7 @@ export interface ClientWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated'
     | 'deposit_status_updated' | 'kyc_status_updated' | 'swap_updated'
     | 'settlement_updated' | 'user_deactivated' | 'notification'
-    | 'orderbook_updated';
+    | 'orderbook_updated' | 'trade_executed';
   data?: {
     role?: string; oldRole?: string; entityId?: string;
     eurBalance?: number; ceaBalance?: number; source?: string;
@@ -423,6 +522,12 @@ export interface ClientWebSocketMessage {
     documentId?: string;
     message?: string; level?: string;
     certificateType?: string;
+    /** New trade from trade_executed (id, certificateType, price, quantity, side, executedAt) */
+    id?: string;
+    price?: number;
+    quantity?: number;
+    side?: 'BUY' | 'SELL';
+    executedAt?: string;
   };
   message?: string;
   timestamp: string;
@@ -803,30 +908,6 @@ export const usersApi = {
     return data;
   },
 
-  getMyEntityAssets: async (): Promise<{
-    entity_id: string;
-    entity_name: string;
-    eur_balance: number;
-    cea_balance: number;
-    eua_balance: number;
-  }> => {
-    const { data } = await api.get('/users/me/entity/assets');
-    return data;
-  },
-
-  getMyHoldings: async (): Promise<{
-    eur: number;
-    cea: number;
-    eua: number;
-  }> => {
-    const { data } = await api.get('/users/me/entity/assets');
-    return {
-      eur: data.eur_balance || 0,
-      cea: data.cea_balance || 0,
-      eua: data.eua_balance || 0,
-    };
-  },
-
   getFundingInstructions: async (): Promise<FundingInstructions> => {
     const { data } = await api.get('/users/me/funding-instructions');
     return data;
@@ -866,6 +947,8 @@ export const adminApi = {
       mode: 'manual' | 'invitation';
       password?: string;
       position?: string;
+      /** Target role: 'KYC' (buyer flow, creates Entity) or 'INTRODUCER' (no Entity). */
+      target_role?: 'KYC' | 'INTRODUCER';
     }
   ): Promise<{
     message: string;
@@ -893,6 +976,9 @@ export const adminApi = {
     if (userData.position != null && userData.position !== '') {
       params.position = userData.position;
     }
+    if (userData.target_role) {
+      params.target_role = userData.target_role;
+    }
     const { data } = await api.post('/admin/users/create-from-request', null, {
       params,
     });
@@ -907,6 +993,27 @@ export const adminApi = {
    */
   openNDAInBrowser: async (requestId: string, _fileName: string): Promise<void> => {
     const response = await api.get(`/admin/contact-requests/${requestId}/nda`, {
+      responseType: 'blob'
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) {
+      window.URL.revokeObjectURL(url);
+      throw new Error('POPUP_BLOCKED');
+    }
+    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+  },
+
+  /**
+   * Open User NDA PDF in a new browser tab. Fetches the file from the User model with auth,
+   * creates a blob URL, and opens it with noopener.
+   * @param userId - User UUID
+   * @throws Error with message 'POPUP_BLOCKED' if the browser blocks window.open
+   */
+  openUserNDAInBrowser: async (userId: string): Promise<void> => {
+    const response = await api.get(`/admin/users/${userId}/nda`, {
       responseType: 'blob'
     });
 
@@ -1033,17 +1140,6 @@ export const adminApi = {
     return data;
   },
 
-  getActivityStats: async (): Promise<{
-    total_users: number;
-    users_by_role: Record<UserRole, number>;
-    active_sessions: number;
-    logins_today: number;
-    avg_session_duration: number;
-  }> => {
-    const { data } = await api.get('/admin/activity-logs/stats');
-    return data;
-  },
-
   // Scraping Sources
   getScrapingSources: async (): Promise<ScrapingSource[]> => {
     const { data } = await api.get('/admin/scraping-sources');
@@ -1078,6 +1174,43 @@ export const adminApi = {
     scrape_interval_minutes: number;
   }): Promise<ScrapingSource> => {
     const { data } = await api.post('/admin/scraping-sources', source);
+    return data;
+  },
+
+  getScrapingSourceHistory: async (id: string, hours = 24): Promise<{
+    sourceId: string;
+    sourceName: string;
+    certificateType: string;
+    currency: string;
+    points: Array<{ price: number; recordedAt: string }>;
+  }> => {
+    const { data } = await api.get(`/admin/scraping-sources/${id}/history?hours=${hours}`);
+    return data;
+  },
+
+  resetScrapingSourceHistory: async (id: string): Promise<{ message: string; success: boolean }> => {
+    const { data } = await api.delete(`/admin/scraping-sources/${id}/history`);
+    return data;
+  },
+
+  // Referral / Introducer Management
+  createPreintroducer: async (payload: {
+    email: string; first_name: string; last_name: string;
+    mode: 'manual' | 'invitation'; password?: string;
+  }): Promise<{ message: string; success: boolean; user: { id: string; email: string; role: string; referral_code: string } }> => {
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([k, v]) => { if (v) params.set(k, v); });
+    const { data } = await api.post(`/admin/users/create-preintroducer?${params}`);
+    return data;
+  },
+
+  sendIntroducerNDA: async (requestId: string): Promise<MessageResponse> => {
+    const { data } = await api.post(`/admin/introducer/${requestId}/send-nda`);
+    return data;
+  },
+
+  approveIntroducerNDA: async (userId: string): Promise<MessageResponse> => {
+    const { data } = await api.put(`/admin/introducer/${userId}/approve-nda`);
     return data;
   },
 
@@ -1131,6 +1264,21 @@ export const adminApi = {
 
   deleteExchangeRateSource: async (id: string): Promise<MessageResponse> => {
     const { data } = await api.delete(`/admin/exchange-rate-sources/${id}`);
+    return data;
+  },
+
+  getExchangeRateHistory: async (id: string, hours = 24): Promise<{
+    sourceId: string;
+    sourceName: string;
+    pair: string;
+    points: Array<{ rate: number; recordedAt: string }>;
+  }> => {
+    const { data } = await api.get(`/admin/exchange-rate-sources/${id}/history?hours=${hours}`);
+    return data;
+  },
+
+  resetExchangeRateHistory: async (id: string): Promise<{ message: string; success: boolean }> => {
+    const { data } = await api.delete(`/admin/exchange-rate-sources/${id}/history`);
     return data;
   },
 
@@ -1194,6 +1342,11 @@ export const adminApi = {
 
   getLiquidityStatus: async (certificateType: string): Promise<LiquidityStatus> => {
     const { data } = await api.get(`/admin/auto-trade-settings/${certificateType}/liquidity`);
+    return data;
+  },
+
+  getAutoTradeStatus: async (): Promise<import('../types').AutoTradeStatus> => {
+    const { data } = await api.get('/admin/auto-trade-status');
     return data;
   },
 
@@ -1276,13 +1429,11 @@ export const adminApi = {
   },
 
   getMmActivity: async (limit = 50): Promise<Array<{
-    type: 'order' | 'trade';
-    id: string;
-    side?: string;
-    price: string;
-    quantity: string;
-    filled_quantity?: string;
-    status?: string;
+    side: 'SELL' | 'BUY';
+    totalQuantity: number;
+    vwap: number;
+    totalEur: number;
+    fillCount: number;
     timestamp: string;
   }>> => {
     const { data } = await api.get(`/admin/auto-trade-market-settings/mm-activity?limit=${limit}`);
@@ -1697,6 +1848,16 @@ export const cashMarketApi = {
 
   getMarketStats: async (certificateType: CertificateType): Promise<CashMarketStats> => {
     const { data } = await api.get(`/cash-market/stats/${certificateType}`);
+    return data;
+  },
+
+  getOHLC: async (
+    certificateType: CertificateType,
+    interval: number = 900
+  ): Promise<{ time: number; open: number; high: number; low: number; close: number; volume: number }[]> => {
+    const { data } = await api.get(`/cash-market/ohlc/${certificateType}`, {
+      params: { interval },
+    });
     return data;
   },
 
@@ -2345,6 +2506,87 @@ export const feesApi = {
   ): Promise<EffectiveFeeResponse> => {
     const params = entityId ? `?entity_id=${entityId}` : '';
     const { data } = await api.get(`/admin/fees/effective/${market}/${side}${params}`);
+    return data;
+  },
+};
+
+// AI Agent API (admin only)
+export const aiAgentApi = {
+  // Configs
+  getConfigs: async () => {
+    const { data } = await api.get('/admin/ai-agent/configs');
+    return data;
+  },
+
+  updateConfig: async (role: string, update: {
+    model?: string;
+    system_prompt?: string;
+    temperature?: number;
+    max_tokens?: number;
+    allow_internet?: boolean;
+    allow_off_knowledge?: boolean;
+    enabled?: boolean;
+  }) => {
+    const { data } = await api.put(`/admin/ai-agent/configs/${role}`, update);
+    return data;
+  },
+
+  // Knowledge
+  getKnowledgeSources: async () => {
+    const { data } = await api.get('/admin/ai-agent/knowledge');
+    return data;
+  },
+
+  uploadKnowledgeFile: async (name: string, file: File) => {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('file', file);
+    const { data } = await api.post('/admin/ai-agent/knowledge/upload', formData);
+    return data;
+  },
+
+  addKnowledgeURL: async (name: string, url: string) => {
+    const { data } = await api.post('/admin/ai-agent/knowledge/add-url', { name, url });
+    return data;
+  },
+
+  deleteKnowledgeSource: async (id: string) => {
+    const { data } = await api.delete(`/admin/ai-agent/knowledge/${id}`);
+    return data;
+  },
+
+  reindexSource: async (id: string) => {
+    const { data } = await api.post(`/admin/ai-agent/knowledge/${id}/reindex`);
+    return data;
+  },
+
+  getSourceChunks: async (id: string) => {
+    const { data } = await api.get(`/admin/ai-agent/knowledge/${id}/chunks`);
+    return data;
+  },
+
+  // API Keys
+  getApiKeys: async () => {
+    const { data } = await api.get('/admin/ai-agent/api-keys');
+    return data;
+  },
+
+  updateApiKeys: async (update: {
+    anthropic_api_key?: string;
+    openai_api_key?: string;
+  }) => {
+    const { data } = await api.put('/admin/ai-agent/api-keys', update);
+    return data;
+  },
+
+  // Test Chat
+  testChat: async (messages: Array<{ role: string; content: string }>, role: string) => {
+    const { data } = await api.post('/admin/ai-agent/test-chat', { messages, role });
+    return data;
+  },
+
+  dualChat: async (messages: Array<{ role: string; content: string }>) => {
+    const { data } = await api.post('/admin/ai-agent/dual-chat', { messages });
     return data;
   },
 };

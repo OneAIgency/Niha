@@ -368,38 +368,76 @@ function ContainersSection({ textSecondary }: { textSecondary: string }) {
         </div>
       </div>
 
-      {/* Card/Wrapper Classes */}
+      {/* Panel Classes */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold text-white mb-4">Card & Wrapper Classes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Panel Classes (Canonical Container)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-3">
+            <div className="panel">
+              <p className="text-sm text-navy-400">Default (p-5)</p>
+              <p className="text-2xl font-bold text-white font-mono mt-1">€1,234.56</p>
+            </div>
+            <div>
+              <code className="text-emerald-400 text-sm">.panel</code>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="panel panel--flush">
+              <div className="px-4 py-3 border-b border-navy-700">
+                <span className="text-sm font-semibold text-white">Header</span>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-navy-400">Flush (p-0)</p>
+              </div>
+            </div>
+            <div>
+              <code className="text-emerald-400 text-sm">.panel.panel--flush</code>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="panel panel--compact">
+              <p className="text-sm text-navy-400">Compact (p-3)</p>
+            </div>
+            <div>
+              <code className="text-emerald-400 text-sm">.panel.panel--compact</code>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="panel panel--hover cursor-pointer">
+              <p className="text-sm text-navy-400">Hover me</p>
+            </div>
+            <div>
+              <code className="text-emerald-400 text-sm">.panel.panel--hover</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Legacy Wrapper Classes */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-white mb-4">Legacy Wrappers</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <div className="content_wrapper">
-              <p className="text-sm text-navy-400">Label</p>
+              <p className="text-sm text-navy-400">Theme-aware stat card</p>
               <p className="text-2xl font-bold text-white font-mono mt-1">€1,234.56</p>
             </div>
             <div>
               <code className="text-emerald-400 text-sm">.content_wrapper</code>
-              <p className="text-xs text-navy-400 mt-1">Dashboard stat cards</p>
+              <p className="text-xs text-navy-400 mt-1">Uses CSS variables for theming</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="content_wrapper_last p-4">
-              <p className="text-sm text-navy-400">Section content</p>
+              <p className="text-sm text-navy-400">Deprecated — use <code className="text-emerald-400">.panel</code></p>
             </div>
             <div>
-              <code className="text-emerald-400 text-sm">.content_wrapper_last</code>
-              <p className="text-xs text-navy-400 mt-1">Generic section wrapper</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="content_wrapper_last-hover p-4 cursor-pointer">
-              <p className="text-sm text-navy-400">Hover me</p>
-            </div>
-            <div>
-              <code className="text-emerald-400 text-sm">.content_wrapper_last-hover</code>
-              <p className="text-xs text-navy-400 mt-1">Interactive with hover effect</p>
+              <code className="text-navy-500 text-sm">.content_wrapper_last</code>
+              <p className="text-xs text-navy-400 mt-1">Legacy alias for .panel</p>
             </div>
           </div>
         </div>
@@ -612,7 +650,7 @@ function ButtonsSection({ textSecondary }: { textSecondary: string }) {
         <div>
           <p className={`text-sm font-medium ${textSecondary} mb-3`}>Sub-button (chip/toggle)</p>
           <p className={`text-xs ${textSecondary} mb-2`}>
-            Theme-driven chips for category filters or option groups. Classes: <code className="bg-navy-700 dark:bg-navy-800 px-1 rounded text-xs">sub-button sub-button-active</code> / <code className="bg-navy-700 dark:bg-navy-800 px-1 rounded text-xs">sub-button sub-button-inactive</code>.
+            Theme-driven chips for category filters or option groups. Classes: <code className="bg-navy-800 px-1 rounded text-xs">sub-button sub-button-active</code> / <code className="bg-navy-800 px-1 rounded text-xs">sub-button sub-button-inactive</code>.
           </p>
           <div className="flex flex-wrap gap-2">
             {(['a', 'b', 'c'] as const).map((id) => (
@@ -1026,7 +1064,7 @@ function CardsSection({ textPrimary, textSecondary, isDark }: { textPrimary: str
             </div>
           </div>
         </Card>
-        <Card className="p-6 border border-white/20 dark:border-navy-700/50 bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg">
+        <Card className="p-6 border border-navy-700/50 bg-navy-800/80 backdrop-blur-lg">
           <div className="flex items-start gap-4">
             <div className={`rounded-xl p-3 ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
               <BarChart3 className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -1124,7 +1162,7 @@ function FeedbackSection({ textSecondary, isDark, showModal, setShowModal }: { t
         <Alert type="error" title="Error" message="Failed to process your request. Please try again." isDark={isDark} />
         <Alert type="info" title="Info" message="Market will close in 30 minutes for maintenance." isDark={isDark} />
 
-        <div className="pt-4 border-t border-navy-200 dark:border-navy-700">
+        <div className="pt-4 border-t border-navy-700">
           <p className={`text-sm font-medium ${textSecondary} mb-3`}>Confirmation Modal</p>
           <Button variant="primary" onClick={() => setShowModal(true)}>
             Open Modal

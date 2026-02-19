@@ -22,6 +22,16 @@ export interface ContactRequest {
   submitterIp?: string;
   /** Sole source for request state; values NDA, KYC, REJECTED (aligned with UserRole). */
   userRole: string;
+  /** Request flow: 'buyer' (default) or 'introducer'. */
+  requestFlow?: string;
+  /** UUID of the PREINTRODUCER who referred this request (if any). */
+  referredByUserId?: string;
+  /** Referral code used when submitting (if any). */
+  referralCodeUsed?: string;
+  /** Introducer NDA lifecycle status: not_sent, sent, uploaded. */
+  introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded';
+  /** User ID of the linked INTRODUCER user (if created). */
+  introducerUserId?: string;
   notes?: string;
   createdAt: string;
 }

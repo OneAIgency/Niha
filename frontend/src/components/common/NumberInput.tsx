@@ -201,13 +201,13 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
+          <label className="block text-sm font-medium text-navy-200 mb-2">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400 dark:text-navy-500">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-500">
               {icon}
             </div>
           )}
@@ -221,7 +221,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             onBlur={handleBlur}
             placeholder={placeholder}
             className={cn(
-              'w-full px-3 py-2 border border-navy-300 dark:border-navy-600 rounded-lg bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 dark:placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors duration-300',
+              'w-full px-3 py-2 border border-navy-600 rounded-lg bg-navy-800 text-white placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors duration-300',
               icon && 'pl-12',
               suffix && 'pr-16',
               error && 'border-red-500 focus:ring-red-500',
@@ -232,7 +232,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             {...props}
           />
           {suffix && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-500 dark:text-navy-400 font-medium pointer-events-none">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 font-medium pointer-events-none">
               {suffix}
             </div>
           )}

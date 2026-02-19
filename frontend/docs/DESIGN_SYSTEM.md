@@ -1,7 +1,7 @@
 # Niha Carbon Platform - Design System Documentation
 
-> **Version:** 1.0.0
-> **Last Updated:** 2026-01-22
+> **Version:** 2.0.0
+> **Last Updated:** 2026-02-14
 > **Live Reference:** [/design-system](http://localhost:5173/design-system)
 
 ### Tema grafică – un singur punct de intrare
@@ -19,16 +19,17 @@ Variabilele CSS sunt în `frontend/src/styles/design-tokens.css`; paleta Tailwin
 
 1. [Overview](#overview)
 2. [Design Principles](#design-principles)
-3. [Color System](#color-system)
-4. [Typography](#typography)
-5. [Spacing System](#spacing-system)
-6. [Border Radius](#border-radius)
-7. [Shadow System](#shadow-system)
-8. [Component Library](#component-library)
-9. [Trading UI Patterns](#trading-ui-patterns)
-10. [Animation Guidelines](#animation-guidelines)
-11. [Implementation Guide](#implementation-guide)
-12. [Best Practices](#best-practices)
+3. [Surface Hierarchy](#surface-hierarchy) ← **NEW: 5-level depth system, container rules, spacing/radius rules**
+4. [Color System](#color-system)
+5. [Typography](#typography)
+6. [Spacing System](#spacing-system)
+7. [Border Radius](#border-radius)
+8. [Shadow System](#shadow-system)
+9. [Component Library](#component-library)
+10. [Trading UI Patterns](#trading-ui-patterns)
+11. [Animation Guidelines](#animation-guidelines)
+12. [Implementation Guide](#implementation-guide)
+13. [Best Practices](#best-practices)
 
 ---
 
@@ -72,6 +73,60 @@ Trading interfaces need to display lots of information without overwhelming user
 - Framer Motion for complex interactions
 - Optimized component rendering
 - Minimal bundle size
+
+---
+
+## Surface Hierarchy
+
+The platform uses **5 depth levels** for its dark theme, creating clear visual separation between page backgrounds, content areas, and interactive elements.
+
+| Level | Color | Tailwind | CSS Variable | Usage |
+|-------|-------|----------|-------------|-------|
+| 0 — Page background | `#020617` | `navy-950` | `--page-container-dark-bg` | `.page-container-dark` — deepest page bg |
+| 1 — Page content | `#0f172a` | `navy-900` | `--color-background` | `.page-bg` — standard page background |
+| 2 — Card / Panel | `#1e293b` | `navy-800` | `--panel-bg` | `.panel`, `.content_wrapper` — card containers |
+| 3 — Elevated | `#334155` | `navy-700` | `--color-surface-elevated` | Hover states, dropdowns, borders |
+| 4 — Active | `#475569` | `navy-600` | `--color-surface-muted` | Active nav items, selected states |
+
+### Container Rules
+
+| Class | Purpose | Background | Padding |
+|-------|---------|-----------|---------|
+| `.page-container` | Max-width wrapper (1280px) | none | `px-4 sm:px-6 lg:px-8` |
+| `.panel` | Canonical card/panel container | navy-800 + border navy-700 | `p-5` (20px) |
+| `.panel--flush` | Panel with no padding | navy-800 + border navy-700 | `p-0` |
+| `.panel--compact` | Panel with tight padding | navy-800 + border navy-700 | `p-3` (12px) |
+| `.panel--hover` | Panel with lift-on-hover | navy-800 + border navy-700 | inherited |
+| `.content_wrapper` | Theme-aware panel (CSS vars) | `var(--content-wrapper-bg)` | `var(--content-wrapper-padding)` |
+| Modal bg | Dialog container | navy-800 + border navy-700 | Managed by Modal component |
+
+**When to use what:**
+- `.panel` — default for all card/section containers
+- `.panel--flush` — when you need header/body layout with manual padding
+- `.panel--compact` — stat cards, compact info displays
+- `.content_wrapper` — dashboard summary cards (theme-overridable via ThemeContainers page)
+- `<Card />` — React component wrapping `.panel` with variant/padding props
+
+### Spacing Rules
+
+| Context | Value | Tailwind |
+|---------|-------|----------|
+| Page content padding | 24px | `py-6` |
+| Panel default padding | 20px | `p-5` (via `--panel-padding`) |
+| Panel compact padding | 12px | `p-3` (via `--panel-compact-padding`) |
+| Main layout grid gap | 24px | `gap-6` |
+| Card-to-card gap | 16px | `gap-4` |
+| Elements inside cards | 12px | `gap-3` |
+| Dense rows / lists | 8px | `gap-2` |
+
+### Border Radius Rules
+
+| Element | Radius | Tailwind |
+|---------|--------|----------|
+| Inputs, buttons, badges | 8px | `rounded-lg` |
+| Panels, cards | 12px | `rounded-xl` |
+| Modals | 16px | `rounded-2xl` |
+| Pills, avatars | 9999px | `rounded-full` |
 
 ---
 
@@ -611,6 +666,25 @@ import { NumberInput } from '../common';
 />
 ```
 
+#### Admin config inputs (SettingsInput pattern)
+
+For **admin configuration panels** (e.g. Auto Trade settings) where numeric values use thousands-separator formatting and optional recommended-value hints:
+
+- Use the same visual pattern as NumberInput: **light/dark support** with `bg-white dark:bg-navy-900`, `border-navy-300 dark:border-navy-700`, `text-navy-900 dark:text-white`, and `focus:border-emerald-500/50 dark:focus:border-emerald-500/50`.
+- Raw value on focus, formatted (e.g. with commas) on blur.
+- Optional "Rec: …" hint below the input; clicking the hint applies the recommended value.
+- Reference: `frontend/src/pages/AutoTradePage.tsx` — `SettingsInput` component.
+
+#### ActionsDropdown (table row actions)
+
+For **table row actions** (Edit, Delete, Test, etc.) use a compact **ellipsis button** (e.g. `MoreHorizontal` icon) that opens a dropdown menu. The dropdown must:
+
+- Close on **click outside** (document mousedown) and on **Escape** key.
+- Render above or below the trigger as needed (e.g. `bottom-full` for last rows).
+- Use design tokens only (navy background, border, emerald/red for actions).
+
+Reference: `frontend/src/pages/SettingsPage.tsx` — `ActionsDropdown` component used in Price Scraping and Exchange Rate tables.
+
 ---
 
 ### Badges
@@ -621,6 +695,10 @@ import { NumberInput } from '../common';
 2. **Certificates** - EUA (blue), CEA (amber)
 3. **Trading** - Bid (green), Ask (red)
 4. **Count** - Notification badges
+
+**Cash Market – Recent Trades (Ticker & ACTIVITY):** The ticker and ACTIVITY panel on Cash Market Pro share a single data source (`recentTrades` from `useCashMarket`), updated on initial load and on WebSocket `trade_executed`. Use **emerald** for BUY and **red** for SELL in both. ACTIVITY shows relative time; on hover over the time, show the full UTC timestamp (e.g. "Feb 14, 2026, 1:22:08 AM UTC"). Use `flex flex-col gap-2` for row spacing.
+
+**CEA Price chart (Cash Market Pro):** Same container pattern as ACTIVITY: `bg-navy-900 rounded border border-navy-700 overflow-hidden`; header bar with icon (TrendingUp), title "CEA Price", `border-b border-navy-700`, `bg-navy-800`. Chart area uses **lightweight-charts** (Area series): background navy-900 (#0f172a), grid navy-800 (#1e293b), borders navy-700 (#334155), text navy-400 (#94a3b8), line/fill emerald-400 (#34d399). No slate/gray. Data: GET /cash-market/trades/CEA?limit=100 on mount; real-time via `nihao:tradeExecuted` (filter `certificateType === 'CEA'`). Resize via ResizeObserver. Component: `frontend/src/components/cash-market/CEAPriceChart.tsx`.
 
 #### Examples
 
@@ -681,54 +759,65 @@ Merge and sort via `buildDepositAndWithdrawalHistory` (`utils/depositHistory.ts`
 
 ---
 
-### Cards
+### Cards & Panels
 
-**Card back (section/card wrapper):** Use the `.card_back` class or `<Card />` for page sections and card containers. Dark background, less rounded corners. Design parameters in the theme (`frontend/src/styles/design-tokens.css`):
+**Panel (canonical container):** Use the `.panel` class or `<Card />` component for all card/section containers. See [Surface Hierarchy](#surface-hierarchy) for the full container system.
 
-| Token | Light | Dark | Role |
-|-------|--------|------|------|
-| `--color-card-back-bg` | `#f1f5f9` (navy-100) | `#0f172a` (navy-900) | Background (a few steps above layout) |
-| `--color-card-back-border` | `#e2e8f0` (navy-200) | `#1e293b` (navy-800) | Border |
-| `--radius-card-back` | 0.75rem (12px) | 0.75rem | Corner radius (less rounded) |
-| `--shadow-lg` | — | — | Shadow |
-| `--space-6` | 1.5rem | 1.5rem | Padding |
+| Token | Value | Role |
+|-------|-------|------|
+| `--panel-bg` | `#1e293b` (navy-800) | Background |
+| `--panel-border` | `#334155` (navy-700) | Border |
+| `--panel-radius` | `0.75rem` (12px) | Corner radius (`rounded-xl`) |
+| `--panel-padding` | `1.25rem` (20px) | Default padding |
+| `--panel-compact-padding` | `0.75rem` (12px) | Compact variant padding |
 
-To change the card back look, edit these variables in `design-tokens.css` (in `:root` for light, in `.dark` for dark).
+To change the panel look globally, edit these variables in `design-tokens.css`.
 
-**Dashboard summary cards (Portfolio):** The Cash (EUR) card follows the standard card pattern. For users with role **AML**, the card additionally uses an amber background at 50% opacity (`bg-amber-500/50`, `dark:bg-amber-400/50`) and displays the secondary line **"UNDER AML APPROVAL"** (with optional "Total deposited: €X · " when applicable). This indicates funds pending AML approval without introducing new tokens.
+**Dashboard summary cards (Portfolio):** The Cash (EUR) card follows the standard `.content_wrapper` pattern (theme-aware). For users with role **AML**, the card additionally uses an amber background at 50% opacity (`bg-amber-500/50`, `dark:bg-amber-400/50`) and displays the secondary line **"UNDER AML APPROVAL"** (with optional "Total deposited: €X · " when applicable). This indicates funds pending AML approval without introducing new tokens.
 
 #### Variants
 
-1. **Default** - Card back (dark surface, less rounded) — **use as standard for cards and sections**
-2. **Glass** - Glassmorphism effect with backdrop blur
-3. **Hover** - Same as default with elevation change on hover (`.card_back-hover`)
-4. **Stat** - Statistics display with icon
+1. **Default** (`panel`) - Standard container with default padding (p-5)
+2. **Flush** (`panel panel--flush`) - No padding, for tables/lists with header/body
+3. **Compact** (`panel panel--compact`) - Tight padding (p-3), for stat cards
+4. **Hover** (`panel panel--hover`) - Lift on hover, for interactive cards
+5. **Glass** - Glassmorphism effect with backdrop blur (via `<Card variant="glass" />`)
 
 #### Examples
 
 ```tsx
-// Standard card/section wrapper (preferred): use .card_back class or <Card />
-<div className="card_back">
-  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
-  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+// Standard panel (preferred for all card containers)
+<div className="panel">
+  <h3 className="text-lg font-bold text-white">Card Title</h3>
+  <p className="mt-2 text-sm text-navy-400">Card content goes here</p>
 </div>
 
-// Or with the Card component
+// Panel with header/body layout (flush + manual padding)
+<div className="panel panel--flush">
+  <div className="px-4 py-3 border-b border-navy-700">
+    <h3 className="font-semibold text-white">Section Header</h3>
+  </div>
+  <div className="p-4">
+    <p className="text-sm text-navy-400">Section body content</p>
+  </div>
+</div>
+
+// Or with the Card component (same thing, React-style)
 <Card>
-  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
-  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+  <h3 className="text-lg font-bold text-white">Card Title</h3>
+  <p className="mt-2 text-sm text-navy-400">Card content goes here</p>
 </Card>
 
-// Inline equivalent (only if you cannot use .card_back / <Card />) — prefer theme vars
-<div className="shadow-lg p-6" style={{ backgroundColor: 'var(--color-card-back-bg)', border: '1px solid var(--color-card-back-border)', borderRadius: 'var(--radius-card-back)' }}>
-  <h3 className="text-lg font-bold text-navy-900 dark:text-white">Card Title</h3>
-  <p className="mt-2 text-sm text-navy-600 dark:text-navy-400">Card content goes here</p>
+// Compact stat card
+<div className="panel panel--compact">
+  <p className="text-xs text-navy-400">Total Revenue</p>
+  <p className="text-2xl font-bold text-white font-mono">€12,543</p>
 </div>
 
-// Settings sections (e.g. Mail & Authentication) use the same card_back / Card pattern per section.
-<div className="card_back">
+// Settings sections use the same panel pattern per section.
+<div className="panel">
   <h2>Mail & Authentication</h2>
-  {/* Form fields: provider, from_email, invitation subject/body, link base URL, token expiry */}
+  {/* Form fields */}
 </div>
 
 // Compact list row (e.g. Contact Requests: Entitate, Nume, Data + actions). Class in index.css.
@@ -1114,6 +1203,18 @@ Breakpoints:
 ---
 
 ## Changelog
+
+### Version 2.0.0 (2026-02-14)
+- **Surface hierarchy**: formalized 5-level depth system (navy-950 → navy-600)
+- **Panel system**: new `.panel` class as canonical container, replacing `content_wrapper_last` and `card_back`
+  - Variants: `--flush` (p-0), `--compact` (p-3), `--hover` (interactive)
+  - CSS variable tokens: `--panel-bg`, `--panel-border`, `--panel-radius`, `--panel-padding`
+- **Spacing rules**: standardized card padding (p-5), section gap (gap-6), element gap (gap-3), dense gap (gap-2)
+- **Border radius rules**: formalized usage — lg for elements, xl for panels, 2xl for modals, full for pills
+- **Typography formalization**: documented usage per size level
+- **Shadow system fix**: removed global `box-shadow: none !important` that was disabling the entire shadow system
+- **Color cleanup**: migrated all `gray-*` and `slate-*` references to `navy-*` palette
+- **Deprecated**: `content_wrapper_last` (alias kept for compat, use `.panel` instead), `.card_back`
 
 ### Version 1.0.0 (2026-01-22)
 - Initial design system documentation

@@ -11,7 +11,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.database import get_db
@@ -38,11 +38,11 @@ from ...models.models import (
     MarketMakerClient,
     MarketMakerType,
     MarketType,
+    PriceHistory,
     Order,
     OrderSide,
     OrderStatus,
     ScrapeLibrary,
-    ScrapeStatus,
     ScrapingSource,
     SettlementBatch,
     SettlementStatus,
@@ -93,23 +93,28 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/contact-requests")
 async def get_contact_requests(
     status: Optional[str] = None,
+    request_flow: Optional[str] = Query(None, description="Filter by request_flow: 'buyer' or 'introducer'"),  # noqa: B008
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=100),  # noqa: B008
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
     """
-    Get all contact requests with optional status filter.
+    Get all contact requests with optional status and request_flow filters.
     """
     query = select(ContactRequest).order_by(ContactRequest.created_at.desc())
 
     if status:
         query = query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        query = query.where(ContactRequest.request_flow == request_flow)
 
     # Get total count
     count_query = select(func.count()).select_from(ContactRequest)
     if status:
         count_query = count_query.where(ContactRequest.user_role == ContactStatus(status))
+    if request_flow:
+        count_query = count_query.where(ContactRequest.request_flow == request_flow)
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
@@ -120,26 +125,49 @@ async def get_contact_requests(
     result = await db.execute(query)
     requests = result.scalars().all()
 
+    # Batch-fetch introducer users to compute NDA status (avoids N+1)
+    introducer_emails = [
+        r.contact_email for r in requests
+        if getattr(r, "request_flow", "buyer") == "introducer"
+    ]
+    introducer_user_map: dict = {}
+    if introducer_emails:
+        user_result = await db.execute(
+            select(User).where(User.email.in_(introducer_emails), User.role.in_([UserRole.TRODUCER, UserRole.INTRODUCER]))
+        )
+        for u in user_result.scalars().all():
+            introducer_user_map[u.email] = u
+
+    def _build_request_dict(r: ContactRequest) -> dict:
+        d = {
+            "id": str(r.id),
+            "entity_name": r.entity_name,
+            "contact_email": r.contact_email,
+            "contact_name": r.contact_name,
+            "contact_first_name": r.contact_first_name,
+            "contact_last_name": r.contact_last_name,
+            "position": r.position,
+            "nda_file_name": r.nda_file_name,
+            "submitter_ip": r.submitter_ip,
+            "user_role": r.user_role.value if r.user_role else "NDA",
+            "request_flow": getattr(r, "request_flow", "buyer"),
+            "notes": r.notes,
+            "created_at": (r.created_at.isoformat() + "Z") if r.created_at else None,
+        }
+        if d["request_flow"] == "introducer":
+            intro_user = introducer_user_map.get(r.contact_email)
+            if not intro_user:
+                d["introducer_nda_status"] = "not_sent"
+            elif not intro_user.nda_file_data:
+                d["introducer_nda_status"] = "sent"
+                d["introducer_user_id"] = str(intro_user.id)
+            else:
+                d["introducer_nda_status"] = "uploaded"
+                d["introducer_user_id"] = str(intro_user.id)
+        return d
+
     return {
-        "data": [
-            {
-                "id": str(r.id),
-                "entity_name": r.entity_name,
-                "contact_email": r.contact_email,
-                "contact_name": r.contact_name,
-                "contact_first_name": r.contact_first_name,
-                "contact_last_name": r.contact_last_name,
-                "position": r.position,
-                "nda_file_name": r.nda_file_name,
-                "submitter_ip": r.submitter_ip,
-                "user_role": r.user_role.value if r.user_role else "NDA",
-                "notes": r.notes,
-                "created_at": (r.created_at.isoformat() + "Z")
-                if r.created_at
-                else None,
-            }
-            for r in requests
-        ],
+        "data": [_build_request_dict(r) for r in requests],
         "pagination": {
             "page": page,
             "per_page": per_page,
@@ -161,8 +189,13 @@ async def update_contact_request(
     """
     from uuid import UUID
 
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -205,6 +238,7 @@ async def update_contact_request(
                 "nda_file_name": contact.nda_file_name,
                 "submitter_ip": contact.submitter_ip,
                 "user_role": contact.user_role.value if contact.user_role else "NDA",
+                "request_flow": getattr(contact, "request_flow", "buyer"),
                 "notes": contact.notes,
                 "created_at": (contact.created_at.isoformat() + "Z")
                 if contact.created_at
@@ -226,8 +260,13 @@ async def delete_contact_request(
     Delete a contact request permanently.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -256,6 +295,9 @@ async def create_user_from_contact_request(
         None, description="Password (required for manual mode)"
     ),
     position: Optional[str] = Query(None, description="Position/title"),  # noqa: B008
+    target_role: Optional[str] = Query(  # noqa: B008
+        "KYC", description="Target role: 'KYC' (buyer flow, creates Entity) or 'INTRODUCER' (no Entity)"
+    ),
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
@@ -301,18 +343,24 @@ async def create_user_from_contact_request(
         else 7
     )
 
+    is_introducer = (target_role or "KYC").upper() == "INTRODUCER"
+    entity_id_val = None
+
     try:
-        # Create entity from contact request
-        entity = Entity(
-            name=contact_request.entity_name,
-            jurisdiction=Jurisdiction.OTHER,
-            kyc_status=KYCStatus.PENDING,
-        )
-        db.add(entity)
-        await db.flush()
+        if not is_introducer:
+            # Create entity from contact request (buyer flow)
+            entity = Entity(
+                name=contact_request.entity_name,
+                jurisdiction=Jurisdiction.OTHER,
+                kyc_status=KYCStatus.PENDING,
+            )
+            db.add(entity)
+            await db.flush()
+            entity_id_val = entity.id
+
+        user_role_val = UserRole.INTRODUCER if is_introducer else UserRole.KYC
 
         if mode == "manual":
-            # Manual creation with password
             if not password or len(password) < 8:
                 raise HTTPException(
                     status_code=400,
@@ -324,8 +372,8 @@ async def create_user_from_contact_request(
                 first_name=first_name,
                 last_name=last_name,
                 password_hash=hash_password(password),
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 must_change_password=False,
                 is_active=True,
@@ -333,28 +381,33 @@ async def create_user_from_contact_request(
                 created_by=admin_user.id,
             )
         else:
-            # Send invitation
             invitation_token = secrets.token_urlsafe(32)
             user = User(
                 email=email.lower(),
                 first_name=first_name,
                 last_name=last_name,
-                role=UserRole.KYC,
-                entity_id=entity.id,
+                role=user_role_val,
+                entity_id=entity_id_val,
                 position=position,
                 invitation_token=invitation_token,
-                # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
                 invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 invitation_expires_at=(
                     datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days)
                 ),
                 must_change_password=True,
-                is_active=False,  # Activate when password is set
+                is_active=False,
                 creation_method="invitation",
                 created_by=admin_user.id,
             )
 
         db.add(user)
+
+        # Generate referral code for INTRODUCER users
+        if is_introducer:
+            from ...services.referral_codes import get_unique_referral_code
+
+            user.referral_code = await get_unique_referral_code(db)
+            user.nda_signed = contact_request.nda_file_data is not None
 
         # Update contact request user_role to KYC (approved, user created)
         contact_request.user_role = ContactStatus.KYC
@@ -367,6 +420,19 @@ async def create_user_from_contact_request(
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "create user from contact request", logger) from e
+
+    # Update referral invitation status if this user was referred
+    if contact_request.referred_by_user_id:
+        try:
+            from ...services.invitation_service import mark_invitation_registered
+
+            await mark_invitation_registered(db, contact_request.contact_email, user.id)
+            await db.commit()
+        except Exception:
+            logger.warning(
+                "Failed to mark invitation registered for %s (non-blocking)",
+                contact_request.contact_email,
+            )
 
     # Send invitation email if applicable
     if mode == "invitation":
@@ -417,6 +483,7 @@ async def create_user_from_contact_request(
                 "nda_file_name": contact_request.nda_file_name,
                 "submitter_ip": contact_request.submitter_ip,
                 "user_role": contact_request.user_role.value if contact_request.user_role else "NDA",
+                "request_flow": getattr(contact_request, "request_flow", "buyer"),
                 "notes": contact_request.notes,
                 "created_at": (contact_request.created_at.isoformat() + "Z")
                 if contact_request.created_at
@@ -446,7 +513,7 @@ async def create_user_from_contact_request(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "role": user.role.value,
-            "entity_id": str(entity.id),
+            "entity_id": str(entity_id_val) if entity_id_val else None,
             "creation_method": mode,
         },
     }
@@ -463,8 +530,13 @@ async def download_nda_file(
     Serves PDF from database binary storage.
     Admin only.
     """
+    try:
+        req_uuid = UUID(request_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID")
+
     result = await db.execute(
-        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+        select(ContactRequest).where(ContactRequest.id == req_uuid)
     )
     contact = result.scalar_one_or_none()
 
@@ -491,6 +563,33 @@ async def download_nda_file(
             )
 
     raise HTTPException(status_code=404, detail="No NDA file attached to this request")
+
+
+@router.get("/users/{user_id}/nda")
+async def download_user_nda(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Download NDA file uploaded by a user (stored on User model). Admin only."""
+    try:
+        uid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    user = await db.get(User, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.nda_file_data:
+        raise HTTPException(status_code=404, detail="No NDA file uploaded")
+
+    return Response(
+        content=user.nda_file_data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{user.nda_file_name or "nda.pdf"}"'
+        },
+    )
 
 
 @router.get("/ip-lookup/{ip_address}")
@@ -792,6 +891,12 @@ async def create_user(
         await db.flush()
         entity_id = entity.id
 
+    # Auto-generate referral code for PREINTRODUCER (safety net)
+    referral_code = None
+    if user_data.role == UserRole.PREINTRODUCER:
+        from ...services.referral_codes import get_unique_referral_code
+        referral_code = await get_unique_referral_code(db)
+
     # Create user with or without password
     if user_data.password:
         # Create user with password directly
@@ -803,6 +908,7 @@ async def create_user(
             role=user_data.role,
             entity_id=entity_id,
             position=user_data.position,
+            referral_code=referral_code,
             must_change_password=False,  # Password already set by admin
             is_active=True,
         )
@@ -816,6 +922,7 @@ async def create_user(
             role=user_data.role,
             entity_id=entity_id,
             position=user_data.position,
+            referral_code=referral_code,
             invitation_token=invitation_token,
             # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
             invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
@@ -1431,6 +1538,7 @@ async def get_scraping_sources(
             if s.scrape_library
             else ScrapeLibrary.HTTPX.value,
             "is_active": s.is_active,
+            "is_primary": s.is_primary,
             "scrape_interval_minutes": s.scrape_interval_minutes,
             "last_scrape_at": (s.last_scrape_at.isoformat() + "Z")
             if s.last_scrape_at
@@ -1484,6 +1592,7 @@ async def create_scraping_source(
         if source.scrape_library
         else ScrapeLibrary.HTTPX.value,
         "is_active": source.is_active,
+        "is_primary": source.is_primary,
         "scrape_interval_minutes": source.scrape_interval_minutes,
         "last_scrape_at": source.last_scrape_at.isoformat()
         if source.last_scrape_at
@@ -1523,6 +1632,18 @@ async def update_scraping_source(
     if not source:
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
+    # If marking as primary, unset other primary sources with same certificate_type
+    if update.is_primary:
+        from sqlalchemy import update as sql_update
+        await db.execute(
+            sql_update(ScrapingSource)
+            .where(
+                ScrapingSource.certificate_type == source.certificate_type,
+                ScrapingSource.id != source.id,
+            )
+            .values(is_primary=False)
+        )
+
     if update.name is not None:
         source.name = update.name
     if update.url is not None:
@@ -1531,10 +1652,28 @@ async def update_scraping_source(
         source.scrape_library = update.scrape_library
     if update.is_active is not None:
         source.is_active = update.is_active
+    if update.is_primary is not None:
+        source.is_primary = update.is_primary
     if update.scrape_interval_minutes is not None:
         source.scrape_interval_minutes = update.scrape_interval_minutes
     if update.config is not None:
         source.config = update.config
+
+    # If we just unset primary, auto-promote another active source
+    if update.is_primary is False:
+        next_result = await db.execute(
+            select(ScrapingSource)
+            .where(
+                ScrapingSource.certificate_type == source.certificate_type,
+                ScrapingSource.is_active.is_(True),
+                ScrapingSource.id != source.id,
+            )
+            .order_by(ScrapingSource.created_at.asc())
+            .limit(1)
+        )
+        next_source = next_result.scalar_one_or_none()
+        if next_source:
+            next_source.is_primary = True
 
     await db.commit()
 
@@ -1609,16 +1748,20 @@ async def refresh_scraping_source(
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
     try:
-        if source.url and "carboncredits.com" in source.url:
+        from ...services.price_scraper import is_carboncredits_url
+
+        if source.url and is_carboncredits_url(source.url):
             # One request updates all carboncredits.com sources (0026)
-            all_cc = await db.execute(
+            all_active = await db.execute(
                 select(ScrapingSource).where(
                     ScrapingSource.is_active.is_(True),
                     ScrapingSource.url.isnot(None),
-                    ScrapingSource.url.contains("carboncredits.com"),
                 )
             )
-            carboncredits_sources = all_cc.scalars().all()
+            carboncredits_sources = [
+                s for s in all_active.scalars().all()
+                if is_carboncredits_url(s.url)
+            ]
             await price_scraper.refresh_carboncredits_sources(
                 db, carboncredits_sources
             )
@@ -1659,6 +1802,85 @@ async def delete_scraping_source(
     return MessageResponse(
         message=f"Scraping source '{source.name}' deleted successfully"
     )
+
+
+@router.get("/scraping-sources/{source_id}/history")
+async def get_scraping_source_history(
+    source_id: str,
+    hours: int = Query(24, ge=1, le=168),
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get price history for a specific scraping source."""
+    result = await db.execute(
+        select(ScrapingSource).where(ScrapingSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Scraping source not found")
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
+    history_result = await db.execute(
+        select(PriceHistory)
+        .where(
+            PriceHistory.source == source.name,
+            PriceHistory.recorded_at >= since,
+        )
+        .order_by(PriceHistory.recorded_at.asc())
+    )
+    records = history_result.scalars().all()
+
+    return {
+        "source_id": source_id,
+        "source_name": source.name,
+        "certificate_type": source.certificate_type.value,
+        "currency": "EUR" if source.certificate_type == CertificateType.EUA else "CNY",
+        "points": [
+            {
+                "price": float(r.price),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
+            }
+            for r in records
+        ],
+    }
+
+
+@router.delete("/scraping-sources/{source_id}/history")
+async def reset_scraping_source_history(
+    source_id: str,
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all price history for a scraping source and seed a single point at current price."""
+    result = await db.execute(
+        select(ScrapingSource).where(ScrapingSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Scraping source not found")
+
+    try:
+        # Delete all history for this source
+        await db.execute(
+            delete(PriceHistory).where(PriceHistory.source == source.name)
+        )
+
+        # Seed a single point at the current price (if available)
+        if source.last_price is not None:
+            seed = PriceHistory(
+                certificate_type=source.certificate_type,
+                price=source.last_price,
+                currency="EUR" if source.certificate_type == CertificateType.EUA else "CNY",
+                source=source.name,
+            )
+            db.add(seed)
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {"message": "Price history reset", "success": True}
 
 
 # ==================== Exchange Rate Sources ====================
@@ -1808,6 +2030,23 @@ async def update_exchange_rate_source(
     if update_data.config is not None:
         source.config = update_data.config
 
+    # If we just unset primary, auto-promote another active source
+    if update_data.is_primary is False:
+        next_result = await db.execute(
+            select(ExchangeRateSource)
+            .where(
+                ExchangeRateSource.from_currency == source.from_currency,
+                ExchangeRateSource.to_currency == source.to_currency,
+                ExchangeRateSource.is_active.is_(True),
+                ExchangeRateSource.id != source.id,
+            )
+            .order_by(ExchangeRateSource.created_at.asc())
+            .limit(1)
+        )
+        next_source = next_result.scalar_one_or_none()
+        if next_source:
+            next_source.is_primary = True
+
     await db.commit()
     return MessageResponse(message="Exchange rate source updated successfully")
 
@@ -1885,6 +2124,84 @@ async def delete_exchange_rate_source(
     return MessageResponse(
         message=f"Exchange rate source '{source.name}' deleted successfully"
     )
+
+
+@router.get("/exchange-rate-sources/{source_id}/history")
+async def get_exchange_rate_history(
+    source_id: str,
+    hours: int = Query(24, ge=1, le=168),
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get exchange rate history for a specific source."""
+    from ...models.models import ExchangeRateHistory
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
+    history_result = await db.execute(
+        select(ExchangeRateHistory)
+        .where(
+            ExchangeRateHistory.source == source.name,
+            ExchangeRateHistory.recorded_at >= since,
+        )
+        .order_by(ExchangeRateHistory.recorded_at.asc())
+    )
+    records = history_result.scalars().all()
+
+    return {
+        "source_id": source_id,
+        "source_name": source.name,
+        "pair": f"{source.from_currency}/{source.to_currency}",
+        "points": [
+            {
+                "rate": float(r.rate),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
+            }
+            for r in records
+        ],
+    }
+
+
+@router.delete("/exchange-rate-sources/{source_id}/history")
+async def reset_exchange_rate_history(
+    source_id: str,
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all exchange rate history for a source and seed a point at current rate."""
+    from ...models.models import ExchangeRateHistory
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        await db.execute(
+            delete(ExchangeRateHistory).where(ExchangeRateHistory.source == source.name)
+        )
+        if source.last_rate is not None:
+            seed = ExchangeRateHistory(
+                from_currency=source.from_currency,
+                to_currency=source.to_currency,
+                rate=source.last_rate,
+                source=source.name,
+            )
+            db.add(seed)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {"message": "Exchange rate history reset", "success": True}
 
 
 # ==================== Mail & Auth Settings ====================
@@ -2339,6 +2656,74 @@ async def _check_is_online(db: AsyncSession, market_key: str) -> bool:
     return False
 
 
+def _build_market_settings_response(
+    settings: AutoTradeMarketSettings,
+    market_makers: list,
+    current_liquidity,
+    liquidity_percentage,
+    is_online: bool,
+) -> AutoTradeMarketSettingsResponse:
+    """Build a standardized AutoTradeMarketSettingsResponse from a settings model."""
+    return AutoTradeMarketSettingsResponse(
+        id=settings.id,
+        market_key=settings.market_key,
+        enabled=settings.enabled,
+        target_liquidity=settings.target_liquidity,
+        price_deviation_pct=settings.price_deviation_pct,
+        avg_order_count=settings.avg_order_count,
+        min_order_volume_eur=settings.min_order_volume_eur,
+        volume_variety=settings.volume_variety,
+        avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
+        max_orders_per_price_level=settings.max_orders_per_price_level,
+        max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
+        min_order_value_variation_pct=settings.min_order_value_variation_pct,
+        interval_seconds=settings.interval_seconds,
+        order_interval_variation_pct=settings.order_interval_variation_pct,
+        max_order_volume_eur=settings.max_order_volume_eur,
+        max_liquidity_threshold=settings.max_liquidity_threshold,
+        internal_trade_interval=settings.internal_trade_interval,
+        internal_trade_volume_min=settings.internal_trade_volume_min,
+        internal_trade_volume_max=settings.internal_trade_volume_max,
+        avg_spread=settings.avg_spread,
+        tick_size=settings.tick_size,
+        created_at=settings.created_at,
+        updated_at=settings.updated_at,
+        market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
+        current_liquidity=current_liquidity,
+        liquidity_percentage=liquidity_percentage,
+        is_online=is_online,
+    )
+
+
+@router.get("/auto-trade-status")
+async def get_auto_trade_status(
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_admin_user),
+):
+    """
+    Get executor status: running state, last/next cycle, results summary, and rules overview.
+    Polled by the frontend to display the read-only timer.
+    """
+    from app.services.auto_trade_executor import get_executor_status
+
+    status = get_executor_status()
+
+    # Add live rules summary from DB
+    rules_result = await db.execute(select(AutoTradeRule))
+    all_rules = list(rules_result.scalars().all())
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    status["rules_summary"] = {
+        "total": len(all_rules),
+        "enabled": sum(1 for r in all_rules if r.enabled),
+        "ready_to_execute": sum(
+            1 for r in all_rules
+            if r.enabled and (r.next_execution_at is None or r.next_execution_at <= now)
+        ),
+    }
+
+    return status
+
+
 @router.get("/auto-trade-market-settings", response_model=list[AutoTradeMarketSettingsResponse])
 async def get_all_market_settings(
     db: AsyncSession = Depends(get_db),
@@ -2367,32 +2752,8 @@ async def get_all_market_settings(
         # Check if auto-trader is actively running
         is_online = settings.enabled and await _check_is_online(db, settings.market_key)
 
-        responses.append(AutoTradeMarketSettingsResponse(
-            id=settings.id,
-            market_key=settings.market_key,
-            enabled=settings.enabled,
-            target_liquidity=settings.target_liquidity,
-            price_deviation_pct=settings.price_deviation_pct,
-            avg_order_count=settings.avg_order_count,
-            min_order_volume_eur=settings.min_order_volume_eur,
-            volume_variety=settings.volume_variety,
-            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-            max_orders_per_price_level=settings.max_orders_per_price_level,
-            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-            min_order_value_variation_pct=settings.min_order_value_variation_pct,
-            interval_seconds=settings.interval_seconds,
-            order_interval_variation_pct=settings.order_interval_variation_pct,
-            max_order_volume_eur=settings.max_order_volume_eur,
-            max_liquidity_threshold=settings.max_liquidity_threshold,
-            internal_trade_interval=settings.internal_trade_interval,
-            internal_trade_volume_min=settings.internal_trade_volume_min,
-            internal_trade_volume_max=settings.internal_trade_volume_max,
-            created_at=settings.created_at,
-            updated_at=settings.updated_at,
-            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-            current_liquidity=current_liquidity,
-            liquidity_percentage=liquidity_percentage,
-            is_online=is_online,
+        responses.append(_build_market_settings_response(
+            settings, market_makers, current_liquidity, liquidity_percentage, is_online
         ))
 
     return responses
@@ -2520,48 +2881,51 @@ async def refresh_cea_market(
         ask_orders_created = 0
         price_step = Decimal("0.1")
 
-        MAX_ORDERS_PER_LEVEL = 3  # hard cap per price level
+        from app.services.auto_trade_executor import AutoTradeExecutor
 
-        # Helper: random volume uniformly between min_eur and max_eur
-        def random_volume_eur(min_eur, max_eur):
-            """Random EUR value between min and max. Gives true diversity."""
-            lo = float(min_eur) if min_eur else 1.0
-            hi = float(max_eur) if max_eur else lo * 10
-            if hi <= lo:
-                hi = lo * 2
-            return Decimal(str(round(random.uniform(lo, hi), 2)))
+        # Helper: generate volume using log-normal distribution from settings
+        def _lognormal_volume(settings):
+            return AutoTradeExecutor.calculate_order_volume_with_variety(
+                min_volume_eur=settings.min_order_volume_eur,
+                volume_variety=settings.volume_variety or 5,
+                target_liquidity=settings.target_liquidity,
+                current_liquidity=Decimal("0"),
+                avg_order_count=settings.avg_order_count or 10,
+                max_volume_eur=settings.max_order_volume_eur,
+            )
 
         # 5. Create BID orders (from best_bid downward)
-        bid_min_vol = bid_settings.min_order_volume_eur
-        bid_max_vol = bid_settings.max_order_volume_eur
         bid_target = bid_settings.target_liquidity or Decimal("50000000")
         bid_max_orders = int(bid_settings.avg_order_count or 200) * 2  # safety cap
+        bid_max_per_level = bid_settings.max_orders_per_price_level or 3
+        bid_depth_pct = bid_settings.price_deviation_pct or Decimal("5.0")
+        bid_worst_price = best_bid * (Decimal("1") - bid_depth_pct / Decimal("100"))
+        bid_worst_price = max(bid_worst_price, Decimal("0.1"))
 
         current_price = best_bid
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, bid_max_per_level)
         buyer_idx = 0
         bid_liquidity_eur = Decimal("0")
 
         for _ in range(bid_max_orders):
-            if current_price <= Decimal("0.1") or bid_liquidity_eur >= bid_target:
+            if current_price < bid_worst_price or bid_liquidity_eur >= bid_target:
                 break
 
             if orders_at_level >= max_at_this_level:
                 current_price -= price_step
                 current_price = current_price.quantize(Decimal("0.1"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
-                if current_price <= Decimal("0"):
+                max_at_this_level = random.randint(1, bid_max_per_level)
+                if current_price < bid_worst_price:
                     break
 
-            # Cap max volume by remaining budget
+            # Log-normal volume, capped by remaining budget
             remaining = bid_target - bid_liquidity_eur
-            effective_max = min(bid_max_vol, remaining) if bid_max_vol else remaining
-            if effective_max < bid_min_vol:
-                break  # Can't even fit one min-size order
+            order_value_eur = min(_lognormal_volume(bid_settings), remaining)
+            if order_value_eur < (bid_settings.min_order_volume_eur or Decimal("1")):
+                break
 
-            order_value_eur = random_volume_eur(bid_min_vol, effective_max)
             quantity = (order_value_eur / current_price).quantize(Decimal("1"))
             if quantity < 1:
                 quantity = Decimal("1")
@@ -2585,14 +2949,15 @@ async def refresh_cea_market(
             bid_liquidity_eur += current_price * quantity
 
         # 6. Create ASK orders (from best_ask upward)
-        ask_min_vol = ask_settings.min_order_volume_eur
-        ask_max_vol = ask_settings.max_order_volume_eur
         ask_target = ask_settings.target_liquidity or Decimal("90000000")
         ask_max_orders = int(ask_settings.avg_order_count or 200) * 2  # safety cap
+        ask_max_per_level = ask_settings.max_orders_per_price_level or 3
+        ask_depth_pct = ask_settings.price_deviation_pct or Decimal("5.0")
+        ask_worst_price = best_ask * (Decimal("1") + ask_depth_pct / Decimal("100"))
 
         current_price = best_ask
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, ask_max_per_level)
         seller_idx = 0
         ask_liquidity_eur = Decimal("0")
 
@@ -2604,15 +2969,17 @@ async def refresh_cea_market(
                 current_price += price_step
                 current_price = current_price.quantize(Decimal("0.1"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+                max_at_this_level = random.randint(1, ask_max_per_level)
 
-            # Cap max volume by remaining budget
-            remaining = ask_target - ask_liquidity_eur
-            effective_max = min(ask_max_vol, remaining) if ask_max_vol else remaining
-            if effective_max < ask_min_vol:
+            if current_price > ask_worst_price:
                 break
 
-            order_value_eur = random_volume_eur(ask_min_vol, effective_max)
+            # Log-normal volume, capped by remaining budget
+            remaining = ask_target - ask_liquidity_eur
+            order_value_eur = min(_lognormal_volume(ask_settings), remaining)
+            if order_value_eur < (ask_settings.min_order_volume_eur or Decimal("1")):
+                break
+
             quantity = (order_value_eur / current_price).quantize(Decimal("1"))
             if quantity < 1:
                 quantity = Decimal("1")
@@ -2736,26 +3103,30 @@ async def refresh_swap_market(
             raise HTTPException(status_code=400, detail="No active EUA_OFFER market makers")
 
         # 6. Create ASK orders from best_ratio DOWNWARD to worst_ratio
+        from app.services.auto_trade_executor import AutoTradeExecutor
+
         target_liquidity_eur = swap_settings.target_liquidity or Decimal("90000000")
-        min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
-        max_vol = swap_settings.max_order_volume_eur or Decimal("5000000")
         max_orders = int(swap_settings.avg_order_count or 100) * 2  # safety cap
         ratio_step = Decimal("0.0001")
-        MAX_ORDERS_PER_LEVEL = 3
+        swap_max_per_level = swap_settings.max_orders_per_price_level or 3
 
-        def random_volume_eur(lo, hi):
-            lo_f = float(lo) if lo else 1.0
-            hi_f = float(hi) if hi else lo_f * 10
-            if hi_f <= lo_f:
-                hi_f = lo_f * 2
-            return Decimal(str(round(random.uniform(lo_f, hi_f), 2)))
+        def _swap_lognormal_volume():
+            return AutoTradeExecutor.calculate_order_volume_with_variety(
+                min_volume_eur=swap_settings.min_order_volume_eur or Decimal("200000"),
+                volume_variety=swap_settings.volume_variety or 5,
+                target_liquidity=swap_settings.target_liquidity,
+                current_liquidity=Decimal("0"),
+                avg_order_count=swap_settings.avg_order_count or 10,
+                max_volume_eur=swap_settings.max_order_volume_eur,
+            )
 
         current_ratio = best_ratio
         orders_at_level = 0
-        max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+        max_at_this_level = random.randint(1, swap_max_per_level)
         mm_idx = 0
         liquidity_eur = Decimal("0")
         orders_created = 0
+        min_vol = swap_settings.min_order_volume_eur or Decimal("200000")
 
         for _ in range(max_orders):
             if liquidity_eur >= target_liquidity_eur:
@@ -2767,15 +3138,14 @@ async def refresh_swap_market(
                 current_ratio -= ratio_step
                 current_ratio = current_ratio.quantize(Decimal("0.0001"))
                 orders_at_level = 0
-                max_at_this_level = random.randint(1, MAX_ORDERS_PER_LEVEL)
+                max_at_this_level = random.randint(1, swap_max_per_level)
 
-            # Cap max volume by remaining budget
+            # Log-normal volume, capped by remaining budget
             remaining = target_liquidity_eur - liquidity_eur
-            effective_max = min(max_vol, remaining) if max_vol else remaining
-            if effective_max < min_vol:
+            order_value_eur = min(_swap_lognormal_volume(), remaining)
+            if order_value_eur < min_vol:
                 break
 
-            order_value_eur = random_volume_eur(min_vol, effective_max)
             # eua_quantity = volume_eur / eua_price_eur (whole certificates)
             eua_quantity = (order_value_eur / eua_price).quantize(Decimal("1"))
             if eua_quantity < 1:
@@ -3601,56 +3971,55 @@ async def get_mm_activity(
     _current_user: User = Depends(get_admin_user),
 ):
     """
-    Get recent MM orders and trades for the activity feed.
-    Returns orders and trades merged chronologically, newest first.
+    Aggregated trade activity feed.
+    Groups trades by aggressor order and returns VWAP, total qty, total EUR.
     """
-    from sqlalchemy import and_, literal
+    from sqlalchemy.orm import selectinload
+    from collections import defaultdict
 
-    # Recent MM orders (all statuses)
-    orders_result = await db.execute(
-        select(Order)
-        .where(
-            and_(
-                Order.market_maker_id.isnot(None),
-                Order.market == MarketType.CEA_CASH,
-            )
-        )
-        .order_by(Order.created_at.desc())
-        .limit(limit)
-    )
-    orders = list(orders_result.scalars().all())
-
-    # Recent trades
     trades_result = await db.execute(
         select(CashMarketTrade)
         .where(CashMarketTrade.certificate_type == CertificateType.CEA)
+        .options(selectinload(CashMarketTrade.buy_order), selectinload(CashMarketTrade.sell_order))
         .order_by(CashMarketTrade.executed_at.desc())
-        .limit(limit)
+        .limit(limit * 5)  # fetch more to group properly
     )
     trades = list(trades_result.scalars().all())
 
-    # Build unified activity list
-    activity = []
-
-    for o in orders:
-        activity.append({
-            "type": "order",
-            "id": str(o.id),
-            "side": o.side.value,
-            "price": str(o.price),
-            "quantity": str(o.quantity),
-            "filled_quantity": str(o.filled_quantity or 0),
-            "status": o.status.value,
-            "timestamp": o.created_at.isoformat() if o.created_at else None,
-        })
-
+    # Group trades by aggressor order
+    groups: dict[str, list] = defaultdict(list)
     for t in trades:
+        aggressor_side = None
+        if t.buy_order and t.sell_order:
+            if (t.buy_order.created_at or t.executed_at) >= (t.sell_order.created_at or t.executed_at):
+                aggressor_side = "BUY"
+            else:
+                aggressor_side = "SELL"
+
+        if aggressor_side is None:
+            continue  # skip trades without both orders loaded
+
+        aggressor_order_id = str(t.buy_order_id) if aggressor_side == "BUY" else str(t.sell_order_id)
+        groups[aggressor_order_id].append((t, aggressor_side))
+
+    # Build aggregated activity
+    activity = []
+    for _order_id, group_trades in groups.items():
+        total_qty = sum(float(t.quantity) for t, _ in group_trades)
+        if total_qty <= 0:
+            continue  # skip zero-quantity groups
+        total_eur = sum(float(t.price) * float(t.quantity) for t, _ in group_trades)
+        vwap = total_eur / total_qty
+        latest_ts = max((t.executed_at for t, _ in group_trades if t.executed_at), default=None)
+        side = group_trades[0][1]  # aggressor side (same for all in group)
+
         activity.append({
-            "type": "trade",
-            "id": str(t.id),
-            "price": str(t.price),
-            "quantity": str(t.quantity),
-            "timestamp": t.executed_at.isoformat() if t.executed_at else None,
+            "side": side,
+            "total_quantity": round(total_qty),
+            "vwap": round(vwap, 4),
+            "total_eur": round(total_eur, 2),
+            "fill_count": len(group_trades),
+            "timestamp": (latest_ts.isoformat() + "Z") if latest_ts else None,
         })
 
     # Sort by timestamp descending
@@ -3698,32 +4067,8 @@ async def get_market_settings(
     # Check if auto-trader is actively running
     is_online = settings.enabled and await _check_is_online(db, market_key_upper)
 
-    return AutoTradeMarketSettingsResponse(
-        id=settings.id,
-        market_key=settings.market_key,
-        enabled=settings.enabled,
-        target_liquidity=settings.target_liquidity,
-        price_deviation_pct=settings.price_deviation_pct,
-        avg_order_count=settings.avg_order_count,
-        min_order_volume_eur=settings.min_order_volume_eur,
-        volume_variety=settings.volume_variety,
-        avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-        max_orders_per_price_level=settings.max_orders_per_price_level,
-        max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-        min_order_value_variation_pct=settings.min_order_value_variation_pct,
-        interval_seconds=settings.interval_seconds,
-        order_interval_variation_pct=settings.order_interval_variation_pct,
-        max_order_volume_eur=settings.max_order_volume_eur,
-        max_liquidity_threshold=settings.max_liquidity_threshold,
-        internal_trade_interval=settings.internal_trade_interval,
-        internal_trade_volume_min=settings.internal_trade_volume_min,
-        internal_trade_volume_max=settings.internal_trade_volume_max,
-        created_at=settings.created_at,
-        updated_at=settings.updated_at,
-        market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-        current_liquidity=current_liquidity,
-        liquidity_percentage=liquidity_percentage,
-        is_online=is_online,
+    return _build_market_settings_response(
+        settings, market_makers, current_liquidity, liquidity_percentage, is_online
     )
 
 
@@ -3781,32 +4126,8 @@ async def update_market_settings(
         # Check if auto-trader is actively running
         is_online = settings.enabled and await _check_is_online(db, market_key_upper)
 
-        return AutoTradeMarketSettingsResponse(
-            id=settings.id,
-            market_key=settings.market_key,
-            enabled=settings.enabled,
-            target_liquidity=settings.target_liquidity,
-            price_deviation_pct=settings.price_deviation_pct,
-            avg_order_count=settings.avg_order_count,
-            min_order_volume_eur=settings.min_order_volume_eur,
-            volume_variety=settings.volume_variety,
-            avg_order_count_variation_pct=settings.avg_order_count_variation_pct,
-            max_orders_per_price_level=settings.max_orders_per_price_level,
-            max_orders_per_level_variation_pct=settings.max_orders_per_level_variation_pct,
-            min_order_value_variation_pct=settings.min_order_value_variation_pct,
-            interval_seconds=settings.interval_seconds,
-            order_interval_variation_pct=settings.order_interval_variation_pct,
-            max_order_volume_eur=settings.max_order_volume_eur,
-            max_liquidity_threshold=settings.max_liquidity_threshold,
-            internal_trade_interval=settings.internal_trade_interval,
-            internal_trade_volume_min=settings.internal_trade_volume_min,
-            internal_trade_volume_max=settings.internal_trade_volume_max,
-            created_at=settings.created_at,
-            updated_at=settings.updated_at,
-            market_makers=[MarketMakerSummary(id=mm.id, name=mm.name, is_active=mm.is_active) for mm in market_makers],
-            current_liquidity=current_liquidity,
-            liquidity_percentage=liquidity_percentage,
-            is_online=is_online,
+        return _build_market_settings_response(
+            settings, market_makers, current_liquidity, liquidity_percentage, is_online
         )
 
     except HTTPException:
@@ -4036,6 +4357,8 @@ async def update_my_role(
             entity_id=user.entity_id,
             is_active=user.is_active,
             must_change_password=user.must_change_password,
+            nda_signed=user.nda_signed,
+            referral_code=user.referral_code,
             last_login=user.last_login,
             created_at=user.created_at,
         )
@@ -4059,7 +4382,7 @@ async def credit_my_entity(
     This allows admins to quickly add EUR, CEA, or EUA to their entity
     for testing trading functionality.
     """
-    from app.models.models import AssetType, EntityHolding, AssetTransaction, TransactionType
+    from app.models.models import AssetType, TransactionType
     from app.services.balance_utils import update_entity_balance, get_entity_balance
 
     try:
@@ -4077,7 +4400,7 @@ async def credit_my_entity(
         except ValueError:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid asset type. Must be one of: EUR, CEA, EUA"
+                detail="Invalid asset type. Must be one of: EUR, CEA, EUA"
             )
 
         # Credit the entity using ADJUSTMENT type (for admin credits)
@@ -4165,7 +4488,6 @@ async def get_admin_pending_settlements(
         entity_ids = list({b.entity_id for b in batches if b.entity_id})
         user_map: dict[UUID, User] = {}
         if entity_ids:
-            from sqlalchemy import distinct
             from sqlalchemy.orm import load_only
 
             user_result = await db.execute(
@@ -4329,3 +4651,405 @@ async def settle_batch_now(
     except Exception as e:
         await db.rollback()
         raise handle_database_error(e, "settle batch now") from e
+
+
+# ── Referral / Introducer Management ──────────────────────────────────────
+
+
+@router.post("/users/create-preintroducer")
+async def create_preintroducer(
+    email: str = Query(...),  # noqa: B008
+    first_name: str = Query(...),  # noqa: B008
+    last_name: str = Query(...),  # noqa: B008
+    mode: str = Query(...),  # noqa: B008
+    password: Optional[str] = Query(None),  # noqa: B008
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Create a PREINTRODUCER user with auto-generated referral code."""
+    from ...services.referral_codes import get_unique_referral_code
+
+    existing = await db.execute(select(User).where(User.email == email.lower()))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    referral_code = await get_unique_referral_code(db)
+
+    # Load mail config for invitation expiry
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 7
+    )
+
+    if mode == "manual":
+        if not password or len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password required (min 8 chars)")
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=hash_password(password),
+            role=UserRole.PREINTRODUCER,
+            referral_code=referral_code,
+            must_change_password=False,
+            is_active=True,
+            creation_method="manual",
+            created_by=admin_user.id,
+        )
+    else:
+        invitation_token = secrets.token_urlsafe(32)
+        user = User(
+            email=email.lower(),
+            first_name=first_name,
+            last_name=last_name,
+            role=UserRole.PREINTRODUCER,
+            referral_code=referral_code,
+            invitation_token=invitation_token,
+            invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            invitation_expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days),
+            must_change_password=True,
+            is_active=False,
+            creation_method="invitation",
+            created_by=admin_user.id,
+        )
+
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating preintroducer", logger) from e
+
+    return {
+        "message": "PREINTRODUCER created",
+        "success": True,
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "role": user.role.value,
+            "referral_code": user.referral_code,
+        },
+    }
+
+
+@router.post("/introducer/{request_id}/send-nda")
+async def send_introducer_nda(
+    request_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """For introducer requests without NDA: create user as TRODUCER(nda_signed=false), send invitation email."""
+    from ...services.referral_codes import get_unique_referral_code
+
+    result = await db.execute(
+        select(ContactRequest).where(ContactRequest.id == UUID(request_id))
+    )
+    contact_request = result.scalar_one_or_none()
+    if not contact_request:
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+    existing = await db.execute(select(User).where(User.email == contact_request.contact_email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Load mail config
+    cfg_result = await db.execute(
+        select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+    )
+    mail_row = cfg_result.scalar_one_or_none()
+    invitation_expiry_days = (
+        mail_row.invitation_token_expiry_days
+        if mail_row and mail_row.invitation_token_expiry_days is not None
+        else 14
+    )
+
+    invitation_token = secrets.token_urlsafe(32)
+    referral_code = await get_unique_referral_code(db)
+
+    user = User(
+        email=contact_request.contact_email,
+        first_name=contact_request.contact_first_name or "",
+        last_name=contact_request.contact_last_name or "",
+        role=UserRole.TRODUCER,
+        referral_code=referral_code,
+        nda_signed=False,
+        invitation_token=invitation_token,
+        invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        invitation_expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=invitation_expiry_days),
+        must_change_password=True,
+        is_active=False,
+        creation_method="invitation",
+        created_by=admin_user.id,
+    )
+
+    try:
+        db.add(user)
+        # Keep user_role as NDA so the request stays visible in backoffice
+        await db.commit()
+        await db.refresh(user)
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "creating introducer (send NDA)", logger) from e
+
+    # Send NDA invitation email with PDF attachment
+    try:
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        nda_pdf_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf")
+        await email_service.send_introducer_nda_invitation(
+            user.email, user.first_name, user.invitation_token,
+            nda_pdf_path, expiry_days=invitation_expiry_days, mail_config=mail_cfg,
+        )
+    except Exception:
+        logger.exception("Failed to send NDA email for introducer %s", user.email)
+
+    asyncio.create_task(
+        backoffice_ws_manager.broadcast("request_updated", {
+            "id": str(contact_request.id),
+            "user_role": "NDA",
+            "request_flow": contact_request.request_flow,
+            "introducer_nda_status": "sent",
+            "introducer_user_id": str(user.id),
+        })
+    )
+
+    return {"message": "NDA sent to introducer", "success": True}
+
+
+@router.put("/introducer/{user_id}/approve-nda")
+async def approve_introducer_nda(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark a TRODUCER's NDA as signed, upgrade to INTRODUCER, activate user, update ContactRequest, send confirmation."""
+    result = await db.execute(
+        select(User).where(User.id == UUID(user_id), User.role == UserRole.TRODUCER)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Troducer not found")
+
+    # Find the associated contact request
+    cr_result = await db.execute(
+        select(ContactRequest).where(
+            ContactRequest.contact_email == user.email,
+            ContactRequest.request_flow == "introducer",
+        )
+    )
+    contact_request = cr_result.scalar_one_or_none()
+
+    try:
+        user.role = UserRole.INTRODUCER
+        user.commission_rate = Decimal("0.010000")  # Default 1%
+        user.nda_signed = True
+        user.is_active = True
+        if contact_request:
+            contact_request.user_role = ContactStatus.KYC
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise handle_database_error(e, "approving introducer NDA") from e
+
+    # Send confirmation email
+    try:
+        cfg_result = await db.execute(
+            select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
+        )
+        mail_row = cfg_result.scalar_one_or_none()
+        mail_cfg = None
+        if mail_row:
+            mail_cfg = {
+                "provider": mail_row.provider.value,
+                "use_env_credentials": mail_row.use_env_credentials,
+                "from_email": mail_row.from_email,
+                "resend_api_key": (
+                    mail_row.resend_api_key
+                    if not mail_row.use_env_credentials
+                    and mail_row.provider == MailProvider.RESEND
+                    else None
+                ),
+                "smtp_host": mail_row.smtp_host,
+                "smtp_port": mail_row.smtp_port,
+                "smtp_use_tls": mail_row.smtp_use_tls,
+                "smtp_username": mail_row.smtp_username,
+                "smtp_password": mail_row.smtp_password,
+                "invitation_link_base_url": mail_row.invitation_link_base_url,
+            }
+        await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
+    except Exception:
+        logger.exception("Failed to send introducer approval email to %s", user.email)
+
+    # Broadcast WS event so request disappears from backoffice list
+    if contact_request:
+        asyncio.create_task(
+            backoffice_ws_manager.broadcast("request_updated", {
+                "id": str(contact_request.id),
+                "user_role": "KYC",
+                "request_flow": "introducer",
+            })
+        )
+
+    return {"message": "NDA approved", "success": True}
+
+
+# ==================== Commission Management ====================
+
+
+@router.get("/commissions")
+async def list_all_commissions(
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    status: str | None = Query(None),
+    limit: int = Query(50, le=200),
+):
+    """List all commissions across all introducers. Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    query = (
+        select(CommissionLedger)
+        .order_by(CommissionLedger.created_at.desc())
+        .limit(limit)
+    )
+    if status:
+        query = query.where(CommissionLedger.status == CommissionStatus(status))
+    result = await db.execute(query)
+    entries = result.scalars().all()
+
+    # Get introducer and referred user info
+    response = []
+    for e in entries:
+        introducer = await db.get(User, e.introducer_user_id)
+        referred = await db.get(User, e.referred_user_id)
+        response.append(
+            {
+                "id": str(e.id),
+                "introducer_user_id": str(e.introducer_user_id),
+                "introducer_name": (
+                    f"{introducer.first_name} {introducer.last_name}".strip()
+                    if introducer
+                    else "Unknown"
+                ),
+                "referred_user_id": str(e.referred_user_id),
+                "referred_name": (
+                    f"{referred.first_name} {referred.last_name}".strip()
+                    if referred
+                    else "Unknown"
+                ),
+                "trade_eur_value": f"{e.trade_eur_value:.2f}",
+                "commission_rate": str(e.commission_rate),
+                "commission_eur": f"{e.commission_eur:.2f}",
+                "status": e.status.value,
+                "trade_executed_at": e.trade_executed_at.isoformat() + "Z",
+                "created_at": e.created_at.isoformat() + "Z",
+                "confirmed_at": (
+                    (e.confirmed_at.isoformat() + "Z") if e.confirmed_at else None
+                ),
+                "paid_at": (e.paid_at.isoformat() + "Z") if e.paid_at else None,
+                "notes": e.notes,
+            }
+        )
+
+    return response
+
+
+@router.put("/commissions/{commission_id}/confirm")
+async def confirm_commission(
+    commission_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Confirm a pending commission (PENDING -> CONFIRMED). Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    entry = await db.get(CommissionLedger, UUID(commission_id))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    if entry.status != CommissionStatus.PENDING:
+        raise HTTPException(
+            status_code=400, detail=f"Commission is {entry.status.value}, not pending"
+        )
+
+    entry.status = CommissionStatus.CONFIRMED
+    entry.confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    entry.confirmed_by = admin_user.id
+    await db.commit()
+
+    return {"message": "Commission confirmed", "success": True}
+
+
+@router.put("/commissions/{commission_id}/mark-paid")
+async def mark_commission_paid(
+    commission_id: str,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Mark a confirmed commission as paid (CONFIRMED -> PAID). Admin only."""
+    from ...models.models import CommissionLedger, CommissionStatus
+
+    entry = await db.get(CommissionLedger, UUID(commission_id))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    if entry.status != CommissionStatus.CONFIRMED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Commission is {entry.status.value}, not confirmed",
+        )
+
+    entry.status = CommissionStatus.PAID
+    entry.paid_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+
+    return {"message": "Commission marked as paid", "success": True}
+
+
+@router.put("/users/{user_id}/commission-rate")
+async def set_commission_rate(
+    user_id: str,
+    body: dict,
+    admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
+    """Set per-introducer commission rate. Admin only."""
+    user = await db.get(User, UUID(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    rate_str = body.get("rate")
+    if rate_str is None:
+        raise HTTPException(status_code=400, detail="Missing 'rate' in body")
+
+    try:
+        rate = Decimal(rate_str)
+        if rate < 0 or rate > 1:
+            raise ValueError("Rate must be between 0 and 1")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid rate: {e}") from e
+
+    user.commission_rate = rate
+    await db.commit()
+
+    return {"message": f"Commission rate set to {rate}", "success": True}

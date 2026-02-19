@@ -1,0 +1,18 @@
+export { IntroducerLayout } from './IntroducerLayout';
+export { IntroducerSubheader } from './IntroducerSubheader';
+export { SectionRegistryProvider, useSectionRegistry, useSection } from './SectionRegistry';
+export { HeroMetrics } from './HeroMetrics';
+export { HowItWorksFlow } from './HowItWorksFlow';
+export { ComparisonTable } from './ComparisonTable';
+export { ValuePropositionCards } from './ValuePropositionCards';
+export { AccordionItem } from './AccordionItem';
+export { MarketSection } from './MarketSection';
+export { ClientPathsSection } from './ClientPathsSection';
+export { LegalSection } from './LegalSection';
+export { TimingSection } from './TimingSection';
+export { ROICalculator } from './ROICalculator';
+export { FAQSection } from './FAQSection';
+export { ReferralsSection } from './ReferralsSection';
+export { ChatPanel } from './ChatPanel';
+export { ChatFAB } from './ChatFAB';
+export { ContentDepthSelector } from './ContentDepthSelector';

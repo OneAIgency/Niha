@@ -147,3 +147,251 @@ Review performed against `docs/features/0021_PLAN.md`. Order: Phase 1 (SSOT + sc
 3. **Frontend – AddAssetModal** ✅  
    File: `frontend/src/components/backoffice/AddAssetModal.tsx`.  
    When `selectedAsset` is `'CEA'` or `'EUA'`, send `amount: Math.round(amountNum)` in the `backofficeApi.addAsset` request body.
+
+---
+
+# Code Review: All above (0032, 0031/0030 fixes, documentation)
+
+Review of: **0032** (Introducer page, INTRODUCER role), **0031** (Settings/Scraping fixes), **0030** (Auto Trade UI fix), and **documentation** (app_truth, README, DESIGN_SYSTEM, ADMIN_SCRAPING, interface, API). References: `docs/features/0032_PLAN.md`, `docs/features/0032_REVIEW.md`, `docs/features/0031_REVIEW.md`, `docs/features/0030_REVIEW.md`, `docs/commands/write_docs.md`.
+
+---
+
+## 1. 0032 – Introducer
+
+### 1.1 Backend ✅
+
+- **UserRole.INTRODUCER**, **request_flow** on ContactRequest, migration `2026_02_13_introducer_role_and_request_flow` (enum + column).
+- **POST /contact/introducer-nda-request**: Form fields + PDF; creates ContactRequest with `request_flow='introducer'`; broadcast + email.
+- **create-from-request**: Query param `target_role` (KYC | INTRODUCER); when INTRODUCER, user without Entity.
+- **get_introducer_user** dependency; **GET /admin/contact-requests** with `request_flow` filter; responses include `request_flow`.
+
+### 1.2 Frontend ✅
+
+- **UserRole 'INTRODUCER'**, **USER_ROLES**, **getPostLoginRedirect** → `/introducer/dashboard`, **roleBadge** (INTRODUCER → info).
+- **IntroducerPage**: ENTER + NDA; NDA → `contactApi.submitIntroducerNDARequest`; redirect when already INTRODUCER to `/introducer/dashboard`.
+- **IntroducerDashboardPage**: Minimal content; design tokens.
+- **App.tsx**: Routes `/introducer`, `/introducer/dashboard` (RoleProtectedRoute INTRODUCER|ADMIN); CatchAllRedirect uses getPostLoginRedirect (INTRODUCER → dashboard).
+
+### 1.3 Backoffice ✅
+
+- **BackofficeOnboardingPage**: Tab Introducer; `introducerRequests` filtered by `request_flow === 'introducer'`; **ApproveInviteModal** sends `target_role: 'INTRODUCER'` when `requestFlow === 'introducer'`.
+
+### 1.4 Docs ✅
+
+- **ROLE_TRANSITIONS.md**, **app_truth.md** §8: INTRODUCER flow, request_flow, target_role documented.
+
+**Verdict**: 0032 implementation and docs aligned with plan.
+
+---
+
+## 2. 0031 – Fixes (Settings / Scraping)
+
+### 2.1 Certificate Type in edit modal ✅
+
+- **SettingsPage.tsx**: Certificate Type block removed from the **Edit** Scraping Source modal (field not sent by update API; avoids UX mismatch).
+
+### 2.2 ActionsDropdown Escape ✅
+
+- **SettingsPage.tsx** `ActionsDropdown`: `keydown` listener for `Escape` added; closes dropdown; cleanup on unmount.
+
+### 2.2 ScrapingSourceResponse / source.name / optimistic exchange ✅
+
+- Schema already has `last_price_eur`, `last_exchange_rate`; Price Scraping table already shows `source.name`; **handleSaveEditExchange** already unsets other primaries for same currency pair (verified in 0031_REVIEW “Fixes applied”).
+
+**Verdict**: 0031 recommendations applied; 0031_REVIEW.md status and “Fixes applied” section updated.
+
+---
+
+## 3. 0030 – Fix (Auto Trade UI)
+
+### 3.1 GET single market settings ✅
+
+- **get_market_settings** uses `_build_market_settings_response()`, which includes `avg_spread` and `tick_size` (no missing fields).
+
+### 3.2 SettingsInput dark variants ✅
+
+- **AutoTradePage.tsx** `SettingsInput`: `bg-white dark:bg-navy-900`, `border-navy-300 dark:border-navy-700`, `text-navy-900 dark:text-white`, `focus:border-emerald-500/50 dark:focus:border-emerald-500/50` for light/dark.
+
+### 3.3 Executor / save ✅
+
+- Executor: `tick = max(raw_tick, Decimal("0.0001"))` guard present. **handleSaveSettings** uses `Promise.all` for parallel save.
+
+**Verdict**: 0030 C1, M1, M3 addressed; 0030_REVIEW.md “Fixes applied” section added.
+
+---
+
+## 4. Documentation (write_docs)
+
+### 4.1 app_truth.md ✅
+
+- **§4**: Price scraping: name, **is_primary** (one per certificate type).
+- **§7**: Migrations: head via `alembic current`; no hardcoded head.
+- **§8**: INTRODUCER: **POST /api/v1/contact/introducer-nda-request** and `target_role=INTRODUCER` for create-from-request.
+
+### 4.2 README.md ✅
+
+- Introducer role: `/introducer`, INTRODUCER dashboard, Backoffice Introducer tab.
+- Onboarding subpages: Contact Requests, **Introducer**, KYC Review, Deposits; Introducer tab and `target_role=INTRODUCER` described.
+
+### 4.3 frontend/docs/DESIGN_SYSTEM.md ✅
+
+- **Admin config inputs (SettingsInput)**: Light/dark, formatting, recommended hint; reference AutoTradePage.
+- **ActionsDropdown**: Ellipsis menu, click-outside + Escape; reference SettingsPage.
+
+### 4.4 docs/ADMIN_SCRAPING.md ✅
+
+- Overview: **is_primary**; example list response includes `is_primary`. **Create source** and **Update source** examples (JSON body, including `is_primary`).
+
+### 4.5 docs/commands/interface.md ✅
+
+- Settings pages: **ActionsDropdown** for table row actions (click-outside + Escape); reference DESIGN_SYSTEM.
+
+### 4.6 docs/API.md ✅
+
+- **New file**: Contact & Introducer (POST /contact/request, nda-request, **introducer-nda-request** with form + example response). Admin: **GET /admin/contact-requests** (request_flow, pagination), **POST /admin/users/create-from-request** (target_role, example for INTRODUCER, errors). References to ADMIN_SCRAPING and app_truth.
+
+**Verdict**: Documentation matches implementation; style and structure consistent; no new docs in `docs/features/` (per write_docs rules).
+
+---
+
+## 5. Summary (all above)
+
+| Area | Status | Notes |
+|------|--------|------|
+| 0032 Backend | ✅ | INTRODUCER, request_flow, introducer-nda-request, create-from-request target_role, get_introducer_user |
+| 0032 Frontend | ✅ | IntroducerPage, IntroducerDashboardPage, routes, redirect, roleBadge, redirect when already INTRODUCER |
+| 0032 Backoffice | ✅ | Tab Introducer, ApproveInviteModal target_role |
+| 0032 Docs | ✅ | ROLE_TRANSITIONS, app_truth §8 |
+| 0031 Fixes | ✅ | Certificate Type removed from edit modal; Escape on ActionsDropdown; 0031_REVIEW updated |
+| 0030 Fixes | ✅ | SettingsInput dark variants; 0030_REVIEW “Fixes applied”; C1/I2/M3 already in place |
+| app_truth | ✅ | Scraping is_primary, migrations head, introducer endpoint |
+| README | ✅ | Introducer feature, Onboarding subpages |
+| DESIGN_SYSTEM | ✅ | SettingsInput pattern, ActionsDropdown |
+| ADMIN_SCRAPING | ✅ | is_primary, create/update examples |
+| interface.md | ✅ | ActionsDropdown pattern |
+| docs/API.md | ✅ | Contact, Introducer, Admin contact-requests & create-from-request with examples |
+
+---
+
+## 6. Action items (all above)
+
+None open. All planned changes, review recommendations, and documentation updates have been implemented and verified.
+
+---
+
+# Code Review: 0033 – Ticker & ACTIVITY (colors, single source, WebSocket, hover timestamp, spacing)
+
+Review of: **0033** (Ticker & ACTIVITY on Cash Market Pro). Reference: [docs/features/0033_PLAN.md](docs/features/0033_PLAN.md), [docs/features/0033_REVIEW.md](docs/features/0033_REVIEW.md).
+
+---
+
+## 1. Backend ✅
+
+- **get_recent_trades**: joinedload `buy_order` / `sell_order`; side = aggressor (BUY if buy_order.created_at >= sell_order.created_at); response includes real `side`.
+- **place_order (limit)**: after commit, broadcasts `orderbook_updated` and `trade_executed` per match (id, certificate_type, price, quantity, side, executed_at).
+- **limit_order_matching.py**: `MatchResult.executed_at`; passed to matches.
+
+**Verdict**: Done.
+
+---
+
+## 2. Frontend ✅
+
+- **Ticker**: Uses `trade.side` when available; fallback on price vs mid; emerald for BUY, red for SELL.
+- **RecentTradesActivity**: BUY/SELL badge, quantity @ price, total EUR, relative time; hover `title={formatFullTimestamp(trade.executedAt)}`; `gap-2` spacing.
+- **Layout**: ticker lg:col-span-8, ACTIVITY lg:col-span-4; shared `recentTrades`.
+- **useCashMarket**: `nihao:tradeExecuted` listener prepends trade, cap 20.
+- **useClientRealtime**: `trade_executed` → `nihao:tradeExecuted` with normalized payload.
+- **api.ts**: `ClientWebSocketMessage` type includes `trade_executed`; data: id, price, quantity, side, executedAt.
+
+**Verdict**: Done.
+
+---
+
+## 3. Summary (0033)
+
+| Area | Status |
+|------|--------|
+| Backend get_recent_trades / place_order | ✅ |
+| limit_order_matching MatchResult.executed_at | ✅ |
+| Ticker / ACTIVITY / Layout | ✅ |
+| useCashMarket / useClientRealtime / api.ts | ✅ |
+
+**Action items**: None. Implementation matches plan.
+
+---
+
+# Code Review: 0034 – Cash Market Pro layout & CEA chart
+
+Review of: **0034** (layout, order of components, CEA price chart). Reference: [docs/features/0034_PLAN.md](docs/features/0034_PLAN.md).
+
+---
+
+## 1. Layout (Faza 1)
+
+### 1.1 Page container flex ✅
+
+- **Parent**: `min-h-screen bg-navy-900 flex flex-col` — flex column so content can extend to bottom.
+- **Page container**: `page-container py-6 flex flex-col flex-1 min-h-0` — flex-1 + min-h-0 so content fills and scrolls correctly.
+- **Verdict**: Done.
+
+### 1.2 Order of components (top → bottom) ✅
+
+1. **Ticker** – Recent Trades (last 20), full width, `shrink-0`.
+2. **Order input** – InlineOrderForm, immediately under ticker, `shrink-0`.
+3. **Order book** – ProfessionalOrderBook, full width, `shrink-0`.
+4. **Grid**: ACTIVITY (lg:col-span-4) | Chart (lg:col-span-8), `flex-1 min-h-0`, under order book.
+
+Layout matches plan: `[Ticker] → [InlineOrderForm] → [Order Book] → [ACTIVITY | Chart]`.
+
+### 1.3 ACTIVITY under order book ✅
+
+- RecentTradesActivity is in the grid under the order book; ticker/ACTIVITY both use `recentTrades` (last 20) from useCashMarket.
+- **Verdict**: Done.
+
+---
+
+## 2. Chart component & integration (Faza 2)
+
+### 2.1 CEAPriceChart.tsx ✅
+
+- **Container style**: `bg-navy-900 rounded border border-navy-700 overflow-hidden` — matches plan and RecentTradesActivity; plus `flex flex-col h-full min-h-[200px]` for layout.
+- **Header**: TrendingUp icon, "CEA Price" title; border-b, navy-800 bar — consistent with ACTIVITY header pattern.
+- **Library**: `lightweight-charts` (^5.1.0) in package.json ✅.
+
+### 2.2 Data & real-time ✅
+
+- **Fetch**: `cashMarketApi.getRecentTrades('CEA', 100)` on mount — limit 100 as specified.
+- **Transform**: `tradesToChartData` → `{ time: unix_sec, value: price }`, sorted ascending by time.
+- **Series**: AreaSeries, navy background (#0f172a), grid #1e293b, borders #334155, text #94a3b8 (design system navy-400), line emerald (#34d399) — per DESIGN_SYSTEM/app_truth (no slate/gray).
+- **WebSocket**: Listener `nihao:tradeExecuted`; on event, `seriesRef.current.update(point)` with `{ time: toUnixSeconds(t.executedAt), value: t.price }`. useClientRealtime dispatches `detail: { trade }` with id, certificateType, price, quantity, side, executedAt — chart uses trade.executedAt and trade.price ✅.
+- **Resize**: ResizeObserver updates chart width.
+- **Cleanup**: removeEventListener, chart.remove(), refs nulled on unmount.
+
+### 2.3 useCashMarket / API ✅
+
+- Ticker and ACTIVITY keep `getRecentTrades(certificateType, 20)`; chart does its own fetch with 100 — no change to useCashMarket; plan’s “preferabil fetch separat pentru chart” satisfied.
+- API: getRecentTrades already supports limit 1–100 — no changes.
+
+---
+
+## 3. Summary (0034)
+
+| Area | Status | Notes |
+|------|--------|--------|
+| Page container flex | ✅ | min-h-screen flex flex-col; page-container flex-1 min-h-0 |
+| Order: Ticker → Form → Book → Grid | ✅ | As in plan |
+| ACTIVITY under order book | ✅ | lg:col-span-4 in grid |
+| Chart in “zona roșie” | ✅ | lg:col-span-8, same row as ACTIVITY |
+| Chart container style | ✅ | Same base classes as RecentTradesActivity |
+| lightweight-charts | ✅ | Area series, navy/emerald, grid, resize |
+| Fetch 100 + trade_executed | ✅ | Initial 100, real-time update via nihao:tradeExecuted |
+| Design system colors | ✅ | navy-900/800/700, emerald, no slate/gray |
+
+---
+
+## 4. Action items (0034)
+
+**None required.** Implementation matches 0034_PLAN.
+
+**Optional hardening**: If the backend ever broadcasts `trade_executed` for both CEA and EUA on the same channel, consider filtering in the chart listener so only `detail.trade.certificateType === 'CEA'` is applied to the series. Current behavior is correct if only CEA trades are pushed on this page.

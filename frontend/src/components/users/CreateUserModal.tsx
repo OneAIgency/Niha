@@ -38,13 +38,13 @@ export function CreateUserModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
       >
-        <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
-          <h2 className="text-xl font-bold text-navy-900 dark:text-white">Create New User</h2>
+        <div className="flex items-center justify-between p-6 border-b border-navy-700">
+          <h2 className="text-xl font-bold text-white">Create New User</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+            className="p-2 hover:bg-navy-700 rounded-lg"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 text-navy-500" aria-hidden="true" />
@@ -79,15 +79,26 @@ export function CreateUserModal({
             onChange={(e) => setNewUser({ ...newUser, position: e.target.value })}
           />
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2">
+            <label className="block text-sm font-medium text-navy-200 mb-2">
               Initial Role
             </label>
             <select
               value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+              onChange={(e) => {
+                const role = e.target.value as UserRole;
+                const updates: Partial<typeof newUser> = { role };
+                if (role === 'PREINTRODUCER') {
+                  updates.position = 'Pre-Introducer';
+                  setUseInvitation(false);
+                }
+                setNewUser({ ...newUser, ...updates });
+              }}
               className="w-full form-select"
             >
               <option value="MM">MM (Market Maker)</option>
+              <option value="PREINTRODUCER">Pre-Introducer</option>
+              <option value="TRODUCER">Troducer</option>
+              <option value="INTRODUCER">Introducer</option>
               <option value="NDA">NDA</option>
               <option value="REJECTED">Rejected</option>
               <option value="KYC">KYC</option>
@@ -104,21 +115,23 @@ export function CreateUserModal({
           </div>
 
           {/* Password or Invitation Toggle */}
-          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg space-y-3">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="useInvitation"
-                checked={useInvitation}
-                onChange={(e) => setUseInvitation(e.target.checked)}
-                className="w-4 h-4 text-emerald-500 rounded"
-              />
-              <label htmlFor="useInvitation" className="text-sm text-navy-700 dark:text-navy-200">
-                Send invitation email instead of setting password
-              </label>
-            </div>
+          <div className="p-4 bg-navy-700/50 rounded-lg space-y-3">
+            {newUser.role !== 'PREINTRODUCER' && (
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="useInvitation"
+                  checked={useInvitation}
+                  onChange={(e) => setUseInvitation(e.target.checked)}
+                  className="w-4 h-4 text-emerald-500 rounded"
+                />
+                <label htmlFor="useInvitation" className="text-sm text-navy-200">
+                  Send invitation email instead of setting password
+                </label>
+              </div>
+            )}
 
-            {!useInvitation && (
+            {(!useInvitation || newUser.role === 'PREINTRODUCER') && (
               <Input
                 label="Password"
                 type="password"
@@ -128,14 +141,16 @@ export function CreateUserModal({
               />
             )}
 
-            <p className="text-xs text-navy-500 dark:text-navy-400">
-              {useInvitation
-                ? 'An invitation email will be sent to the user to set up their password.'
-                : 'The user will be able to login immediately with this password.'}
+            <p className="text-xs text-navy-400">
+              {newUser.role === 'PREINTRODUCER'
+                ? 'Admin sets the password. No invitation email will be sent.'
+                : useInvitation
+                  ? 'An invitation email will be sent to the user to set up their password.'
+                  : 'The user will be able to login immediately with this password.'}
             </p>
           </div>
         </div>
-        <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
+        <div className="flex justify-end gap-3 p-6 border-t border-navy-700">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
@@ -143,7 +158,7 @@ export function CreateUserModal({
             variant="primary"
             onClick={onSubmit}
             loading={saving}
-            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || (!useInvitation && newUser.password.length < 8)}
+            disabled={!newUser.email || !newUser.firstName || !newUser.lastName || ((!useInvitation || newUser.role === 'PREINTRODUCER') && newUser.password.length < 8)}
           >
             {useInvitation ? (
               <>

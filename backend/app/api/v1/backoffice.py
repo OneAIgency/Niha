@@ -32,7 +32,6 @@ from ...models.models import (
     DocumentStatus,
     Entity,
     EntityHolding,
-    HoldType,
     KYCDocument,
     KYCStatus,
     TicketStatus,

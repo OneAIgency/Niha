@@ -1,7 +1,7 @@
 import React, { Component, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout, ThemeLayout } from './components/layout';
-import { AutoOrdersService, MmActivityFloater, RoleSimulationFloater } from './components/admin';
+import { AutoOrdersService } from './components/admin';
 import { ThemeTokenOverridesStyle } from './components/theme/ThemeTokenOverridesStyle';
 import { useAuthStore } from './stores/useStore';
 import type { UserRole } from './types';
@@ -45,6 +45,10 @@ class BackofficeErrorBoundary extends Component<
 // Code splitting: Lazy load pages with DIRECT imports (not barrel) for true code splitting
 const ContactPage = lazy(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const IntroducerPage = lazy(() => import('./pages/IntroducerPage').then(m => ({ default: m.IntroducerPage })));
+const IntroducerDashboardPage = lazy(() => import('./pages/IntroducerDashboardPage').then(m => ({ default: m.IntroducerDashboardPage })));
+const PreintroducerPage = lazy(() => import('./pages/PreintroducerPage').then(m => ({ default: m.PreintroducerPage })));
+const IntroducerSignNDAPage = lazy(() => import('./pages/IntroducerSignNDAPage').then(m => ({ default: m.IntroducerSignNDAPage })));
 const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -73,11 +77,11 @@ const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ de
 
 // Loading fallback component with proper semantic structure for accessibility
 const PageLoader = () => (
-  <div className="min-h-screen bg-navy-50 dark:bg-navy-950">
+  <div className="min-h-screen bg-navy-950">
     <main className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-        <p className="mt-4 text-navy-600 dark:text-navy-400">Loading...</p>
+        <p className="mt-4 text-navy-400">Loading...</p>
       </div>
     </main>
   </div>
@@ -203,6 +207,19 @@ function RoleProtectedRoute({
 function AdminRoute({ children }: { children: React.ReactNode }) {
   return (
     <RoleProtectedRoute allowedRoles={['ADMIN']} redirectTo="/dashboard">
+      {children}
+    </RoleProtectedRoute>
+  );
+}
+
+/** INTRODUCER dashboard: only approved INTRODUCERs and ADMINs. TRODUCERs go to sign-nda. */
+function IntroducerDashboardRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (user?.role === 'TRODUCER') {
+    return <Navigate to="/introducer/sign-nda" replace />;
+  }
+  return (
+    <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -393,6 +410,30 @@ function App() {
                 </DashboardRoute>
               }
             />
+            <Route
+              path="/introducer/dashboard"
+              element={
+                <IntroducerDashboardRoute>
+                  <IntroducerDashboardPage />
+                </IntroducerDashboardRoute>
+              }
+            />
+            <Route
+              path="/preintroducer"
+              element={
+                <RoleProtectedRoute allowedRoles={['PREINTRODUCER', 'ADMIN']}>
+                  <PreintroducerPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/introducer/sign-nda"
+              element={
+                <RoleProtectedRoute allowedRoles={['TRODUCER', 'INTRODUCER', 'ADMIN']}>
+                  <IntroducerSignNDAPage />
+                </RoleProtectedRoute>
+              }
+            />
             {/* Legacy: redirect to main cash market */}
             <Route path="/cash-market-pro" element={<Navigate to="/cash-market" replace />} />
             {/* Swap Center: SWAP, EUA_SETTLE, EUA, ADMIN */}
@@ -492,6 +533,16 @@ function App() {
               }
             />
             <Route
+              path="/backoffice/onboarding/introducer"
+              element={
+                <AdminRoute>
+                  <BackofficeErrorBoundary>
+                    <BackofficeOnboardingPage />
+                  </BackofficeErrorBoundary>
+                </AdminRoute>
+              }
+            />
+            <Route
               path="/backoffice/onboarding/kyc"
               element={
                 <AdminRoute>
@@ -553,6 +604,16 @@ function App() {
             />
           </Route>
 
+          {/* Introducer - public page (no layout) */}
+          <Route
+            path="/introducer"
+            element={
+              <LoginRoute>
+                <IntroducerPage />
+              </LoginRoute>
+            }
+          />
+
           {/* Auth routes (no layout) */}
           <Route
             path="/login"
@@ -576,8 +637,6 @@ function App() {
           <Route path="*" element={<CatchAllRedirect />} />
         </Routes>
         <AutoOrdersService />
-        <MmActivityFloater />
-        <RoleSimulationFloater />
       </Suspense>
     </Router>
   );

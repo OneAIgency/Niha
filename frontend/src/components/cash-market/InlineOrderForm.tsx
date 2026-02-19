@@ -5,8 +5,6 @@ import {
   Loader2,
   AlertCircle,
   ShoppingCart,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { cashMarketApi } from '../../services/api';
 import type { CertificateType, OrderBookLevel } from '../../types';
@@ -83,13 +81,11 @@ export function calcMarketBuy(asks: OrderBookLevel[], budgetEur: number): Market
     const costForLevel = level.price * level.quantity;
 
     if (remaining >= costForLevel) {
-      // Buy entire level
       totalQty += level.quantity;
       totalCost += costForLevel;
       remaining -= costForLevel;
       levelsUsed++;
     } else {
-      // Partial: buy as many whole units as remaining EUR allows
       const units = Math.floor(remaining / level.price);
       if (units > 0) {
         totalQty += units;
@@ -105,21 +101,18 @@ export function calcMarketBuy(asks: OrderBookLevel[], budgetEur: number): Market
 }
 
 // ─────────────────────────────────────────────────
-// Component
+// Component — always-open vertical layout
 // ─────────────────────────────────────────────────
 
 export function InlineOrderForm({
   certificateType,
   availableBalance,
-  bestBid,
   bestAsk,
-  spread,
   asks,
   onOrderSubmit,
   onRefresh,
   onExpandChange,
 }: InlineOrderFormProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [preview, setPreview] = useState<OrderPreview | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -127,13 +120,14 @@ export function InlineOrderForm({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Local calculation from ASK orderbook — instant, no API call
+  // Notify parent that form is always expanded
+  useEffect(() => { onExpandChange?.(true); }, [onExpandChange]);
+
   const calc = useMemo(
     () => calcMarketBuy(asks, availableBalance),
     [asks, availableBalance],
   );
 
-  // Fetch backend preview for submit validation (canExecute, fees, etc.)
   const fetchPreview = useCallback(async () => {
     if (availableBalance <= 0) {
       setPreview(null);
@@ -182,7 +176,6 @@ export function InlineOrderForm({
       await onRefresh();
     } catch (error) {
       console.error('Order submission error:', error);
-      // Re-throw so the modal catches and displays the error inline
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -204,200 +197,104 @@ export function InlineOrderForm({
   };
 
   return (
-    <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
-      {!isExpanded ? (
-        /* ── Contracted: button + expand icon ── */
-        <button
-          type="button"
-          onClick={() => { setIsExpanded(true); onExpandChange?.(true); }}
-          className="w-full px-5 py-3 flex items-center justify-between gap-3 hover:bg-navy-700/30 transition-colors text-left"
-        >
-          <div
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 opacity-80 ${
-              canSubmit
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
-                : 'bg-navy-700 text-navy-500'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span>Buy {certificateType} at Market</span>
-          </div>
-          <ChevronDown className="w-5 h-5 text-navy-400 shrink-0" aria-hidden />
-        </button>
-      ) : (
-        <>
-      {/* ── Header row: Market context ── */}
-      <div className="px-5 py-3 border-b border-navy-700/50 flex items-center justify-between">
-        <div className="flex items-center justify-between flex-1">
-          {/* Left: Best Bid */}
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-navy-500 mb-0.5">Best Bid</div>
-              <div className="font-mono font-bold text-emerald-400 text-xl tabular-nums">
-                €{formatNumber(bestBid)}
-              </div>
-            </div>
-          </div>
-
-          {/* Center: Spread indicator */}
-          <div className="flex flex-col items-center">
-            <div className="text-xs uppercase tracking-wider text-navy-500 mb-0.5">Spread</div>
-            <div className="font-mono font-semibold text-amber-400 text-sm tabular-nums">
-              €{formatNumber(spread, 4)}
-            </div>
-          </div>
-
-          {/* Right: Best Ask */}
-          <div className="text-right">
-            <div className="text-xs uppercase tracking-wider text-navy-500 mb-0.5">Best Ask</div>
-            <div className="font-mono font-bold text-red-400 text-xl tabular-nums">
-              €{formatNumber(bestAsk)}
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => { setIsExpanded(false); onExpandChange?.(false); }}
-          className="p-1.5 rounded-lg hover:bg-navy-700/50 text-navy-400 hover:text-white transition-colors shrink-0"
-          aria-label="Collapse order form"
-        >
-          <ChevronUp className="w-5 h-5" />
-        </button>
+    <div className="rounded-lg border border-navy-700/50 overflow-hidden flex flex-col flex-1 min-h-0 bg-navy-800/30 widget-accent-emerald">
+      {/* Header */}
+      <div className="px-3 py-1 border-b border-navy-700/50 flex items-center gap-1.5 shrink-0">
+        <ShoppingCart className="w-3 h-3 text-emerald-400" />
+        <span className="text-[10px] font-semibold text-navy-300 uppercase tracking-wider">Buy {certificateType}</span>
       </div>
 
-      {/* ── Order Form ── market only, full balance, single execute */}
-      <form onSubmit={handleSubmit} className="px-5 py-4">
-        <div className="grid gap-3 mb-3 grid-cols-3">
-          {/* Amount EUR — read-only, full balance */}
-          <div>
-            <label className="text-xs font-medium text-navy-400 uppercase tracking-wider block mb-1">
-              Amount (EUR)
-            </label>
-            <div className="h-[38px] px-3 rounded-lg border border-navy-600 bg-navy-900/50 text-sm font-mono text-white flex items-center justify-between">
-              <span className="tabular-nums">€{formatNumber(availableBalance)}</span>
-            </div>
-            <div className="text-xs text-navy-500 mt-0.5">Full balance</div>
-          </div>
+      {/* Form content — vertical stack */}
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-y-auto px-3 py-2 gap-1.5">
+        {/* Ask price */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-navy-500 uppercase">Market Ask</span>
+          <span className="text-sm font-mono font-bold text-red-400 tabular-nums">
+            €{formatNumber(bestAsk)}
+          </span>
+        </div>
 
-          {/* Estimated Quantity — from local orderbook calc */}
-          <div>
-            <label className="text-xs font-medium text-navy-400 uppercase tracking-wider block mb-1">
-              Est. Quantity
-            </label>
-            <div className="h-[38px] px-3 rounded-lg border border-navy-600 bg-navy-900/50 text-sm font-mono text-white flex items-center justify-between">
-              {calc ? (
-                <span className="tabular-nums">{formatNumber(calc.totalQty, 0)}</span>
-              ) : (
-                <span className="text-navy-500">—</span>
-              )}
-              <span className="text-xs text-navy-500 ml-1">{certificateType}</span>
-            </div>
-          </div>
-
-          {/* Avg. Price — weighted average from ASK levels */}
-          <div>
-            <label className="text-xs font-medium text-navy-400 uppercase tracking-wider block mb-1">
-              Avg. Price
-            </label>
-            <div className="h-[38px] px-3 rounded-lg border border-navy-600 bg-navy-900/50 text-sm font-mono text-white flex items-center justify-between">
-              {calc ? (
-                <span className="tabular-nums text-amber-400">€{formatNumber(calc.avgPrice)}</span>
-              ) : (
-                <span className="text-navy-500">—</span>
-              )}
-              <span className="text-xs text-navy-500 ml-1">/ {certificateType}</span>
-            </div>
+        {/* Balance */}
+        <div>
+          <label className="text-[10px] text-navy-500 uppercase block">Amount (EUR)</label>
+          <div className="h-7 px-2.5 rounded-lg border border-navy-700 bg-navy-900/50 text-xs font-mono text-white flex items-center justify-between">
+            <span className="tabular-nums">€{formatNumber(availableBalance)}</span>
+            <span className="text-[9px] text-navy-600">full balance</span>
           </div>
         </div>
 
-        {/* ── Preview Section ── */}
-        <AnimatePresence>
-          {(calc || previewError || isLoadingPreview) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              {isLoadingPreview && !calc && (
-                <div className="flex items-center justify-center py-3 rounded-lg bg-navy-900/50 border border-navy-700 mb-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-emerald-500 mr-2" />
-                  <span className="text-xs text-navy-400">Calculating...</span>
-                </div>
-              )}
+        {/* Est. Quantity */}
+        <div>
+          <label className="text-[10px] text-navy-500 uppercase block">Est. Quantity</label>
+          <div className="h-7 px-2.5 rounded-lg border border-navy-700 bg-navy-900/50 text-xs font-mono text-white flex items-center justify-between">
+            {calc ? (
+              <span className="tabular-nums">{formatNumber(calc.totalQty, 0)}</span>
+            ) : (
+              <span className="text-navy-500">—</span>
+            )}
+            <span className="text-[9px] text-navy-600">{certificateType}</span>
+          </div>
+        </div>
 
-              {previewError && (
-                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-900/15 border border-red-800/30 mb-3">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-300">{previewError}</p>
-                </div>
-              )}
+        {/* Preview details */}
+        {calc && (
+          <div className="rounded-lg bg-navy-900/50 border border-navy-700/50 px-2.5 py-1.5 space-y-0.5">
+            <div className="flex justify-between text-[10px]">
+              <span className="text-navy-500">Avg Price</span>
+              <span className="font-mono text-amber-400 tabular-nums">€{formatNumber(calc.avgPrice)}</span>
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-navy-500">Total Cost</span>
+              <span className="font-mono text-white tabular-nums">€{formatNumber(calc.totalCost)}</span>
+            </div>
+            <div className="flex justify-between text-[10px]">
+              <span className="text-navy-500">Levels</span>
+              <span className="font-mono text-navy-300 tabular-nums">{calc.levelsUsed}</span>
+            </div>
+            {preview?.platformFeeAmount != null && preview.platformFeeAmount > 0 && (
+              <div className="flex justify-between text-[10px]">
+                <span className="text-navy-500">Fee</span>
+                <span className="font-mono text-navy-300 tabular-nums">
+                  €{formatNumber(preview.platformFeeAmount)}
+                  {preview.platformFeeRate != null && (
+                    <span className="text-navy-600 ml-0.5">({(preview.platformFeeRate * 100).toFixed(1)}%)</span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
-              {calc && (
-                <div className="rounded-lg bg-navy-900/50 border border-navy-700 mb-3 px-3 py-2.5 space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-navy-400">Quantity</span>
-                    <span className="font-mono font-semibold text-white tabular-nums">
-                      {formatNumber(calc.totalQty, 0)} {certificateType}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-navy-400">Total Cost</span>
-                    <span className="font-mono font-semibold text-white tabular-nums">
-                      €{formatNumber(calc.totalCost)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-navy-400">Avg. Price</span>
-                    <span className="font-mono font-semibold text-amber-400 tabular-nums">
-                      €{formatNumber(calc.avgPrice)} / {certificateType}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-navy-400">Price Levels</span>
-                    <span className="font-mono text-navy-300 tabular-nums">
-                      {calc.levelsUsed} level{calc.levelsUsed !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  {preview?.platformFeeAmount != null && preview.platformFeeAmount > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-navy-400">Platform Fee</span>
-                      <span className="font-mono text-navy-300 tabular-nums">
-                        €{formatNumber(preview.platformFeeAmount)}
-                        {preview.platformFeeRate != null && (
-                          <span className="text-navy-500 ml-1">
-                            ({(preview.platformFeeRate * 100).toFixed(2)}%)
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {!preview?.canExecute && preview && (
-                    <div className="flex items-start gap-1.5 p-2 rounded bg-red-900/20 border border-red-800/30 mt-2">
-                      <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-300">{preview.executionMessage}</p>
-                    </div>
-                  )}
-                  {preview?.canExecute && (
-                    <div className="flex items-start gap-1.5 p-2 rounded bg-emerald-900/20 border border-emerald-800/30 mt-2">
-                      <TrendingUp className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-emerald-300">Ready to execute at market</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Loading / Error states */}
+        {isLoadingPreview && !calc && (
+          <div className="flex items-center justify-center py-2 rounded-lg bg-navy-900/50 border border-navy-700/50">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500 mr-1.5" />
+            <span className="text-[10px] text-navy-400">Calculating...</span>
+          </div>
+        )}
 
-        {/* ── Submit Button ── */}
+        {previewError && (
+          <div className="flex items-start gap-1.5 p-2 rounded-lg bg-red-900/15 border border-red-800/30">
+            <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] text-red-300">{previewError}</p>
+          </div>
+        )}
+
+        {/* Status — only show when NOT executable (error/warning) */}
+        {!preview?.canExecute && preview && (
+          <div className="flex items-start gap-1.5 px-2 py-1 rounded bg-red-900/20 border border-red-800/30">
+            <AlertCircle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+            <span className="text-[10px] text-red-300">{preview.executionMessage}</span>
+          </div>
+        )}
+
+        {/* Submit — mt-auto pushes to bottom when space allows without clipping on short screens */}
         <motion.button
-          whileHover={canSubmit ? { scale: 1.005 } : {}}
-          whileTap={canSubmit ? { scale: 0.995 } : {}}
+          whileHover={canSubmit ? { scale: 1.01 } : {}}
+          whileTap={canSubmit ? { scale: 0.99 } : {}}
           type="submit"
           disabled={!canSubmit}
-          className={`w-full py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`w-full py-2 rounded-lg font-semibold text-xs text-white transition-all duration-200 flex items-center justify-center gap-1.5 shrink-0 mt-auto ${
             canSubmit
               ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/20'
               : 'bg-navy-700 text-navy-500 cursor-not-allowed'
@@ -405,12 +302,12 @@ export function InlineOrderForm({
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
               <span>Executing...</span>
             </>
           ) : (
             <>
-              <ShoppingCart className="w-4 h-4" />
+              <ShoppingCart className="w-3.5 h-3.5" />
               <span>Buy {certificateType} at Market</span>
             </>
           )}
@@ -423,18 +320,16 @@ export function InlineOrderForm({
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              className="mt-2 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-900/20 border border-emerald-800/30"
+              className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-emerald-900/20 border border-emerald-800/30 shrink-0"
             >
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-xs font-medium text-emerald-400">Order placed successfully</span>
+              <TrendingUp className="w-3 h-3 text-emerald-400" />
+              <span className="text-[10px] font-medium text-emerald-400">Order placed</span>
             </motion.div>
           )}
         </AnimatePresence>
       </form>
-        </>
-      )}
 
-      {/* ── Trade Confirmation Modal ── */}
+      {/* Trade Confirmation Modal */}
       <TradeConfirmationModal
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}

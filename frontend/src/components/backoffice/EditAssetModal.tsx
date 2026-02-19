@@ -23,8 +23,8 @@ const ASSET_CONFIG = {
   EUR: {
     label: 'EUR Cash',
     icon: DollarSign,
-    bgClass: 'bg-emerald-100 dark:bg-emerald-900/30',
-    textClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-900/30',
+    textClass: 'text-emerald-400',
     borderClass: 'border-emerald-500',
     ringClass: 'focus:ring-emerald-500',
     format: formatEUR,
@@ -32,8 +32,8 @@ const ASSET_CONFIG = {
   CEA: {
     label: 'CEA Certificates',
     icon: Leaf,
-    bgClass: 'bg-amber-100 dark:bg-amber-900/30',
-    textClass: 'text-amber-600 dark:text-amber-400',
+    bgClass: 'bg-amber-900/30',
+    textClass: 'text-amber-400',
     borderClass: 'border-amber-500',
     ringClass: 'focus:ring-amber-500',
     format: formatQty,
@@ -41,8 +41,8 @@ const ASSET_CONFIG = {
   EUA: {
     label: 'EUA Certificates',
     icon: Wind,
-    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
-    textClass: 'text-blue-600 dark:text-blue-400',
+    bgClass: 'bg-blue-900/30',
+    textClass: 'text-blue-400',
     borderClass: 'border-blue-500',
     ringClass: 'focus:ring-blue-500',
     format: formatQty,
@@ -128,27 +128,27 @@ export function EditAssetModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              className="bg-navy-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
+              <div className="flex items-center justify-between p-6 border-b border-navy-700">
                 <div className="flex items-center gap-3">
                   <div className={cn('p-2.5 rounded-xl', config.bgClass)}>
                     <Icon className={cn('w-5 h-5', config.textClass)} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-navy-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-white">
                       Edit {config.label}
                     </h2>
-                    <p className="text-sm text-navy-500 dark:text-navy-400">
+                    <p className="text-sm text-navy-400">
                       {entityName}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg text-navy-400 hover:text-navy-600 dark:hover:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-800 transition-colors"
+                  className="p-2 rounded-lg text-navy-400 hover:text-navy-300 hover:bg-navy-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -158,7 +158,7 @@ export function EditAssetModal({
               <div className="p-6 space-y-5">
                 {/* Current Balance */}
                 <div className={cn('p-4 rounded-xl', config.bgClass)}>
-                  <div className="text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 mb-1">
+                  <div className="text-xs uppercase tracking-wider text-navy-400 mb-1">
                     Current Balance
                   </div>
                   <div className={cn('text-2xl font-bold font-mono', config.textClass)}>
@@ -168,7 +168,7 @@ export function EditAssetModal({
 
                 {/* New Balance Input */}
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-300 mb-2">
                     New Balance *
                   </label>
                   <NumberInput
@@ -183,7 +183,7 @@ export function EditAssetModal({
 
                 {/* Notes (optional) */}
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-300 mb-2">
                     Admin Notes <span className="text-navy-400">(optional)</span>
                   </label>
                   <textarea
@@ -191,7 +191,7 @@ export function EditAssetModal({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Reason for adjustment..."
                     rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                    className="w-full px-4 py-2.5 rounded-xl border border-navy-700 bg-navy-800 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                   />
                 </div>
 
@@ -202,9 +202,9 @@ export function EditAssetModal({
                     animate={{ opacity: 1, y: 0 }}
                     className={cn(
                       'p-4 rounded-xl border',
-                      isIncrease && 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
-                      isDecrease && 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-                      isUnchanged && 'bg-navy-50 dark:bg-navy-800/50 border-navy-200 dark:border-navy-700'
+                      isIncrease && 'bg-emerald-900/20 border-emerald-800',
+                      isDecrease && 'bg-red-900/20 border-red-800',
+                      isUnchanged && 'bg-navy-800/50 border-navy-700'
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -214,8 +214,8 @@ export function EditAssetModal({
                         {isUnchanged && <Minus className="w-4 h-4 text-navy-400" />}
                         <span className={cn(
                           'text-sm font-medium',
-                          isIncrease && 'text-emerald-600 dark:text-emerald-400',
-                          isDecrease && 'text-red-600 dark:text-red-400',
+                          isIncrease && 'text-emerald-400',
+                          isDecrease && 'text-red-400',
                           isUnchanged && 'text-navy-500'
                         )}>
                           {isIncrease && `+${config.format(delta)}`}

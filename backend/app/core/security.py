@@ -447,3 +447,14 @@ async def get_onboarding_user(current_user=Depends(get_current_user)):  # noqa: 
             status_code=status.HTTP_403_FORBIDDEN, detail="Onboarding access required"
         )
     return current_user
+
+
+async def get_introducer_user(current_user=Depends(get_current_user)):  # noqa: B008
+    """Dependency that allows INTRODUCER or ADMIN (introducer dashboard). 0032 plan."""
+    from ..models.models import UserRole
+
+    if current_user.role not in {UserRole.ADMIN, UserRole.INTRODUCER}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Introducer access required"
+        )
+    return current_user

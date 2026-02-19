@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x2705;</div>
+<h1>Welcome Aboard, {{ name }}!</h1>
+<p>Your Non-Disclosure Agreement has been reviewed and approved.
+Your Introducer account is now fully active.</p>
+
+<div class="callout success">
+    <p class="callout-title">What's Available to You</p>
+    <p>You now have full access to the Introducer Portal where you can
+    refer clients to Nihao Group's carbon trading platform.</p>
+</div>
+
+<div class="feature-list">
+    <div class="feature-item">
+        <div class="feature-icon">&#x1F517;</div>
+        <div class="feature-text">Generate unique referral codes for your clients</div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">&#x1F4CA;</div>
+        <div class="feature-text">Track referral activity in real time</div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">&#x1F4B0;</div>
+        <div class="feature-text">Earn commissions on successful referrals</div>
+    </div>
+</div>
+
+<a href="{{ dashboard_url }}" class="btn btn-primary">Go to Introducer Portal</a>
+{% endblock %}

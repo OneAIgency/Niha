@@ -73,7 +73,7 @@ frontend/
 |---------|------|
 | Frontend | 5173 |
 | Backend | 8000 |
-| PostgreSQL | 5433 (host) / 5432 (internal) |
+| PostgreSQL | 5434 (host) / 5432 (internal) |
 | Redis | 6379 |
 
 ## Code Style
@@ -89,6 +89,17 @@ frontend/
 - Never use `slate-*`, `gray-*`, or hardcoded hex colors
 - Use components from `src/components/common/`
 - Use `ClientStatusBadge` for role/status display
+
+## Post-Implementation Checks
+
+After implementing a feature or fix, verify before considering done:
+
+1. **Build passes** — `cd frontend && npx tsc --noEmit` (zero errors)
+2. **Backend tests pass** — `docker compose exec backend pytest --tb=short -q`
+3. **No hardcoded colors** — no hex colors, `slate-*`, or `gray-*` in new/changed files
+4. **Update app_truth.md** — if you added routes, roles, API endpoints, or business rules
+
+Exceptions: documentation-only changes, comment-only changes, dependency updates.
 
 ## Critical Rules
 
@@ -113,8 +124,8 @@ See `app_truth.md` §10. These files are locked:
 
 ## Gotchas
 
-1. **PostgreSQL port**: Host uses 5433 to avoid conflicts with local Postgres
-2. **Migrations**: Current head is `2026_01_30_add_mm` - new migrations use this as `down_revision`
+1. **PostgreSQL port**: Host uses 5434 to avoid conflicts with local Postgres
+2. **Migrations**: Current head is `2026_02_16_ai_agent` — new migrations use this as `down_revision`
 3. **WebSocket**: Backoffice uses realtime updates - normalize payloads to snake_case
 4. **Deposits**: APPROVED→FUNDING only via first `announce_deposit` (no manual "fund user")
 5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list
@@ -146,6 +157,8 @@ docker compose logs backend | grep "Settlement processor"
 # Database shell
 docker compose exec db psql -U niha_user -d niha_carbon
 ```
+
+**Introducer simulation (dev only)**: On `/introducer`, a "Simulează cerere introducer" button (visible in dev mode) pre-fills the form with sample data for quick testing. Introducer requests do not require a PDF attachment.
 
 ## Known Technical Debt
 

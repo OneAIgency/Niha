@@ -10,6 +10,7 @@ from httpx import ASGITransport
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
+from app.core.security import RedisManager
 from app.main import app
 from app.models.models import Entity, TicketLog
 
@@ -36,19 +37,28 @@ async def _get_latest_ticket_by_action_type(action_type: str) -> TicketLog | Non
         return result.scalar_one_or_none()
 
 
+async def _admin_login(client: httpx.AsyncClient) -> str:
+    """Login as admin, clearing rate limit first to avoid 429 in test suites."""
+    try:
+        r = await RedisManager.get_redis()
+        await r.delete("rate_limit:auth:127.0.0.1")
+    except Exception:
+        pass
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
+    )
+    assert resp.status_code == 200, f"Admin login failed: {resp.text}"
+    return resp.json()["access_token"]
+
+
 @pytest.mark.asyncio
 async def test_add_asset_deposit_creates_ticket():
     """POST add-asset (deposit) creates a ticket with ENTITY_ASSET_DEPOSIT, entity_type AssetTransaction, tags."""
     async with httpx.AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        login = await client.post(
-            "/api/v1/auth/login",
-            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
-        )
-        assert login.status_code == 200
-        token = login.json()["access_token"]
-
+        token = await _admin_login(client)
         entity_id = await _get_first_entity_id()
 
         response = await client.post(
@@ -79,13 +89,7 @@ async def test_add_asset_withdrawal_creates_ticket():
     async with httpx.AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        login = await client.post(
-            "/api/v1/auth/login",
-            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
-        )
-        assert login.status_code == 200
-        token = login.json()["access_token"]
-
+        token = await _admin_login(client)
         entity_id = await _get_first_entity_id()
 
         dep = await client.post(
@@ -127,13 +131,7 @@ async def test_add_asset_cea_fractional_amount_rejected():
     async with httpx.AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        login = await client.post(
-            "/api/v1/auth/login",
-            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
-        )
-        assert login.status_code == 200
-        token = login.json()["access_token"]
-
+        token = await _admin_login(client)
         entity_id = await _get_first_entity_id()
 
         response = await client.post(
@@ -161,13 +159,7 @@ async def test_add_asset_eua_fractional_amount_rejected():
     async with httpx.AsyncClient(
         transport=ASGITransport(app=app), base_url="http://testserver"
     ) as client:
-        login = await client.post(
-            "/api/v1/auth/login",
-            json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
-        )
-        assert login.status_code == 200
-        token = login.json()["access_token"]
-
+        token = await _admin_login(client)
         entity_id = await _get_first_entity_id()
 
         response = await client.post(

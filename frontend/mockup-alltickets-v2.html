@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIHA Audit Log — Redesign Proposal v2</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-950: #0a0e1a;
+    --navy-900: #0f1629;
+    --navy-800: #161d33;
+    --navy-700: #1e2744;
+    --navy-600: #2a3555;
+    --navy-500: #4a5578;
+    --navy-400: #6b7899;
+    --navy-300: #94a3b8;
+    --navy-200: #c8d0df;
+    --emerald-500: #10b981;
+    --emerald-400: #34d399;
+    --emerald-900: rgba(6, 78, 59, 0.3);
+    --red-500: #ef4444;
+    --red-400: #f87171;
+    --red-900: rgba(127, 29, 29, 0.3);
+    --amber-400: #fbbf24;
+    --amber-900: rgba(120, 53, 15, 0.25);
+    --blue-400: #60a5fa;
+    --blue-900: rgba(30, 58, 138, 0.3);
+    --violet-400: #a78bfa;
+    --violet-900: rgba(76, 29, 149, 0.25);
+    --orange-400: #fb923c;
+    --orange-300: #fdba74;
+    --orange-900: rgba(124, 45, 18, 0.25);
+    --cyan-400: #22d3ee;
+    --cyan-900: rgba(22, 78, 99, 0.25);
+    --indigo-400: #818cf8;
+    --indigo-900: rgba(49, 46, 129, 0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy-950);
+    color: var(--navy-200);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--navy-700);
+  }
+  .header h1 { font-size: 16px; font-weight: 600; color: var(--navy-200); }
+  .header .subtitle { font-size: 11px; color: var(--navy-500); margin-top: 2px; }
+  .proposal-badge {
+    background: linear-gradient(135deg, var(--emerald-900), var(--blue-900));
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    color: var(--emerald-400);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: var(--navy-900);
+    border: 1px solid var(--navy-700);
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+  .legend-section { display: flex; align-items: center; gap: 8px; }
+  .legend-title { font-size: 10px; color: var(--navy-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .legend-items { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Table */
+  .table-wrapper {
+    border: 1px solid var(--navy-700);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--navy-800);
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    background: var(--navy-900);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--navy-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--navy-700);
+    white-space: nowrap;
+  }
+  thead th.right { text-align: right; }
+  thead th.center { text-align: center; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30, 39, 68, 0.5);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: rgba(30, 39, 68, 0.6); }
+  tbody tr:last-child { border-bottom: none; }
+
+  td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    font-size: 11px;
+  }
+  td.right { text-align: right; }
+  td.center { text-align: center; }
+  td.mono-cell { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+
+  /* Badges & Pills */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+
+  /* Role badges */
+  .role-admin { background: var(--violet-900); color: var(--violet-400); }
+  .role-mm { background: var(--orange-900); color: var(--orange-400); }
+  .role-user { background: var(--blue-900); color: var(--blue-400); }
+  .role-system { background: rgba(42, 53, 85, 0.5); color: var(--navy-400); }
+
+  /* Action category badges */
+  .cat-auth { background: rgba(42, 53, 85, 0.6); color: var(--navy-300); }
+  .cat-trading { background: var(--emerald-900); color: var(--emerald-400); }
+  .cat-deposit { background: var(--blue-900); color: var(--blue-400); }
+  .cat-withdrawal { background: var(--amber-900); color: var(--amber-400); }
+  .cat-kyc { background: rgba(42, 53, 85, 0.5); color: var(--navy-300); }
+  .cat-mm { background: var(--orange-900); color: var(--orange-400); }
+  .cat-auto { background: var(--cyan-900); color: var(--cyan-400); }
+  .cat-admin { background: var(--violet-900); color: var(--violet-400); }
+  .cat-swap { background: var(--indigo-900); color: var(--indigo-400); }
+
+  /* Instrument badges */
+  .inst-eur { background: rgba(30, 58, 138, 0.2); color: #93bbfc; border: 1px solid rgba(96, 165, 250, 0.15); }
+  .inst-cea { background: rgba(6, 78, 59, 0.2); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.15); }
+  .inst-eua { background: rgba(76, 29, 149, 0.2); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.15); }
+
+  /* Side indicators */
+  .side-buy { background: rgba(6, 78, 59, 0.35); color: var(--emerald-400); font-weight: 700; }
+  .side-sell { background: rgba(127, 29, 29, 0.35); color: var(--red-400); font-weight: 700; }
+  .side-int { background: var(--violet-900); color: var(--violet-400); }
+
+  /* Result badges */
+  .result-success { color: var(--emerald-400); }
+  .result-info { color: var(--blue-400); }
+  .result-warning { color: var(--red-400); font-weight: 600; }
+  .result-muted { color: var(--navy-500); }
+
+  /* Trade execution card */
+  .trade-card {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    min-width: 320px;
+  }
+  .trade-party {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 8px;
+    border-radius: 4px;
+    min-width: 90px;
+  }
+  .trade-party.buyer { background: rgba(6, 78, 59, 0.15); border: 1px solid rgba(52, 211, 153, 0.12); }
+  .trade-party.seller { background: rgba(127, 29, 29, 0.15); border: 1px solid rgba(248, 113, 113, 0.12); }
+  .trade-party-role { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .trade-party-name { font-size: 10px; font-weight: 500; color: var(--navy-200); margin-top: 1px; }
+  .trade-party.buyer .trade-party-role { color: var(--emerald-400); }
+  .trade-party.seller .trade-party-role { color: var(--red-400); }
+
+  .trade-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2px 6px;
+    position: relative;
+  }
+  .trade-connector-line {
+    width: 32px;
+    height: 1px;
+    background: var(--navy-600);
+    position: relative;
+  }
+  .trade-connector-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .trade-connector-qty {
+    font-size: 9px;
+    color: var(--navy-400);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .aggressor-arrow {
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .aggressor-arrow.buy { color: var(--emerald-400); }
+  .aggressor-arrow.sell { color: var(--red-400); }
+
+  /* Balance change column */
+  .balance-change {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .balance-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+  .balance-asset {
+    font-size: 9px;
+    font-weight: 600;
+    width: 24px;
+    text-align: right;
+    color: var(--navy-400);
+  }
+  .balance-before { color: var(--navy-500); }
+  .balance-arrow { color: var(--navy-600); font-size: 9px; }
+  .balance-after { color: var(--navy-200); font-weight: 500; }
+  .balance-delta {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+  .balance-delta.positive { color: var(--emerald-400); background: rgba(6, 78, 59, 0.2); }
+  .balance-delta.negative { color: var(--red-400); background: rgba(127, 29, 29, 0.2); }
+
+  /* Trade direction row tints */
+  tr.tint-ask { background: rgba(6, 78, 59, 0.08); }
+  tr.tint-bid { background: rgba(127, 29, 29, 0.08); }
+  tr.tint-ask:hover { background: rgba(6, 78, 59, 0.15); }
+  tr.tint-bid:hover { background: rgba(127, 29, 29, 0.15); }
+
+  /* Status dot */
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .status-dot.ok { background: rgba(16, 185, 129, 0.6); }
+  .status-dot.fail { background: var(--red-500); }
+
+  /* Time cell */
+  .time-cell { display: flex; align-items: center; gap: 6px; }
+  .time-main { font-size: 11px; color: var(--navy-200); font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .time-relative { font-size: 9px; color: var(--navy-500); }
+
+  /* Actor cell */
+  .actor-cell { display: flex; align-items: center; gap: 5px; }
+  .actor-name { font-size: 11px; font-weight: 500; color: var(--navy-200); }
+  .actor-name.mm-name { color: var(--orange-300); }
+
+  /* Sections annotation */
+  .section-label {
+    display: block;
+    padding: 6px 12px;
+    background: var(--navy-900);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--navy-500);
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--navy-700);
+  }
+
+  /* Notes on design decisions */
+  .design-notes {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--navy-900);
+    border: 1px solid var(--navy-700);
+    border-radius: 8px;
+  }
+  .design-notes h3 { font-size: 13px; color: var(--navy-200); margin-bottom: 10px; }
+  .design-notes ul { padding-left: 16px; }
+  .design-notes li { margin-bottom: 6px; color: var(--navy-400); font-size: 11px; line-height: 1.5; }
+  .design-notes li strong { color: var(--navy-200); }
+  .design-notes .highlight { color: var(--emerald-400); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>All Tickets — Redesign Proposal</h1>
+    <div class="subtitle">Standardized columns, rich trade execution cards, balance before/after tracking</div>
+  </div>
+  <div class="proposal-badge">DESIGN PREVIEW</div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-section">
+    <span class="legend-title">Roles</span>
+    <div class="legend-items">
+      <span class="badge role-admin">ADMIN</span>
+      <span class="badge role-mm">MM</span>
+      <span class="badge role-user">CLIENT</span>
+      <span class="badge role-system">SYSTEM</span>
+    </div>
+  </div>
+  <div class="legend-section">
+    <span class="legend-title">Actions</span>
+    <div class="legend-items">
+      <span class="badge cat-auth">Auth</span>
+      <span class="badge cat-trading">Trading</span>
+      <span class="badge cat-deposit">Deposit</span>
+      <span class="badge cat-withdrawal">Withdrawal</span>
+      <span class="badge cat-mm">MM</span>
+      <span class="badge cat-auto">Auto Trade</span>
+      <span class="badge cat-admin">Admin</span>
+      <span class="badge cat-swap">Swap</span>
+    </div>
+  </div>
+  <div class="legend-section">
+    <span class="legend-title">Instruments</span>
+    <div class="legend-items">
+      <span class="badge inst-eur">EUR</span>
+      <span class="badge inst-cea">CEA</span>
+      <span class="badge inst-eua">EUA</span>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr>
+      <th style="width:90px">Time</th>
+      <th style="width:60px">Role</th>
+      <th style="width:160px">Actor</th>
+      <th style="width:110px">Action</th>
+      <th style="width:50px center">Instr.</th>
+      <th style="width:auto">Details / Counterparties</th>
+      <th style="width:200px">Balance Change</th>
+      <th style="width:70px" class="center">Result</th>
+      <th style="width:60px" class="right">Ref</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- Row 1: TRADE_EXECUTED — BUY aggressor (lifted the ask) -->
+    <tr class="tint-ask">
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:45</div>
+            <div class="time-relative">12m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-mm">MM</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-buy" style="font-size:9px;padding:1px 4px;">BUY</span>
+          <span class="actor-name">Aggressor</span>
+        </div>
+      </td>
+      <td><span class="badge cat-trading">Trade Exec</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td>
+        <div class="trade-card">
+          <div class="trade-party buyer">
+            <span class="trade-party-role">Buyer (Aggressor)</span>
+            <span class="trade-party-name">CEA Buyer</span>
+          </div>
+          <div class="trade-connector">
+            <span class="trade-connector-label side-buy" style="font-size:8px;padding:1px 4px;">LIFTED ASK</span>
+            <div style="display:flex;align-items:center;gap:2px;margin:2px 0;">
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+              <span class="aggressor-arrow buy">&rarr;</span>
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+            </div>
+            <span class="trade-connector-qty">5,000 CEA @ &euro;9.58</span>
+          </div>
+          <div class="trade-party seller">
+            <span class="trade-party-role">Seller</span>
+            <span class="trade-party-name">CEA Seller</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">952,100</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">904,200</span>
+            <span class="balance-delta negative">-47,900</span>
+          </div>
+          <div class="balance-row">
+            <span class="balance-asset">CEA</span>
+            <span class="balance-before">10,000</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">15,000</span>
+            <span class="balance-delta positive">+5,000</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;font-weight:600;">Filled</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006190</span></td>
+    </tr>
+
+    <!-- Row 2: TRADE_EXECUTED — SELL aggressor (hit the bid) -->
+    <tr class="tint-bid">
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:44</div>
+            <div class="time-relative">13m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-mm">MM</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-sell" style="font-size:9px;padding:1px 4px;">SELL</span>
+          <span class="actor-name">Aggressor</span>
+        </div>
+      </td>
+      <td><span class="badge cat-trading">Trade Exec</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td>
+        <div class="trade-card">
+          <div class="trade-party buyer">
+            <span class="trade-party-role">Buyer</span>
+            <span class="trade-party-name">CEA Buyer</span>
+          </div>
+          <div class="trade-connector">
+            <span class="trade-connector-label side-sell" style="font-size:8px;padding:1px 4px;">HIT BID</span>
+            <div style="display:flex;align-items:center;gap:2px;margin:2px 0;">
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+              <span class="aggressor-arrow sell">&larr;</span>
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+            </div>
+            <span class="trade-connector-qty">2,000 CEA @ &euro;9.55</span>
+          </div>
+          <div class="trade-party seller">
+            <span class="trade-party-role">Seller (Aggressor)</span>
+            <span class="trade-party-name">CEA Seller</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">800,000</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">819,100</span>
+            <span class="balance-delta positive">+19,100</span>
+          </div>
+          <div class="balance-row">
+            <span class="balance-asset">CEA</span>
+            <span class="balance-before">50,000</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">48,000</span>
+            <span class="balance-delta negative">-2,000</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;font-weight:600;">Filled</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006189</span></td>
+    </tr>
+
+    <!-- Row 3: Internal trade -->
+    <tr style="background:rgba(76,29,149,0.05);">
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:40</div>
+            <div class="time-relative">17m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-system">SYS</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-int" style="font-size:9px;padding:1px 4px;">INT</span>
+          <span class="actor-name" style="color:var(--navy-400);">Auto Match</span>
+        </div>
+      </td>
+      <td><span class="badge cat-trading">Trade Exec</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td>
+        <div class="trade-card">
+          <div class="trade-party buyer">
+            <span class="trade-party-role">Buyer</span>
+            <span class="trade-party-name">CEA Buyer</span>
+          </div>
+          <div class="trade-connector">
+            <span class="trade-connector-label side-int" style="font-size:8px;padding:1px 4px;">INTERNAL</span>
+            <div style="display:flex;align-items:center;gap:2px;margin:2px 0;">
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+              <span style="color:var(--violet-400);font-size:10px;font-weight:700;">&harr;</span>
+              <span style="width:16px;height:1px;background:var(--navy-600);display:block;"></span>
+            </div>
+            <span class="trade-connector-qty">1,000 CEA @ &euro;9.56</span>
+          </div>
+          <div class="trade-party seller">
+            <span class="trade-party-role">Seller</span>
+            <span class="trade-party-name">CEA Seller</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row" style="opacity:0.5;">
+            <span class="balance-asset">EUR</span>
+            <span style="color:var(--navy-500);font-size:10px;font-family:'JetBrains Mono',monospace;">internal — no client balance impact</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;font-weight:600;">Filled</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006188</span></td>
+    </tr>
+
+    <!-- Row 4: ORDER_PLACED (BUY) -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:35</div>
+            <div class="time-relative">22m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-mm">MM</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-buy" style="font-size:9px;padding:1px 4px;">BUY</span>
+          <span class="actor-name mm-name">CEA Buyer</span>
+        </div>
+      </td>
+      <td><span class="badge cat-trading">Place Order</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td class="mono-cell" style="color:var(--navy-300);">BUY 5,000 CEA @ &euro;9.58</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">1,000,000</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">952,100</span>
+            <span class="balance-delta negative">-47,900</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;">OPEN</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006187</span></td>
+    </tr>
+
+    <!-- Row 5: Asset Deposit (EUR by admin) -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">01:48</div>
+            <div class="time-relative">6h ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-admin">ADMIN</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="actor-name">Nihao Group</span>
+        </div>
+      </td>
+      <td><span class="badge cat-deposit">Asset Deposit</span></td>
+      <td class="center"><span class="badge inst-eur" style="font-size:9px;padding:1px 5px;">EUR</span></td>
+      <td class="mono-cell" style="color:var(--navy-300);">&euro;1,000,000,000.00</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">0</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">1,000,000,000</span>
+            <span class="balance-delta positive">+1B</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;">Deposited</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006166</span></td>
+    </tr>
+
+    <!-- Row 6: MM Deposit -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">01:48</div>
+            <div class="time-relative">6h ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-admin">ADMIN</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="actor-name">Nihao Group</span>
+        </div>
+      </td>
+      <td><span class="badge cat-mm">MM Deposit</span></td>
+      <td class="center"><span class="badge inst-eur" style="font-size:9px;padding:1px 5px;">EUR</span></td>
+      <td class="mono-cell" style="color:var(--navy-300);">&euro;1,000,000,000.00 &rarr; Market Maker CEA Seller</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">0</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">1,000,000,000</span>
+            <span class="balance-delta positive">+1B</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;">Credited</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006167</span></td>
+    </tr>
+
+    <!-- Row 7: Asset Withdrawal -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">01:19</div>
+            <div class="time-relative">6h ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-admin">ADMIN</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="actor-name">Nihao Group</span>
+        </div>
+      </td>
+      <td><span class="badge cat-withdrawal">Withdrawal</span></td>
+      <td class="center"><span class="badge inst-eur" style="font-size:9px;padding:1px 5px;">EUR</span></td>
+      <td class="mono-cell" style="color:var(--navy-300);">200 EUR</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">EUR</span>
+            <span class="balance-before">500</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">300</span>
+            <span class="balance-delta negative">-200</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-muted" style="font-size:10px;">Withdrawn</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006081</span></td>
+    </tr>
+
+    <!-- Row 8: Login -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:30</div>
+            <div class="time-relative">27m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-admin">ADMIN</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="actor-name">Nihao Group</span>
+        </div>
+      </td>
+      <td><span class="badge cat-auth">Login</span></td>
+      <td class="center"><span style="color:var(--navy-600);font-size:10px;">&mdash;</span></td>
+      <td><span style="color:var(--navy-600);font-size:10px;">&mdash;</span></td>
+      <td><span style="color:var(--navy-600);font-size:10px;">&mdash;</span></td>
+      <td class="center"><span class="result-muted" style="font-size:10px;">OK</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006169</span></td>
+    </tr>
+
+    <!-- Row 9: Auto Trade Order -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:20</div>
+            <div class="time-relative">37m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-system">SYS</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-sell" style="font-size:9px;padding:1px 4px;">SELL</span>
+          <span class="actor-name" style="color:var(--navy-400);">Auto Trade</span>
+        </div>
+      </td>
+      <td><span class="badge cat-auto">Auto Trade</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td class="mono-cell" style="color:var(--navy-300);">SELL 800 CEA @ &euro;9.60</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">CEA</span>
+            <span class="balance-before">50,800</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">50,000</span>
+            <span class="balance-delta negative">-800</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-success" style="font-size:10px;">Placed</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006185</span></td>
+    </tr>
+
+    <!-- Row 10: SWAP_CREATED -->
+    <tr>
+      <td>
+        <div class="time-cell">
+          <span class="status-dot ok"></span>
+          <div>
+            <div class="time-main">07:10</div>
+            <div class="time-relative">47m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-mm">MM</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="actor-name mm-name">Swapper</span>
+        </div>
+      </td>
+      <td><span class="badge cat-swap">Swap</span></td>
+      <td class="center">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+          <span class="badge inst-cea" style="font-size:8px;padding:0 4px;">CEA</span>
+          <span style="font-size:8px;color:var(--navy-600);">&darr;</span>
+          <span class="badge inst-eua" style="font-size:8px;padding:0 4px;">EUA</span>
+        </div>
+      </td>
+      <td class="mono-cell" style="color:var(--navy-300);">10,000 CEA &rarr; 1,177 EUA @ 0.1177</td>
+      <td>
+        <div class="balance-change">
+          <div class="balance-row">
+            <span class="balance-asset">CEA</span>
+            <span class="balance-before">60,000</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">50,000</span>
+            <span class="balance-delta negative">-10,000</span>
+          </div>
+          <div class="balance-row">
+            <span class="balance-asset">EUA</span>
+            <span class="balance-before">0</span>
+            <span class="balance-arrow">&rarr;</span>
+            <span class="balance-after">1,177</span>
+            <span class="balance-delta positive">+1,177</span>
+          </div>
+        </div>
+      </td>
+      <td class="center"><span class="result-info" style="font-size:10px;">Created</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006183</span></td>
+    </tr>
+
+    <!-- Row 11: Failed action -->
+    <tr style="background:rgba(127,29,29,0.08);border-left:2px solid rgba(239,68,68,0.5);">
+      <td>
+        <div class="time-cell">
+          <span class="status-dot fail"></span>
+          <div>
+            <div class="time-main">07:05</div>
+            <div class="time-relative">52m ago</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge role-user">CLIENT</span></td>
+      <td>
+        <div class="actor-cell">
+          <span class="badge side-buy" style="font-size:9px;padding:1px 4px;">BUY</span>
+          <span class="actor-name">EU Carbon Trading</span>
+        </div>
+      </td>
+      <td><span class="badge cat-trading">Place Order</span></td>
+      <td class="center"><span class="badge inst-cea" style="font-size:9px;padding:1px 5px;">CEA</span></td>
+      <td class="mono-cell" style="color:var(--red-400);">BUY 100 CEA @ &euro;9.58 — Insufficient funds</td>
+      <td><span style="color:var(--navy-600);font-size:10px;">&mdash;</span></td>
+      <td class="center"><span class="result-warning" style="font-size:10px;">Failed</span></td>
+      <td class="right"><span class="mono" style="font-size:10px;color:var(--navy-600);">#006182</span></td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<!-- Design Notes -->
+<div class="design-notes">
+  <h3>Design Decisions</h3>
+  <ul>
+    <li><strong>Role column</strong> — Dedicated column with colored badge (ADMIN/MM/CLIENT/SYS) for instant visual scanning</li>
+    <li><strong>Instrument column</strong> — Isolated instrument badge (EUR/CEA/EUA) with distinct color per asset type. Swaps show both instruments with arrow</li>
+    <li><strong>Trade execution cards</strong> — Rich inline component showing <span class="highlight">Buyer</span> &harr; <span class="highlight">Seller</span> with aggressor indicated. Direction label shows <em>LIFTED ASK</em> (buy aggressor) or <em>HIT BID</em> (sell aggressor). Internal trades show <em>INTERNAL</em> with &harr; arrow</li>
+    <li><strong>Balance change column</strong> — Shows <span class="highlight">before &rarr; after</span> with colored delta for each affected asset. Deposits show EUR change, trades show both EUR and CEA/EUA, swaps show both CEA and EUA. Login/auth rows show dash</li>
+    <li><strong>Row tinting</strong> — Trade executions get subtle background tint: green for buy-aggressor (lifted ask), red for sell-aggressor (hit bid), purple for internal</li>
+    <li><strong>Data source</strong> — Balance before/after comes from existing <code>before_state</code> and <code>after_state</code> JSONB fields in TicketLog model. For trades, backend enriches with both counterparty balances</li>
+  </ul>
+</div>
+
+</body>
+</html>

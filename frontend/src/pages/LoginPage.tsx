@@ -21,7 +21,7 @@ import {
  * Preview: ?preview=nda-success shows that flow without submitting.
  */
 export function LoginPage() {
-  const [mode, setMode] = useState<'initial' | 'enter' | 'nda'>('initial');
+  const [mode, setMode] = useState<'initial' | 'enter' | 'nda' | 'code-entry' | 'no-introducer' | 'introducer-form' | 'buyer-form'>('initial');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -48,6 +48,10 @@ export function LoginPage() {
   const [position, setPosition] = useState('');
   const [ndaFile, setNdaFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [referralCode, setReferralCode] = useState('');
+  const [codeType, setCodeType] = useState<'preintroducer' | 'introducer' | null>(null);
+  const [codeError, setCodeError] = useState('');
+  const [validatingCode, setValidatingCode] = useState(false);
 
   const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
@@ -211,6 +215,7 @@ export function LoginPage() {
         contact_last_name: sanitizedLastName,
         position: sanitizedPosition,
         nda_file: ndaFile,
+        referral_code: codeType === 'introducer' ? referralCode.trim() : undefined,
       });
       setRequestSent(true);
     } catch {
@@ -229,6 +234,81 @@ export function LoginPage() {
       }
       setNdaFile(file);
       setError('');
+    }
+  };
+
+  const handleValidateCode = async () => {
+    const code = referralCode.trim();
+    if (!code) {
+      setCodeError('Please enter a code');
+      return;
+    }
+    if (code.length !== 8) {
+      setCodeError('Code must be exactly 8 characters');
+      return;
+    }
+    setValidatingCode(true);
+    setCodeError('');
+    try {
+      const result = await contactApi.validateCode(code);
+      if (!result.valid || !result.type) {
+        setCodeError('This code is not valid');
+        return;
+      }
+      setCodeType(result.type);
+      if (result.type === 'preintroducer') {
+        setMode('introducer-form');
+      } else {
+        setMode('buyer-form');
+      }
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 429) {
+        setCodeError('Too many attempts. Please wait 10 minutes and try again.');
+      } else {
+        setCodeError('Unable to verify code. Please try again.');
+      }
+    } finally {
+      setValidatingCode(false);
+    }
+  };
+
+  const handleIntroducerSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedFirstName = sanitizeString(contactFirstName);
+    const sanitizedLastName = sanitizeString(contactLastName);
+
+    if (!sanitizedEmail || !isValidEmail(sanitizedEmail)) {
+      setError('Please enter a valid email');
+      return;
+    }
+    if (!sanitizedFirstName.trim()) { setError('First name is required'); return; }
+    if (!sanitizedLastName.trim()) { setError('Last name is required'); return; }
+
+    // Validate NDA file if provided
+    if (ndaFile && !ndaFile.name.toLowerCase().endsWith('.pdf')) {
+      setError('Only PDF files are allowed');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await contactApi.submitIntroducerRequest({
+        contact_email: sanitizedEmail,
+        contact_first_name: sanitizedFirstName,
+        contact_last_name: sanitizedLastName,
+        entity_name: sanitizeString(entity) || undefined,
+        referral_code: referralCode.trim(),
+        file: ndaFile || undefined,
+      });
+      setRequestSent(true);
+    } catch {
+      setError('Unable to process request. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -258,6 +338,9 @@ export function LoginPage() {
       setContactLastName('');
       setPosition('');
       setNdaFile(null);
+      setReferralCode('');
+      setCodeType(null);
+      setCodeError('');
     };
 
     return (
@@ -447,8 +530,117 @@ export function LoginPage() {
           )}
 
           {mode === 'nda' && (
-            <motion.form
+            <motion.div
               key="nda"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-4"
+            >
+              <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
+                How would you like to request access?
+              </p>
+              <button
+                onClick={() => setMode('code-entry')}
+                className="w-full py-4 px-6 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 text-left transition-all duration-300"
+              >
+                <div className="text-white/80 font-light tracking-wide text-sm">I have an access code</div>
+                <div className="text-white/30 text-xs mt-1">Enter the code from your introducer</div>
+              </button>
+              <button
+                onClick={() => setMode('no-introducer')}
+                className="w-full py-4 px-6 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/30 text-left transition-all duration-300"
+              >
+                <div className="text-white/80 font-light tracking-wide text-sm">No access code</div>
+                <div className="text-white/30 text-xs mt-1">Request access without a referral</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('initial'); setError(''); }}
+                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
+              >
+                Back
+              </button>
+            </motion.div>
+          )}
+
+          {mode === 'code-entry' && (
+            <motion.div
+              key="code-entry"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-5"
+            >
+              <p className="text-white/40 text-center text-sm font-light leading-relaxed">
+                Enter the access code from your introducer
+              </p>
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => { setReferralCode(e.target.value); setCodeError(''); }}
+                placeholder="e.g. Nx7k$mP2"
+                className="w-full py-4 px-4 bg-white/5 border border-white/10 rounded-lg text-white/90 text-center text-lg font-mono tracking-[0.15em] placeholder-white/20 focus:outline-none focus:border-white/20 transition-colors"
+                maxLength={16}
+              />
+              {codeError && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400/70 text-sm text-center">
+                  {codeError}
+                </motion.p>
+              )}
+              <button
+                onClick={handleValidateCode}
+                disabled={validatingCode}
+                className="w-full py-4 px-8 rounded-lg bg-emerald-600/80 hover:bg-emerald-500/80 border border-emerald-500/30 text-white/90 font-light tracking-[0.2em] transition-all duration-300 disabled:opacity-50"
+              >
+                {validatingCode ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'VERIFY CODE'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('nda'); setReferralCode(''); setCodeError(''); }}
+                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
+              >
+                Back
+              </button>
+            </motion.div>
+          )}
+
+          {mode === 'no-introducer' && (
+            <motion.div
+              key="no-introducer"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-5"
+            >
+              <div className="bg-white/5 border border-amber-500/20 rounded-lg p-5 text-white/50 text-xs leading-relaxed space-y-3">
+                <p>NIHA provides an <span className="text-amber-400/80">exclusive market access service</span>, available only to referred business partners and qualified entities.</p>
+                <p>Due to limited CEA market liquidity, we carefully manage our client capacity to ensure we can deliver on our commitments.</p>
+                <p>You may request access without a referral — we will assess whether current market conditions allow us to serve your needs and <span className="text-white/70">respond within 48 hours</span>.</p>
+                <p className="text-white/30">Thank you for your interest. If we are unable to accommodate your request at this time, we conduct systematic reviews and will be honored to invite you as a partner as soon as liquidity permits.</p>
+              </div>
+              <button
+                onClick={() => setMode('buyer-form')}
+                className="w-full py-4 px-8 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white/90 font-light tracking-[0.2em] transition-all duration-300"
+              >
+                CONTINUE
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('nda')}
+                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
+              >
+                Back
+              </button>
+            </motion.div>
+          )}
+
+          {mode === 'buyer-form' && (
+            <motion.form
+              key="buyer-form"
               onSubmit={handleNDA}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -461,114 +653,128 @@ export function LoginPage() {
               </p>
 
               <div className="space-y-3">
+                {/* Entity Name */}
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type="text"
-                    placeholder="Entity Name"
-                    value={entity}
-                    onChange={(e) => setEntity(e.target.value)}
-                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                  />
+                  <input type="text" placeholder="Entity Name" value={entity} onChange={(e) => setEntity(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
                 </div>
+                {/* Email */}
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type="email"
-                    placeholder="Corporate Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                  />
+                  <input type="email" placeholder="Corporate Email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
                 </div>
+                {/* Names */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <input
-                      type="text"
-                      placeholder="First Name"
-                      value={contactFirstName}
-                      onChange={(e) => setContactFirstName(e.target.value)}
-                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                    />
+                    <input type="text" placeholder="First Name" value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
                   </div>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <input
-                      type="text"
-                      placeholder="Last Name"
-                      value={contactLastName}
-                      onChange={(e) => setContactLastName(e.target.value)}
-                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                    />
+                    <input type="text" placeholder="Last Name" value={contactLastName} onChange={(e) => setContactLastName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
                   </div>
                 </div>
+                {/* Position */}
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                  <input
-                    type="text"
-                    placeholder="Position in Entity"
-                    value={position}
-                    onChange={(e) => setPosition(e.target.value)}
-                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"
-                  />
+                  <input type="text" placeholder="Position in Entity" value={position} onChange={(e) => setPosition(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
                 </div>
-
                 {/* File Upload */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => fileInputRef.current?.click()}
+                <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
+                <div onClick={() => fileInputRef.current?.click()}
                   className={`w-full py-3.5 px-4 bg-white/5 border rounded-lg cursor-pointer transition-colors flex items-center gap-3 ${
                     ndaFile ? 'border-emerald-500/50' : 'border-white/10 hover:border-white/20'
-                  }`}
-                >
+                  }`}>
                   {ndaFile ? (
-                    <>
-                      <FileText className="w-4 h-4 text-emerald-400/70" />
-                      <span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span>
-                    </>
+                    <><FileText className="w-4 h-4 text-emerald-400/70" /><span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span></>
                   ) : (
-                    <>
-                      <Upload className="w-4 h-4 text-white/30" />
-                      <span className="text-white/30 font-light">Upload Signed NDA (PDF)</span>
-                    </>
+                    <><Upload className="w-4 h-4 text-white/30" /><span className="text-white/30 font-light">Upload Signed NDA (PDF)</span></>
                   )}
                 </div>
               </div>
 
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-red-400/70 text-sm text-center"
-                >
-                  {error}
-                </motion.p>
-              )}
+              {error && (<motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400/70 text-sm text-center">{error}</motion.p>)}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 px-8 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white/90 font-light tracking-[0.2em] transition-all duration-300 disabled:opacity-50"
-              >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                ) : (
-                  'SUBMIT NDA'
-                )}
+              <button type="submit" disabled={loading}
+                className="w-full py-4 px-8 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white/90 font-light tracking-[0.2em] transition-all duration-300 disabled:opacity-50">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'SUBMIT NDA'}
               </button>
 
-              <button
-                type="button"
-                onClick={() => { setMode('initial'); setError(''); setNdaFile(null); }}
-                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors"
-              >
+              <button type="button" onClick={() => { setMode('nda'); setError(''); setNdaFile(null); }}
+                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors">
+                Back
+              </button>
+            </motion.form>
+          )}
+
+          {mode === 'introducer-form' && (
+            <motion.form
+              key="introducer-form"
+              onSubmit={handleIntroducerSubmit}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-5"
+            >
+              <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
+                Apply as an Introducer
+              </p>
+
+              <div className="space-y-3">
+                {/* Email */}
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
+                </div>
+                {/* Names */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input type="text" placeholder="First Name" value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <input type="text" placeholder="Last Name" value={contactLastName} onChange={(e) => setContactLastName(e.target.value)}
+                      className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
+                  </div>
+                </div>
+                {/* Entity (optional) */}
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <input type="text" placeholder="Entity (optional)" value={entity} onChange={(e) => setEntity(e.target.value)}
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light" />
+                </div>
+                {/* NDA Upload (optional) */}
+                <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
+                <div onClick={() => fileInputRef.current?.click()}
+                  className={`w-full py-3.5 px-4 bg-white/5 border rounded-lg cursor-pointer transition-colors flex items-center gap-3 ${
+                    ndaFile ? 'border-emerald-500/50' : 'border-white/10 hover:border-white/20'
+                  }`}>
+                  {ndaFile ? (
+                    <><FileText className="w-4 h-4 text-emerald-400/70" /><span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span></>
+                  ) : (
+                    <><Upload className="w-4 h-4 text-white/30" /><span className="text-white/30 font-light">Upload Signed NDA (optional)</span></>
+                  )}
+                </div>
+              </div>
+
+              {error && (<motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400/70 text-sm text-center">{error}</motion.p>)}
+
+              <button type="submit" disabled={loading}
+                className="w-full py-4 px-8 rounded-lg bg-emerald-600/80 hover:bg-emerald-500/80 border border-emerald-500/30 text-white/90 font-light tracking-[0.2em] transition-all duration-300 disabled:opacity-50">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'APPLY'}
+              </button>
+
+              <button type="button" onClick={() => { setMode('code-entry'); setError(''); setNdaFile(null); }}
+                className="w-full text-white/30 hover:text-white/50 text-xs tracking-wider transition-colors">
                 Back
               </button>
             </motion.form>

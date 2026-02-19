@@ -30,16 +30,16 @@ export function RoleSimulationFloater() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-40 flex items-center gap-3 rounded-xl border px-3 py-2 shadow-lg bg-white border-navy-200 text-navy-800 dark:bg-navy-800 dark:border-navy-600 dark:text-navy-100"
+      className="fixed bottom-4 right-4 z-40 flex items-center gap-3 rounded-xl border px-3 py-2 shadow-lg bg-navy-800 border-navy-600 text-navy-100"
       role="group"
       aria-label="Admin controls"
     >
       {/* Best Ratio card */}
-      <div className="flex items-center gap-1.5 border-r border-navy-200 dark:border-navy-600 pr-3">
-        <span className="text-xs font-medium text-navy-600 whitespace-nowrap dark:text-navy-300">
+      <div className="flex items-center gap-1.5 border-r border-navy-600 pr-3">
+        <span className="text-xs font-medium text-navy-300 whitespace-nowrap">
           Best ratio
         </span>
-        <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+        <span className="font-mono font-bold text-sm text-emerald-400">
           {bestRatio > 0 ? bestRatio.toFixed(4) : '...'}
         </span>
       </div>
@@ -47,7 +47,7 @@ export function RoleSimulationFloater() {
       {/* Role simulation */}
       <label
         htmlFor="role-simulation-select"
-        className="text-xs font-medium text-navy-600 whitespace-nowrap dark:text-navy-300"
+        className="text-xs font-medium text-navy-300 whitespace-nowrap"
       >
         Simulare rol (test)
       </label>
@@ -55,7 +55,7 @@ export function RoleSimulationFloater() {
         id="role-simulation-select"
         value={value}
         onChange={handleChange}
-        className="rounded-lg border px-2 py-1.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-navy-50 border-navy-200 text-navy-900 dark:bg-navy-900 dark:border-navy-600 dark:text-navy-100"
+        className="rounded-lg border px-2 py-1.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-navy-900 border-navy-600 text-navy-100"
         aria-label="Selectează rol de simulat"
       >
         <option value={NO_SIMULATION_VALUE}>Fără simulare</option>

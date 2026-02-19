@@ -14,9 +14,9 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
 
   // BID (buy) = red, ASK (sell) = green - standard trading convention
   const colorClasses = {
-    hover: isBid ? 'hover:bg-red-50 dark:hover:bg-red-900/10' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/10',
-    depthFill: isBid ? 'fill-red-500/10 dark:fill-red-500/20' : 'fill-emerald-500/10 dark:fill-emerald-500/20',
-    price: isBid ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400',
+    hover: isBid ? 'hover:bg-red-900/10' : 'hover:bg-emerald-900/10',
+    depthFill: isBid ? 'fill-red-500/20' : 'fill-emerald-500/20',
+    price: isBid ? 'text-red-400' : 'text-emerald-400',
   };
 
   // Smooth curve for depth: path in 0–100 coordinate space, curved edge instead of vertical bar
@@ -63,31 +63,31 @@ export function OrderBookRow({ level, side, maxQuantity, onPriceClick }: OrderBo
       <div className="relative grid grid-cols-3 md:grid-cols-4 gap-2">
         {isBid ? (
           <>
-            <div className="text-right font-mono text-navy-600 dark:text-navy-400 hidden md:block">
+            <div className="text-right font-mono text-navy-400 hidden md:block">
               {formatCertificateQuantity(level.cumulativeQuantity)}
             </div>
-            <div className="text-right font-mono text-navy-900 dark:text-white">
+            <div className="text-right font-mono text-white">
               {formatCertificateQuantity(level.quantity)}
             </div>
             <div className={`text-right font-mono font-semibold ${colorClasses.price}`}>
               {level.price.toFixed(2)}
             </div>
-            <div className="text-center text-xs text-navy-500 dark:text-navy-500">
+            <div className="text-center text-xs text-navy-500">
               {level.orderCount}
             </div>
           </>
         ) : (
           <>
-            <div className="text-center text-xs text-navy-500 dark:text-navy-500">
+            <div className="text-center text-xs text-navy-500">
               {level.orderCount}
             </div>
             <div className={`text-left font-mono font-semibold ${colorClasses.price}`}>
               {level.price.toFixed(2)}
             </div>
-            <div className="text-left font-mono text-navy-900 dark:text-white">
+            <div className="text-left font-mono text-white">
               {formatCertificateQuantity(level.quantity)}
             </div>
-            <div className="text-left font-mono text-navy-600 dark:text-navy-400 hidden md:block">
+            <div className="text-left font-mono text-navy-400 hidden md:block">
               {formatCertificateQuantity(level.cumulativeQuantity)}
             </div>
           </>

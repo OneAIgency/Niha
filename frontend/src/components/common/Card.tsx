@@ -8,11 +8,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', children, ...props }, ref) => {
-    /* Section/card wrapper: .content_wrapper_last */
+    /* Section/card wrapper: .panel (canonical container class) */
     const variants = {
-      default: 'content_wrapper_last',
-      glass: 'bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg rounded-2xl border border-white/20 dark:border-navy-700/50 shadow-lg',
-      hover: 'content_wrapper_last transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5',
+      default: 'panel panel--flush',
+      glass: 'bg-navy-800/80 backdrop-blur-lg rounded-2xl border border-navy-700/50 shadow-lg',
+      hover: 'panel panel--flush panel--hover',
     };
 
     const paddings = {

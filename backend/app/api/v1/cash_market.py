@@ -11,7 +11,7 @@ import uuid
 
 logger = logging.getLogger(__name__)
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from typing import List, Optional
 
 # Price step for CEA cash market (0.1 EUR)
@@ -29,7 +29,8 @@ def validate_price_step(price: Decimal) -> bool:
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, text
+from sqlalchemy.orm import joinedload
 
 from ...core.database import get_db
 from ...core.exceptions import handle_database_error
@@ -42,6 +43,7 @@ from ...models.models import (
     MarketType,
     Order,
     OrderStatus,
+    PriceHistory,
     Seller,
     TicketStatus,
     User,
@@ -58,6 +60,7 @@ from ...schemas.schemas import (
     MarketOrderRequest,
     MarketStatsResponse,
     MessageResponse,
+    OHLCCandle,
     OrderBookLevel,
     OrderBookResponse,
     OrderCreate,
@@ -71,7 +74,6 @@ from ...schemas.schemas import (
 from ..v1.client_ws import client_ws_manager
 from ...services.balance_utils import get_entity_eur_balance
 from ...services.order_matching import (
-    DEFAULT_FEE_RATE,
     execute_market_buy_order,
     get_effective_fee_rate,
     get_entity_balance,
@@ -145,11 +147,12 @@ async def get_market_depth(
 @router.get("/trades/{certificate_type}", response_model=List[CashMarketTradeResponse])
 async def get_recent_trades(
     certificate_type: CertificateType,
-    limit: int = Query(50, ge=1, le=100),  # noqa: B008
+    limit: int = Query(50, ge=1, le=5000),  # noqa: B008
     db=Depends(get_db),  # noqa: B008
 ):
     """
-    Get REAL recent executed trades for a certificate type from database.
+    Get recent executed trades for a certificate type. Response includes real `side`
+    (aggressor: BUY if buy order was created at or after sell order, else SELL).
     """
     cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
 
@@ -158,8 +161,18 @@ async def get_recent_trades(
         .where(CashMarketTrade.certificate_type == cert_enum)
         .order_by(CashMarketTrade.executed_at.desc())
         .limit(limit)
+        .options(
+            joinedload(CashMarketTrade.buy_order),
+            joinedload(CashMarketTrade.sell_order),
+        )
     )
-    trades = result.scalars().all()
+    trades = result.unique().scalars().all()
+
+    def _aggressor_side(t):
+        """Side of the taker: BUY if buy order was placed at or after sell order, else SELL."""
+        if t.buy_order and t.sell_order:
+            return "BUY" if t.buy_order.created_at >= t.sell_order.created_at else "SELL"
+        return "BUY"
 
     return [
         CashMarketTradeResponse(
@@ -167,10 +180,53 @@ async def get_recent_trades(
             certificate_type=t.certificate_type.value,
             price=float(t.price),
             quantity=int(round(float(t.quantity))),
-            side="BUY",  # All trades from client perspective are buys
+            side=_aggressor_side(t),
             executed_at=t.executed_at,
         )
         for t in trades
+    ]
+
+
+@router.get("/ohlc/{certificate_type}", response_model=List[OHLCCandle])
+async def get_ohlc(
+    certificate_type: CertificateType,
+    interval: int = Query(900, ge=60, le=2592000),  # noqa: B008
+    db=Depends(get_db),  # noqa: B008
+):
+    """
+    Get OHLC candlestick data aggregated from executed trades.
+    `interval` is bucket size in seconds (default 900 = 15m).
+    """
+    cert_enum = CertTypeEnum.CEA if certificate_type.value == "CEA" else CertTypeEnum.EUA
+
+    result = await db.execute(
+        text("""
+            SELECT
+                FLOOR(EXTRACT(EPOCH FROM executed_at) / :interval)::bigint * :interval AS time,
+                (array_agg(price ORDER BY executed_at ASC))[1] AS open,
+                MAX(price) AS high,
+                MIN(price) AS low,
+                (array_agg(price ORDER BY executed_at DESC))[1] AS close,
+                SUM(quantity) AS volume
+            FROM cash_market_trades
+            WHERE certificate_type = :cert_type
+            GROUP BY time
+            ORDER BY time ASC
+        """),
+        {"interval": interval, "cert_type": cert_enum.value},
+    )
+    rows = result.fetchall()
+
+    return [
+        OHLCCandle(
+            time=int(row[0]),
+            open=float(row[1]),
+            high=float(row[2]),
+            low=float(row[3]),
+            close=float(row[4]),
+            volume=float(row[5]),
+        )
+        for row in rows
     ]
 
 
@@ -305,7 +361,7 @@ async def place_order(
 
         # Try to match the order against the book immediately
         # This ensures we never have crossing orders (negative spread)
-        await LimitOrderMatcher.match_incoming_order(
+        matching_result = await LimitOrderMatcher.match_incoming_order(
             db=db,
             incoming_order=new_order,
             user_id=current_user.id,
@@ -318,6 +374,20 @@ async def place_order(
         asyncio.create_task(client_ws_manager.broadcast_to_all(
             {"type": "orderbook_updated", "data": {"certificate_type": new_order.certificate_type.value}},
         ))
+        # Push each new trade so ticker and ACTIVITY update in sync (same source, streaming)
+        for m in matching_result.matches:
+            exec_at = m.executed_at
+            asyncio.create_task(client_ws_manager.broadcast_to_all({
+                "type": "trade_executed",
+                "data": {
+                    "id": str(m.trade_id),
+                    "certificate_type": new_order.certificate_type.value,
+                    "price": float(m.price),
+                    "quantity": int(round(float(m.quantity))),
+                    "side": new_order.side.value,
+                    "executed_at": exec_at.isoformat() if hasattr(exec_at, "isoformat") else str(exec_at),
+                },
+            }))
 
         return OrderResponse(
             id=new_order.id,
@@ -776,6 +846,15 @@ async def buy_cea_fifo(amount_eur: float, entity_id: str, db=Depends(get_db)):  
         )
         db.add(trade)
 
+        # Persist trade price in price_history for chart data
+        db.add(PriceHistory(
+            certificate_type=CertTypeEnum.CEA,
+            price=Decimal(str(order_price_cny)),
+            currency="EUR",
+            source="trade_execution",
+            recorded_at=trade.executed_at,
+        ))
+
         # Update the sell order
         order.filled_quantity = Decimal(str(float(order.filled_quantity) + qty_to_buy))
         if order.filled_quantity >= order.quantity:
@@ -1032,6 +1111,21 @@ async def execute_market_order(
                 },
             )
         asyncio.create_task(_send_balance_update())
+
+    # Broadcast each trade so chart and activity feed update instantly
+    if result.success:
+        for fill in result.fills:
+            asyncio.create_task(client_ws_manager.broadcast_to_all({
+                "type": "trade_executed",
+                "data": {
+                    "id": "",
+                    "certificate_type": request.certificate_type.value,
+                    "price": float(fill.price),
+                    "quantity": int(round(float(fill.quantity))),
+                    "side": "BUY",
+                    "executed_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }))
 
     # Notify all connected clients that the order book changed (after any trade execution)
     asyncio.create_task(client_ws_manager.broadcast_to_all(

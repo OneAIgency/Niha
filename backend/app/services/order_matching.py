@@ -29,6 +29,7 @@ from ..models.models import (
     Order,
     OrderSide,
     OrderStatus,
+    PriceHistory,
     Seller,
     TradingFeeConfig,
     TransactionType,
@@ -623,6 +624,19 @@ async def execute_market_buy_order(
             executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(trade)
+
+        # Persist trade price in price_history for chart data
+        db.add(PriceHistory(
+            certificate_type=CertificateType.CEA,
+            price=fill.price,
+            currency="EUR",
+            source="trade_execution",
+            recorded_at=trade.executed_at,
+        ))
+
+        # Commission tracking — lazy import to avoid circular deps
+        from .commission_service import maybe_create_commission
+        await maybe_create_commission(db, trade, entity_id)
 
         logger.info(
             f"Trade executed: buyer_order={buy_order.id}, seller_order={sell_order.id}, "

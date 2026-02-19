@@ -9,8 +9,9 @@
 ## Current State
 
 NIHA Carbon Trading Platform is functional with:
-- ✅ Authentication & Role-based Access (NDA → KYC → APPROVED → FUNDING → AML → CEA → SWAP → EUA → MM → ADMIN)
+- ✅ Authentication & Role-based Access (NDA → KYC → APPROVED → FUNDING → AML → CEA → SWAP → EUA → MM → INTRODUCER → ADMIN)
 - ✅ User Onboarding (Contact Request → NDA → KYC)
+- ✅ Introducer Portal (NDA request flow, educational dashboard, AI chat assistant)
 - ✅ Deposit/Funding System
 - ✅ Cash Market with Order Book
 - ✅ T+3 Settlement System

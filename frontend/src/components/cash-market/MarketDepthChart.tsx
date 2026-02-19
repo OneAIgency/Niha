@@ -86,8 +86,8 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
 
   return (
     <Card className="h-full" padding="none">
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-        <h3 className="font-semibold text-navy-900 dark:text-white">Market Depth</h3>
+      <div className="px-4 py-3 border-b border-navy-700">
+        <h3 className="font-semibold text-white">Market Depth</h3>
       </div>
 
       <div className="p-4">
@@ -95,7 +95,7 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
           {/* Grid lines */}
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-navy-200 dark:text-navy-700" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-navy-700" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" opacity="0.5" />
@@ -126,7 +126,7 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
               stroke="currentColor"
               strokeWidth="1"
               strokeDasharray="4"
-              className="text-navy-400 dark:text-navy-500"
+              className="text-navy-500"
             />
           )}
         </svg>
@@ -136,20 +136,20 @@ export function MarketDepthChart({ bids, asks, midPrice }: MarketDepthChartProps
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500" />
-              <span className="text-navy-600 dark:text-navy-400">Bids</span>
+              <span className="text-navy-400">Bids</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-red-500/30 border border-red-500" />
-              <span className="text-navy-600 dark:text-navy-400">Asks</span>
+              <span className="text-navy-400">Asks</span>
             </div>
           </div>
-          <div className="text-navy-500 dark:text-navy-400">
+          <div className="text-navy-400">
             Max: {formatQuantity(maxY)}
           </div>
         </div>
 
         {/* Price range */}
-        <div className="flex justify-between mt-2 text-xs text-navy-400 dark:text-navy-500 font-mono">
+        <div className="flex justify-between mt-2 text-xs text-navy-500 font-mono">
           <span>${minPrice.toFixed(2)}</span>
           {midPrice && <span className="font-semibold">${midPrice.toFixed(2)}</span>}
           <span>${maxPrice.toFixed(2)}</span>

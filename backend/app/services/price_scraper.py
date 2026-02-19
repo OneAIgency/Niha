@@ -5,13 +5,24 @@ import re
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
+
+def is_carboncredits_url(url: str) -> bool:
+    """Safely check if a URL belongs to carboncredits.com (exact domain match)."""
+    try:
+        host = urlparse(url).hostname or ""
+        return host == "carboncredits.com" or host.endswith(".carboncredits.com")
+    except Exception:
+        return False
+
 from ..core.security import RedisManager
 from ..models.models import (
     CertificateType,
+    ExchangeRateHistory,
     ExchangeRateSource,
     PriceHistory,
     ScrapeLibrary,
@@ -220,7 +231,7 @@ class PriceScraper:
         config = source.config or {}
 
         # Special handling for carboncredits.com - use their API endpoint
-        if "carboncredits.com" in url:
+        if is_carboncredits_url(url):
             return await self._scrape_carboncredits(source)
 
         # Generic scraping based on library
@@ -428,11 +439,15 @@ class PriceScraper:
         content = result.get("content", "")
         soup = result.get("soup")
 
-        # Check for CSS selector in config
-        if config.get("css_selector") and soup:
-            element = soup.select_one(config["css_selector"])
-            if element:
-                return self._parse_price(element.get_text())
+        # Check for CSS selector in config (auto-parse HTML if soup not available)
+        if config.get("css_selector"):
+            if soup is None and content:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(content, "html.parser")
+            if soup:
+                element = soup.select_one(config["css_selector"])
+                if element:
+                    return self._parse_price(element.get_text())
 
         # Check for regex pattern in config
         if config.get("regex_pattern"):
@@ -698,9 +713,16 @@ class PriceScraper:
         return None
 
     async def get_current_prices(self) -> Dict:
-        """Get current carbon prices with realistic variance - ALL IN EUR"""
+        """Get current carbon prices - ALL IN EUR.
 
-        # Prefer cache to avoid duplicate requests (0026); then try shared fetch
+        Priority chain:
+        1. Redis cache (10 min TTL, warmed by scheduler + this method)
+        2. DB primary scraping sources (admin-configured, authoritative)
+        3. Direct carboncredits.com fetch (legacy fallback)
+        4. Simulated prices (last resort)
+        """
+
+        # 1. Redis cache — fast path
         cached = await RedisManager.get_cached_prices()
         if cached and "eua_eur" in cached and "cea_eur" in cached:
             return {
@@ -719,27 +741,38 @@ class PriceScraper:
                 ),
             }
 
-        web_prices = await self.fetch_prices_from_web()
+        # 2. DB primary sources — authoritative prices from admin-configured scrapers
+        eua_eur = None
+        cea_eur = None
+        try:
+            eua_eur, cea_eur = await self._read_prices_from_db()
+        except Exception as e:
+            logger.warning("Failed to read prices from DB: %s", e)
 
-        if web_prices and web_prices.get("eua"):
-            eua_eur = web_prices["eua"]
-            cea_cny = web_prices.get("cea", 100.0)  # CEA fetched in CNY
-        else:
-            # No cache and no successful fetch (e.g. 429/backoff) – use simulated
+        # 3. Fallback to direct carboncredits.com fetch if DB has no prices
+        if eua_eur is None or cea_eur is None:
+            web_prices = await self.fetch_prices_from_web()
+            if web_prices and web_prices.get("eua"):
+                if eua_eur is None:
+                    eua_eur = web_prices["eua"]
+                if cea_eur is None:
+                    cea_cny = web_prices.get("cea", 100.0)
+                    cea_eur = float(
+                        await currency_service.convert(
+                            amount=Decimal(str(cea_cny)),
+                            from_currency="CNY",
+                            to_currency="EUR",
+                        )
+                    )
+
+        # 4. Last resort — simulated prices
+        if eua_eur is None:
             eua_eur = self._apply_variance(self.BASE_EUA_EUR)
-            cea_cny = 100.0  # Fallback CEA in CNY
+        if cea_eur is None:
+            cea_eur = self._apply_variance(self.BASE_CEA_EUR)
 
-        # Convert CEA from CNY to EUR using currency service
-        cea_eur = float(
-            await currency_service.convert(
-                amount=Decimal(str(cea_cny)), from_currency="CNY", to_currency="EUR"
-            )
-        )
-
-        # Calculate 24h change (simulated if not available)
         eua_change = round(random.uniform(-3, 3), 2)
         cea_change = round(random.uniform(-2, 2), 2)
-
         now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         prices = {
@@ -756,7 +789,7 @@ class PriceScraper:
             "updated_at": now.isoformat(),
         }
 
-        # Cache the prices (EUR only)
+        # Warm Redis cache
         await RedisManager.cache_prices(
             {
                 "eua_eur": str(eua_eur),
@@ -768,10 +801,55 @@ class PriceScraper:
         )
 
         self.last_eua_price = eua_eur
-        self.last_cea_price = cea_eur  # Now storing EUR
+        self.last_cea_price = cea_eur
         self.last_update = now
 
         return prices
+
+    async def _read_prices_from_db(self):
+        """Read latest prices from primary active scraping sources.
+
+        Returns (eua_eur, cea_eur) — either may be None if no source found.
+        """
+        from sqlalchemy import select
+
+        from ..core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(ScrapingSource).where(
+                    ScrapingSource.is_active.is_(True),
+                )
+            )
+            sources = list(result.scalars().all())
+
+        eua_eur = None
+        cea_eur = None
+
+        # Find primary source for each type, fallback to any active source
+        for cert_type, attr in [
+            (CertificateType.EUA, "eua"),
+            (CertificateType.CEA, "cea"),
+        ]:
+            type_sources = [s for s in sources if s.certificate_type == cert_type]
+            if not type_sources:
+                continue
+            # Prefer primary, then first with a price
+            type_sources.sort(key=lambda s: (not s.is_primary, s.last_price is None))
+            source = type_sources[0]
+            if source.last_price is None:
+                continue
+
+            if cert_type == CertificateType.EUA:
+                eua_eur = float(source.last_price)
+            else:
+                # CEA: prefer pre-computed EUR, else use raw price (already EUR for some)
+                if source.last_price_eur is not None:
+                    cea_eur = float(source.last_price_eur)
+                else:
+                    cea_eur = float(source.last_price)
+
+        return eua_eur, cea_eur
 
     async def get_price_trend_async(self, hours: int = 24) -> Dict:
         """Get historical price data from database for charts.
@@ -945,11 +1023,15 @@ class PriceScraper:
         content = result.get("content", "")
         soup = result.get("soup")
 
-        # Check for CSS selector in config
-        if config.get("css_selector") and soup:
-            element = soup.select_one(config["css_selector"])
-            if element:
-                return self._parse_price(element.get_text())
+        # Check for CSS selector in config (auto-parse HTML if soup not available)
+        if config.get("css_selector"):
+            if soup is None and content:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(content, "html.parser")
+            if soup:
+                element = soup.select_one(config["css_selector"])
+                if element:
+                    return self._parse_price(element.get_text())
 
         # Check for regex pattern in config
         if config.get("regex_pattern"):
@@ -984,6 +1066,16 @@ class PriceScraper:
                         last_scrape_status=ScrapeStatus.SUCCESS,
                     )
                 )
+
+                # Record history point
+                history = ExchangeRateHistory(
+                    from_currency=source.from_currency,
+                    to_currency=source.to_currency,
+                    rate=rate_decimal,
+                    source=source.name,
+                )
+                db.add(history)
+
                 await db.commit()
                 logger.info(f"Refreshed exchange rate {source.name}: {rate}")
             else:
@@ -1024,6 +1116,150 @@ class PriceScraper:
             except Exception:
                 pass  # Don't fail on update error during exception handling
             raise
+
+
+# ==================== Startup Seed ====================
+
+
+async def seed_default_sources(db) -> None:
+    """Ensure at least one active+primary source exists for both EUA and CEA.
+    Called once during application startup."""
+    from sqlalchemy import select, func
+
+    try:
+        for cert_type in (CertificateType.EUA, CertificateType.CEA):
+            # Check if any active source exists for this certificate type
+            count_result = await db.execute(
+                select(func.count())
+                .select_from(ScrapingSource)
+                .where(
+                    ScrapingSource.certificate_type == cert_type,
+                    ScrapingSource.is_active.is_(True),
+                )
+            )
+            active_count = count_result.scalar()
+
+            source_created = False
+            if active_count == 0:
+                # Create a default carboncredits.com source
+                source = ScrapingSource(
+                    name=f"CarbonCredits {cert_type.value}",
+                    url="https://carboncredits.com/wp-content/themes/fetchcarbonprices.php",
+                    certificate_type=cert_type,
+                    scrape_library=ScrapeLibrary.HTTPX,
+                    is_active=True,
+                    is_primary=True,
+                    scrape_interval_minutes=5,
+                )
+                db.add(source)
+                source_created = True
+                logger.info(
+                    "Seeded default %s scraping source: CarbonCredits %s",
+                    cert_type.value,
+                    cert_type.value,
+                )
+
+            # Ensure exactly one primary exists among active sources
+            # (skip if we just created one with is_primary=True)
+            if not source_created:
+                primary_result = await db.execute(
+                    select(func.count())
+                    .select_from(ScrapingSource)
+                    .where(
+                        ScrapingSource.certificate_type == cert_type,
+                        ScrapingSource.is_active.is_(True),
+                        ScrapingSource.is_primary.is_(True),
+                    )
+                )
+                primary_count = primary_result.scalar()
+
+                if primary_count == 0 and active_count > 0:
+                    # No primary set — promote the first active source
+                    first_result = await db.execute(
+                        select(ScrapingSource)
+                        .where(
+                            ScrapingSource.certificate_type == cert_type,
+                            ScrapingSource.is_active.is_(True),
+                        )
+                        .order_by(ScrapingSource.created_at.asc())
+                        .limit(1)
+                    )
+                    first_source = first_result.scalar_one_or_none()
+                    if first_source:
+                        first_source.is_primary = True
+                        logger.info(
+                            "Auto-promoted %s as primary %s source",
+                            first_source.name,
+                            cert_type.value,
+                        )
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
+async def seed_default_exchange_rate_sources(db) -> None:
+    """Ensure at least one active+primary exchange rate source exists for EUR/CNY.
+    Called once during application startup."""
+    from sqlalchemy import select, func
+
+    try:
+        # Check if any active EUR/CNY source exists
+        count_result = await db.execute(
+            select(func.count())
+            .select_from(ExchangeRateSource)
+            .where(ExchangeRateSource.is_active.is_(True))
+        )
+        active_count = count_result.scalar()
+
+        source_created = False
+        if active_count == 0:
+            source = ExchangeRateSource(
+                name="ECB EUR/CNY",
+                from_currency="EUR",
+                to_currency="CNY",
+                url="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+                scrape_library=ScrapeLibrary.HTTPX,
+                is_active=True,
+                is_primary=True,
+                scrape_interval_minutes=60,
+            )
+            db.add(source)
+            source_created = True
+            logger.info("Seeded default exchange rate source: ECB EUR/CNY")
+
+        # Ensure a primary exists (skip if we just created one)
+        if not source_created:
+            primary_result = await db.execute(
+                select(func.count())
+                .select_from(ExchangeRateSource)
+                .where(
+                    ExchangeRateSource.is_active.is_(True),
+                    ExchangeRateSource.is_primary.is_(True),
+                )
+            )
+            primary_count = primary_result.scalar()
+
+            if primary_count == 0 and active_count > 0:
+                first_result = await db.execute(
+                    select(ExchangeRateSource)
+                    .where(ExchangeRateSource.is_active.is_(True))
+                    .order_by(ExchangeRateSource.created_at.asc())
+                    .limit(1)
+                )
+                first_source = first_result.scalar_one_or_none()
+                if first_source:
+                    first_source.is_primary = True
+                    logger.info(
+                        "Auto-promoted %s as primary exchange rate source",
+                        first_source.name,
+                    )
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
 
 # Singleton instance

@@ -27,6 +27,10 @@ export function clientStatusVariant(role: string | undefined): ClientStatusVaria
       return 'info';
     case 'MM':
       return 'info';
+    case 'INTRODUCER':
+      return 'info';
+    case 'TRODUCER':
+      return 'warning';
     case 'KYC':
     case 'NDA':
     case 'CEA':

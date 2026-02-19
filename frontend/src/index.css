@@ -25,20 +25,49 @@
 
   * {
     @apply border-navy-700;
-    box-shadow: none !important;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/80 dark:bg-navy-800/80 backdrop-blur-lg border border-white/20 dark:border-navy-700/50 shadow-lg;
+    @apply bg-navy-800/80 backdrop-blur-lg border border-navy-700/50 shadow-lg;
   }
 
   .glass-dark {
     @apply bg-navy-900/80 backdrop-blur-lg border border-white/10;
   }
 
-  /* Content wrapper: panel container with header/content sections, overflow hidden for child borders */
+  /* ========================================
+     PANEL – canonical card/section container
+     Replaces: content_wrapper_last, card_back
+     Use .panel for all card-like containers.
+     Variants: --flush (p-0), --compact (p-3)
+     ======================================== */
+  .panel {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--panel-radius);
+    padding: var(--panel-padding);
+    overflow: hidden;
+  }
+
+  .panel--flush {
+    padding: 0;
+  }
+
+  .panel--compact {
+    padding: var(--panel-compact-padding);
+  }
+
+  .panel--hover {
+    transition: all 0.3s;
+  }
+  .panel--hover:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+  }
+
+  /* Legacy alias — use .panel instead */
   .content_wrapper_last {
     @apply bg-navy-800 rounded-xl border border-navy-700 overflow-hidden;
   }
@@ -53,7 +82,7 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-navy-900;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-navy-900;
   }
 
   .btn-primary {
@@ -61,7 +90,7 @@
   }
 
   .btn-secondary {
-    @apply btn bg-navy-900 dark:bg-navy-700 text-white hover:bg-navy-800 dark:hover:bg-navy-600 focus:ring-navy-500;
+    @apply btn bg-navy-700 text-white hover:bg-navy-600 focus:ring-navy-500;
   }
 
   .btn-outline {
@@ -69,7 +98,7 @@
   }
 
   .btn-ghost {
-    @apply btn text-navy-600 dark:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-700 focus:ring-navy-500;
+    @apply btn text-navy-300 hover:bg-navy-700 focus:ring-navy-500;
   }
 
   .input {
@@ -77,7 +106,7 @@
   }
 
   .label {
-    @apply block text-sm font-medium text-navy-700 dark:text-navy-200 mb-2;
+    @apply block text-sm font-medium text-navy-200 mb-2;
   }
 
   .badge {
@@ -85,23 +114,23 @@
   }
 
   .badge-success {
-    @apply badge bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400;
+    @apply badge bg-emerald-900/30 text-emerald-400;
   }
 
   .badge-warning {
-    @apply badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400;
+    @apply badge bg-amber-900/30 text-amber-400;
   }
 
   .badge-info {
-    @apply badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400;
+    @apply badge bg-blue-900/30 text-blue-400;
   }
 
   .price-up {
-    @apply text-emerald-600 dark:text-emerald-400;
+    @apply text-emerald-400;
   }
 
   .price-down {
-    @apply text-red-500 dark:text-red-400;
+    @apply text-red-400;
   }
 
   .stat-card {
@@ -118,11 +147,11 @@
   }
 
   .section-title {
-    @apply text-3xl font-bold text-navy-900 dark:text-white mb-2;
+    @apply text-3xl font-bold text-white mb-2;
   }
 
   .section-subtitle {
-    @apply text-navy-500 dark:text-navy-400 text-lg;
+    @apply text-navy-400 text-lg;
   }
 
   /* ========================================
@@ -159,41 +188,29 @@
 
   /* ========================================
      TYPOGRAPHY COMPONENTS
+     Canonical definitions are in design-tokens.css
+     (.page-title, .section-heading, .text-value)
+     Below are supplementary typography utilities.
      ======================================== */
-  .page-title {
-    @apply text-3xl font-bold text-navy-900 dark:text-white;
-  }
 
   .page-title-sm {
-    @apply text-2xl font-semibold text-navy-900 dark:text-white tracking-tight;
-  }
-
-  .section-heading {
-    @apply text-xl font-bold text-navy-900 dark:text-white;
+    @apply text-2xl font-semibold text-white tracking-tight;
   }
 
   .section-label {
-    @apply text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 font-medium;
-  }
-
-  .text-value {
-    @apply font-mono font-semibold text-navy-900 dark:text-white;
+    @apply text-xs uppercase tracking-wider text-navy-400 font-medium;
   }
 
   .text-value-lg {
-    @apply font-mono font-bold text-xl text-navy-900 dark:text-white;
+    @apply font-mono font-bold text-xl text-white;
   }
 
   .text-value-2xl {
-    @apply font-mono font-bold text-2xl text-navy-900 dark:text-white;
-  }
-
-  .text-muted {
-    @apply text-navy-500 dark:text-navy-400;
+    @apply font-mono font-bold text-2xl text-white;
   }
 
   .text-label {
-    @apply text-sm text-navy-600 dark:text-navy-400;
+    @apply text-sm text-navy-400;
   }
 
   /* ========================================
@@ -208,15 +225,15 @@
   }
 
   .table-header {
-    @apply text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400 font-medium;
+    @apply text-xs uppercase tracking-wider text-navy-400 font-medium;
   }
 
   .table-header-cell {
-    @apply px-5 py-4 text-left font-medium text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400;
+    @apply px-5 py-4 text-left font-medium text-xs uppercase tracking-wider text-navy-400;
   }
 
   .table-header-cell-right {
-    @apply px-5 py-4 text-right font-medium text-xs uppercase tracking-wider text-navy-500 dark:text-navy-400;
+    @apply px-5 py-4 text-right font-medium text-xs uppercase tracking-wider text-navy-400;
   }
 
   .table-row-hover {
@@ -245,41 +262,41 @@
   }
 
   .grid-table-row-bid {
-    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors;
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-emerald-900/10 transition-colors;
   }
 
   .grid-table-row-ask {
-    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors;
+    @apply grid text-sm px-4 py-1.5 cursor-pointer hover:bg-red-900/10 transition-colors;
   }
 
   /* ========================================
      DEPTH BAR COMPONENTS
      ======================================== */
   .depth-bar-bid {
-    @apply absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/20;
+    @apply absolute right-0 top-0 bottom-0 bg-emerald-500/20;
   }
 
   .depth-bar-ask {
-    @apply absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/20;
+    @apply absolute right-0 top-0 bottom-0 bg-red-500/20;
   }
 
   /* ========================================
      CERTIFICATE BADGE COMPONENTS
      ======================================== */
   .cert-badge-eua {
-    @apply px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded;
+    @apply px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs font-bold rounded;
   }
 
   .cert-badge-cea {
-    @apply px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded;
+    @apply px-2 py-0.5 bg-amber-900/30 text-amber-400 text-xs font-bold rounded;
   }
 
   .cert-badge-eua-lg {
-    @apply px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold rounded-xl border border-blue-200 dark:border-blue-800;
+    @apply px-4 py-2 bg-blue-900/30 text-blue-400 font-bold rounded-xl border border-blue-800;
   }
 
   .cert-badge-cea-lg {
-    @apply px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-bold rounded-xl border border-amber-200 dark:border-amber-800;
+    @apply px-4 py-2 bg-amber-900/30 text-amber-400 font-bold rounded-xl border border-amber-800;
   }
 
   /* ========================================
@@ -350,46 +367,46 @@
   }
 
   .stat-card-icon-emerald {
-    @apply bg-emerald-100 dark:bg-emerald-900/30;
+    @apply bg-emerald-900/30;
   }
 
   .stat-card-icon-blue {
-    @apply bg-blue-100 dark:bg-blue-900/30;
+    @apply bg-blue-900/30;
   }
 
   .stat-card-icon-amber {
-    @apply bg-amber-100 dark:bg-amber-900/30;
+    @apply bg-amber-900/30;
   }
 
   .stat-card-icon-navy {
-    @apply bg-navy-100 dark:bg-navy-900/30;
+    @apply bg-navy-900/30;
   }
 
   .stat-card-icon-red {
-    @apply bg-red-100 dark:bg-red-900/30;
+    @apply bg-red-900/30;
   }
 
   .stat-card-value {
-    @apply text-3xl font-bold text-navy-900 dark:text-white;
+    @apply text-3xl font-bold text-white;
   }
 
   .stat-card-label {
-    @apply text-sm text-navy-500 dark:text-navy-400;
+    @apply text-sm text-navy-400;
   }
 
   /* ========================================
      PRICE DISPLAY COMPONENTS
      ======================================== */
   .price-positive {
-    @apply text-emerald-600 dark:text-emerald-400;
+    @apply text-emerald-400;
   }
 
   .price-negative {
-    @apply text-red-500 dark:text-red-400;
+    @apply text-red-400;
   }
 
   .price-neutral {
-    @apply text-navy-500 dark:text-navy-400;
+    @apply text-navy-400;
   }
 
   /* ========================================
@@ -423,7 +440,7 @@
   }
 
   .progress-track-light {
-    @apply h-1 bg-navy-200 dark:bg-navy-700 rounded-full overflow-hidden;
+    @apply h-1 bg-navy-700 rounded-full overflow-hidden;
   }
 
   .progress-fill {
@@ -438,19 +455,19 @@
      SKELETON LOADERS
      ======================================== */
   .skeleton {
-    @apply animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+    @apply animate-pulse bg-navy-700 rounded;
   }
 
   .skeleton-text {
-    @apply h-4 animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+    @apply h-4 animate-pulse bg-navy-700 rounded;
   }
 
   .skeleton-text-lg {
-    @apply h-6 animate-pulse bg-navy-100 dark:bg-navy-700 rounded;
+    @apply h-6 animate-pulse bg-navy-700 rounded;
   }
 
   .skeleton-avatar {
-    @apply w-12 h-12 animate-pulse bg-navy-100 dark:bg-navy-700 rounded-xl;
+    @apply w-12 h-12 animate-pulse bg-navy-700 rounded-xl;
   }
 
   .skeleton-card {
@@ -461,24 +478,24 @@
      FORM COMPONENTS
      ======================================== */
   .form-input {
-    @apply w-full px-3 py-2 rounded-lg border border-navy-600 bg-navy-800 text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all;
+    @apply w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-sm text-white focus:border-emerald-500/50 focus:outline-none transition-colors;
   }
 
   .form-input-lg {
-    @apply w-full px-4 py-3 rounded-xl border border-navy-600 bg-navy-800 text-white placeholder-navy-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border border-navy-700 bg-navy-900 text-white placeholder-navy-500 focus:border-emerald-500/50 focus:outline-none transition-colors;
   }
 
   /* Select: same as form inputs + extra right padding so dropdown arrow has clear spacing from edge */
   .form-select {
-    @apply px-4 py-2 pr-12 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-3 py-2 pr-10 rounded-lg border border-navy-700 bg-navy-900 text-sm text-white focus:border-emerald-500/50 focus:outline-none transition-colors;
   }
 
   .form-label {
-    @apply block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2;
+    @apply block text-sm font-medium text-navy-300 mb-2;
   }
 
   .form-helper {
-    @apply text-xs text-navy-500 dark:text-navy-400 mt-1;
+    @apply text-xs text-navy-400 mt-1;
   }
 
   .form-error {
@@ -489,41 +506,41 @@
      CTA / HIGHLIGHT COMPONENTS
      ======================================== */
   .cta-gradient {
-    @apply bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800;
+    @apply bg-gradient-to-r from-emerald-900/20 to-blue-900/20 rounded-xl border border-emerald-800;
   }
 
   .highlight-box {
-    @apply p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl;
+    @apply p-4 bg-emerald-900/20 rounded-xl;
   }
 
   .info-box {
-    @apply p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800;
+    @apply p-4 bg-blue-900/20 rounded-xl border border-blue-800;
   }
 
   /* ========================================
      DIVIDERS
      ======================================== */
   .divider-vertical {
-    @apply w-px h-10 bg-navy-200 dark:bg-navy-700;
+    @apply w-px h-10 bg-navy-700;
   }
 
   .divider-horizontal {
-    @apply h-px bg-navy-200 dark:bg-navy-700;
+    @apply h-px bg-navy-700;
   }
 
   .divider-vertical-sm {
-    @apply w-px h-4 bg-navy-200 dark:bg-navy-700;
+    @apply w-px h-4 bg-navy-700;
   }
 
   /* ========================================
      EMPTY STATES
      ======================================== */
   .empty-state {
-    @apply flex flex-col items-center justify-center h-32 text-navy-400 dark:text-navy-500;
+    @apply flex flex-col items-center justify-center h-32 text-navy-500;
   }
 
   .empty-state-lg {
-    @apply flex flex-col items-center justify-center h-64 text-navy-400 dark:text-navy-500;
+    @apply flex flex-col items-center justify-center h-64 text-navy-500;
   }
 }
 

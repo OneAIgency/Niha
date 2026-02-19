@@ -5,6 +5,7 @@
 | De la → La | Condiție / acțiune |
 |------------|--------------------|
 | **NDA → KYC** | Backoffice: Approve & Create User → `user.role = KYC`, `contact_request.user_role = KYC`. |
+| **NDA (introducer) → INTRODUCER** | Backoffice: Approve & Create User cu `target_role=INTRODUCER` → `user.role = INTRODUCER`, `entity_id = null`, nu se creează Entity. Cererea NDA trebuie să aibă `request_flow='introducer'` (submit la `/contact/introducer-nda-request`). |
 | **KYC → REJECTED** | Backoffice: Reject KYC (apel `reject_user`). |
 | **KYC → APPROVED** | Backoffice: Approve KYC (apel `approve_user`); `entity.kyc_status = APPROVED`. |
 | **APPROVED → FUNDING** | La primul `announce_deposit` reușit pentru entity (în `deposit_service`). |
@@ -19,6 +20,7 @@
 ## Implicații
 
 - **MM (Market Maker)**: Rol creat și gestionat strict de admin. Nu trece prin cereri de contact sau aprobări. Admin creează useri MM din Users (Create User, rol MM) și poate modifica rolul lor (Edit User) sau orice alt câmp.
+- **INTRODUCER**: Rol creat din cereri NDA cu `request_flow='introducer'` (pagina `/introducer`, endpoint `POST /contact/introducer-nda-request`). Admin aprobă din tab-ul Introducer (Backoffice → Onboarding → Introducer) cu Approve & Create User; `create-from-request` primește `target_role=INTRODUCER` și creează user fără Entity. INTRODUCER are acces doar la `/introducer/dashboard` (conținut simplificat).
 - **Contact request**: Starea se citește din `contact_request.user_role` (NDA, KYC, REJECTED). PUT contact-requests permite actualizarea `user_role`; când se setează REJECTED, userul legat (dacă există) devine REJECTED. Badge-ul în listă folosește `contact_request.user_role`.
 - **User role**: Nu există endpoint pentru schimbare arbitrară de role pentru userii din flow (NDA → EUA). Tranzițiile se fac doar prin: create-from-request, approve_user, reject_user, announce_deposit, confirm_deposit, clear_deposit, reject_deposit, și funcțiile din `role_transitions`. Pentru MM, admin poate seta sau schimba rolul direct (PUT /admin/users/{id}).
 - **APPROVED → FUNDING**: Doar prin primul `announce_deposit` reușit; nu există „fund user” manual.

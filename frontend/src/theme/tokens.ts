@@ -6,7 +6,13 @@
 
 /** CSS variable names that can be overridden from Theme UI */
 export const EDITABLE_TOKEN_KEYS = [
-  // Container tokens
+  // Panel tokens (canonical container)
+  '--panel-bg',
+  '--panel-border',
+  '--panel-radius',
+  '--panel-padding',
+  '--panel-compact-padding',
+  // Container tokens (legacy / page-level)
   '--page-bg-bg',
   '--page-container-dark-bg',
   '--content-wrapper-bg',
@@ -142,6 +148,11 @@ export const DESIGN_TOKEN_CATEGORIES: Record<string, TokenCategory> = {
   containers: {
     label: 'Containers',
     tokens: [
+      { key: '--panel-bg', label: 'Panel Background', type: 'color' },
+      { key: '--panel-border', label: 'Panel Border', type: 'color' },
+      { key: '--panel-radius', label: 'Panel Radius', type: 'size' },
+      { key: '--panel-padding', label: 'Panel Padding', type: 'size' },
+      { key: '--panel-compact-padding', label: 'Panel Compact Padding', type: 'size' },
       { key: '--page-bg-bg', label: 'Page Background', type: 'color' },
       { key: '--page-container-dark-bg', label: 'Page Container Dark', type: 'color' },
       { key: '--content-wrapper-bg', label: 'Content Wrapper BG', type: 'color' },

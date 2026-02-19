@@ -58,7 +58,7 @@ export function PriceDisplay({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <span className={cn(styles.price, 'text-navy-900 dark:text-white')}>
+      <span className={cn(styles.price, 'text-white')}>
         {showCurrency && currencySymbols[currency]}
         {price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>

@@ -1,0 +1,37 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="icon-header success">&#x1F517;</div>
+<h1>You've Been Invited</h1>
+
+<p>Hi {{ invited_name }},</p>
+
+<p><strong>{{ introducer_name }}</strong> has invited you to join <strong>NIHA</strong> — the only platform bridging EU and Chinese carbon markets, delivering 8–12% savings on EUA compliance purchases.</p>
+
+{% if personal_note %}
+<div class="callout">
+  <p class="callout-title">Message from {{ introducer_name }}</p>
+  <p>{{ personal_note }}</p>
+</div>
+{% endif %}
+
+<div class="feature-list">
+  <div class="feature-item">
+    <div class="feature-icon">&#x1F4B0;</div>
+    <div class="feature-text">8–12% savings on EU ETS compliance costs</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">&#x1F30D;</div>
+    <div class="feature-text">Exclusive cross-border carbon market access</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">&#x1F512;</div>
+    <div class="feature-text">Zero market impact — confidential OTC execution</div>
+  </div>
+</div>
+
+<a href="{{ invitation_url }}" class="btn btn-primary">Create Your Account</a>
+
+<p style="color: #94a3b8; font-size: 13px; margin-top: 24px;">
+  This invitation expires in {{ expiry_days }} days. If you didn't expect this email, you can safely ignore it.
+</p>
+{% endblock %}

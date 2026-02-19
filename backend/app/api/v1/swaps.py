@@ -255,7 +255,6 @@ async def get_swap_offers(
     Returns orders from the SWAP market that users can accept.
     Each offer represents EUA available at a specific ratio.
     """
-    from sqlalchemy import func
     from sqlalchemy.orm import joinedload
 
     # Query SWAP market orders that are OPEN, grouped by market maker and ratio
@@ -397,7 +396,6 @@ async def create_swap_offer(
     Creates an order in the SWAP market representing EUA available for swap.
     The ratio is stored in the price field (CEA/EUA ratio).
     """
-    from ...core.security import get_admin_user
 
     # Verify admin access
     if current_user.role.value not in ["ADMIN"]:
@@ -480,7 +478,7 @@ async def reset_swap_liquidity(
     This is a destructive operation that requires confirmation code.
     Only available to admins.
     """
-    from sqlalchemy import and_, delete, update
+    from sqlalchemy import and_, update
 
     # Verify admin access
     if current_user.role.value not in ["ADMIN"]:

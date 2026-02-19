@@ -35,12 +35,12 @@ export function OrderBook({
 
   return (
     <Card className="h-full flex flex-col" padding="none">
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-        <h3 className="font-semibold text-navy-900 dark:text-white">Order Book</h3>
+      <div className="px-4 py-3 border-b border-navy-700">
+        <h3 className="font-semibold text-white">Order Book</h3>
       </div>
 
       {/* Header */}
-      <div className="grid grid-cols-3 text-xs text-navy-500 dark:text-navy-400 px-4 py-2 border-b border-navy-100 dark:border-navy-700/50">
+      <div className="grid grid-cols-3 text-xs text-navy-400 px-4 py-2 border-b border-navy-700/50">
         <span>Price (EUR)</span>
         <span className="text-right">Quantity</span>
         <span className="text-right">Total</span>
@@ -54,21 +54,21 @@ export function OrderBook({
               key={`ask-${idx}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="relative grid grid-cols-3 text-sm px-4 py-1.5 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10"
+              className="relative grid grid-cols-3 text-sm px-4 py-1.5 cursor-pointer hover:bg-red-900/10"
               onClick={() => onPriceClick?.(ask.price)}
             >
               {/* Depth bar */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/20"
+                className="absolute right-0 top-0 bottom-0 bg-red-500/20"
                 style={{ width: `${(ask.cumulativeQuantity / maxCumulative) * 100}%` }}
               />
-              <span className="relative text-red-600 dark:text-red-400 font-mono">
+              <span className="relative text-red-400 font-mono">
                 {formatNumber(ask.price)}
               </span>
-              <span className="relative text-right text-navy-700 dark:text-navy-300 font-mono">
+              <span className="relative text-right text-navy-300 font-mono">
                 {formatNumber(ask.quantity, 0)}
               </span>
-              <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
+              <span className="relative text-right text-navy-400 font-mono">
                 {formatNumber(ask.cumulativeQuantity, 0)}
               </span>
             </motion.div>
@@ -76,14 +76,14 @@ export function OrderBook({
         </div>
 
         {/* Spread Indicator */}
-        <div className="px-4 py-2 bg-navy-50 dark:bg-navy-800/50 border-y border-navy-100 dark:border-navy-700/50">
+        <div className="px-4 py-2 bg-navy-800/50 border-y border-navy-700/50">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-navy-500 dark:text-navy-400">Spread</span>
-            <span className="font-mono font-semibold text-navy-700 dark:text-navy-300">
+            <span className="text-navy-400">Spread</span>
+            <span className="font-mono font-semibold text-navy-300">
               {spread !== null ? `€${formatNumber(spread, 4)}` : '-'}
             </span>
             {spread !== null && bestBid !== null && (
-              <span className="text-navy-400 dark:text-navy-500 text-xs">
+              <span className="text-navy-500 text-xs">
                 ({((spread / bestBid) * 100).toFixed(1)}%)
               </span>
             )}
@@ -97,21 +97,21 @@ export function OrderBook({
               key={`bid-${idx}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="relative grid grid-cols-3 text-sm px-4 py-1.5 cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10"
+              className="relative grid grid-cols-3 text-sm px-4 py-1.5 cursor-pointer hover:bg-emerald-900/10"
               onClick={() => onPriceClick?.(bid.price)}
             >
               {/* Depth bar */}
               <div
-                className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/20"
+                className="absolute right-0 top-0 bottom-0 bg-emerald-500/20"
                 style={{ width: `${(bid.cumulativeQuantity / maxCumulative) * 100}%` }}
               />
-              <span className="relative text-emerald-600 dark:text-emerald-400 font-mono">
+              <span className="relative text-emerald-400 font-mono">
                 {formatNumber(bid.price)}
               </span>
-              <span className="relative text-right text-navy-700 dark:text-navy-300 font-mono">
+              <span className="relative text-right text-navy-300 font-mono">
                 {formatNumber(bid.quantity, 0)}
               </span>
-              <span className="relative text-right text-navy-500 dark:text-navy-400 font-mono">
+              <span className="relative text-right text-navy-400 font-mono">
                 {formatNumber(bid.cumulativeQuantity, 0)}
               </span>
             </motion.div>

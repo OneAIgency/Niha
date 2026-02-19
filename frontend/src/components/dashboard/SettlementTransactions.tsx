@@ -71,7 +71,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
       case 'AT_CUSTODY':
         return 'text-blue-400 bg-blue-500/20';
       default:
-        return 'text-navy-600 dark:text-navy-400 bg-navy-500/20';
+        return 'text-navy-400 bg-navy-500/20';
     }
   };
 
@@ -120,7 +120,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-8">
-          <div className="text-navy-600 dark:text-navy-400">Loading pending transactions...</div>
+          <div className="text-navy-400">Loading pending transactions...</div>
         </div>
       </Card>
     );
@@ -140,7 +140,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-8">
-          <div className="text-navy-600 dark:text-navy-400">No pending transactions</div>
+          <div className="text-navy-400">No pending transactions</div>
         </div>
       </Card>
     );
@@ -156,7 +156,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
           transition={{ duration: 0.2 }}
         >
           <Card
-            className="p-4 hover:bg-navy-100 dark:hover:bg-navy-800/50 transition-colors cursor-pointer"
+            className="p-4 hover:bg-navy-800/50 transition-colors cursor-pointer"
             role="button"
             tabIndex={0}
             aria-label={`View details for ${settlement.batchReference}`}
@@ -176,24 +176,24 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                   <span className="text-sm font-medium text-white">
                     {getTypeLabel(settlement.settlementType)}
                   </span>
-                  <span className="text-xs text-navy-600 dark:text-navy-400 font-mono">
+                  <span className="text-xs text-navy-400 font-mono">
                     {settlement.batchReference}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 text-sm text-navy-300 dark:text-navy-300 mb-3">
+                <div className="flex items-center gap-4 text-sm text-navy-300 mb-3">
                   <div className="flex items-center gap-1">
-                    <span className="text-navy-500 dark:text-navy-500">Asset:</span>
+                    <span className="text-navy-500">Asset:</span>
                     <span className="font-medium">{settlement.assetType}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-navy-500 dark:text-navy-500">Quantity:</span>
+                    <span className="text-navy-500">Quantity:</span>
                     <span className="font-mono font-medium">
                       {formatCertificateQuantity(settlement.quantity)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-navy-500 dark:text-navy-500">Value:</span>
+                    <span className="text-navy-500">Value:</span>
                     <span className="font-mono font-medium">
                       {formatCurrency(settlement.totalValueEur ?? 0, 'EUR')}
                     </span>
@@ -202,11 +202,11 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
 
                 {/* Progress Bar */}
                 <div className="mb-2">
-                  <div className="flex items-center justify-between text-xs text-navy-600 dark:text-navy-400 mb-1">
+                  <div className="flex items-center justify-between text-xs text-navy-400 mb-1">
                     <span>Progress</span>
                     <span>{Math.round(settlement.progressPercent ?? 0)}%</span>
                   </div>
-                  <div className="w-full bg-navy-200 dark:bg-navy-700 rounded-full h-1.5">
+                  <div className="w-full bg-navy-700 rounded-full h-1.5">
                     <div
                       className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${settlement.progressPercent ?? 0}%` }}
@@ -215,7 +215,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                 </div>
 
                 {/* Expected Date */}
-                <div className="flex items-center gap-1 text-xs text-navy-600 dark:text-navy-400">
+                <div className="flex items-center gap-1 text-xs text-navy-400">
                   <Calendar className="w-3 h-3" />
                   <span>
                     Expected: {formatDate(settlement.expectedSettlementDate)}
@@ -230,7 +230,7 @@ export function SettlementTransactions({ onSettlementClick }: SettlementTransact
                   {getStatusLabel(settlement.status)}
                 </div>
                 {onSettlementClick && (
-                  <ChevronRight className="w-4 h-4 text-navy-500 dark:text-navy-500" />
+                  <ChevronRight className="w-4 h-4 text-navy-500" />
                 )}
               </div>
             </div>

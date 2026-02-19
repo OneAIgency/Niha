@@ -1,11 +1,49 @@
 /**
  * NIHA CARBON PLATFORM - DESIGN TOKENS
  * Standardized design system for consistent UI across all components
- * Version: 1.0.0
- * Last Updated: 2026-01-22
+ * Version: 2.0.0
+ * Last Updated: 2026-02-14
  *
  * Theme hub (unde modifici tot ce ține de temă): src/theme/README.md
  * Tailwind palette: tailwind.config.js (păstrează paleta aliniată cu acest fișier)
+ *
+ * SURFACE HIERARCHY (5 levels, dark theme):
+ *   Level 0 – Page background:   navy-950 (#020617)  → .page-container-dark
+ *   Level 1 – Page content area:  navy-900 (#0f172a)  → .page-bg
+ *   Level 2 – Card / Panel:       navy-800 (#1e293b)  → .panel, .content_wrapper
+ *   Level 3 – Elevated / Hover:   navy-700 (#334155)  → hover states, dropdowns
+ *   Level 4 – Active / Selected:  navy-600 (#475569)  → active nav items, selected
+ *
+ * CONTAINER RULES:
+ *   .page-container       → max-width wrapper (1280px), horizontal padding
+ *   .panel                → card/panel container (navy-800, border navy-700, rounded-xl, p-5)
+ *   .panel--flush         → panel with no padding (p-0, for tables/lists)
+ *   .panel--compact       → panel with compact padding (p-3)
+ *   Modal bg              → navy-800 with navy-700 border (in Modal component)
+ *
+ * SPACING RULES:
+ *   Page content padding:  py-6 (24px)
+ *   Panel padding:         p-5 (20px)        → var(--panel-padding)
+ *   Panel compact:         p-3 (12px)        → var(--panel-compact-padding)
+ *   Grid gap:              gap-6 (24px)      → main layout
+ *   Card-to-card gap:      gap-4 (16px)      → card grids
+ *   Element gap:           gap-3 (12px)      → elements inside cards
+ *   Dense rows:            gap-2 (8px)       → compact lists
+ *
+ * BORDER RADIUS RULES:
+ *   Elements (inputs, buttons, badges):  rounded-lg (8px)   → var(--radius-md)
+ *   Panels / cards:                      rounded-xl (12px)  → var(--radius-lg)
+ *   Modals:                              rounded-2xl (16px) → var(--radius-xl)
+ *   Pills / avatars:                     rounded-full       → var(--radius-full)
+ *
+ * TYPOGRAPHY RULES:
+ *   --text-xs  (12px):  table headers, badges, timestamps
+ *   --text-sm  (14px):  body text, buttons, inputs, nav
+ *   --text-base (16px): emphasized body, modal descriptions
+ *   --text-lg  (18px):  card section titles (.section-heading)
+ *   --text-xl  (20px):  page subtitles
+ *   --text-2xl (24px):  page titles, dashboard stat values
+ *   --text-3xl (30px):  hero numbers (fluid: .value-text-fluid)
  */
 
 :root {
@@ -30,6 +68,13 @@
   --color-border: #334155;               /* navy-700 */
   --color-border-strong: #475569;        /* navy-600 */
   --color-border-muted: #1e293b;         /* navy-800 */
+
+  /* Panel: canonical card/section container (Level 2 surface) */
+  --panel-bg: #1e293b;                  /* navy-800 */
+  --panel-border: #334155;              /* navy-700 */
+  --panel-radius: 0.75rem;              /* 12px = rounded-xl */
+  --panel-padding: 1.25rem;             /* 20px = p-5 */
+  --panel-compact-padding: 0.75rem;     /* 12px = p-3 */
 
   /* Card back: a few steps above layout (navy-950). Not too bright. */
   --color-card-back-bg: #0f172a;        /* navy-900 – one step above layout */
@@ -330,6 +375,13 @@
   --color-border: #334155;               /* navy-700 */
   --color-border-strong: #475569;        /* navy-600 */
   --color-border-muted: #1e293b;         /* navy-800 */
+
+  /* Panel (Level 2 surface) */
+  --panel-bg: #1e293b;                  /* navy-800 */
+  --panel-border: #334155;              /* navy-700 */
+  --panel-radius: 0.75rem;
+  --panel-padding: 1.25rem;
+  --panel-compact-padding: 0.75rem;
 
   /* Card back: a few steps above layout (navy-950). Not too bright. */
   --color-card-back-bg: #0f172a;        /* navy-900 – one step above layout */

@@ -17,9 +17,9 @@ const variantStyles: Record<TextVariant, string> = {
   pageTitleSm: 'page-title-sm',
   sectionHeading: 'section-heading',
   sectionLabel: 'section-label',
-  body: 'text-navy-700 dark:text-navy-300',
-  bodySmall: 'text-sm text-navy-600 dark:text-navy-400',
-  caption: 'text-xs text-navy-500 dark:text-navy-400',
+  body: 'text-navy-300',
+  bodySmall: 'text-sm text-navy-400',
+  caption: 'text-xs text-navy-400',
   mono: 'text-value',
   monoLg: 'text-value-lg',
   muted: 'text-muted',
@@ -27,13 +27,13 @@ const variantStyles: Record<TextVariant, string> = {
 
 const colorStyles: Record<TextColor, string> = {
   default: '',
-  primary: 'text-navy-900 dark:text-white',
-  secondary: 'text-navy-600 dark:text-navy-300',
-  muted: 'text-navy-500 dark:text-navy-400',
+  primary: 'text-white',
+  secondary: 'text-navy-300',
+  muted: 'text-navy-400',
   positive: 'price-positive',
   negative: 'price-negative',
-  eua: 'text-blue-600 dark:text-blue-400',
-  cea: 'text-amber-600 dark:text-amber-400',
+  eua: 'text-blue-400',
+  cea: 'text-amber-400',
 };
 
 const defaultElements: Record<TextVariant, TextElement> = {

@@ -156,28 +156,38 @@ export function UsersPage() {
 
     setSavingUser(true);
     try {
-      const userData: {
-        email: string;
-        firstName: string;
-        lastName: string;
-        role: UserRole;
-        password?: string;
-        position?: string;
-      } = {
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        role: newUser.role,
-      };
+      let created: User;
 
-      if (!useInvitation && newUser.password) {
-        userData.password = newUser.password;
-      }
-      if (newUser.position?.trim()) {
-        userData.position = newUser.position.trim();
+      if (newUser.role === 'PREINTRODUCER') {
+        // Use dedicated endpoint that auto-generates referral code
+        const result = await adminApi.createPreintroducer({
+          email: newUser.email,
+          first_name: newUser.firstName,
+          last_name: newUser.lastName,
+          mode: useInvitation ? 'invitation' : 'manual',
+          password: useInvitation ? undefined : newUser.password,
+        });
+        created = {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role as UserRole,
+          referralCode: result.user.referral_code,
+        } as User;
+      } else {
+        const userData: {
+          email: string; firstName: string; lastName: string;
+          role: UserRole; password?: string; position?: string;
+        } = {
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          role: newUser.role,
+        };
+        if (!useInvitation && newUser.password) userData.password = newUser.password;
+        if (newUser.position?.trim()) userData.position = newUser.position.trim();
+        created = await adminApi.createUser(userData);
       }
 
-      const created = await adminApi.createUser(userData);
       setUsers([created, ...users]);
       setShowCreateModal(false);
       setNewUser({ email: '', firstName: '', lastName: '', position: '', password: '', role: 'NDA' });
@@ -431,7 +441,7 @@ export function UsersPage() {
               placeholder="Search by name, email, or entity..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-800 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-navy-600 bg-navy-800 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div className="flex gap-2">
@@ -443,6 +453,9 @@ export function UsersPage() {
               <option value="all">All Roles</option>
               <option value="ADMIN">Admin</option>
               <option value="MM">MM (Market Maker)</option>
+              <option value="PREINTRODUCER">Pre-Introducer</option>
+              <option value="TRODUCER">Troducer</option>
+              <option value="INTRODUCER">Introducer</option>
               <option value="NDA">NDA</option>
               <option value="KYC">KYC</option>
               <option value="APPROVED">Approved</option>
@@ -468,35 +481,35 @@ export function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-navy-100 dark:border-navy-700">
-                <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+              <tr className="border-b border-navy-700">
+                <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   User
                 </th>
-                <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   Entity
                 </th>
-                <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="text-left py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                <th className="text-left py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   Last Activity
                 </th>
-                <th className="text-right py-4 px-4 text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+                <th className="text-right py-4 px-4 text-xs font-medium text-navy-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-100 dark:divide-navy-700">
+            <tbody className="divide-y divide-navy-700">
               {users.map((user, index) => (
                 <motion.tr
                   key={user.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="hover:bg-navy-50 dark:hover:bg-navy-800/50"
+                  className="hover:bg-navy-800/50"
                 >
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
@@ -513,19 +526,19 @@ export function UsersPage() {
                         {getInitials(user.firstName, user.lastName, user.email)}
                       </div>
                       <div>
-                        <p className="font-medium text-navy-900 dark:text-white">
+                        <p className="font-medium text-white">
                           {user.firstName && user.lastName
                             ? `${user.firstName} ${user.lastName}`
                             : 'Name not set'}
                         </p>
-                        <p className="text-sm text-navy-500 dark:text-navy-400">{user.email}</p>
+                        <p className="text-sm text-navy-400">{user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-navy-400" />
-                      <span className="text-sm text-navy-600 dark:text-navy-300">
+                      <span className="text-sm text-navy-300">
                         {user.entityName || 'No entity'}
                       </span>
                     </div>
@@ -551,7 +564,7 @@ export function UsersPage() {
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-navy-400" />
-                      <span className="text-sm text-navy-600 dark:text-navy-300">
+                      <span className="text-sm text-navy-300">
                         {user.lastLogin
                             ? formatRelativeTime(user.lastLogin)
                             : 'Never'}
@@ -586,7 +599,7 @@ export function UsersPage() {
                               entityId: user.entityId!,
                               entityName: user.entityName || 'Unknown Entity'
                             })}
-                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-900/20"
                             title="Add Asset"
                           >
                             <Plus className="w-4 h-4" />
@@ -597,7 +610,7 @@ export function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleCreateEntityForUser(user)}
-                          className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                          className="text-amber-500 hover:text-amber-600 hover:bg-amber-900/20"
                           title="Create Entity (required for deposits)"
                         >
                           <Building2 className="w-4 h-4" />
@@ -608,7 +621,7 @@ export function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeactivateUser(user)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-900/20"
                           title="Deactivate"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -624,14 +637,14 @@ export function UsersPage() {
 
         {users.length === 0 && !loading && (
           <div className="text-center py-12">
-            <Users className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-            <p className="text-navy-500 dark:text-navy-400">No users found matching your criteria</p>
+            <Users className="w-12 h-12 text-navy-600 mx-auto mb-4" />
+            <p className="text-navy-400">No users found matching your criteria</p>
           </div>
         )}
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-6 pt-6 border-t border-navy-100 dark:border-navy-700">
+          <div className="flex justify-center gap-2 mt-6 pt-6 border-t border-navy-700">
             <Button
               variant="ghost"
               size="sm"
@@ -640,7 +653,7 @@ export function UsersPage() {
             >
               Previous
             </Button>
-            <span className="px-4 py-2 text-sm text-navy-600 dark:text-navy-300">
+            <span className="px-4 py-2 text-sm text-navy-300">
               Page {pagination.page} of {pagination.totalPages}
             </span>
             <Button

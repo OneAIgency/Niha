@@ -4,7 +4,7 @@ This document describes how EUA and CEA price scraping works, the admin API, and
 
 ## Overview
 
-- **Settings → Price Scraping Sources** (admin-only): configure URLs, certificate type (EUA/CEA), scrape interval, and library (httpx, BeautifulSoup, etc.).
+- **Settings → Price Scraping Sources** (admin-only): configure name, URL, certificate type (EUA/CEA), scrape interval, library (httpx, BeautifulSoup, etc.), and **is_primary**. At most one source per certificate type can be primary; the primary flag is used when multiple sources exist (e.g. for display or default selection).
 - **Scheduler**: runs every 60 seconds; for each active source whose interval has elapsed, it triggers a refresh. Carboncredits.com sources are refreshed as a **group** with one HTTP request per cycle.
 - **Test** (per source): runs a single scrape and returns the extracted price; no DB update. For carboncredits.com this uses the same single-fetch path (one request, returns price for that source’s certificate type).
 - **Refresh** (per source): updates DB from the source. For carboncredits.com, refreshing any carboncredits.com source refreshes **all** active carboncredits.com sources in one request.
@@ -44,6 +44,52 @@ Base path: `/api/v1/admin`. All require admin authentication.
 | POST | `/scraping-sources/{source_id}/refresh` | Refresh from source. For carboncredits.com, refreshes all active carboncredits.com sources. |
 | DELETE | `/scraping-sources/{source_id}` | Delete a scraping source. |
 
+### Example: Create source
+
+**Request**
+
+```http
+POST /api/v1/admin/scraping-sources
+Content-Type: application/json
+Cookie: access_token=...
+```
+
+```json
+{
+  "name": "CarbonCredits EU",
+  "url": "https://carboncredits.com/carbon-prices-today/",
+  "certificate_type": "EUA",
+  "scrape_library": "httpx",
+  "scrape_interval_minutes": 5,
+  "is_primary": true,
+  "is_active": true
+}
+```
+
+**Response (200)** — Same shape as a list item (id, name, url, certificate_type, is_primary, last_price, etc.).
+
+### Example: Update source
+
+**Request**
+
+```http
+PUT /api/v1/admin/scraping-sources/{source_id}
+Content-Type: application/json
+Cookie: access_token=...
+```
+
+Body: any subset of updatable fields (all optional). When `is_primary` is set to `true`, other sources with the same `certificate_type` are set to non-primary.
+
+```json
+{
+  "name": "CarbonCredits EU (primary)",
+  "is_primary": true,
+  "scrape_interval_minutes": 10
+}
+```
+
+**Response (200)** — Updated scraping source object.
+
 ### Example: List sources
 
 **Request**
@@ -64,6 +110,7 @@ Cookie: access_token=...
     "certificate_type": "EUA",
     "scrape_library": "httpx",
     "is_active": true,
+    "is_primary": true,
     "scrape_interval_minutes": 5,
     "last_scrape_at": "2026-02-08T12:00:00.000000Z",
     "last_scrape_status": "SUCCESS",

@@ -185,19 +185,19 @@ export function MarketMakersPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+            className="relative bg-navy-800 rounded-2xl border border-navy-700 w-full max-w-md mx-4 overflow-hidden"
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-navy-700">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <ShieldAlert className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <div className="p-2 bg-red-900/30 rounded-lg">
+                  <ShieldAlert className="w-6 h-6 text-red-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white">
                     Reset All Market Makers
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-navy-400">
                     This action cannot be undone
                   </p>
                 </div>
@@ -206,18 +206,18 @@ export function MarketMakersPage() {
 
             {/* Content */}
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-700 dark:text-red-300">
+              <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
+                <p className="text-sm text-red-300">
                   This will reset <strong>{marketMakers.length} market makers</strong>:
                 </p>
-                <ul className="mt-2 text-sm text-red-600 dark:text-red-400 list-disc list-inside space-y-1">
+                <ul className="mt-2 text-sm text-red-400 list-disc list-inside space-y-1">
                   <li>Zero all balances (EUR, CEA, EUA)</li>
                   <li>Delete all MM orders (from order book)</li>
                   <li>Delete all cash market trades</li>
                   <li>Delete all asset transactions</li>
                   <li>Delete all audit tickets</li>
                 </ul>
-                <p className="mt-3 text-sm text-red-700 dark:text-red-300">
+                <p className="mt-3 text-sm text-red-300">
                   Market Maker accounts will be kept. Use <strong>Refund Market Makers</strong> to add new balances.
                 </p>
               </div>
@@ -238,7 +238,7 @@ export function MarketMakersPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-navy-700 bg-navy-900/50">
               <Button
                 variant="ghost"
                 onClick={handleCloseResetModal}

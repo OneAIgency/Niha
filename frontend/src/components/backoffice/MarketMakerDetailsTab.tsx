@@ -117,7 +117,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
     <div className="p-6 space-y-6">
       {/* Current Balances */}
       <div>
-        <h3 className="text-sm font-medium text-navy-700 dark:text-navy-300 mb-3">
+        <h3 className="text-sm font-medium text-navy-300 mb-3">
           Current Balances
         </h3>
         <BalanceCards
@@ -132,44 +132,44 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
 
       {/* Name */}
       <div>
-        <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+        <label className="block text-sm font-medium text-navy-300 mb-2">
           Name *
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+        <label className="block text-sm font-medium text-navy-300 mb-2">
           Description
         </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+          className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
         />
       </div>
 
       {/* Is Active Toggle */}
-      <div className="flex items-center justify-between p-4 rounded-lg bg-navy-50 dark:bg-navy-900/50">
+      <div className="flex items-center justify-between p-4 rounded-lg bg-navy-900/50">
         <div>
-          <label className="block text-sm font-medium text-navy-700 dark:text-navy-300">
+          <label className="block text-sm font-medium text-navy-300">
             Active Status
           </label>
-          <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+          <p className="text-xs text-navy-400 mt-1">
             When inactive, the market maker will not execute trades
           </p>
         </div>
         <button
           onClick={() => setIsActive(!isActive)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isActive ? 'bg-emerald-500' : 'bg-navy-300 dark:bg-navy-600'
+            isActive ? 'bg-emerald-500' : 'bg-navy-600'
           }`}
         >
           <span
@@ -182,11 +182,11 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
 
       {/* Ticket ID Display */}
       {ticketId && (
-        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+        <div className="p-3 rounded-lg bg-emerald-900/20 border border-emerald-800">
+          <div className="flex items-center gap-2 text-emerald-400">
             <Ticket className="w-4 h-4" />
             <span className="text-sm font-medium">Ticket ID:</span>
-            <code className="text-xs bg-white dark:bg-navy-900 px-2 py-1 rounded font-mono">
+            <code className="text-xs bg-navy-900 px-2 py-1 rounded font-mono">
               {ticketId}
             </code>
           </div>
@@ -203,7 +203,7 @@ export function MarketMakerDetailsTab({ marketMaker, onUpdateSuccess }: MarketMa
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+          className="p-3 bg-emerald-900/20 border border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-400"
         >
           <Check className="w-4 h-4 flex-shrink-0" />
           <span className="text-sm font-medium">Market maker updated successfully!</span>

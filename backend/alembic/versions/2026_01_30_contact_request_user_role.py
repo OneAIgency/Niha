@@ -5,7 +5,6 @@ Revises: 2026_01_30_request_type
 Create Date: 2026-01-30
 
 """
-import sqlalchemy as sa
 from alembic import op
 
 revision = "2026_01_30_user_role"

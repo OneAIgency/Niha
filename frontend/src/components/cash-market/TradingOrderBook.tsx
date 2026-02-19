@@ -227,13 +227,13 @@ export function TradingOrderBook({
   if (isLoading) {
     return (
       <Card className="h-full flex flex-col" padding="none">
-        <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-          <h2 className="text-lg font-semibold text-navy-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3 border-b border-navy-700">
+          <h2 className="text-lg font-semibold text-white tracking-tight">
             Order book
           </h2>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="text-sm text-navy-500 dark:text-navy-400">Loading order book...</div>
+          <div className="text-sm text-navy-400">Loading order book...</div>
         </div>
       </Card>
     );
@@ -243,13 +243,13 @@ export function TradingOrderBook({
   if (displayBids.length === 0 && displayAsks.length === 0) {
     return (
       <Card className="h-full flex flex-col" padding="none">
-        <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-          <h2 className="text-lg font-semibold text-navy-900 dark:text-white tracking-tight">
+        <div className="px-4 py-3 border-b border-navy-700">
+          <h2 className="text-lg font-semibold text-white tracking-tight">
             Order book
           </h2>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="text-sm text-navy-500 dark:text-navy-400">No orders available</div>
+          <div className="text-sm text-navy-400">No orders available</div>
         </div>
       </Card>
     );
@@ -258,8 +258,8 @@ export function TradingOrderBook({
   return (
     <Card className="h-full flex flex-col rounded-3xl" padding="none">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-navy-200 dark:border-navy-700">
-        <h2 className="text-lg font-semibold text-navy-900 dark:text-white tracking-tight">
+      <div className="px-4 py-3 border-b border-navy-700">
+        <h2 className="text-lg font-semibold text-white tracking-tight">
           Order book
         </h2>
       </div>
@@ -267,14 +267,14 @@ export function TradingOrderBook({
       {/* Order Book Table */}
       <div className="px-4 py-4">
         {/* Column Headers - Single row for merged layout */}
-        <div className="grid grid-cols-3 gap-4 pb-2 mb-2 border-b border-navy-200 dark:border-navy-700">
-          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-left">
+        <div className="grid grid-cols-3 gap-4 pb-2 mb-2 border-b border-navy-700">
+          <div className="text-xs font-medium text-navy-400 uppercase tracking-wider text-left">
             Price
           </div>
-          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-right">
+          <div className="text-xs font-medium text-navy-400 uppercase tracking-wider text-right">
             Volume
           </div>
-          <div className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider text-right">
+          <div className="text-xs font-medium text-navy-400 uppercase tracking-wider text-right">
             Total (EUR)
           </div>
         </div>
@@ -298,29 +298,29 @@ export function TradingOrderBook({
                   role="row"
                   tabIndex={0}
                   aria-label={`Ask order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
-                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-red-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-red-400"
                   onClick={() => onPriceClick?.(level.price)}
                   onKeyDown={(e) => handleKeyDown(e, level.price)}
                 >
                   {/* Depth Visualization - Red bar growing from left */}
                   <div
-                    className="absolute left-0 top-0 bottom-0 bg-red-500/15 dark:bg-red-500/25 rounded-l transition-all"
+                    className="absolute left-0 top-0 bottom-0 bg-red-500/25 rounded-l transition-all"
                     style={{ width: `${depthPercentage}%` }}
                     aria-hidden="true"
                   />
 
                   {/* Price */}
-                  <div className="relative text-sm text-red-600 dark:text-red-400 font-semibold font-mono tabular-nums text-left">
+                  <div className="relative text-sm text-red-400 font-semibold font-mono tabular-nums text-left">
                     {formatPrice(level.price)}
                   </div>
 
                   {/* Volume */}
-                  <div className="relative text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
+                  <div className="relative text-sm text-white font-mono tabular-nums text-right">
                     {formatNumber(level.quantity)}
                   </div>
 
                   {/* Total (EUR) */}
-                  <div className="relative text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
+                  <div className="relative text-xs text-navy-300 font-mono tabular-nums text-right">
                     {formatEurValue(level.orderValue)}
                   </div>
                 </div>
@@ -330,7 +330,7 @@ export function TradingOrderBook({
 
           {/* Center Highlight Row - Best Bid and Best Ask */}
           <div
-            className="grid grid-cols-3 gap-4 py-3 px-4 my-2 bg-gradient-to-r from-emerald-50 via-navy-50 to-red-50 dark:from-emerald-900/20 dark:via-navy-800 dark:to-red-900/20 border-y-2 border-navy-300 dark:border-navy-600"
+            className="grid grid-cols-3 gap-4 py-3 px-4 my-2 bg-gradient-to-r from-emerald-900/20 via-navy-800 to-red-900/20 border-y-2 border-navy-600"
             role="status"
             aria-label={`Best bid ${bestBidData ? formatPrice(bestBidData.price) : 'none'}, best ask ${bestAskData ? formatPrice(bestAskData.price) : 'none'}, spread ${spread !== null && isFinite(spread) ? formatPrice(spread) : 'none'}`}
           >
@@ -338,15 +338,15 @@ export function TradingOrderBook({
             <div className="flex flex-col items-start">
               {bestBidData ? (
                 <>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
+                  <span className="text-xs text-emerald-400 font-medium mb-1">
                     BID
                   </span>
-                  <span className="text-base text-emerald-700 dark:text-emerald-300 font-bold font-mono tabular-nums">
+                  <span className="text-base text-emerald-300 font-bold font-mono tabular-nums">
                     {formatPrice(bestBidData.price)}
                   </span>
                 </>
               ) : (
-                <span className="text-base text-navy-500 dark:text-navy-400 font-bold">
+                <span className="text-base text-navy-400 font-bold">
                   --
                 </span>
               )}
@@ -355,14 +355,14 @@ export function TradingOrderBook({
             {/* Center: Spread */}
             <div className="flex items-center justify-center">
               {spread !== null && isFinite(spread) ? (
-                <div className="bg-white dark:bg-navy-700 rounded-full px-3 py-1 border border-navy-200 dark:border-navy-600">
-                  <span className="text-xs text-navy-600 dark:text-navy-400 font-medium tabular-nums">
+                <div className="bg-navy-700 rounded-full px-3 py-1 border border-navy-600">
+                  <span className="text-xs text-navy-400 font-medium tabular-nums">
                     Spread: {formatPrice(spread)}
                   </span>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-navy-700 rounded-full px-3 py-1 border border-dashed border-navy-300 dark:border-navy-600">
-                  <span className="text-xs text-navy-500 dark:text-navy-400 font-medium">
+                <div className="bg-navy-700 rounded-full px-3 py-1 border border-dashed border-navy-600">
+                  <span className="text-xs text-navy-400 font-medium">
                     No Spread
                   </span>
                 </div>
@@ -373,15 +373,15 @@ export function TradingOrderBook({
             <div className="flex flex-col items-end">
               {bestAskData ? (
                 <>
-                  <span className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+                  <span className="text-xs text-red-400 font-medium mb-1">
                     ASK
                   </span>
-                  <span className="text-base text-red-700 dark:text-red-300 font-bold font-mono tabular-nums">
+                  <span className="text-base text-red-300 font-bold font-mono tabular-nums">
                     {formatPrice(bestAskData.price)}
                   </span>
                 </>
               ) : (
-                <span className="text-base text-navy-500 dark:text-navy-400 font-bold">
+                <span className="text-base text-navy-400 font-bold">
                   --
                 </span>
               )}
@@ -402,29 +402,29 @@ export function TradingOrderBook({
                   role="row"
                   tabIndex={0}
                   aria-label={`Bid order at price ${formatPrice(level.price)}, quantity ${formatNumber(level.quantity)}, total ${formatEurValue(level.orderValue)} EUR`}
-                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                  className="relative grid grid-cols-3 gap-4 py-1.5 px-2 rounded hover:bg-emerald-900/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-emerald-400"
                   onClick={() => onPriceClick?.(level.price)}
                   onKeyDown={(e) => handleKeyDown(e, level.price)}
                 >
                   {/* Depth Visualization - Green bar growing from left */}
                   <div
-                    className="absolute left-0 top-0 bottom-0 bg-emerald-500/15 dark:bg-emerald-500/25 rounded-l transition-all"
+                    className="absolute left-0 top-0 bottom-0 bg-emerald-500/25 rounded-l transition-all"
                     style={{ width: `${depthPercentage}%` }}
                     aria-hidden="true"
                   />
 
                   {/* Price */}
-                  <div className="relative text-sm text-emerald-600 dark:text-emerald-400 font-semibold font-mono tabular-nums text-left">
+                  <div className="relative text-sm text-emerald-400 font-semibold font-mono tabular-nums text-left">
                     {formatPrice(level.price)}
                   </div>
 
                   {/* Volume */}
-                  <div className="relative text-sm text-navy-900 dark:text-white font-mono tabular-nums text-right">
+                  <div className="relative text-sm text-white font-mono tabular-nums text-right">
                     {formatNumber(level.quantity)}
                   </div>
 
                   {/* Total (EUR) */}
-                  <div className="relative text-xs text-navy-700 dark:text-navy-300 font-mono tabular-nums text-right">
+                  <div className="relative text-xs text-navy-300 font-mono tabular-nums text-right">
                     {formatEurValue(level.orderValue)}
                   </div>
                 </div>
@@ -435,19 +435,19 @@ export function TradingOrderBook({
 
         {/* Totals Summary - Below bids */}
         {(displayBids.length > 0 || displayAsks.length > 0) && (
-          <div className="mt-4 pt-3 border-t border-navy-200 dark:border-navy-700">
+          <div className="mt-4 pt-3 border-t border-navy-700">
             <div className="grid grid-cols-2 gap-8">
               {/* Bid Totals */}
               {displayBids.length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
+                  <span className="text-xs text-emerald-400 font-medium uppercase tracking-wide">
                     Total Bids
                   </span>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                    <span className="text-sm font-mono font-bold text-white tabular-nums">
                       {formatEurValue(bidLiquidity.value)} EUR
                     </span>
-                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                    <span className="text-sm font-mono font-bold text-white tabular-nums">
                       {formatNumber(bidLiquidity.volume)} cert.
                     </span>
                   </div>
@@ -459,14 +459,14 @@ export function TradingOrderBook({
               {/* Ask Totals */}
               {displayAsks.length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wide">
+                  <span className="text-xs text-red-400 font-medium uppercase tracking-wide">
                     Total Asks
                   </span>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                    <span className="text-sm font-mono font-bold text-white tabular-nums">
                       {formatEurValue(askLiquidity.value)} EUR
                     </span>
-                    <span className="text-sm font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+                    <span className="text-sm font-mono font-bold text-white tabular-nums">
                       {formatNumber(askLiquidity.volume)} cert.
                     </span>
                   </div>
@@ -480,13 +480,13 @@ export function TradingOrderBook({
 
         {/* Order Count Footer - shown when full book is enabled */}
         {showFullBook && (
-          <div className="mt-4 pt-3 border-t border-navy-200 dark:border-navy-700">
-            <div className="flex items-center justify-between text-xs text-navy-500 dark:text-navy-400">
+          <div className="mt-4 pt-3 border-t border-navy-700">
+            <div className="flex items-center justify-between text-xs text-navy-400">
               <span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{safeBids.length}</span> bid levels
+                <span className="font-semibold text-emerald-400">{safeBids.length}</span> bid levels
               </span>
               <span>
-                <span className="font-semibold text-red-600 dark:text-red-400">{safeAsks.length}</span> ask levels
+                <span className="font-semibold text-red-400">{safeAsks.length}</span> ask levels
               </span>
             </div>
           </div>

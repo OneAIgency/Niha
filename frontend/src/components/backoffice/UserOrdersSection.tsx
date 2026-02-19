@@ -89,13 +89,13 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
+        className="bg-navy-800 rounded-2xl shadow-2xl w-full max-w-md mx-4"
       >
-        <div className="flex items-center justify-between p-6 border-b border-navy-100 dark:border-navy-700">
+        <div className="flex items-center justify-between p-6 border-b border-navy-700">
           <div className="flex items-center gap-3">
             <div className={cn(
               'p-2 rounded-lg',
-              order.side === 'BUY' ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'
+              order.side === 'BUY' ? 'bg-emerald-900/30' : 'bg-red-900/30'
             )}>
               {order.side === 'BUY' ? (
                 <ArrowDownRight className="w-5 h-5 text-emerald-600" />
@@ -104,7 +104,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
               )}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-navy-900 dark:text-white">
+              <h2 className="text-lg font-bold text-white">
                 Edit {order.side} Order
               </h2>
               <p className="text-sm text-navy-500">{order.certificateType}</p>
@@ -112,7 +112,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg"
+            className="p-2 hover:bg-navy-700 rounded-lg"
           >
             <X className="w-5 h-5 text-navy-500" />
           </button>
@@ -120,17 +120,17 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
 
         <div className="p-6 space-y-4">
           {/* Current Order Info */}
-          <div className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
+          <div className="p-4 bg-navy-700/50 rounded-lg">
             <div className="text-xs text-navy-500 mb-2">Current Order</div>
             <div className="flex justify-between text-sm">
-              <span className="text-navy-600 dark:text-navy-300">Quantity:</span>
-              <span className="font-mono font-medium text-navy-900 dark:text-white">
+              <span className="text-navy-300">Quantity:</span>
+              <span className="font-mono font-medium text-white">
                 {order.quantity.toLocaleString()} ({order.filledQuantity.toLocaleString()} filled)
               </span>
             </div>
             <div className="flex justify-between text-sm mt-1">
-              <span className="text-navy-600 dark:text-navy-300">Price:</span>
-              <span className="font-mono font-medium text-navy-900 dark:text-white">
+              <span className="text-navy-300">Price:</span>
+              <span className="font-mono font-medium text-white">
                 €{order.price.toFixed(2)}
               </span>
             </div>
@@ -138,7 +138,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
 
           {/* Price Input */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               New Price *
             </label>
             <NumberInput
@@ -152,7 +152,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
 
           {/* Quantity Input */}
           <div>
-            <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               New Quantity * <span className="text-navy-400">(min: {order.filledQuantity})</span>
             </label>
             <NumberInput
@@ -170,7 +170,7 @@ function EditOrderModal({ isOpen, onClose, onSuccess, order }: EditOrderModalPro
           )}
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t border-navy-100 dark:border-navy-700">
+        <div className="flex justify-end gap-3 p-6 border-t border-navy-700">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -274,15 +274,15 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="font-semibold text-navy-900 dark:text-white">Orders</h3>
+          <h3 className="font-semibold text-white">Orders</h3>
           {openCount > 0 && (
-            <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full">
+            <span className="px-2 py-0.5 text-xs font-medium bg-amber-900/30 text-amber-400 rounded-full">
               {openCount} open
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-navy-100 dark:bg-navy-700 rounded-lg p-0.5">
+          <div className="flex bg-navy-700 rounded-lg p-0.5">
             {(['all', 'open', 'history'] as const).map((f) => (
               <button
                 key={f}
@@ -290,8 +290,8 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
                   filter === f
-                    ? 'bg-white dark:bg-navy-600 text-navy-900 dark:text-white shadow-sm'
-                    : 'text-navy-500 hover:text-navy-700 dark:hover:text-navy-300'
+                    ? 'bg-navy-600 text-white shadow-sm'
+                    : 'text-navy-500 hover:text-navy-300'
                 )}
               >
                 {f === 'all' ? 'All' : f === 'open' ? 'Open' : 'History'}
@@ -307,8 +307,8 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
         <div className="text-center py-12">
-          <ShoppingCart className="w-12 h-12 text-navy-300 dark:text-navy-600 mx-auto mb-4" />
-          <p className="text-navy-500 dark:text-navy-400">
+          <ShoppingCart className="w-12 h-12 text-navy-600 mx-auto mb-4" />
+          <p className="text-navy-400">
             {filter === 'open' ? 'No open orders' : filter === 'history' ? 'No order history' : 'No orders found'}
           </p>
         </div>
@@ -319,7 +319,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
               key={order.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-100 dark:border-navy-600"
+              className="p-4 bg-navy-700/50 rounded-xl border border-navy-600"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -327,13 +327,13 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                   <div className={cn(
                     'p-2 rounded-lg',
                     order.side === 'BUY'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : 'bg-red-100 dark:bg-red-900/30'
+                      ? 'bg-emerald-900/30'
+                      : 'bg-red-900/30'
                   )}>
                     {order.side === 'BUY' ? (
-                      <ArrowDownRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <ArrowDownRight className="w-4 h-4 text-emerald-400" />
                     ) : (
-                      <ArrowUpRight className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <ArrowUpRight className="w-4 h-4 text-red-400" />
                     )}
                   </div>
 
@@ -342,11 +342,11 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         'font-semibold',
-                        order.side === 'BUY' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                        order.side === 'BUY' ? 'text-emerald-400' : 'text-red-400'
                       )}>
                         {order.side}
                       </span>
-                      <span className="text-navy-900 dark:text-white font-medium">
+                      <span className="text-white font-medium">
                         {order.certificateType}
                       </span>
                       {order.certificateType === 'CEA' ? (
@@ -355,7 +355,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                         <Wind className="w-4 h-4 text-blue-500" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    <div className="flex items-center gap-2 text-xs text-navy-400 mt-1">
                       <Clock className="w-3 h-3" />
                       {formatRelativeTime(order.createdAt)}
                     </div>
@@ -369,20 +369,20 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
               {/* Order Details */}
               <div className="grid grid-cols-3 gap-4 mb-3">
                 <div>
-                  <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Price</div>
-                  <div className="font-mono font-semibold text-navy-900 dark:text-white">
+                  <div className="text-xs text-navy-400 mb-1">Price</div>
+                  <div className="font-mono font-semibold text-white">
                     €{order.price.toFixed(2)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Quantity</div>
-                  <div className="font-mono font-semibold text-navy-900 dark:text-white">
+                  <div className="text-xs text-navy-400 mb-1">Quantity</div>
+                  <div className="font-mono font-semibold text-white">
                     {order.quantity.toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-navy-500 dark:text-navy-400 mb-1">Filled</div>
-                  <div className="font-mono font-semibold text-navy-900 dark:text-white">
+                  <div className="text-xs text-navy-400 mb-1">Filled</div>
+                  <div className="font-mono font-semibold text-white">
                     {order.filledQuantity.toLocaleString()}
                     <span className="text-navy-400 text-xs ml-1">
                       ({((order.filledQuantity / order.quantity) * 100).toFixed(0)}%)
@@ -394,7 +394,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
               {/* Progress Bar */}
               {order.filledQuantity > 0 && order.status !== 'CANCELLED' && (
                 <div className="mb-3">
-                  <div className="h-1.5 bg-navy-200 dark:bg-navy-600 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-navy-600 rounded-full overflow-hidden">
                     <div
                       className={cn(
                         'h-full rounded-full transition-all',
@@ -408,12 +408,12 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
 
               {/* Actions */}
               {(order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED') && (
-                <div className="flex justify-end gap-2 pt-2 border-t border-navy-100 dark:border-navy-600">
+                <div className="flex justify-end gap-2 pt-2 border-t border-navy-600">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setEditOrder(order)}
-                    className="text-navy-600 dark:text-navy-300"
+                    className="text-navy-300"
                   >
                     <Edit className="w-4 h-4" />
                     Edit
@@ -422,7 +422,7 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setCancelOrder(order)}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-900/20"
                   >
                     <X className="w-4 h-4" />
                     Cancel
@@ -432,13 +432,13 @@ export function UserOrdersSection({ entityId }: UserOrdersSectionProps) {
 
               {/* Status Icons for completed orders */}
               {order.status === 'FILLED' && (
-                <div className="flex items-center gap-2 pt-2 border-t border-navy-100 dark:border-navy-600 text-emerald-500">
+                <div className="flex items-center gap-2 pt-2 border-t border-navy-600 text-emerald-500">
                   <CheckCircle2 className="w-4 h-4" />
                   <span className="text-sm">Order fully filled</span>
                 </div>
               )}
               {order.status === 'CANCELLED' && (
-                <div className="flex items-center gap-2 pt-2 border-t border-navy-100 dark:border-navy-600 text-navy-400">
+                <div className="flex items-center gap-2 pt-2 border-t border-navy-600 text-navy-400">
                   <XCircle className="w-4 h-4" />
                   <span className="text-sm">Order cancelled</span>
                 </div>

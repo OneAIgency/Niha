@@ -39,14 +39,14 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
     return (
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">EUA</span>
-          <span className={cn('font-mono font-bold text-navy-900 dark:text-white', animate && 'animate-pulse')}>
+          <span className="text-sm font-medium text-blue-400">EUA</span>
+          <span className={cn('font-mono font-bold text-white', animate && 'animate-pulse')}>
             {formatCurrency(prices.eua.price, 'EUR')}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">CEA</span>
-          <span className={cn('font-mono font-bold text-navy-900 dark:text-white', animate && 'animate-pulse')}>
+          <span className="text-sm font-medium text-amber-400">CEA</span>
+          <span className={cn('font-mono font-bold text-white', animate && 'animate-pulse')}>
             {formatCurrency(prices.cea.price, 'EUR')}
           </span>
         </div>
@@ -59,16 +59,16 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
       {/* EUA Price */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col">
-          <span className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-navy-400 uppercase tracking-wider">
             EU Allowances
           </span>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded">
+            <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs font-bold rounded">
               EUA
             </span>
             <span
               className={cn(
-                'font-mono text-xl font-bold text-navy-900 dark:text-white',
+                'font-mono text-xl font-bold text-white',
                 animate && 'animate-pulse'
               )}
             >
@@ -84,21 +84,21 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
         </div>
       </div>
 
-      <div className="w-px h-10 bg-navy-200 dark:bg-navy-700" />
+      <div className="w-px h-10 bg-navy-700" />
 
       {/* CEA Price */}
       <div className="flex items-center gap-4">
         <div className="flex flex-col">
-          <span className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+          <span className="text-xs font-medium text-navy-400 uppercase tracking-wider">
             China Allowances
           </span>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded">
+            <span className="px-2 py-0.5 bg-amber-900/30 text-amber-400 text-xs font-bold rounded">
               CEA
             </span>
             <span
               className={cn(
-                'font-mono text-xl font-bold text-navy-900 dark:text-white',
+                'font-mono text-xl font-bold text-white',
                 animate && 'animate-pulse'
               )}
             >
@@ -114,14 +114,14 @@ export function PriceTicker({ prices, variant = 'full' }: PriceTickerProps) {
         </div>
       </div>
 
-      <div className="w-px h-10 bg-navy-200 dark:bg-navy-700" />
+      <div className="w-px h-10 bg-navy-700" />
 
       {/* Swap Rate */}
       <div className="flex flex-col">
-        <span className="text-xs font-medium text-navy-500 dark:text-navy-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-navy-400 uppercase tracking-wider">
           Swap Rate
         </span>
-        <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
+        <span className="font-mono text-lg font-bold text-emerald-400">
           1 EUA = {prices.swapRate.toFixed(2)} CEA
         </span>
       </div>

@@ -30,10 +30,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500',
       secondary:
-        'bg-navy-900 dark:bg-navy-700 text-white hover:bg-navy-800 dark:hover:bg-navy-600 focus:ring-navy-500',
+        'bg-navy-700 text-white hover:bg-navy-600 focus:ring-navy-500',
       outline:
-        'border-2 border-navy-200 dark:border-navy-600 text-navy-700 dark:text-navy-200 hover:bg-navy-50 dark:hover:bg-navy-700 focus:ring-navy-500',
-      ghost: 'text-navy-600 dark:text-navy-300 hover:bg-navy-100 dark:hover:bg-navy-700 focus:ring-navy-500',
+        'border-2 border-navy-600 text-navy-200 hover:bg-navy-700 focus:ring-navy-500',
+      ghost: 'text-navy-300 hover:bg-navy-700 focus:ring-navy-500',
       danger:
         'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
     };

@@ -115,17 +115,17 @@ export function TransactionForm({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
+          className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-md"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
-            <h3 className="text-lg font-semibold text-navy-900 dark:text-white">
+          <div className="flex items-center justify-between p-6 border-b border-navy-700">
+            <h3 className="text-lg font-semibold text-white">
               Add Transaction
             </h3>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
+              className="p-1 hover:bg-navy-700 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-navy-500" />
             </button>
@@ -135,13 +135,13 @@ export function TransactionForm({
           <div className="p-6 space-y-4">
             {/* Currency / Certificate Type */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 {useEur ? 'Currency' : 'Certificate Type'} *
               </label>
               {useEur ? (
                 <div className="flex">
-                  <div className="p-3 rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-center w-full">
-                    <Euro className="w-5 h-5 mx-auto mb-1 text-emerald-600 dark:text-emerald-400" />
+                  <div className="p-3 rounded-lg border-2 border-emerald-500 bg-emerald-900/20 text-center w-full">
+                    <Euro className="w-5 h-5 mx-auto mb-1 text-emerald-400" />
                     <span className="text-sm font-medium">EUR</span>
                   </div>
                 </div>
@@ -154,8 +154,8 @@ export function TransactionForm({
                         'p-3 rounded-lg border-2 transition-all text-center',
                         !showEua && 'w-full',
                         certificateType === 'CEA'
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-navy-200 dark:border-navy-700 hover:border-navy-300'
+                          ? 'border-amber-500 bg-amber-900/20'
+                          : 'border-navy-700 hover:border-navy-300'
                       )}
                     >
                       <Leaf
@@ -174,8 +174,8 @@ export function TransactionForm({
                         'p-3 rounded-lg border-2 transition-all text-center',
                         !showCea && 'w-full',
                         certificateType === 'EUA'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-navy-200 dark:border-navy-700 hover:border-navy-300'
+                          ? 'border-blue-500 bg-blue-900/20'
+                          : 'border-navy-700 hover:border-navy-300'
                       )}
                     >
                       <Wind
@@ -193,7 +193,7 @@ export function TransactionForm({
 
             {/* Transaction Type */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Transaction Type *
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -202,8 +202,8 @@ export function TransactionForm({
                   className={cn(
                     'p-3 rounded-lg border-2 transition-all text-center',
                     transactionType === 'deposit'
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-navy-200 dark:border-navy-700 hover:border-navy-300'
+                      ? 'border-emerald-500 bg-emerald-900/20'
+                      : 'border-navy-700 hover:border-navy-300'
                   )}
                 >
                   <ArrowUpCircle
@@ -219,8 +219,8 @@ export function TransactionForm({
                   className={cn(
                     'p-3 rounded-lg border-2 transition-all text-center',
                     transactionType === 'withdrawal'
-                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                      : 'border-navy-200 dark:border-navy-700 hover:border-navy-300'
+                      ? 'border-red-500 bg-red-900/20'
+                      : 'border-navy-700 hover:border-navy-300'
                   )}
                 >
                   <ArrowDownCircle
@@ -235,12 +235,12 @@ export function TransactionForm({
             </div>
 
             {/* Current Balance Info */}
-            <div className="p-3 rounded-lg bg-navy-50 dark:bg-navy-900/50">
+            <div className="p-3 rounded-lg bg-navy-900/50">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-navy-600 dark:text-navy-400">
+                <span className="text-navy-400">
                   Current {useEur ? 'EUR' : certificateType} Balance:
                 </span>
-                <span className="font-mono font-semibold text-navy-900 dark:text-white">
+                <span className="font-mono font-semibold text-white">
                   {useEur ? formatCurrency(currentBalance, 'EUR') : formatCertificateQuantity(currentBalance)}
                 </span>
               </div>
@@ -265,7 +265,7 @@ export function TransactionForm({
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Notes <span className="text-navy-400">(optional)</span>
               </label>
               <textarea
@@ -273,7 +273,7 @@ export function TransactionForm({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add transaction notes..."
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
               />
             </div>
 
@@ -284,7 +284,7 @@ export function TransactionForm({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-navy-200 dark:border-navy-700">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-navy-700">
             <Button variant="ghost" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>

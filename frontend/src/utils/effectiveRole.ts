@@ -4,6 +4,9 @@ import type { User, UserRole } from '../types';
 export const USER_ROLES: UserRole[] = [
   'ADMIN',
   'MM',
+  'PREINTRODUCER',
+  'TRODUCER',
+  'INTRODUCER',
   'NDA',
   'REJECTED',
   'KYC',

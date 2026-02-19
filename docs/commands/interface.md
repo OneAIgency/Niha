@@ -68,7 +68,11 @@ When creating or reviewing components, verify:
 
 **Admin role simulation floater:** Fixed bottom-right, z-index below modals (e.g. `z-40`). Design tokens only (navy, emerald focus); light/dark support. `aria-label` on the control group and on the select. See `app_truth.md` §8–9 and `frontend/src/components/admin/RoleSimulationFloater.tsx`.
 
-**Settings pages:** Platform Settings (e.g. Price Scraping Sources, Mail & Authentication) use the same Card/Input patterns and design tokens; each section is wrapped in `.card_back` or `<Card />`. No hard-coded colors; use navy/emerald/amber/blue/red tokens per the design system.
+**Settings pages:** Platform Settings (e.g. Price Scraping Sources, Mail & Authentication) use the same Card/Input patterns and design tokens; each section is wrapped in `.card_back` or `<Card />`. No hard-coded colors; use navy/emerald/amber/blue/red tokens per the design system. For table row actions (Edit, Delete, Test, etc.) use an **ActionsDropdown** (ellipsis button opening a menu); the dropdown must close on click-outside and on Escape. See `frontend/docs/DESIGN_SYSTEM.md` § Inputs → ActionsDropdown.
+
+**Cash Market – Recent Trades (Ticker & ACTIVITY):** Both use the same list (`recentTrades` from `useCashMarket`). Use **emerald** for BUY and **red** for SELL (no slate/gray). In ACTIVITY, show relative time with full UTC timestamp on hover (e.g. via `formatFullTimestamp`). Use `flex flex-col gap-2` for consistent spacing between activity rows.
+
+**Cash Market Pro layout & CEA Price chart:** Page order: Ticker → InlineOrderForm → Order book → grid (ACTIVITY | CEA Price chart). Chart container uses the same pattern as ACTIVITY: `bg-navy-900 rounded border border-navy-700 overflow-hidden`, header with icon (e.g. TrendingUp) and title. CEA Price chart (CEAPriceChart) uses **lightweight-charts** (navy background, emerald series, grid); fetches GET /cash-market/trades/CEA?limit=100 and updates on `nihao:tradeExecuted`, applying only trades with `certificateType === 'CEA'`. See `frontend/docs/DESIGN_SYSTEM.md` and `app_truth.md` §8.
 
 ## Output
 

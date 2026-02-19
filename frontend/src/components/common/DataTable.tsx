@@ -67,7 +67,7 @@ export function DataTable<T extends Record<string, unknown>>({
       <div className={cn(containerClass, className)}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-navy-100 dark:border-navy-700/50">
+            <tr className="border-b border-navy-700/50">
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -105,7 +105,7 @@ export function DataTable<T extends Record<string, unknown>>({
       <div className={cn(containerClass, className)}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-navy-100 dark:border-navy-700/50">
+            <tr className="border-b border-navy-700/50">
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -134,7 +134,7 @@ export function DataTable<T extends Record<string, unknown>>({
     <div className={cn(containerClass, className)}>
       <table className="w-full text-sm">
         <thead className={stickyHeader ? 'sticky top-0 bg-inherit z-10' : ''}>
-          <tr className="border-b border-navy-100 dark:border-navy-700/50">
+          <tr className="border-b border-navy-700/50">
             {columns.map((col, i) => (
               <th
                 key={i}

@@ -125,10 +125,10 @@ export function PendingDepositsTab({
           className="mb-6"
         >
           <Card>
-            <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <Shield className="w-5 h-5 text-blue-500" />
               AML Hold - Awaiting Approval
-              <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm rounded-full">
+              <span className="ml-2 px-2 py-0.5 bg-blue-900/30 text-blue-400 text-sm rounded-full">
                 {onHoldDeposits.length}
               </span>
             </h2>
@@ -152,43 +152,43 @@ export function PendingDepositsTab({
                     className={cn(
                       "p-4 rounded-xl border",
                       expired
-                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
-                        : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                        ? "bg-emerald-900/20 border-emerald-800"
+                        : "bg-blue-900/20 border-blue-800"
                     )}
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                          <h3 className="font-semibold text-white">
                             {deposit.entityName}
                           </h3>
                           <ClientStatusBadge role={deposit.userRole} />
                           {expired && (
-                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs rounded-full">
+                            <span className="px-2 py-0.5 bg-emerald-900/50 text-emerald-400 text-xs rounded-full">
                               Ready to Clear
                             </span>
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Amount:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Amount:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               {deposit.amount ? formatCurrency(Number(deposit.amount)) : 'N/A'} {deposit.currency || 'EUR'}
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{deposit.userEmail}</span>
+                            <span className="text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-200">{deposit.userEmail}</span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Confirmed:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{confirmedDate}</span>
+                            <span className="text-navy-400">Confirmed:</span>
+                            <span className="ml-2 text-navy-200">{confirmedDate}</span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Hold Status:</span>
+                            <span className="text-navy-400">Hold Status:</span>
                             <span className={cn(
                               "ml-2 font-medium",
-                              expired ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                              expired ? "text-emerald-400" : "text-blue-400"
                             )}>
                               {getHoldTimeRemaining(holdExpiresAtValue)}
                             </span>
@@ -241,17 +241,17 @@ export function PendingDepositsTab({
         animate={{ opacity: 1, y: 0 }}
       >
         <Card>
-          <h2 className="text-xl font-bold text-navy-900 dark:text-white mb-6 flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-navy-600 dark:text-navy-400" />
+          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <Banknote className="w-5 h-5 text-navy-400" />
             Pending Deposits
           </h2>
 
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl">
-                  <div className="h-5 bg-navy-100 dark:bg-navy-600 rounded w-1/3 mb-3" />
-                  <div className="h-4 bg-navy-100 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="animate-pulse p-4 bg-navy-700/50 rounded-xl">
+                  <div className="h-5 bg-navy-600 rounded w-1/3 mb-3" />
+                  <div className="h-4 bg-navy-600 rounded w-1/2" />
                 </div>
               ))}
             </div>
@@ -260,27 +260,27 @@ export function PendingDepositsTab({
               {pendingDeposits.map((deposit) => (
                 <div
                   key={deposit.id}
-                  className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-3 bg-navy-700/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex-1 min-w-0">
                     {/* Primary: Entity + Amount highlighted */}
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
-                      <h3 className="font-semibold text-navy-900 dark:text-white">
+                      <h3 className="font-semibold text-white">
                         {deposit.entityName}
                       </h3>
                       <ClientStatusBadge role={deposit.userRole} />
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                      <span className="text-lg font-bold text-emerald-400 tabular-nums">
                         {deposit.reportedAmount ? formatCurrency(deposit.reportedAmount) : 'N/A'} {deposit.reportedCurrency || 'EUR'}
                       </span>
                     </div>
                     {/* Secondary: User, refs - compact */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-navy-500 dark:text-navy-400">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-navy-400">
                       <span className="truncate">{deposit.userEmail}</span>
-                      <span className="font-mono text-navy-600 dark:text-navy-300">{deposit.bankReference}</span>
+                      <span className="font-mono text-navy-300">{deposit.bankReference}</span>
                       {deposit.wireReference && (
-                        <span className="font-mono text-navy-500 dark:text-navy-400">Wire: {deposit.wireReference}</span>
+                        <span className="font-mono text-navy-400">Wire: {deposit.wireReference}</span>
                       )}
-                      <span className="flex items-center gap-1 text-navy-400 dark:text-navy-500">
+                      <span className="flex items-center gap-1 text-navy-500">
                         <Clock className="w-3 h-3 flex-shrink-0" />
                         {deposit.reportedAt ? formatRelativeTime(deposit.reportedAt) : formatRelativeTime(deposit.createdAt)}
                       </span>
@@ -292,7 +292,7 @@ export function PendingDepositsTab({
                       size="sm"
                       onClick={() => onReject(deposit.id)}
                       loading={actionLoading === `reject-${deposit.id}`}
-                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="text-red-500 hover:bg-red-900/20"
                     >
                       <XCircle className="w-4 h-4" />
                       Reject
@@ -313,7 +313,7 @@ export function PendingDepositsTab({
           ) : (
             <div className="text-center py-12">
               <CheckCircle className="w-12 h-12 text-navy-400 mx-auto mb-4" />
-              <p className="text-navy-500 dark:text-navy-400">No pending deposits</p>
+              <p className="text-navy-400">No pending deposits</p>
               <p className="text-xs text-navy-400 mt-1">All deposits have been processed</p>
             </div>
           )}
@@ -326,11 +326,11 @@ export function PendingDepositsTab({
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
+            className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-md"
           >
-            <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
-              <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-navy-600 dark:text-navy-400" />
+            <div className="flex items-center justify-between p-4 border-b border-navy-700">
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-navy-400" />
                 Confirm Deposit
               </h3>
               <button
@@ -339,7 +339,7 @@ export function PendingDepositsTab({
                   setConfirmAmount('');
                   setConfirmNotes('');
                 }}
-                className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+                className="text-navy-400 hover:text-navy-200"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
@@ -347,20 +347,20 @@ export function PendingDepositsTab({
             </div>
             <div className="p-4 space-y-4">
               {/* Entity/User Info */}
-              <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-                <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
-                <p className="font-semibold text-navy-900 dark:text-white">{confirmDepositModal.entityName}</p>
+              <div className="p-3 bg-navy-700/50 rounded-lg">
+                <p className="text-sm text-navy-400">Entity</p>
+                <p className="font-semibold text-white">{confirmDepositModal.entityName}</p>
                 <p className="text-xs text-navy-400 mt-1">{confirmDepositModal.userEmail}</p>
               </div>
 
               {/* Reported Amount (for reference) */}
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <p className="text-sm text-amber-700 dark:text-amber-400">Reported by User</p>
-                <p className="font-semibold text-amber-900 dark:text-amber-200">
+              <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-400">Reported by User</p>
+                <p className="font-semibold text-amber-200">
                   {confirmDepositModal.reportedAmount ? formatCurrency(confirmDepositModal.reportedAmount) : 'N/A'} {confirmDepositModal.reportedCurrency || ''}
                 </p>
                 {confirmDepositModal.wireReference && (
-                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1 font-mono">
+                  <p className="text-xs text-amber-500 mt-1 font-mono">
                     Wire Ref: {confirmDepositModal.wireReference}
                   </p>
                 )}
@@ -368,12 +368,12 @@ export function PendingDepositsTab({
 
               {/* Validation Error Display */}
               {validationError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700 dark:text-red-400 flex-1">{validationError}</p>
+                <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-400 flex-1">{validationError}</p>
                   <button
                     onClick={() => setValidationError(null)}
-                    className="text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                    className="text-red-400 hover:text-red-300"
                     aria-label="Dismiss error"
                   >
                     <X className="w-4 h-4" />
@@ -383,7 +383,7 @@ export function PendingDepositsTab({
 
               {/* Actual Amount Input */}
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Actual Amount Received *
                 </label>
                 <NumberInput
@@ -398,13 +398,13 @@ export function PendingDepositsTab({
                   aria-describedby={validationError ? 'amount-error' : undefined}
                   className={cn(
                     validationError
-                      ? "border-red-300 dark:border-red-700 focus:ring-red-500"
+                      ? "border-red-700 focus:ring-red-500"
                       : ""
                   )}
                   required
                 />
                 {validationError && (
-                  <p id="amount-error" className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+                  <p id="amount-error" className="mt-1 text-xs text-red-400" role="alert">
                     {validationError}
                   </p>
                 )}
@@ -412,7 +412,7 @@ export function PendingDepositsTab({
 
               {/* Currency Select */}
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Currency *
                 </label>
                 <select
@@ -429,7 +429,7 @@ export function PendingDepositsTab({
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Notes (optional)
                 </label>
                 <textarea
@@ -437,16 +437,16 @@ export function PendingDepositsTab({
                   onChange={(e) => setConfirmNotes(e.target.value)}
                   placeholder="Add any notes..."
                   rows={2}
-                  className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                  className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
               </div>
 
               {/* Info about what happens */}
-              <div className="p-3 bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800 rounded-lg text-sm">
-                <p className="text-navy-700 dark:text-navy-300">
+              <div className="p-3 bg-navy-900/20 border border-navy-800 rounded-lg text-sm">
+                <p className="text-navy-300">
                   Confirming this deposit will:
                 </p>
-                <ul className="text-navy-600 dark:text-navy-400 text-xs mt-1 list-disc list-inside">
+                <ul className="text-navy-400 text-xs mt-1 list-disc list-inside">
                   <li>Update the entity balance</li>
                   <li>Upgrade the user to FUNDED status</li>
                   <li>Grant Cash Market access</li>
@@ -487,10 +487,10 @@ export function PendingDepositsTab({
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-md"
+            className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-md"
           >
-            <div className="flex items-center justify-between p-4 border-b border-navy-200 dark:border-navy-700">
-              <h3 className="font-semibold text-navy-900 dark:text-white flex items-center gap-2">
+            <div className="flex items-center justify-between p-4 border-b border-navy-700">
+              <h3 className="font-semibold text-white flex items-center gap-2">
                 <Shield className="w-5 h-5 text-emerald-500" />
                 Clear AML Hold
               </h3>
@@ -500,7 +500,7 @@ export function PendingDepositsTab({
                   setClearNotes('');
                   setForceClear(false);
                 }}
-                className="text-navy-400 hover:text-navy-600 dark:hover:text-navy-200"
+                className="text-navy-400 hover:text-navy-200"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
@@ -508,28 +508,28 @@ export function PendingDepositsTab({
             </div>
             <div className="p-4 space-y-4">
               {/* Entity/User Info */}
-              <div className="p-3 bg-navy-50 dark:bg-navy-700/50 rounded-lg">
-                <p className="text-sm text-navy-500 dark:text-navy-400">Entity</p>
-                <p className="font-semibold text-navy-900 dark:text-white">{clearDepositModal.entityName}</p>
+              <div className="p-3 bg-navy-700/50 rounded-lg">
+                <p className="text-sm text-navy-400">Entity</p>
+                <p className="font-semibold text-white">{clearDepositModal.entityName}</p>
                 <p className="text-xs text-navy-400 mt-1">{clearDepositModal.userEmail}</p>
               </div>
 
               {/* Amount */}
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">Amount to Clear</p>
-                <p className="font-semibold text-emerald-900 dark:text-emerald-200 text-xl">
+              <div className="p-3 bg-emerald-900/20 border border-emerald-800 rounded-lg">
+                <p className="text-sm text-emerald-400">Amount to Clear</p>
+                <p className="font-semibold text-emerald-200 text-xl">
                   {clearDepositModal.amount ? formatCurrency(Number(clearDepositModal.amount)) : 'N/A'} {clearDepositModal.currency || 'EUR'}
                 </p>
               </div>
 
               {/* Force clear warning */}
               {forceClear && !isHoldExpired(clearDepositModal.holdExpiresAt) && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                  <p className="text-sm text-amber-400 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     Hold period has not expired yet
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                  <p className="text-xs text-amber-500 mt-1">
                     {getHoldTimeRemaining(clearDepositModal.holdExpiresAt)}
                   </p>
                 </div>
@@ -537,7 +537,7 @@ export function PendingDepositsTab({
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Admin Notes (optional)
                 </label>
                 <textarea
@@ -545,16 +545,16 @@ export function PendingDepositsTab({
                   onChange={(e) => setClearNotes(e.target.value)}
                   placeholder="Add any notes..."
                   rows={2}
-                  className="w-full px-4 py-2 rounded-lg border border-navy-200 dark:border-navy-600 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                  className="w-full px-4 py-2 rounded-lg border border-navy-600 bg-navy-900 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
               </div>
 
               {/* Info about what happens */}
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm">
-                <p className="text-emerald-700 dark:text-emerald-300">
+              <div className="p-3 bg-emerald-900/20 border border-emerald-800 rounded-lg text-sm">
+                <p className="text-emerald-300">
                   Clearing this deposit will:
                 </p>
-                <ul className="text-emerald-600 dark:text-emerald-400 text-xs mt-1 list-disc list-inside">
+                <ul className="text-emerald-400 text-xs mt-1 list-disc list-inside">
                   <li>Credit funds to entity balance</li>
                   <li>Upgrade users from AML to CEA status</li>
                   <li>Grant full trading access</li>

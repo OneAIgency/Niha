@@ -249,7 +249,7 @@ export function FundingPage() {
       <div>
         {/* Show Funding content */}
         {activeSection === 'funding' && (
-          <div className="page-container py-8 space-y-6">
+          <div className="page-container py-6 space-y-6">
             {/* Current Balance (if any) */}
             {balance && balance.balanceAmount > 0 && (
               <motion.div

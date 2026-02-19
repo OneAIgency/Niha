@@ -87,23 +87,23 @@ export function OrderBookLiquiditySummary({
     <>
       {/* Bid Totals - Modern styled card */}
       <div 
-        className="flex-1 flex flex-col gap-3 px-4 py-3 bg-gradient-to-br from-emerald-50/50 to-transparent dark:from-emerald-900/10 dark:to-transparent rounded-xl border border-emerald-100 dark:border-emerald-900/30"
+        className="flex-1 flex flex-col gap-3 px-4 py-3 bg-gradient-to-br from-emerald-900/10 to-transparent rounded-xl border border-emerald-900/30"
         aria-label={`Total bids: ${bidVolumeFormatted} certificates, ${bidValueFormatted} euros`}
         role="region"
       >
-        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wide">
+        <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">
           TOTAL BIDS
         </span>
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2" aria-label={`${bidVolumeFormatted} certificates`}>
-            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" aria-hidden="true" />
-            <span className="text-lg font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+            <FileText className="w-4 h-4 text-emerald-400 flex-shrink-0" aria-hidden="true" />
+            <span className="text-lg font-mono font-bold text-white tabular-nums">
               {bidVolumeFormatted}
             </span>
           </div>
           <div className="flex items-center gap-2" aria-label={`${bidValueFormatted} euros`}>
-            <Euro className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" aria-hidden="true" />
-            <span className="text-base font-mono font-semibold text-navy-700 dark:text-navy-300 tabular-nums">
+            <Euro className="w-4 h-4 text-emerald-400 flex-shrink-0" aria-hidden="true" />
+            <span className="text-base font-mono font-semibold text-navy-300 tabular-nums">
               {bidValueFormatted}
             </span>
           </div>
@@ -112,23 +112,23 @@ export function OrderBookLiquiditySummary({
 
       {/* Ask Totals - Modern styled card */}
       <div 
-        className="flex-1 flex flex-col gap-3 px-4 py-3 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/10 dark:to-transparent rounded-xl border border-red-100 dark:border-red-900/30"
+        className="flex-1 flex flex-col gap-3 px-4 py-3 bg-gradient-to-br from-red-900/10 to-transparent rounded-xl border border-red-900/30"
         aria-label={`Total asks: ${askVolumeFormatted} certificates, ${askValueFormatted} euros`}
         role="region"
       >
-        <span className="text-xs text-red-600 dark:text-red-400 font-semibold uppercase tracking-wide">
+        <span className="text-xs text-red-400 font-semibold uppercase tracking-wide">
           TOTAL ASKS
         </span>
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2" aria-label={`${askVolumeFormatted} certificates`}>
-            <FileText className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" aria-hidden="true" />
-            <span className="text-lg font-mono font-bold text-navy-900 dark:text-white tabular-nums">
+            <FileText className="w-4 h-4 text-red-400 flex-shrink-0" aria-hidden="true" />
+            <span className="text-lg font-mono font-bold text-white tabular-nums">
               {askVolumeFormatted}
             </span>
           </div>
           <div className="flex items-center gap-2" aria-label={`${askValueFormatted} euros`}>
-            <Euro className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" aria-hidden="true" />
-            <span className="text-base font-mono font-semibold text-navy-700 dark:text-navy-300 tabular-nums">
+            <Euro className="w-4 h-4 text-red-400 flex-shrink-0" aria-hidden="true" />
+            <span className="text-base font-mono font-semibold text-navy-300 tabular-nums">
               {askValueFormatted}
             </span>
           </div>
@@ -138,7 +138,7 @@ export function OrderBookLiquiditySummary({
       {/* Depth Chart */}
       {showDepthChart && bids.length > 0 && asks.length > 0 && (
         <Card className="rounded-2xl" padding="none">
-          <div className="px-4 pb-3 border-t border-navy-200 dark:border-navy-700 pt-3">
+          <div className="px-4 pb-3 border-t border-navy-700 pt-3">
             <DepthChart bids={bids} asks={asks} />
           </div>
         </Card>

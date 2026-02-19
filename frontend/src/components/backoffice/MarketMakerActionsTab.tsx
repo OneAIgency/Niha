@@ -76,7 +76,7 @@ export function MarketMakerActionsTab() {
       header: 'Ticket ID',
       width: '140px',
       render: (value) => (
-        <code className="text-xs font-mono text-navy-900 dark:text-white">
+        <code className="text-xs font-mono text-white">
           {String(value)}
         </code>
       ),
@@ -96,7 +96,7 @@ export function MarketMakerActionsTab() {
       header: 'Action Type',
       width: '200px',
       render: (value) => (
-        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+        <span className="text-xs font-medium text-emerald-300">
           {String(value)}
         </span>
       ),
@@ -106,7 +106,7 @@ export function MarketMakerActionsTab() {
       header: 'Entity',
       width: '120px',
       render: (value) => (
-        <span className="text-xs text-navy-600 dark:text-navy-400">
+        <span className="text-xs text-navy-400">
           {String(value)}
         </span>
       ),
@@ -120,8 +120,8 @@ export function MarketMakerActionsTab() {
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
             String(value) === 'SUCCESS'
-              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              ? 'bg-emerald-900/30 text-emerald-400'
+              : 'bg-red-900/30 text-red-400'
           }`}
         >
           {String(value)}
@@ -135,7 +135,7 @@ export function MarketMakerActionsTab() {
       render: (value) => (
         <div className="flex items-center gap-2">
           <Bot className="w-3 h-3 text-emerald-500" />
-          <code className="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+          <code className="text-xs font-mono text-emerald-400">
             {value ? String(value).substring(0, 8) + '...' : '—'}
           </code>
         </div>
@@ -147,11 +147,11 @@ export function MarketMakerActionsTab() {
       width: '100px',
       render: (value) =>
         value ? (
-          <code className="text-xs font-mono text-navy-600 dark:text-navy-400">
+          <code className="text-xs font-mono text-navy-400">
             {String(value).substring(0, 8)}...
           </code>
         ) : (
-          <span className="text-xs text-navy-400 dark:text-navy-600">—</span>
+          <span className="text-xs text-navy-600">—</span>
         ),
     },
   ];
@@ -159,17 +159,17 @@ export function MarketMakerActionsTab() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+      <div className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 rounded-lg p-4 border border-emerald-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <Bot className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-2 rounded-lg bg-emerald-900/30">
+              <Bot className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-navy-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-white">
                 Market Maker Actions
               </h3>
-              <p className="text-xs text-navy-600 dark:text-navy-400">
+              <p className="text-xs text-navy-400">
                 All actions involving market makers
               </p>
             </div>
@@ -184,7 +184,7 @@ export function MarketMakerActionsTab() {
             Refresh
           </Button>
         </div>
-        <div className="mt-3 text-sm text-navy-600 dark:text-navy-400">
+        <div className="mt-3 text-sm text-navy-400">
           Showing {tickets.length} of {total.toLocaleString()} market maker actions
         </div>
       </div>
@@ -195,7 +195,7 @@ export function MarketMakerActionsTab() {
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-navy-800 rounded-lg border border-navy-200 dark:border-navy-700">
+      <div className="bg-navy-800 rounded-lg border border-navy-700">
         <DataTable
           columns={columns}
           data={tickets}
@@ -217,7 +217,7 @@ export function MarketMakerActionsTab() {
           >
             Previous
           </Button>
-          <span className="text-sm text-navy-600 dark:text-navy-400">
+          <span className="text-sm text-navy-400">
             Page {Math.floor(offset / limit) + 1} of {Math.ceil(total / limit)}
           </span>
           <Button

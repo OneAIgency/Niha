@@ -51,10 +51,11 @@ interface IPLookupResult {
   as: string;
 }
 
-type OnboardingSubpage = 'requests' | 'kyc' | 'deposits' | 'aml' | 'settlements';
+type OnboardingSubpage = 'requests' | 'introducer' | 'kyc' | 'deposits' | 'aml' | 'settlements';
 
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
   { path: 'requests', label: 'Contact Requests', icon: Users },
+  { path: 'introducer', label: 'Introducer', icon: Users },
   { path: 'kyc', label: 'KYC Review', icon: FileText },
   { path: 'deposits', label: 'Deposits', icon: Banknote },
   { path: 'aml', label: 'AML', icon: Shield },
@@ -63,6 +64,7 @@ const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React
 
 function getOnboardingSubpage(pathname: string): OnboardingSubpage {
   if (pathname.endsWith('/kyc') || pathname.includes('/onboarding/kyc')) return 'kyc';
+  if (pathname.endsWith('/introducer') || pathname.includes('/onboarding/introducer')) return 'introducer';
   if (pathname.endsWith('/deposits') || pathname.includes('/onboarding/deposits')) return 'deposits';
   if (pathname.endsWith('/aml') || pathname.includes('/onboarding/aml')) return 'aml';
   if (pathname.endsWith('/settlements') || pathname.includes('/onboarding/settlements')) return 'settlements';
@@ -93,6 +95,11 @@ export function BackofficeOnboardingPage() {
     ndaFileName: r.ndaFileName,
     submitterIp: r.submitterIp,
     userRole: ('userRole' in r ? r.userRole : (r as { status?: string }).status) ?? 'new',
+    requestFlow: (r as { requestFlow?: string }).requestFlow ?? 'buyer',
+    referredByUserId: (r as { referredByUserId?: string }).referredByUserId,
+    referralCodeUsed: (r as { referralCodeUsed?: string }).referralCodeUsed,
+    introducerNdaStatus: (r as { introducerNdaStatus?: 'not_sent' | 'sent' | 'uploaded' }).introducerNdaStatus,
+    introducerUserId: (r as { introducerUserId?: string }).introducerUserId,
     notes: r.notes,
     createdAt: r.createdAt,
   }));
@@ -100,7 +107,8 @@ export function BackofficeOnboardingPage() {
   const contactRequests: ContactRequest[] = allMapped.filter(r =>
     isPendingContactRequest(r.userRole)
   );
-  const contactRequestsCount = contactRequests.length;
+  const introducerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow === 'introducer');
+  const buyerRequests: ContactRequest[] = contactRequests.filter(r => r.requestFlow !== 'introducer');
 
   const [kycUsers, setKycUsers] = useState<KYCUser[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KYCDocument[]>([]);
@@ -213,6 +221,22 @@ export function BackofficeOnboardingPage() {
     }
   };
 
+  const handleOpenUserNDA = async (userId: string) => {
+    setActionLoading(`open-user-nda-${userId}`);
+    try {
+      await adminApi.openUserNDAInBrowser(userId);
+    } catch (err) {
+      logger.error('Failed to open user NDA', err);
+      setError(
+        err instanceof Error && err.message === 'POPUP_BLOCKED'
+          ? 'Allow pop-ups for this site and try again.'
+          : 'Failed to open NDA file'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleIpLookup = async (ip: string) => {
     if (!ip || ip === 'null' || ip === 'None') {
       setError('Invalid IP address');
@@ -245,6 +269,32 @@ export function BackofficeOnboardingPage() {
 
   const handleApproveRequest = async () => {
     refreshContactRequests();
+  };
+
+  const handleSendNDA = async (requestId: string) => {
+    setActionLoading(`send-nda-${requestId}`);
+    try {
+      await adminApi.sendIntroducerNDA(requestId);
+      refreshContactRequests();
+    } catch (err) {
+      logger.error('Failed to send NDA', err);
+      setError('Failed to send NDA to introducer');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveIntroducer = async (userId: string) => {
+    setActionLoading(`approve-introducer-${userId}`);
+    try {
+      await adminApi.approveIntroducerNDA(userId);
+      refreshContactRequests();
+    } catch (err) {
+      logger.error('Failed to approve introducer', err);
+      setError('Failed to approve introducer');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDeleteRequest = async (requestId: string) => {
@@ -414,7 +464,7 @@ export function BackofficeOnboardingPage() {
       {ONBOARDING_SUBPAGES.map(({ path, label, icon: Icon }) => {
         const to = `/backoffice/onboarding/${path}`;
         const isActive = activeSubpage === path;
-        const count = path === 'requests' ? contactRequestsCount : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : path === 'settlements' ? settlementBatches.length : pendingDeposits.length;
+        const count = path === 'requests' ? buyerRequests.length : path === 'introducer' ? introducerRequests.length : path === 'kyc' ? kycUsers.length : path === 'aml' ? amlDeposits.length : path === 'settlements' ? settlementBatches.length : pendingDeposits.length;
         return (
           <Link
             key={path}
@@ -490,7 +540,7 @@ export function BackofficeOnboardingPage() {
 
       {activeSubpage === 'requests' && (
         <ContactRequestsTab
-          contactRequests={contactRequests}
+          contactRequests={buyerRequests}
           loading={loading}
           connectionStatus={connectionStatus}
           onRefresh={handleRefresh}
@@ -498,7 +548,26 @@ export function BackofficeOnboardingPage() {
           onReject={handleRejectRequest}
           onDelete={handleDeleteRequest}
           onOpenNDA={handleOpenNDA}
+          onOpenUserNDA={handleOpenUserNDA}
           onIpLookup={handleIpLookup}
+          actionLoading={actionLoading}
+        />
+      )}
+
+      {activeSubpage === 'introducer' && (
+        <ContactRequestsTab
+          contactRequests={introducerRequests}
+          loading={loading}
+          connectionStatus={connectionStatus}
+          onRefresh={handleRefresh}
+          onApprove={handleApproveRequest}
+          onReject={handleRejectRequest}
+          onDelete={handleDeleteRequest}
+          onOpenNDA={handleOpenNDA}
+          onOpenUserNDA={handleOpenUserNDA}
+          onIpLookup={handleIpLookup}
+          onSendNDA={handleSendNDA}
+          onApproveIntroducer={handleApproveIntroducer}
           actionLoading={actionLoading}
         />
       )}
@@ -532,7 +601,7 @@ export function BackofficeOnboardingPage() {
         <Card>
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-white">
               AML Review Queue
             </h2>
             <Badge variant="warning" className="ml-2">
@@ -543,14 +612,14 @@ export function BackofficeOnboardingPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="animate-pulse p-4 bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-600 rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : amlDeposits.length === 0 ? (
-            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+            <div className="text-center py-12 text-navy-400">
               <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No deposits pending AML review</p>
             </div>
@@ -567,12 +636,12 @@ export function BackofficeOnboardingPage() {
                 return (
                   <div
                     key={deposit.id}
-                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                    className="p-4 bg-navy-700/50 rounded-xl border border-navy-700"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                          <h3 className="font-semibold text-white">
                             {entityName}
                           </h3>
                           <Badge variant="warning">AML Hold</Badge>
@@ -582,19 +651,19 @@ export function BackofficeOnboardingPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Amount:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Amount:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               €{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {currency}
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">{userEmail}</span>
+                            <span className="text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-200">{userEmail}</span>
                           </div>
                           {holdExpiresAt && (
                             <div className="flex items-center gap-1">
                               <Timer className="w-4 h-4 text-navy-400" />
-                              <span className="text-navy-500 dark:text-navy-400">Hold expires:</span>
+                              <span className="text-navy-400">Hold expires:</span>
                               <span className={`ml-1 font-medium ${isExpired ? 'text-emerald-600' : 'text-amber-600'}`}>
                                 {isExpired ? 'Expired' : new Date(holdExpiresAt).toLocaleDateString()}
                               </span>
@@ -639,7 +708,7 @@ export function BackofficeOnboardingPage() {
         <Card>
           <div className="flex items-center gap-2 mb-6">
             <Timer className="w-5 h-5 text-emerald-500" />
-            <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-white">
               Settlement Queue
             </h2>
             <Badge variant="info" className="ml-2">
@@ -650,14 +719,14 @@ export function BackofficeOnboardingPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse p-4 bg-navy-100 dark:bg-navy-700 rounded-xl">
-                  <div className="h-4 bg-navy-200 dark:bg-navy-600 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-navy-200 dark:bg-navy-600 rounded w-1/2" />
+                <div key={i} className="animate-pulse p-4 bg-navy-700 rounded-xl">
+                  <div className="h-4 bg-navy-600 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-navy-600 rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : settlementBatches.length === 0 ? (
-            <div className="text-center py-12 text-navy-500 dark:text-navy-400">
+            <div className="text-center py-12 text-navy-400">
               <Timer className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No settlements pending</p>
             </div>
@@ -683,12 +752,12 @@ export function BackofficeOnboardingPage() {
                 return (
                   <div
                     key={batch.id}
-                    className="p-4 bg-navy-50 dark:bg-navy-700/50 rounded-xl border border-navy-200 dark:border-navy-600"
+                    className="p-4 bg-navy-700/50 rounded-xl border border-navy-700"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-navy-900 dark:text-white">
+                          <h3 className="font-semibold text-white">
                             {batch.entityName}
                           </h3>
                           <Badge variant={typeVariant}>{typeLabel}</Badge>
@@ -703,20 +772,20 @@ export function BackofficeOnboardingPage() {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Quantity:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Quantity:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               {batch.quantity.toLocaleString()} tCO₂
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">Value:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200 font-semibold">
+                            <span className="text-navy-400">Value:</span>
+                            <span className="ml-2 text-navy-200 font-semibold">
                               €{batch.totalValueEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </span>
                           </div>
                           <div>
-                            <span className="text-navy-500 dark:text-navy-400">User:</span>
-                            <span className="ml-2 text-navy-700 dark:text-navy-200">
+                            <span className="text-navy-400">User:</span>
+                            <span className="ml-2 text-navy-200">
                               {batch.userEmail ?? '—'}
                             </span>
                           </div>

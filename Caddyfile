@@ -1,0 +1,14 @@
+platonos.mooo.com {
+    # Frontend
+    reverse_proxy localhost:5173
+
+    # Backend API
+    handle /api/* {
+        reverse_proxy localhost:8000
+    }
+
+    # WebSocket support
+    handle /ws/* {
+        reverse_proxy localhost:8000
+    }
+}

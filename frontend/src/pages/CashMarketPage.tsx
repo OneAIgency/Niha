@@ -165,7 +165,7 @@ export function CashMarketPage() {
         <div className="flex items-center gap-6">
           {/* Best Bid */}
           <div>
-            <span className="text-navy-600 dark:text-navy-400 mr-2">Best Bid</span>
+            <span className="text-navy-400 mr-2">Best Bid</span>
             <span className="font-bold font-mono text-emerald-400 text-lg">
               €{formatNumber(orderBook?.bestBid)}
             </span>
@@ -173,7 +173,7 @@ export function CashMarketPage() {
 
           {/* Best Ask */}
           <div>
-            <span className="text-navy-600 dark:text-navy-400 mr-2">Best Ask</span>
+            <span className="text-navy-400 mr-2">Best Ask</span>
             <span className="font-bold font-mono text-red-400 text-lg">
               €{formatNumber(orderBook?.bestAsk)}
             </span>
@@ -181,7 +181,7 @@ export function CashMarketPage() {
 
           {/* Spread */}
           <div>
-            <span className="text-navy-600 dark:text-navy-400 mr-2">Spread</span>
+            <span className="text-navy-400 mr-2">Spread</span>
             <span className="font-semibold font-mono text-navy-300">
               €{formatNumber(orderBook?.spread, 4)}
             </span>
@@ -211,11 +211,11 @@ export function CashMarketPage() {
       {/* Order Entry Overlay */}
       {isOrderPanelOpen && userBalances && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/70">
-          <div className="relative w-full max-w-5xl mx-4 bg-white dark:bg-navy-800 rounded-lg shadow-2xl">
+          <div className="relative w-full max-w-5xl mx-4 bg-navy-800 rounded-lg shadow-2xl">
             {/* Close Button */}
             <button
               onClick={() => setIsOrderPanelOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-100 dark:hover:bg-navy-700 text-navy-500"
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-navy-700 text-navy-500"
             >
               <X className="w-5 h-5" />
             </button>

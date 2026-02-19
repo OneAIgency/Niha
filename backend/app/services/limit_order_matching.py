@@ -16,7 +16,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_DOWN
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, select
@@ -28,6 +28,7 @@ from app.models.models import (
     Order,
     OrderSide,
     OrderStatus,
+    PriceHistory,
     TicketStatus,
 )
 from app.services.ticket_service import TicketService
@@ -43,6 +44,7 @@ class MatchResult:
     price: Decimal
     quantity: Decimal
     maker_is_buyer: bool  # True if the existing order (maker) was the buyer
+    executed_at: datetime
 
 
 @dataclass
@@ -170,6 +172,20 @@ class LimitOrderMatcher:
             db.add(trade)
             await db.flush()  # Get trade ID
 
+            # Persist trade price in price_history for chart data
+            db.add(PriceHistory(
+                certificate_type=incoming_order.certificate_type,
+                price=trade_price,
+                currency="EUR",
+                source="trade_execution",
+                recorded_at=trade.executed_at,
+            ))
+
+            # Commission tracking for the buyer side
+            if buy_order.entity_id:
+                from app.services.commission_service import maybe_create_commission
+                await maybe_create_commission(db, trade, buy_order.entity_id)
+
             # Create audit ticket for trade execution
             buy_ticket_id = getattr(buy_order, 'ticket_id', None)
             sell_ticket_id = getattr(sell_order, 'ticket_id', None)
@@ -223,12 +239,14 @@ class LimitOrderMatcher:
                 contra_order.status = OrderStatus.PARTIALLY_FILLED
 
             # Track match
+            exec_at = trade.executed_at
             matches.append(MatchResult(
                 trade_id=trade.id,
                 counterparty_order_id=contra_order.id,
                 price=trade_price,
                 quantity=match_qty,
                 maker_is_buyer=maker_is_buyer,
+                executed_at=exec_at,
             ))
 
             total_filled += match_qty
@@ -406,6 +424,20 @@ class LimitOrderMatcher:
                     executed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 db.add(trade)
+
+                # Persist trade price in price_history for chart data
+                db.add(PriceHistory(
+                    certificate_type=certificate_type,
+                    price=trade_price,
+                    currency="EUR",
+                    source="trade_execution",
+                    recorded_at=trade.executed_at,
+                ))
+
+                # Commission tracking for the buyer side
+                if buy_order.entity_id:
+                    from app.services.commission_service import maybe_create_commission
+                    await maybe_create_commission(db, trade, buy_order.entity_id)
 
                 # Update buy order
                 buy_order.filled_quantity = buy_order.filled_quantity + match_qty

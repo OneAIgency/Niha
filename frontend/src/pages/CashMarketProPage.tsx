@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,8 +14,12 @@ import { Subheader, Modal } from '../components/common';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi, usersApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
-import { formatCertificateQuantity } from '../utils';
+import { formatCertificateQuantity, formatRelativeTime } from '../utils';
 import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/InlineOrderForm';
+import { CEAPriceChart } from '../components/cash-market/CEAPriceChart';
+import { NewsIntelligenceFeed } from '../components/cash-market/NewsIntelligenceFeed';
+import { EnvironmentalImpact } from '../components/cash-market/EnvironmentalImpact';
+import { MarketPulseTimeline } from '../components/cash-market/MarketPulseTimeline';
 import type {
   OrderBookLevel,
   CashMarketTrade,
@@ -85,52 +89,49 @@ function ProfessionalOrderBook({
   const formatPrice = (price: number) => price.toFixed(1);
   const formatQuantity = (qty: number) => Math.round(qty).toLocaleString();
   const formatEur = (val: number) =>
-    val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
     <>
-      {/* Summary Row — text-xs (initial size); CEA volumes centered; larger gap between Bid and Ask */}
-      <div className="flex items-center gap-1 px-2 py-1 text-xs font-mono tabular-nums border-b border-navy-700">
-        {/* Left: Total Bid | Bid CEA vol (centered) | Bid price */}
-        <div className="flex-1 flex items-center gap-1">
-          <div className="text-left text-emerald-400 shrink-0">
-            €{totalBidEur.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {/* Summary Row */}
+      <div className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono tabular-nums border-b border-navy-700 whitespace-nowrap">
+        <div className="flex-1 flex items-center gap-1 overflow-hidden">
+          <div className="text-left text-emerald-400 shrink-0 truncate">
+            €{totalBidEur.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
-          <div className="flex-1 flex justify-center text-emerald-400">
+          <div className="flex-1 flex justify-center text-emerald-400 truncate">
             {formatQuantity(bidMaxCumQty)} CEA
           </div>
-          <div className="text-emerald-400 font-bold text-xl tabular-nums shrink-0">€{bestBid?.toFixed(1) || '—'}</div>
+          <div className="text-emerald-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(52,211,153,0.4)' }}>€{bestBid?.toFixed(1) || '—'}</div>
         </div>
-        {/* Center: larger margin between Bid and Ask */}
-        <div className="w-6 shrink-0" />
-        {/* Right: Ask price | Ask CEA vol (centered) | Total Ask */}
-        <div className="flex-1 flex items-center gap-1">
-          <div className="text-red-400 font-bold text-xl tabular-nums shrink-0">€{_bestAsk?.toFixed(1) || '—'}</div>
-          <div className="flex-1 flex justify-center text-red-400">
+        <div className="w-4 shrink-0" />
+        <div className="flex-1 flex items-center gap-1 overflow-hidden">
+          <div className="text-red-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(248,113,113,0.4)' }}>€{_bestAsk?.toFixed(1) || '—'}</div>
+          <div className="flex-1 flex justify-center text-red-400 truncate">
             {formatQuantity(askMaxCumQty)} CEA
           </div>
-          <div className="text-right text-red-400 shrink-0">
-            €{totalAskEur.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="text-right text-red-400 shrink-0 truncate">
+            €{totalAskEur.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>
 
-      {/* Column Headers — uniformly spaced columns */}
-      <div className="flex border-b border-navy-700">
-        <div className="flex-1 flex gap-1 px-2 py-1 text-xs text-navy-500">
-          <div className="flex-1 min-w-0">Cnt</div>
-          <div className="flex-1 min-w-0 text-right">Tot.Value €</div>
-          <div className="flex-1 min-w-0 text-right">Vol.Total</div>
-          <div className="flex-1 min-w-0 text-right">Volume</div>
-          <div className="flex-1 min-w-0 text-right">Bid</div>
+      {/* Column Headers */}
+      <div className="flex border-b border-navy-700 whitespace-nowrap">
+        <div className="flex-1 flex gap-1 px-2 py-1 text-[10px] text-navy-500">
+          <div className="flex-1 min-w-0 truncate">#</div>
+          <div className="flex-1 min-w-0 truncate text-right">Value</div>
+          <div className="flex-1 min-w-0 truncate text-right">CumVol</div>
+          <div className="flex-1 min-w-0 truncate text-right">Vol</div>
+          <div className="flex-1 min-w-0 truncate text-right">Bid</div>
         </div>
         <div className="w-px bg-navy-700 shrink-0" />
-        <div className="flex-1 flex gap-1 px-2 py-1 text-xs text-navy-500">
-          <div className="flex-1 min-w-0">Ask</div>
-          <div className="flex-1 min-w-0 text-right">Volume</div>
-          <div className="flex-1 min-w-0 text-right">Vol.Total</div>
-          <div className="flex-1 min-w-0 text-right">Tot.Value €</div>
-          <div className="flex-1 min-w-0 text-right">Cnt</div>
+        <div className="flex-1 flex gap-1 px-2 py-1 text-[10px] text-navy-500">
+          <div className="flex-1 min-w-0 truncate">Ask</div>
+          <div className="flex-1 min-w-0 truncate text-right">Vol</div>
+          <div className="flex-1 min-w-0 truncate text-right">CumVol</div>
+          <div className="flex-1 min-w-0 truncate text-right">Value</div>
+          <div className="flex-1 min-w-0 truncate text-right">#</div>
         </div>
       </div>
 
@@ -144,14 +145,14 @@ function ProfessionalOrderBook({
               <div
                 key={`bid-${idx}`}
                 onClick={() => onPriceClick?.(bid.price)}
-                className={`flex gap-1 px-2 py-1 text-xs font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 ${isEven ? 'bg-emerald-500/[0.125]' : 'bg-emerald-500/[0.075]'}`}
+                className={`flex gap-1 px-2 py-1 text-[11px] font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 whitespace-nowrap ${isEven ? 'bg-emerald-500/[0.125]' : 'bg-emerald-500/[0.075]'}`}
               >
                 <div className="absolute right-0 top-0 bottom-0 bg-emerald-500/20 transition-all" style={{ width: `${depthPct}%` }} />
-                <div className="relative z-10 flex-1 min-w-0 text-navy-400">{bid.orderCount}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatEur(bid.cumulativeValue)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatQuantity(bid.cumulativeQuantity)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white">{formatQuantity(bid.quantity)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-emerald-400">{formatPrice(bid.price)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-navy-400">{bid.orderCount}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatEur(bid.cumulativeValue)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatQuantity(bid.cumulativeQuantity)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white">{formatQuantity(bid.quantity)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-emerald-400">{formatPrice(bid.price)}</div>
               </div>
             );
           })}
@@ -175,14 +176,14 @@ function ProfessionalOrderBook({
               <div
                 key={`ask-${idx}`}
                 onClick={() => onPriceClick?.(ask.price)}
-                className={`flex gap-1 px-2 py-1 text-xs font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 transition-colors ${rowBg}`}
+                className={`flex gap-1 px-2 py-1 text-[11px] font-mono tabular-nums cursor-pointer relative hover:bg-navy-700/50 transition-colors whitespace-nowrap ${rowBg}`}
               >
                 <div className={`absolute left-0 top-0 bottom-0 ${depthBg} transition-all`} style={{ width: `${depthPct}%` }} />
-                <div className={`relative z-10 flex-1 min-w-0 ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-red-400'}`}>{formatPrice(ask.price)}</div>
-                <div className={`relative z-10 flex-1 min-w-0 text-right ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-white'}`}>{formatQuantity(ask.quantity)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatQuantity(ask.cumulativeQuantity)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-white/70">{formatEur(ask.cumulativeValue)}</div>
-                <div className="relative z-10 flex-1 min-w-0 text-right text-navy-400">{ask.orderCount}</div>
+                <div className={`relative z-10 flex-1 min-w-0 truncate ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-red-400'}`}>{formatPrice(ask.price)}</div>
+                <div className={`relative z-10 flex-1 min-w-0 truncate text-right ${isHighlighted ? 'text-navy-900 font-semibold' : 'text-white'}`}>{formatQuantity(ask.quantity)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatQuantity(ask.cumulativeQuantity)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-white/70">{formatEur(ask.cumulativeValue)}</div>
+                <div className="relative z-10 flex-1 min-w-0 truncate text-right text-navy-400">{ask.orderCount}</div>
               </div>
             );
           })}
@@ -203,15 +204,16 @@ interface RecentTradesTickerProps {
 }
 
 function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProps) {
-  /** Infer side from price: trade at bid = SELL (seller hit bid), trade at ask = BUY (buyer lifted ask).
-   * Backend currently returns side="BUY" for all trades, so we infer from order book levels. */
-  const inferIsBuy = (price: number) => {
+  /** Use backend side when available; otherwise infer from price vs mid (trade at ask = BUY, at bid = SELL). */
+  const isBuy = useCallback((trade: CashMarketTrade) => {
+    if (trade.side === 'BUY' || trade.side === 'SELL') return trade.side === 'BUY';
     if (bestBid != null && bestAsk != null) {
       const mid = (bestBid + bestAsk) / 2;
-      return price >= mid; // price closer to/at ask → BUY, closer to/at bid → SELL
+      return trade.price >= mid;
     }
-    return true; // fallback to BUY styling if no order book
-  };
+    return true;
+  }, [bestBid, bestAsk]);
+
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '-';
     try {
@@ -229,46 +231,156 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
     }
   };
 
-  return (
-    <div className="bg-navy-900 rounded border border-navy-700 overflow-hidden">
-      <div className="px-3 py-1.5 border-b border-navy-700 flex items-center gap-1.5 bg-navy-800">
-        <Activity className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-        <h3 className="text-xs font-semibold text-white">Recent Trades</h3>
-        <span className="text-xs text-navy-500">(last 20)</span>
-      </div>
+  // Build HTML once per trade-set and inject via ref to avoid React re-renders
+  // that reset the CSS animation. We update content only when trade IDs change.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const prevTradeIdsRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!scrollRef.current || trades.length === 0) return;
+
+    const tradeIds = trades.map((t) => t.id).join(',');
+    if (tradeIds === prevTradeIdsRef.current) return;
+    prevTradeIdsRef.current = tradeIds;
+
+    // Build the inner HTML for one copy of the trades
+    const buildCopy = () =>
+      trades
+        .map((trade) => {
+          const buy = isBuy(trade);
+          const bgClass = buy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]';
+          const priceColor = buy ? 'text-emerald-400' : 'text-red-400';
+          const time = trade.executedAt ? formatTime(trade.executedAt) : '-';
+          return `<div class="flex items-center gap-3 px-3 py-1 rounded shrink-0 ${bgClass}">
+            <span class="font-mono font-medium text-xs tabular-nums ${priceColor}">€${trade.price.toFixed(1)}</span>
+            <span class="text-xs font-mono text-white tabular-nums">${Math.round(trade.quantity).toLocaleString()}</span>
+            <span class="text-xs text-navy-500 tabular-nums">${time}</span>
+          </div>`;
+        })
+        .join('');
+
+    const copy = buildCopy();
+    // Two copies for seamless loop
+    scrollRef.current.innerHTML =
+      `<div class="flex items-center gap-x-2 shrink-0 px-2">${copy}</div>` +
+      `<div class="flex items-center gap-x-2 shrink-0 px-2">${copy}</div>`;
+  }, [trades, isBuy]);
+
+  if (trades.length === 0) {
+    return (
       <div className="overflow-hidden">
+        <div className="py-2 px-4 text-xs text-navy-500">No recent trades</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden">
+      <div
+        ref={scrollRef}
+        className="flex items-center min-w-max py-1.5 ticker-scroll"
+      />
+    </div>
+  );
+}
+
+// =============================================================================
+// ACTIVITY (vertical list, same source as ticker — BUY/SELL badge, total, relative time + full timestamp on hover)
+// =============================================================================
+
+interface RecentTradesActivityProps {
+  trades: CashMarketTrade[];
+  bestBid: number | null;
+  bestAsk: number | null;
+}
+
+function formatFullTimestamp(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    const utcDateStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcDateStr);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+      timeZone: 'UTC',
+      hour12: true,
+    }) + ' UTC';
+  } catch {
+    return '—';
+  }
+}
+
+function RecentTradesActivity({ trades, bestBid, bestAsk }: RecentTradesActivityProps) {
+  const isBuy = (trade: CashMarketTrade) => {
+    if (trade.side === 'BUY' || trade.side === 'SELL') return trade.side === 'BUY';
+    if (bestBid != null && bestAsk != null) {
+      const mid = (bestBid + bestAsk) / 2;
+      return trade.price >= mid;
+    }
+    return true;
+  };
+
+  return (
+    <div className="bg-navy-900 rounded-lg border border-navy-700/50 overflow-hidden flex flex-col flex-1 min-h-0 widget-accent-amber glow-amber">
+      <div className="px-3 py-1.5 border-b border-navy-700 flex items-center gap-1.5 bg-navy-800/50 shrink-0">
+        <Activity className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <h3 className="text-[10px] font-semibold text-navy-300 uppercase tracking-wider">Activity</h3>
+        <span className="text-[10px] text-navy-500">(last 20)</span>
+        <div className="live-dot bg-amber-400 ml-auto" title="Live" />
+      </div>
+      {/* Column headers */}
+      <div className="grid grid-cols-[3rem_1fr_5rem_5.5rem_4rem] gap-x-1 px-3 py-1 border-b border-navy-700 text-[10px] text-navy-500 uppercase tracking-wider shrink-0">
+        <span>Side</span>
+        <span className="text-right">Qty</span>
+        <span className="text-right">Price</span>
+        <span className="text-right">Total</span>
+        <span className="text-right">Time</span>
+      </div>
+      <div className="overflow-y-auto flex-1 min-h-0">
         {trades.length === 0 ? (
           <div className="py-3 px-4 text-xs text-navy-500">No recent trades</div>
         ) : (
-          <div className="flex items-center min-w-max py-1.5 ticker-scroll">
-            {/* Duplicate content for seamless right-to-left loop */}
-            {[1, 2].map((copy) => (
-              <div key={copy} className="flex items-center gap-x-2 shrink-0 px-2">
-                {trades.map((trade) => {
-                  const isBuy = inferIsBuy(trade.price);
-                  return (
-                  <div
-                    key={`${copy}-${trade.id}`}
-                    className={`flex items-center gap-3 px-3 py-1 rounded transition-colors shrink-0 hover:bg-navy-700/50 ${
-                      isBuy ? 'bg-emerald-500/[0.075]' : 'bg-red-500/[0.05]'
+          <div className="flex flex-col">
+            {trades.map((trade, idx) => {
+              const buy = isBuy(trade);
+              const totalEur = trade.price * trade.quantity;
+              return (
+                <div
+                  key={`${trade.id}-${idx}`}
+                  className={`grid grid-cols-[3rem_1fr_5rem_5.5rem_4rem] gap-x-1 items-center px-3 py-1.5 border-b border-navy-700/30 ${
+                    buy ? 'bg-emerald-500/[0.05]' : 'bg-red-500/[0.04]'
+                  }`}
+                >
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold text-center w-fit ${
+                      buy ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
                     }`}
                   >
-                    <span className={`font-mono font-medium text-xs tabular-nums ${
-                      isBuy ? 'text-emerald-400' : 'text-red-400'
-                    }`}>
-                      €{trade.price.toFixed(1)}
-                    </span>
-                    <span className="text-xs font-mono text-white tabular-nums">
-                      {Math.round(trade.quantity).toLocaleString()}
-                    </span>
-                    <span className="text-xs text-navy-500 tabular-nums">
-                      {trade.executedAt ? formatTime(trade.executedAt) : '-'}
-                    </span>
-                  </div>
-                  );
-                })}
-              </div>
-            ))}
+                    {buy ? 'BUY' : 'SELL'}
+                  </span>
+                  <span className="text-xs font-mono text-white tabular-nums text-right">
+                    {Math.round(trade.quantity).toLocaleString()}
+                  </span>
+                  <span className="text-xs font-mono text-navy-300 tabular-nums text-right">
+                    €{trade.price.toFixed(2)}
+                  </span>
+                  <span
+                    className={`text-xs font-mono font-medium tabular-nums text-right ${
+                      buy ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  >
+                    €{totalEur.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                  <span
+                    className="text-[10px] text-navy-500 tabular-nums text-right"
+                    title={formatFullTimestamp(trade.executedAt)}
+                  >
+                    {trade.executedAt ? formatRelativeTime(trade.executedAt) : '—'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -395,7 +507,7 @@ export function CashMarketProPage() {
   };
 
   return (
-    <>
+    <div className="h-[calc(100vh-5rem)] flex flex-col overflow-hidden">
       {/* Subheader */}
       <Subheader
         icon={<BarChart3 className="w-5 h-5 text-amber-500" />}
@@ -404,21 +516,21 @@ export function CashMarketProPage() {
         iconBg="bg-amber-500/20"
       >
         <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">Best Bid</span>
+          <span className="text-navy-400 mr-2">Best Bid</span>
           <span className="font-bold font-mono text-emerald-400 text-lg">
             €{formatNumber(safeOrderBook.bestBid)}
           </span>
         </div>
 
         <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">Best Ask</span>
+          <span className="text-navy-400 mr-2">Best Ask</span>
           <span className="font-bold font-mono text-red-400 text-lg">
             €{formatNumber(safeOrderBook.bestAsk)}
           </span>
         </div>
 
         <div>
-          <span className="text-navy-600 dark:text-navy-400 mr-2">Spread</span>
+          <span className="text-navy-400 mr-2">Spread</span>
           <span className="font-semibold font-mono text-navy-300">
             €{formatNumber(safeOrderBook.spread, 4)}
           </span>
@@ -428,15 +540,23 @@ export function CashMarketProPage() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={refresh}
-          className="p-2 rounded-lg hover:bg-navy-100 dark:bg-navy-800 text-navy-600 dark:text-navy-400"
+          className="p-2 rounded-lg hover:bg-navy-800 text-navy-400"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </motion.button>
       </Subheader>
 
-      {/* Content under subheader — same page containers as CeaSwapMarketPage */}
-      <div className="min-h-screen bg-navy-900">
-        <div className="page-container py-6">
+      {/* Ticker — full width, edge-to-edge, no container */}
+      {!loading && orderBook && (
+        <RecentTradesTicker
+          trades={recentTrades}
+          bestBid={safeOrderBook.bestBid}
+          bestAsk={safeOrderBook.bestAsk}
+        />
+      )}
+
+      {/* Content — full page, flex to footer */}
+      <div className="bg-navy-900 flex flex-col flex-1 min-h-0 px-4 py-4">
           {loading && !orderBook ? (
             <div className="flex items-center justify-center h-96">
               <RefreshCw className="w-8 h-8 text-amber-500 animate-spin" />
@@ -453,47 +573,63 @@ export function CashMarketProPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Recent Trades ticker — at top of page content */}
-              <RecentTradesTicker
-                trades={recentTrades}
-                bestBid={safeOrderBook.bestBid}
-                bestAsk={safeOrderBook.bestAsk}
-              />
-
-              {/* Inline Order Form — market only, full balance, single execute */}
-              <InlineOrderForm
-                certificateType="CEA"
-                availableBalance={availableEur}
-                bestBid={safeOrderBook.bestBid}
-                bestAsk={safeOrderBook.bestAsk}
-                spread={safeOrderBook.spread}
-                asks={safeOrderBook.asks}
-                onOrderSubmit={handleMarketOrderSubmit}
-                onRefresh={refresh}
-                onExpandChange={handleExpandChange}
-              />
-
-              {/* Order Book */}
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12">
-                  <div className="content_wrapper_last">
-                    <div className="p-2">
-                      <ProfessionalOrderBook
-                        bids={safeOrderBook.bids}
-                        asks={safeOrderBook.asks}
-                        spread={safeOrderBook.spread}
-                        bestBid={safeOrderBook.bestBid}
-                        bestAsk={safeOrderBook.bestAsk}
-                        highlightAskCount={highlightAskCount}
-                      />
-                    </div>
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              {/* Row 1: Order Book (5/12) | Chart (4/12) | Order Form (3/12) */}
+              <div className="grid grid-cols-12 gap-2" style={{ flex: '5 1 0%', minHeight: 0 }}>
+                <div className="col-span-5 min-h-0 flex flex-col">
+                  <div className="rounded-lg border border-navy-700/50 bg-navy-800/30 flex-1 min-h-0 overflow-y-auto widget-accent-purple">
+                    <ProfessionalOrderBook
+                      bids={safeOrderBook.bids}
+                      asks={safeOrderBook.asks}
+                      spread={safeOrderBook.spread}
+                      bestBid={safeOrderBook.bestBid}
+                      bestAsk={safeOrderBook.bestAsk}
+                      highlightAskCount={highlightAskCount}
+                    />
                   </div>
+                </div>
+                <div className="col-span-4 min-h-0 flex flex-col">
+                  <CEAPriceChart />
+                </div>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <InlineOrderForm
+                    certificateType="CEA"
+                    availableBalance={availableEur}
+                    bestBid={safeOrderBook.bestBid}
+                    bestAsk={safeOrderBook.bestAsk}
+                    spread={safeOrderBook.spread}
+                    asks={safeOrderBook.asks}
+                    onOrderSubmit={handleMarketOrderSubmit}
+                    onRefresh={refresh}
+                    onExpandChange={handleExpandChange}
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Activity (3/12) | News (3/12) | Impact (3/12) | Pulse+Timeline (3/12) */}
+              <div className="grid grid-cols-12 gap-2" style={{ flex: '4 1 0%', minHeight: 0 }}>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <RecentTradesActivity
+                    trades={recentTrades}
+                    bestBid={safeOrderBook.bestBid}
+                    bestAsk={safeOrderBook.bestAsk}
+                  />
+                </div>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <NewsIntelligenceFeed />
+                </div>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <EnvironmentalImpact />
+                </div>
+                <div className="col-span-3 min-h-0 flex flex-col">
+                  <MarketPulseTimeline
+                    bids={safeOrderBook.bids}
+                    asks={safeOrderBook.asks}
+                  />
                 </div>
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Order Success Modal */}
@@ -584,6 +720,6 @@ export function CashMarketProPage() {
           </button>
         </Modal.Footer>
       </Modal>
-    </>
+    </div>
   );
 }

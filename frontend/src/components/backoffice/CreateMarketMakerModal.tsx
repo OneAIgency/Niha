@@ -192,21 +192,21 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-navy-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden"
+          className="bg-navy-800 rounded-2xl border border-navy-700 shadow-xl w-full max-w-lg overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-navy-200 dark:border-navy-700">
+          <div className="flex items-center justify-between p-6 border-b border-navy-700">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                <Bot className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-2 rounded-lg bg-emerald-900/30">
+                <Bot className="w-5 h-5 text-emerald-400" />
               </div>
-              <h2 className="text-lg font-semibold text-navy-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-white">
                 Create Market Maker
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors"
+              className="p-1 hover:bg-navy-700 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-navy-500" />
             </button>
@@ -216,7 +216,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
           <div className="p-6 space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Name *
               </label>
               <input
@@ -224,14 +224,14 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., MM-Alpha"
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 autoFocus
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Email Address *
               </label>
               <input
@@ -239,16 +239,16 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="market-maker@marketmaker.niha.internal"
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+              <p className="text-xs text-navy-400 mt-1">
                 Auto-generated from name. You can edit if needed.
               </p>
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Description <span className="text-navy-400">(optional)</span>
               </label>
               <textarea
@@ -256,13 +256,13 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the market maker strategy..."
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-navy-200 dark:border-navy-700 bg-white dark:bg-navy-900 text-navy-900 dark:text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-navy-700 bg-navy-900 text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
               />
             </div>
 
             {/* Market Selection */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Market *
               </label>
               <select
@@ -290,7 +290,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
 
             {/* Market Maker Role */}
             <div>
-              <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+              <label className="block text-sm font-medium text-navy-300 mb-2">
                 Market Maker Role *
               </label>
               <select
@@ -314,7 +314,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   <option value="EUA_OFFER">EUA Offer (Offers EUA for swaps)</option>
                 )}
               </select>
-              <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+              <p className="text-xs text-navy-400 mt-1">
                 {MARKET_MAKER_TYPES[mmType].description}
               </p>
             </div>
@@ -323,7 +323,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
             {mmType === 'CEA_BUYER' ? (
               // EUR Balance for Cash Buyer
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                <label className="block text-sm font-medium text-navy-300 mb-2">
                   Initial EUR Balance *
                 </label>
                 <NumberInput
@@ -333,14 +333,14 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   decimals={2}
                   className="focus:ring-2 focus:ring-emerald-500"
                 />
-                <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                <p className="text-xs text-navy-400 mt-1">
                   EUR balance for placing buy orders
                 </p>
               </div>
             ) : mmType === 'CEA_SELLER' ? (
               // CEA Balance only for CEA Cash Seller
               <div>
-                <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                <label className="block text-sm font-medium text-navy-300 mb-2">
                   Initial CEA Balance *
                 </label>
                 <NumberInput
@@ -351,7 +351,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   className="focus:ring-2 focus:ring-amber-500"
                 />
                 {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
-                  <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                  <p className="text-xs text-navy-400 mt-1">
                     ≈ €{calculateEurValue(ceaBalance, 'CEA')!.toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
@@ -363,7 +363,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               // CEA/EUA Balances for Swap Maker
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-300 mb-2">
                     Initial CEA Balance <span className="text-navy-400">(optional)</span>
                   </label>
                   <NumberInput
@@ -374,7 +374,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                     className="focus:ring-2 focus:ring-amber-500"
                   />
                   {ceaBalance && calculateEurValue(ceaBalance, 'CEA') !== null && (
-                    <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    <p className="text-xs text-navy-400 mt-1">
                       ≈ €{calculateEurValue(ceaBalance, 'CEA')!.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
@@ -383,7 +383,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 dark:text-navy-300 mb-2">
+                  <label className="block text-sm font-medium text-navy-300 mb-2">
                     Initial EUA Balance <span className="text-navy-400">(optional)</span>
                   </label>
                   <NumberInput
@@ -394,7 +394,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
                     className="focus:ring-2 focus:ring-blue-500"
                   />
                   {euaBalance && calculateEurValue(euaBalance, 'EUA') !== null && (
-                    <p className="text-xs text-navy-500 dark:text-navy-400 mt-1">
+                    <p className="text-xs text-navy-400 mt-1">
                       ≈ €{calculateEurValue(euaBalance, 'EUA')!.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
@@ -415,7 +415,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+                className="p-3 bg-emerald-900/20 border border-emerald-800 rounded-lg flex items-center gap-2 text-emerald-400"
               >
                 <Check className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm font-medium">Market maker created successfully!</span>
@@ -424,7 +424,7 @@ export function CreateMarketMakerModal({ isOpen, onClose, onSuccess, currentMMCo
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-navy-200 dark:border-navy-700">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-navy-700">
             <Button
               variant="ghost"
               onClick={onClose}

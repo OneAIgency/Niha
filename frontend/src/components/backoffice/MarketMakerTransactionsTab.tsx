@@ -119,7 +119,7 @@ export function MarketMakerTransactionsTab({
       header: 'Date',
       width: '15%',
       render: (value) => (
-        <span className="text-sm text-navy-600 dark:text-navy-300">
+        <span className="text-sm text-navy-300">
           {formatRelativeTime(String(value))}
         </span>
       ),
@@ -189,7 +189,7 @@ export function MarketMakerTransactionsTab({
       width: '15%',
       align: 'right',
       render: (value) => (
-        <span className="font-mono text-navy-900 dark:text-white">{formatCertificateQuantity(Number(value))}</span>
+        <span className="font-mono text-white">{formatCertificateQuantity(Number(value))}</span>
       ),
     },
     {
@@ -198,7 +198,7 @@ export function MarketMakerTransactionsTab({
       width: '25%',
       align: 'right',
       render: (value) => (
-        <span className="text-sm text-navy-600 dark:text-navy-300 line-clamp-1">{value ? String(value) : '-'}</span>
+        <span className="text-sm text-navy-300 line-clamp-1">{value ? String(value) : '-'}</span>
       ),
     },
   ];
@@ -212,7 +212,7 @@ export function MarketMakerTransactionsTab({
 
       {/* Balances Section - detailed variant shows EUR/CEA/EUA AVAILABLE, Initial Balance, Locked in Orders */}
       <div>
-        <h3 className="text-lg font-semibold text-navy-900 dark:text-white mb-4">Current Balances</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">Current Balances</h3>
         <BalanceCards
           balances={{
             EUR: (mmType === 'CEA_BUYER' || balances.eurBalance > 0)
@@ -236,7 +236,7 @@ export function MarketMakerTransactionsTab({
       {/* Transaction History */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-navy-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-white">
             Transaction History ({transactions.length})
           </h3>
           <div className="flex items-center gap-2">

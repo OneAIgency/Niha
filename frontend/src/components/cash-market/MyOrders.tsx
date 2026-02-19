@@ -32,7 +32,7 @@ export function MyOrders({ orders, onCancelOrder, isLoading }: MyOrdersProps) {
   };
 
   return (
-    <div className="content_wrapper_last h-full flex flex-col">
+    <div className="panel panel--flush h-full flex flex-col">
       <div className="px-4 py-3 border-b border-navy-700 flex items-center justify-between">
         <h3 className="font-semibold text-white flex items-center gap-2">
           <Clock className="w-4 h-4 text-amber-400" />

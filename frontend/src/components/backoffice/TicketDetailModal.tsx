@@ -348,34 +348,34 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.15 }}
-          className="bg-white dark:bg-navy-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+          className="bg-navy-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
         >
           {/* ── Header ── */}
-          <div className="flex items-start justify-between p-5 pb-4 border-b border-navy-200 dark:border-navy-700">
+          <div className="flex items-start justify-between p-5 pb-4 border-b border-navy-700">
             <div className="flex items-start gap-3 min-w-0">
               <div className={`p-2 rounded-lg flex-shrink-0 ${
                 isSuccess
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                  : 'bg-red-50 dark:bg-red-900/20'
+                  ? 'bg-emerald-900/20'
+                  : 'bg-red-900/20'
               }`}>
                 {isSuccess
-                  ? <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  : <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  : <AlertCircle className="w-5 h-5 text-red-400" />
                 }
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-navy-900 dark:text-white truncate">
+                <h2 className="text-base font-semibold text-white truncate">
                   {actionLabel}
                 </h2>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-navy-500 dark:text-navy-400 font-mono">
+                  <span className="text-xs text-navy-400 font-mono">
                     #{ticket.ticketId.replace('TKT-2026-', '')}
                   </span>
-                  <span className="text-navy-300 dark:text-navy-600">·</span>
+                  <span className="text-navy-600">·</span>
                   <span className={`text-xs font-medium ${
                     isSuccess
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400'
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
                   }`}>
                     {isSuccess ? 'Success' : 'Failed'}
                   </span>
@@ -384,7 +384,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-navy-100 dark:hover:bg-navy-700 rounded-lg transition-colors flex-shrink-0"
+              className="p-1.5 hover:bg-navy-700 rounded-lg transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4 text-navy-400" />
             </button>
@@ -394,41 +394,41 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
             {/* ── Actor Card ── */}
-            <div className="rounded-lg bg-navy-50 dark:bg-navy-900/40 border border-navy-200 dark:border-navy-700 p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-400 dark:text-navy-500 mb-2">
+            <div className="rounded-lg bg-navy-900/40 border border-navy-700 p-3">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-500 mb-2">
                 Actor
               </div>
               <div className="flex items-center gap-2">
                 {adminInitiated && (
-                  <span title="Admin initiated" className="flex items-center justify-center w-5 h-5 rounded bg-violet-100 dark:bg-violet-900/40 flex-shrink-0">
-                    <Shield className="w-3 h-3 text-violet-500 dark:text-violet-400" />
+                  <span title="Admin initiated" className="flex items-center justify-center w-5 h-5 rounded bg-violet-900/40 flex-shrink-0">
+                    <Shield className="w-3 h-3 text-violet-400" />
                   </span>
                 )}
                 {isMM && (
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-orange-100 dark:bg-orange-900/40 flex-shrink-0">
-                    <Bot className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-orange-900/40 flex-shrink-0">
+                    <Bot className="w-3 h-3 text-orange-400" />
                   </span>
                 )}
                 {!isMM && !adminInitiated && (
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-navy-200 dark:bg-navy-700 flex-shrink-0">
-                    <User className="w-3 h-3 text-navy-500 dark:text-navy-400" />
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-navy-700 flex-shrink-0">
+                    <User className="w-3 h-3 text-navy-400" />
                   </span>
                 )}
                 <span className={`text-sm font-medium ${
                   isMM
-                    ? 'text-orange-700 dark:text-orange-400'
-                    : 'text-navy-900 dark:text-white'
+                    ? 'text-orange-400'
+                    : 'text-white'
                 }`}>
                   {actorName}
                 </span>
               </div>
               {adminInitiated && (
-                <div className="mt-1.5 pl-7 text-[11px] text-violet-600 dark:text-violet-400">
+                <div className="mt-1.5 pl-7 text-[11px] text-violet-400">
                   Initiated by Admin ({ticket.userCompany || 'Nihao Group'})
                 </div>
               )}
               {!adminInitiated && isAdmin && (
-                <div className="mt-1.5 pl-7 text-[11px] text-navy-400 dark:text-navy-500">
+                <div className="mt-1.5 pl-7 text-[11px] text-navy-500">
                   Admin account
                 </div>
               )}
@@ -436,21 +436,21 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
 
             {/* ── Action Details ── */}
             {details.length > 0 && (
-              <div className="rounded-lg bg-navy-50 dark:bg-navy-900/40 border border-navy-200 dark:border-navy-700 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-400 dark:text-navy-500 mb-2">
+              <div className="rounded-lg bg-navy-900/40 border border-navy-700 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-500 mb-2">
                   Details
                 </div>
                 <div className="space-y-1.5">
                   {details.map((row, i) => (
                     <div key={i} className="flex items-center justify-between gap-3">
-                      <span className="text-xs text-navy-500 dark:text-navy-400 flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-xs text-navy-400 flex items-center gap-1.5 flex-shrink-0">
                         <DetailIcon type={row.icon} />
                         {row.label}
                       </span>
                       <span className={`text-xs text-right truncate ${
                         row.highlight
-                          ? 'font-semibold text-navy-900 dark:text-white'
-                          : 'text-navy-700 dark:text-navy-300'
+                          ? 'font-semibold text-white'
+                          : 'text-navy-300'
                       } ${row.mono ? 'font-mono tabular-nums' : ''}`}>
                         {row.value}
                       </span>
@@ -462,8 +462,8 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
 
             {/* ── State Change (before → after) ── */}
             {hasStateChange && (
-              <div className="rounded-lg bg-navy-50 dark:bg-navy-900/40 border border-navy-200 dark:border-navy-700 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-400 dark:text-navy-500 mb-2">
+              <div className="rounded-lg bg-navy-900/40 border border-navy-700 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-500 mb-2">
                   State Change
                 </div>
                 <StateChangeDiff before={ticket.beforeState!} after={ticket.afterState!} />
@@ -472,15 +472,15 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
 
             {/* ── Related Tickets ── */}
             {ticket.relatedTicketIds && ticket.relatedTicketIds.length > 0 && (
-              <div className="rounded-lg bg-navy-50 dark:bg-navy-900/40 border border-navy-200 dark:border-navy-700 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-400 dark:text-navy-500 mb-2">
+              <div className="rounded-lg bg-navy-900/40 border border-navy-700 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-navy-500 mb-2">
                   Related Tickets
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {ticket.relatedTicketIds.map((ref, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+                      className="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded bg-blue-900/30 text-blue-400 border border-blue-800"
                     >
                       <Link2 className="w-2.5 h-2.5" />
                       #{ref.replace('TKT-2026-', '')}
@@ -493,11 +493,11 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             {/* ── Tags ── */}
             {ticket.tags && ticket.tags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
-                <Tag className="w-3 h-3 text-navy-400 dark:text-navy-500" />
+                <Tag className="w-3 h-3 text-navy-500" />
                 {ticket.tags.map((tag, i) => (
                   <span
                     key={i}
-                    className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-navy-100 text-navy-600 dark:bg-navy-700 dark:text-navy-400"
+                    className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-navy-700 text-navy-400"
                   >
                     {tag}
                   </span>
@@ -506,20 +506,20 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
             )}
 
             {/* ── Metadata footer ── */}
-            <div className="pt-2 border-t border-navy-100 dark:border-navy-700/50 space-y-1">
-              <div className="flex items-center gap-1.5 text-[11px] text-navy-400 dark:text-navy-500">
+            <div className="pt-2 border-t border-navy-700/50 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-navy-500">
                 <Clock className="w-3 h-3" />
                 {fmtDate(ticket.timestamp)}
-                <span className="text-navy-300 dark:text-navy-600">·</span>
+                <span className="text-navy-600">·</span>
                 {fmtRelative(ticket.timestamp)}
               </div>
               {ticket.ipAddress && (
-                <div className="flex items-center gap-1.5 text-[11px] text-navy-400 dark:text-navy-500">
+                <div className="flex items-center gap-1.5 text-[11px] text-navy-500">
                   <Globe className="w-3 h-3" />
                   {ticket.ipAddress}
                 </div>
               )}
-              <div className="flex items-center gap-1.5 text-[11px] text-navy-400 dark:text-navy-500 font-mono">
+              <div className="flex items-center gap-1.5 text-[11px] text-navy-500 font-mono">
                 <FileText className="w-3 h-3" />
                 {ticket.ticketId}
               </div>
@@ -527,7 +527,7 @@ export function TicketDetailModal({ ticket, isOpen, onClose }: TicketDetailModal
           </div>
 
           {/* ── Footer ── */}
-          <div className="flex items-center justify-end p-4 border-t border-navy-200 dark:border-navy-700">
+          <div className="flex items-center justify-end p-4 border-t border-navy-700">
             <Button onClick={onClose} variant="secondary" size="sm">
               Close
             </Button>
@@ -574,19 +574,19 @@ function StateChangeDiff({ before, after }: { before: Record<string, unknown>; a
   }
 
   if (changes.length === 0) {
-    return <div className="text-xs text-navy-400 dark:text-navy-500 italic">No visible changes</div>;
+    return <div className="text-xs text-navy-500 italic">No visible changes</div>;
   }
 
   return (
     <div className="space-y-1.5">
       {changes.map((c, i) => (
         <div key={i} className="flex items-center gap-2 text-xs">
-          <span className="text-navy-500 dark:text-navy-400 w-24 flex-shrink-0 truncate">{c.key}</span>
-          <span className="font-mono text-red-500/70 dark:text-red-400/60 line-through tabular-nums truncate max-w-[100px]">
+          <span className="text-navy-400 w-24 flex-shrink-0 truncate">{c.key}</span>
+          <span className="font-mono text-red-400/60 line-through tabular-nums truncate max-w-[100px]">
             {c.from}
           </span>
-          <ArrowRight className="w-3 h-3 text-navy-400 dark:text-navy-500 flex-shrink-0" />
-          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-medium tabular-nums truncate max-w-[100px]">
+          <ArrowRight className="w-3 h-3 text-navy-500 flex-shrink-0" />
+          <span className="font-mono text-emerald-400 font-medium tabular-nums truncate max-w-[100px]">
             {c.to}
           </span>
         </div>
