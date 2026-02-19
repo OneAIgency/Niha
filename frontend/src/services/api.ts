@@ -1267,6 +1267,21 @@ export const adminApi = {
     return data;
   },
 
+  getExchangeRateHistory: async (id: string, hours = 24): Promise<{
+    sourceId: string;
+    sourceName: string;
+    pair: string;
+    points: Array<{ rate: number; recordedAt: string }>;
+  }> => {
+    const { data } = await api.get(`/admin/exchange-rate-sources/${id}/history?hours=${hours}`);
+    return data;
+  },
+
+  resetExchangeRateHistory: async (id: string): Promise<{ message: string; success: boolean }> => {
+    const { data } = await api.delete(`/admin/exchange-rate-sources/${id}/history`);
+    return data;
+  },
+
   // Mail & Auth Settings
   getMailSettings: async (): Promise<MailSettings> => {
     const { data } = await api.get('/admin/settings/mail');

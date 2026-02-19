@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from ..core.security import RedisManager
 from ..models.models import (
     CertificateType,
+    ExchangeRateHistory,
     ExchangeRateSource,
     PriceHistory,
     ScrapeLibrary,
@@ -1055,6 +1056,16 @@ class PriceScraper:
                         last_scrape_status=ScrapeStatus.SUCCESS,
                     )
                 )
+
+                # Record history point
+                history = ExchangeRateHistory(
+                    from_currency=source.from_currency,
+                    to_currency=source.to_currency,
+                    rate=rate_decimal,
+                    source=source.name,
+                )
+                db.add(history)
+
                 await db.commit()
                 logger.info(f"Refreshed exchange rate {source.name}: {rate}")
             else:

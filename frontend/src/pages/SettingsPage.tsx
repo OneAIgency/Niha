@@ -330,6 +330,10 @@ export function SettingsPage() {
     is_primary: true,
   });
 
+  // Exchange rate history charts
+  const [exchangeRateHistories, setExchangeRateHistories] = useState<Record<string, { points: ChartPoint[]; pair: string }>>({});
+  const [exchangeRateHistoryHours, setExchangeRateHistoryHours] = useState(24);
+
   // Mail & Auth settings
   const [_mailSettings, setMailSettings] = useState<MailSettings | null>(null);
   const [mailSaving, setMailSaving] = useState(false);
@@ -417,6 +421,38 @@ export function SettingsPage() {
   useEffect(() => {
     if (sources.length > 0) loadHistories(sources, historyHours);
   }, [sources, historyHours, loadHistories]);
+
+  // Exchange rate history loader
+  const loadExchangeRateHistories = useCallback(async (srcs: ExchangeRateSource[], hours: number) => {
+    const results: Record<string, { points: ChartPoint[]; pair: string }> = {};
+    await Promise.all(
+      srcs.map(async (s) => {
+        try {
+          const data = await adminApi.getExchangeRateHistory(s.id, hours);
+          results[s.id] = {
+            points: data.points.map(p => ({ price: p.rate, recordedAt: p.recordedAt })),
+            pair: data.pair,
+          };
+        } catch { /* silent */ }
+      })
+    );
+    setExchangeRateHistories(results);
+  }, []);
+
+  useEffect(() => {
+    if (exchangeRateSources.length > 0) loadExchangeRateHistories(exchangeRateSources, exchangeRateHistoryHours);
+  }, [exchangeRateSources, exchangeRateHistoryHours, loadExchangeRateHistories]);
+
+  const handleResetExchangeRateHistory = async (sourceId: string) => {
+    if (!confirm('Reset chart? This deletes all history and starts fresh from the current rate.')) return;
+    try {
+      await adminApi.resetExchangeRateHistory(sourceId);
+      await loadExchangeRateHistories(exchangeRateSources, exchangeRateHistoryHours);
+    } catch (e) {
+      console.error('Reset exchange rate history failed:', e);
+      setError(getApiErrorMessage(e));
+    }
+  };
 
   const handleTestSource = async (sourceId: string) => {
     setTestingSource(sourceId);
@@ -1172,6 +1208,41 @@ export function SettingsPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Exchange Rate History Charts */}
+              {exchangeRateSources.length > 0 && (
+                <div className="mt-6 border-t border-navy-700 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-navy-200 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      Rate History
+                    </h3>
+                    <div className="flex gap-1">
+                      {[6, 12, 24, 48, 168].map(h => (
+                        <button key={h} onClick={() => setExchangeRateHistoryHours(h)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                            exchangeRateHistoryHours === h
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-navy-700 text-navy-400 hover:text-navy-200'
+                          }`}>
+                          {h < 24 ? `${h}h` : `${h / 24}d`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-4">
+                    {exchangeRateSources.map(s => (
+                      <PriceHistoryChart
+                        key={s.id}
+                        sourceName={s.name}
+                        currency={exchangeRateHistories[s.id]?.pair ?? `${s.fromCurrency}/${s.toCurrency}`}
+                        points={exchangeRateHistories[s.id]?.points ?? []}
+                        onReset={() => handleResetExchangeRateHistory(s.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card>
           </motion.div>}
 

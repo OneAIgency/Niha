@@ -680,6 +680,19 @@ class ScrapingSource(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
+class ExchangeRateHistory(Base):
+    """Historical exchange rate data points for charting"""
+
+    __tablename__ = "exchange_rate_history"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    from_currency = Column(String(3), nullable=False)
+    to_currency = Column(String(3), nullable=False)
+    rate = Column(Numeric(18, 8), nullable=False)
+    source = Column(String(100))
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+
+
 class ExchangeRateSource(Base):
     """Configuration for exchange rate scraping sources"""
 

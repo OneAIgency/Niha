@@ -2122,6 +2122,84 @@ async def delete_exchange_rate_source(
     )
 
 
+@router.get("/exchange-rate-sources/{source_id}/history")
+async def get_exchange_rate_history(
+    source_id: str,
+    hours: int = Query(24, ge=1, le=168),
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get exchange rate history for a specific source."""
+    from ...models.models import ExchangeRateHistory
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
+    history_result = await db.execute(
+        select(ExchangeRateHistory)
+        .where(
+            ExchangeRateHistory.source == source.name,
+            ExchangeRateHistory.recorded_at >= since,
+        )
+        .order_by(ExchangeRateHistory.recorded_at.asc())
+    )
+    records = history_result.scalars().all()
+
+    return {
+        "source_id": source_id,
+        "source_name": source.name,
+        "pair": f"{source.from_currency}/{source.to_currency}",
+        "points": [
+            {
+                "rate": float(r.rate),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
+            }
+            for r in records
+        ],
+    }
+
+
+@router.delete("/exchange-rate-sources/{source_id}/history")
+async def reset_exchange_rate_history(
+    source_id: str,
+    _admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all exchange rate history for a source and seed a point at current rate."""
+    from ...models.models import ExchangeRateHistory
+
+    result = await db.execute(
+        select(ExchangeRateSource).where(ExchangeRateSource.id == UUID(source_id))
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Exchange rate source not found")
+
+    try:
+        await db.execute(
+            delete(ExchangeRateHistory).where(ExchangeRateHistory.source == source.name)
+        )
+        if source.last_rate is not None:
+            seed = ExchangeRateHistory(
+                from_currency=source.from_currency,
+                to_currency=source.to_currency,
+                rate=source.last_rate,
+                source=source.name,
+            )
+            db.add(seed)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    return {"message": "Exchange rate history reset", "success": True}
+
+
 # ==================== Mail & Auth Settings ====================
 
 
