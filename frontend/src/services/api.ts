@@ -333,7 +333,7 @@ export const contactApi = {
     contact_first_name: string;
     contact_last_name: string;
     position: string;
-    nda_file: File;
+    nda_file?: File;
     referral_code?: string;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
@@ -342,7 +342,7 @@ export const contactApi = {
     formData.append('contact_first_name', request.contact_first_name);
     formData.append('contact_last_name', request.contact_last_name);
     formData.append('position', request.position);
-    formData.append('file', request.nda_file);
+    if (request.nda_file) formData.append('file', request.nda_file);
     if (request.referral_code) formData.append('referral_code', request.referral_code);
 
     const { data } = await api.post('/contact/nda-request', formData);
@@ -2559,6 +2559,39 @@ export const feesApi = {
     const params = entityId ? `?entity_id=${entityId}` : '';
     const { data } = await api.get(`/admin/fees/effective/${market}/${side}${params}`);
     return data;
+  },
+
+  getIntroducerDefaults: async (): Promise<{ commissionRate: string }> => {
+    const { data } = await api.get('/admin/fees/introducer-defaults');
+    return data;
+  },
+
+  updateIntroducerDefaults: async (commissionRate: string): Promise<{ commissionRate: string }> => {
+    const { data } = await api.put('/admin/fees/introducer-defaults', { commission_rate: commissionRate });
+    return data;
+  },
+
+  getIntroducerOverrides: async (): Promise<Array<{
+    userId: string; email: string; firstName: string; lastName: string; commissionRate: string;
+  }>> => {
+    const { data } = await api.get('/admin/fees/introducer-overrides');
+    return data;
+  },
+
+  searchClients: async (q: string): Promise<{
+    entities: Array<{ id: string; name: string; type: 'entity' }>;
+    introducers: Array<{ id: string; email: string; firstName: string; lastName: string; type: 'introducer'; commissionRate: string | null }>;
+  }> => {
+    const { data } = await api.get(`/admin/fees/search-clients?q=${encodeURIComponent(q)}`);
+    return data;
+  },
+
+  setUserCommissionRate: async (userId: string, rate: string): Promise<void> => {
+    await api.put(`/admin/users/${userId}/commission-rate`, { rate });
+  },
+
+  deleteUserCommissionRate: async (userId: string): Promise<void> => {
+    await api.put(`/admin/users/${userId}/commission-rate`, { rate: null });
   },
 };
 

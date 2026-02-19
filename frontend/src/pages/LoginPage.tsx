@@ -196,12 +196,7 @@ export function LoginPage() {
       return;
     }
 
-    if (!ndaFile) {
-      setError('Please upload a signed NDA document');
-      return;
-    }
-
-    if (!ndaFile.name.toLowerCase().endsWith('.pdf')) {
+    if (ndaFile && !ndaFile.name.toLowerCase().endsWith('.pdf')) {
       setError('Only PDF files are allowed');
       return;
     }
@@ -214,7 +209,7 @@ export function LoginPage() {
         contact_first_name: sanitizedFirstName,
         contact_last_name: sanitizedLastName,
         position: sanitizedPosition,
-        nda_file: ndaFile,
+        nda_file: ndaFile || undefined,
         referral_code: codeType === 'introducer' ? referralCode.trim() : undefined,
       });
       setRequestSent(true);
@@ -702,7 +697,7 @@ export function LoginPage() {
                   {ndaFile ? (
                     <><FileText className="w-4 h-4 text-emerald-400/70" /><span className="text-white/70 font-light text-sm truncate">{ndaFile.name}</span></>
                   ) : (
-                    <><Upload className="w-4 h-4 text-white/30" /><span className="text-white/30 font-light">Upload Signed NDA (PDF)</span></>
+                    <><Upload className="w-4 h-4 text-white/30" /><span className="text-white/30 font-light">Upload Signed NDA (optional)</span></>
                   )}
                 </div>
               </div>
@@ -711,7 +706,7 @@ export function LoginPage() {
 
               <button type="submit" disabled={loading}
                 className="w-full py-4 px-8 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white/90 font-light tracking-[0.2em] transition-all duration-300 disabled:opacity-50">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'SUBMIT NDA'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'SUBMIT'}
               </button>
 
               <button type="button" onClick={() => { setMode('nda'); setError(''); setNdaFile(null); }}

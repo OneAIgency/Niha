@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '../common';
-import { MapPin, Mail, Phone } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -22,62 +22,18 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Jurisdictions */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Platform</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  to="/cash-market"
-                  className="text-navy-400 hover:text-white transition-colors"
+            <h3 className="font-semibold text-lg mb-4">Jurisdictions Served</h3>
+            <div className="flex flex-wrap gap-2">
+              {['EU', 'CN', 'HK', 'CH', 'SG', 'AE'].map((code) => (
+                <span
+                  key={code}
+                  className="px-2 py-1 bg-navy-800 text-navy-300 text-xs rounded"
                 >
-                  CEA Marketplace
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/swap"
-                  className="text-navy-400 hover:text-white transition-colors"
-                >
-                  Swap Center
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/contact"
-                  className="text-navy-400 hover:text-white transition-colors"
-                >
-                  Contact Us
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Contact</h3>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-navy-400">
-                <Mail className="w-4 h-4" />
-                <span>info@nihaogroup.com</span>
-              </li>
-              <li className="flex items-center gap-2 text-navy-400">
-                <Phone className="w-4 h-4" />
-                <span>+852 1234 5678</span>
-              </li>
-            </ul>
-            <div className="mt-6">
-              <h4 className="font-medium text-sm mb-2">Jurisdictions Served</h4>
-              <div className="flex flex-wrap gap-2">
-                {['EU', 'CN', 'HK', 'CH', 'SG', 'AE'].map((code) => (
-                  <span
-                    key={code}
-                    className="px-2 py-1 bg-navy-800 text-navy-300 text-xs rounded"
-                  >
-                    {code}
-                  </span>
-                ))}
-              </div>
+                  {code}
+                </span>
+              ))}
             </div>
           </div>
         </div>
