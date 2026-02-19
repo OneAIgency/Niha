@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -112,6 +113,21 @@ async def validate_code(
     if result is None:
         return {"valid": False}
     return {"valid": True, "type": result["type"]}
+
+
+@router.get("/nda-template")
+async def download_nda_template():
+    """Public endpoint to download the Nihao-signed NDA template PDF."""
+    nda_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf"
+    )
+    if not os.path.isfile(nda_path):
+        raise HTTPException(status_code=404, detail="NDA template not available")
+    return FileResponse(
+        nda_path,
+        media_type="application/pdf",
+        filename="NDA-Nihao.pdf",
+    )
 
 
 @router.post("/request", response_model=ContactRequestResponse)
@@ -299,7 +315,7 @@ async def create_nda_request(
 @router.post("/introducer-nda-request", response_model=ContactRequestResponse)
 async def create_introducer_nda_request(
     request: Request,
-    entity_name: str = Form(...),  # noqa: B008
+    entity_name: str = Form(""),  # noqa: B008
     contact_email: str = Form(...),  # noqa: B008
     contact_first_name: str = Form(...),  # noqa: B008
     contact_last_name: str = Form(...),  # noqa: B008
