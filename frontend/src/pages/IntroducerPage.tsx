@@ -147,7 +147,7 @@ export function IntroducerPage() {
     const sanitizedPosition = sanitizeString(position);
 
     if (!sanitizedEmail || !isValidEmail(sanitizedEmail)) {
-      setError('Please enter a valid corporate email');
+      setError('Please enter a valid email');
       return;
     }
     if (!sanitizedFirstName.trim()) {
@@ -401,31 +401,27 @@ export function IntroducerPage() {
               className="space-y-5"
             >
               <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
-                Request introducer access
+                {codeType === 'buyer' ? 'Submit your signed NDA to request access' : 'Request introducer access'}
               </p>
-              {codeType !== 'buyer' && (
-                <a
-                  href="/api/v1/contact/nda-template"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300"
-                >
-                  <Download className="w-4 h-4" />
-                  Download NDA
-                </a>
-              )}
-              {codeType !== 'buyer' && (
-                <label className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300 cursor-pointer">
-                  <Upload className="w-4 h-4" />
-                  {ndaFile ? ndaFile.name : 'Upload Signed NDA (optional)'}
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    className="hidden"
-                    onChange={(e) => setNdaFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-              )}
+              <a
+                href="/api/v1/contact/nda-template"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300"
+              >
+                <Download className="w-4 h-4" />
+                Download NDA
+              </a>
+              <label className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300 cursor-pointer">
+                <Upload className="w-4 h-4" />
+                {ndaFile ? ndaFile.name : 'Upload Signed NDA (optional)'}
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => setNdaFile(e.target.files?.[0] || null)}
+                />
+              </label>
               {invitationInfo && (
                 <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-2">
                   <p className="text-emerald-400 text-sm font-medium">
@@ -458,7 +454,7 @@ export function IntroducerPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                   <input
                     type="email"
-                    placeholder="Corporate Email"
+                    placeholder={codeType === 'troducer' ? 'Email' : 'Corporate Email'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full py-3.5 pl-12 pr-4 bg-white/5 border border-white/10 rounded-lg text-white/90 placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors font-light"

@@ -384,7 +384,7 @@ export const contactApi = {
     return data;
   },
 
-  validateCode: async (code: string): Promise<{ valid: boolean; type?: 'preintroducer' | 'introducer' }> => {
+  validateCode: async (code: string): Promise<{ valid: boolean; type?: 'preintroducer' | 'troducer' | 'introducer' }> => {
     const formData = new FormData();
     formData.append('code', code);
     const { data } = await api.post('/contact/validate-code', formData);
