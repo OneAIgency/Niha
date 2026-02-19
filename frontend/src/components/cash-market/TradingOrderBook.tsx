@@ -182,8 +182,8 @@ export function TradingOrderBook({
    * @returns Formatted price string (e.g., "81.500")
    */
   const formatPrice = (price: number) => {
-    if (!isFinite(price) || price <= 0) return '0.0';
-    return price.toFixed(1);
+    if (!isFinite(price) || price <= 0) return '0.00';
+    return price.toFixed(2);
   };
 
   /**

@@ -46,7 +46,7 @@ export function RecentTrades({ orderBook }: RecentTradesProps) {
             key={idx}
             className="grid grid-cols-4 gap-2 px-4 py-2 text-xs hover:bg-navy-700/50"
           >
-            <div className="text-emerald-400 font-mono">{trade.price.toFixed(1)}</div>
+            <div className="text-emerald-400 font-mono">{trade.price.toFixed(2)}</div>
             <div className="text-right text-white font-mono">
               {trade.volume.toLocaleString()}
             </div>

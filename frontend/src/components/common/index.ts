@@ -38,3 +38,4 @@ export { FormSection, FormRow, FormActions } from './FormSection';
 export { ToastContainer, showToast } from './Toast';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { CommandPalette } from './CommandPalette';
+export { ResizablePanelGroup } from './ResizablePanelGroup';

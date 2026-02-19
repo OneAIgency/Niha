@@ -14,14 +14,14 @@ from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
 
-# Price step for CEA cash market (0.1 EUR)
-PRICE_STEP = Decimal("0.1")
+# Price step for CEA cash market (0.01 EUR)
+PRICE_STEP = Decimal("0.01")
 
 
 def validate_price_step(price: Decimal) -> bool:
     """
-    Validate that price respects the quote step of 0.1 EUR.
-    Returns True if price is a valid multiple of 0.1.
+    Validate that price respects the quote step of 0.01 EUR.
+    Returns True if price is a valid multiple of 0.01.
     """
     # Check if price divided by step is a whole number
     remainder = price % PRICE_STEP
@@ -314,12 +314,12 @@ async def place_order(
             detail="Regular clients can only place BUY orders. SELL orders are reserved for Market Makers."
         )
 
-    # Validate price step (0.1 EUR)
+    # Validate price step (0.01 EUR)
     price = Decimal(str(order.price))
     if not validate_price_step(price):
         raise HTTPException(
             status_code=400,
-            detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {order.price}, expected values like 9.30, 9.40, 9.50, etc."
+            detail=f"Price must be a multiple of {PRICE_STEP} EUR. Got {order.price}, expected values like 9.30, 9.31, 9.50, etc."
         )
 
     try:

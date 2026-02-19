@@ -59,13 +59,13 @@ export function UnifiedOrderBook({
             <div className="text-center">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-mono font-bold">
-                  €{bestBid?.toFixed(1) ?? '-'}
+                  €{bestBid?.toFixed(2) ?? '-'}
                 </span>
                 <span className="px-2 py-0.5 bg-navy-700 rounded text-xs text-navy-300">
-                  SPREAD €{spread?.toFixed(1) ?? '-'} ({spread && bestBid ? ((spread / bestBid) * 100).toFixed(1) : '-'}%)
+                  SPREAD €{spread?.toFixed(2) ?? '-'} ({spread && bestBid ? ((spread / bestBid) * 100).toFixed(2) : '-'}%)
                 </span>
                 <span className="text-red-400 font-mono font-bold">
-                  €{bestAsk?.toFixed(1) ?? '-'}
+                  €{bestAsk?.toFixed(2) ?? '-'}
                 </span>
               </div>
             </div>
@@ -143,7 +143,7 @@ export function UnifiedOrderBook({
                   {formatNumber(level.quantity)}
                 </div>
                 <div className="relative text-right text-emerald-400 font-mono font-semibold">
-                  {level.price.toFixed(1)}
+                  {level.price.toFixed(2)}
                 </div>
               </div>
             );
@@ -170,7 +170,7 @@ export function UnifiedOrderBook({
                   style={{ width: `${depthPct}%` }}
                 />
                 <div className="relative text-red-400 font-mono font-semibold">
-                  {level.price.toFixed(1)}
+                  {level.price.toFixed(2)}
                 </div>
                 <div className="relative text-left text-white font-mono">
                   {formatNumber(level.quantity)}

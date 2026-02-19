@@ -117,7 +117,7 @@ const RECOMMENDED: Record<string, Record<string, string>> = {
 const FIELD_TIPS: Record<string, string> = {
   targetLiquidity: 'Total EUR value of open orders to maintain on this market side. The engine places/cancels orders to stay near this target.',
   avgSpread: 'Average bid-ask spread. For CEA Cash this is in EUR (e.g. 0.20 = 20 cents). For Swap this is in ratio units. Used by the algorithm to space orders around the mid price.',
-  tickSize: 'Minimum price increment. All order prices are rounded to this step. CEA Cash: EUR steps (0.10 = 10 cents). Swap: ratio steps (0.0010).',
+  tickSize: 'Minimum price increment. All order prices are rounded to this step. CEA Cash: EUR steps (0.01 = 1 cent). Swap: ratio steps (0.0010).',
   intervalSeconds: 'How often (in seconds) the engine checks and places new orders. Lower = more active market, higher = calmer.',
   avgOrderCount: 'Target number of open orders to maintain. The engine distributes the target liquidity across this many orders.',
   minOrderVolumeEur: 'Minimum EUR value for a single order. Orders below this threshold are skipped.',

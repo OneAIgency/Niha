@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Building2, User, Briefcase, CheckCircle, Loader2, Download } from 'lucide-react';
+import { Mail, Lock, Building2, User, Briefcase, CheckCircle, Loader2, Download, Upload } from 'lucide-react';
 import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { isValidEmail, sanitizeEmail, sanitizeString } from '../utils';
@@ -97,6 +97,7 @@ export function IntroducerPage() {
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
   const [position, setPosition] = useState('');
+  const [ndaFile, setNdaFile] = useState<File | null>(null);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -170,6 +171,7 @@ export function IntroducerPage() {
         contact_first_name: sanitizedFirstName,
         contact_last_name: sanitizedLastName,
         position: sanitizedPosition,
+        nda_file: ndaFile || undefined,
         referral_code: referralCode || undefined,
         invite_token: inviteToken || undefined,
         request_flow: codeType === 'buyer' ? 'buyer' : undefined,
@@ -202,6 +204,7 @@ export function IntroducerPage() {
       setContactFirstName('');
       setContactLastName('');
       setPosition('');
+      setNdaFile(null);
     };
 
     return (
@@ -410,6 +413,18 @@ export function IntroducerPage() {
                   <Download className="w-4 h-4" />
                   Download NDA
                 </a>
+              )}
+              {codeType !== 'buyer' && (
+                <label className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300 cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  {ndaFile ? ndaFile.name : 'Upload Signed NDA (optional)'}
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => setNdaFile(e.target.files?.[0] || null)}
+                  />
+                </label>
               )}
               {invitationInfo && (
                 <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-2">

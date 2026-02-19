@@ -166,7 +166,7 @@ export function DepthChart({ bids, asks }: DepthChartProps) {
                 transform: 'translateX(-50%)',
               }}
             >
-              {label.price.toFixed(1)}
+              {label.price.toFixed(2)}
             </div>
           ))}
         </div>
