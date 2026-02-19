@@ -70,8 +70,6 @@ async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
     Consume a referral code: return the owner's user_id and regenerate their code.
     Uses FOR UPDATE row lock to prevent concurrent consumption of the same code.
     Returns the owner's user_id, or None if code invalid/already consumed.
-
-    TRODUCER codes are single-use: set to None instead of regenerating.
     """
     result = await db.execute(
         select(User)
@@ -87,11 +85,7 @@ async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
         return None
 
     owner_id = user.id
-    if user.role == UserRole.TRODUCER:
-        # Single-use: clear the code (no regeneration)
-        user.referral_code = None
-    else:
-        # Regenerate code (within the same transaction lock)
-        user.referral_code = await get_unique_referral_code(db)
+    # Regenerate code (within the same transaction lock)
+    user.referral_code = await get_unique_referral_code(db)
     # Don't commit here -- caller manages the transaction
     return owner_id

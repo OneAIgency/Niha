@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, CheckCircle } from 'lucide-react';
+import { Copy, Check, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/useStore';
 
 export function TroducerPage() {
@@ -38,13 +38,20 @@ export function TroducerPage() {
           </div>
         ) : (
           <div className="bg-navy-800/50 border border-navy-700 rounded-xl p-8">
-            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-            <p className="text-sm text-navy-300">Your referral code has been used.</p>
+            <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+            <p className="text-sm text-navy-400">Unable to load referral code. Please refresh the page.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Refresh
+            </button>
           </div>
         )}
 
         <p className="text-xs text-navy-500 leading-relaxed">
-          Share this code to invite someone as an introducer. This code works once.
+          Share this code to invite someone as an introducer.
+          After the code is used, a new one will be generated automatically.
         </p>
       </div>
     </div>
