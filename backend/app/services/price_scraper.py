@@ -21,9 +21,11 @@ def is_carboncredits_url(url: str) -> bool:
 
 from ..core.security import RedisManager
 from ..models.models import (
+    AlertDirection,
     CertificateType,
     ExchangeRateHistory,
     ExchangeRateSource,
+    PriceAlert,
     PriceHistory,
     ScrapeLibrary,
     ScrapeStatus,
@@ -1260,6 +1262,87 @@ async def seed_default_exchange_rate_sources(db) -> None:
     except Exception:
         await db.rollback()
         raise
+
+
+# ==================== Price Alert Checker ====================
+
+
+async def check_price_alerts(db, prices: dict) -> None:
+    """Check active alerts against current prices and trigger matches.
+
+    Args:
+        db: AsyncSession
+        prices: dict with 'eua' and 'cea' keys, each having a 'price' float (EUR)
+    """
+    import asyncio
+    from sqlalchemy import select, update as sa_update
+
+    from .ws_utils import get_entity_user_ids  # noqa: F811
+
+    eua_price = prices.get("eua", {}).get("price")
+    cea_price = prices.get("cea", {}).get("price")
+    if eua_price is None and cea_price is None:
+        return
+
+    result = await db.execute(
+        select(PriceAlert).where(PriceAlert.is_active.is_(True))
+    )
+    alerts = result.scalars().all()
+    if not alerts:
+        return
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    triggered_user_alerts: list[tuple] = []  # (user_id, message)
+
+    for alert in alerts:
+        current_price = eua_price if alert.certificate_type == CertificateType.EUA else cea_price
+        if current_price is None:
+            continue
+
+        target = float(alert.target_price)
+        triggered = False
+        if alert.direction == AlertDirection.ABOVE and current_price >= target:
+            triggered = True
+        elif alert.direction == AlertDirection.BELOW and current_price <= target:
+            triggered = True
+
+        if triggered:
+            # Deactivate alert
+            await db.execute(
+                sa_update(PriceAlert)
+                .where(PriceAlert.id == alert.id)
+                .values(is_active=False, triggered_at=now)
+            )
+            direction_label = "above" if alert.direction == AlertDirection.ABOVE else "below"
+            msg = (
+                f"{alert.certificate_type.value} hit €{current_price:.2f} "
+                f"({direction_label} your €{target:.2f} target)"
+            )
+            triggered_user_alerts.append((alert.user_id, msg))
+
+    if triggered_user_alerts:
+        await db.commit()
+
+        # Send WS notifications (lazy import to avoid circular)
+        try:
+            from ..api.v1.client_ws import client_ws_manager
+
+            for user_id, message in triggered_user_alerts:
+                asyncio.create_task(
+                    client_ws_manager.broadcast_to_users(
+                        [user_id],
+                        {
+                            "type": "notification",
+                            "data": {
+                                "message": message,
+                                "level": "info",
+                                "category": "price_alert",
+                            },
+                        },
+                    )
+                )
+        except Exception as e:
+            logger.warning("Failed to send price alert WS notifications: %s", e)
 
 
 # Singleton instance

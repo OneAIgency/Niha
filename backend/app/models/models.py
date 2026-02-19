@@ -1552,3 +1552,25 @@ class MailConfig(Base):
     auth_method = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class AlertDirection(str, enum.Enum):
+    ABOVE = "ABOVE"
+    BELOW = "BELOW"
+
+
+class PriceAlert(Base):
+    """User-configured price alert: fires when price crosses target in given direction."""
+
+    __tablename__ = "price_alerts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    certificate_type = Column(SQLEnum(CertificateType), nullable=False)
+    direction = Column(SQLEnum(AlertDirection), nullable=False)
+    target_price = Column(Numeric(18, 4), nullable=False)
+    is_active = Column(Boolean, default=True, index=True)
+    triggered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    user = relationship("User", foreign_keys=[user_id])

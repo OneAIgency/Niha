@@ -271,6 +271,15 @@ async def lifespan(app: FastAPI):
                     except Exception as e:
                         logger.warning("Failed to warm price cache: %s", e)
 
+                    # Check price alerts after each scrape cycle
+                    try:
+                        from .services.price_scraper import check_price_alerts
+
+                        prices = await price_scraper.get_current_prices()
+                        await check_price_alerts(db, prices)
+                    except Exception as e:
+                        logger.warning("Price alert check failed: %s", e)
+
             except Exception as e:
                 logger.error(f"Price scraping scheduler error: {e}", exc_info=True)
 

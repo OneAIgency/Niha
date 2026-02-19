@@ -37,6 +37,7 @@ import {
 import { EuaScrapped, CeaScrapped } from '../components/dashboard';
 import { SettlementTransactions } from '../components/dashboard/SettlementTransactions';
 import { SettlementDetails } from '../components/dashboard/SettlementDetails';
+import { PriceAlerts } from '../components/dashboard/PriceAlerts';
 import type { Order, SettlementBatch, SwapRequest } from '../types';
 
 /**
@@ -1080,6 +1081,11 @@ export function DashboardPage() {
               )}
             </motion.div>
           )}
+        </div>
+
+        {/* Price Alerts */}
+        <div className="mb-6">
+          <PriceAlerts />
         </div>
 
         {/* Holdings Breakdown */}
