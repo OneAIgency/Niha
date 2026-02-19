@@ -11,6 +11,52 @@ import { getEffectiveRole } from './utils/effectiveRole';
 import { logger } from './utils/logger';
 
 /**
+ * Global error boundary for the entire application. Catches any render error that escapes
+ * inner boundaries (BackofficeErrorBoundary, etc.) and shows a full-page "Reload" fallback.
+ */
+class AppErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logger.error('[AppErrorBoundary]', { error, componentStack: errorInfo.componentStack });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-navy-950 flex items-center justify-center p-8">
+          <div className="max-w-xl w-full bg-navy-800 border border-navy-700 rounded-xl p-6 text-center">
+            <h1 className="text-xl font-bold text-red-400 mb-2">Something went wrong</h1>
+            <p className="text-navy-300 text-sm mb-4">
+              An unexpected error occurred. Please reload the page to continue.
+            </p>
+            {this.state.error && (
+              <p className="text-navy-500 text-xs font-mono mb-4 break-all">
+                {this.state.error.message}
+              </p>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
  * Error boundary for backoffice routes. Surfaces render errors in UI instead of a blank page
  * and logs them via logger.error (with componentStack) for debugging and monitoring.
  */
@@ -282,9 +328,10 @@ function CatchAllRedirect() {
 
 function App() {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ThemeTokenOverridesStyle />
-      <Suspense fallback={<PageLoader />}>
+    <AppErrorBoundary>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ThemeTokenOverridesStyle />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Redirect root to login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -663,8 +710,9 @@ function App() {
         <AutoOrdersService />
         <ToastContainer />
         <CommandPalette />
-      </Suspense>
-    </Router>
+        </Suspense>
+      </Router>
+    </AppErrorBoundary>
   );
 }
 
