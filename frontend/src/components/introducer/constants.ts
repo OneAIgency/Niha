@@ -1,6 +1,6 @@
 import {
   Home, ArrowRightLeft, TrendingUp, Shield, Scale,
-  Calculator, HelpCircle, UserPlus,
+  Calculator, HelpCircle,
   Target, Globe, CheckCircle,
 } from 'lucide-react';
 import type { ContentDepth } from '../../stores/useIntroducerStore';
@@ -54,7 +54,6 @@ export const NAV_ITEMS = [
   { id: SECTION_IDS.ADVANTAGES, label: 'Why NIHA', icon: Shield },
   { id: SECTION_IDS.LEGAL, label: 'Legal Basis', icon: Scale },
   { id: SECTION_IDS.CALCULATOR, label: 'Calculator', icon: Calculator },
-  { id: SECTION_IDS.REFERRALS, label: 'Referrals', icon: UserPlus },
   { id: SECTION_IDS.FAQ, label: 'FAQ', icon: HelpCircle },
 ] as const;
 
