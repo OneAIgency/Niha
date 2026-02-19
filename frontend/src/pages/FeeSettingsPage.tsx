@@ -3,6 +3,7 @@ import { Settings, Building2, Plus, Pencil, Trash2, Save, RefreshCw } from 'luci
 import { feesApi, adminApi } from '../services/api';
 import { BackofficeLayout } from '../components/layout';
 import { AlertBanner, NumberInput, PageLoadingState } from '../components/common';
+import { cn } from '../utils';
 import type {
   TradingFeeConfig,
   EntityFeeOverride,
@@ -18,6 +19,7 @@ const MARKET_NAMES: MarketDisplayName = {
 };
 
 export function FeeSettingsPage() {
+  const [activeTab, setActiveTab] = useState<'default' | 'introducer' | 'special'>('default');
   const [marketFees, setMarketFees] = useState<TradingFeeConfig[]>([]);
   const [entityOverrides, setEntityOverrides] = useState<EntityFeeOverride[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
@@ -186,12 +188,32 @@ export function FeeSettingsPage() {
   }
 
   return (
-    <BackofficeLayout subSubHeader={
-      <button onClick={fetchData} className="flex items-center gap-2 px-3 py-1.5 text-sm text-navy-400 hover:text-white hover:bg-navy-700 rounded-lg transition-colors">
-        <RefreshCw className="w-4 h-4" />
-        Refresh
-      </button>
-    }>
+    <BackofficeLayout
+      subSubHeaderLeft={
+        <div className="flex items-center gap-1">
+          {(['default', 'introducer', 'special'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'px-4 py-1.5 text-sm rounded-lg transition-colors',
+                activeTab === tab
+                  ? 'bg-emerald-600/20 text-emerald-400 font-medium'
+                  : 'text-navy-400 hover:text-white hover:bg-navy-700'
+              )}
+            >
+              {tab === 'default' ? 'Default Fees' : tab === 'introducer' ? 'Introducer Fees' : 'Special Fees'}
+            </button>
+          ))}
+        </div>
+      }
+      subSubHeader={
+        <button onClick={fetchData} className="flex items-center gap-2 px-3 py-1.5 text-sm text-navy-400 hover:text-white hover:bg-navy-700 rounded-lg transition-colors">
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </button>
+      }
+    >
     <div className="space-y-6">
       {/* Messages */}
       {error && (
@@ -206,6 +228,7 @@ export function FeeSettingsPage() {
       )}
 
       {/* Default Market Fees */}
+      {activeTab === 'default' && (
       <div className="panel panel--flush">
         <div className="p-5 border-b border-navy-700">
           <div className="flex items-center gap-2">
@@ -309,8 +332,20 @@ export function FeeSettingsPage() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Entity Fee Overrides */}
+      {/* Introducer Fees (placeholder) */}
+      {activeTab === 'introducer' && (
+        <div className="panel panel--flush">
+          <div className="p-5">
+            <p className="text-navy-400">Introducer Fees (coming next)</p>
+          </div>
+        </div>
+      )}
+
+      {/* Entity Fee Overrides (Special Fees) */}
+      {activeTab === 'special' && (
+      <>
       <div className="panel panel--flush">
         <div className="p-5 border-b border-navy-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -501,6 +536,8 @@ export function FeeSettingsPage() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
     </BackofficeLayout>
