@@ -1123,6 +1123,16 @@ export const adminApi = {
     return data;
   },
 
+  bulkChangeRole: async (userIds: string[], role: UserRole): Promise<MessageResponse> => {
+    const { data } = await api.post('/admin/users/bulk-role-change', { user_ids: userIds, role });
+    return data;
+  },
+
+  bulkDeactivate: async (userIds: string[]): Promise<MessageResponse> => {
+    const { data } = await api.post('/admin/users/bulk-deactivate', { user_ids: userIds, role: 'NDA' });
+    return data;
+  },
+
   // Full User Details (with auth history, sessions, stats)
   getUserFull: async (id: string): Promise<AdminUserFull> => {
     const { data } = await api.get(`/admin/users/${id}/full`);

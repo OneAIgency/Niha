@@ -1063,6 +1063,65 @@ async def change_user_role(
     return MessageResponse(message=msg)
 
 
+class BulkRoleChangeRequest(BaseModel):
+    user_ids: list[str] = Field(..., min_length=1, max_length=50)
+    role: UserRole
+
+
+@router.post("/users/bulk-role-change", response_model=MessageResponse)
+async def bulk_change_role(
+    payload: BulkRoleChangeRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change role for multiple users at once. Admin only. Max 50 users per request."""
+    changed = 0
+    skipped = 0
+    for uid in payload.user_ids:
+        try:
+            result = await db.execute(select(User).where(User.id == UUID(uid)))
+            user = result.scalar_one_or_none()
+            if not user or user.id == admin_user.id or user.role == payload.role:
+                skipped += 1
+                continue
+            user.role = payload.role
+            changed += 1
+        except Exception:
+            skipped += 1
+
+    await db.commit()
+    return MessageResponse(
+        message=f"Bulk role change complete: {changed} updated, {skipped} skipped"
+    )
+
+
+@router.post("/users/bulk-deactivate", response_model=MessageResponse)
+async def bulk_deactivate(
+    payload: BulkRoleChangeRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate multiple users at once. Admin only."""
+    deactivated = 0
+    skipped = 0
+    for uid in payload.user_ids:
+        try:
+            result = await db.execute(select(User).where(User.id == UUID(uid)))
+            user = result.scalar_one_or_none()
+            if not user or user.id == admin_user.id or not user.is_active:
+                skipped += 1
+                continue
+            user.is_active = False
+            deactivated += 1
+        except Exception:
+            skipped += 1
+
+    await db.commit()
+    return MessageResponse(
+        message=f"Bulk deactivate complete: {deactivated} deactivated, {skipped} skipped"
+    )
+
+
 @router.delete("/users/{user_id}", response_model=MessageResponse)
 async def deactivate_user(
     user_id: str,
