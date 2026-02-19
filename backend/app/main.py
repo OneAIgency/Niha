@@ -417,6 +417,112 @@ async def lifespan(app: FastAPI):
             # Check every 5 seconds for rules ready to execute (supports 10-20 sec intervals)
             await asyncio.sleep(5)
 
+    # Exchange rate history retention loop (compact granular data older than 30 days)
+    async def exchange_rate_retention_loop():
+        """Once per day, aggregate granular exchange rate rows older than 30 days
+        into daily averages (source='daily_avg'), then delete the granular rows."""
+        import uuid as _uuid
+        from datetime import datetime, timedelta, timezone
+        from decimal import Decimal
+
+        from sqlalchemy import select, delete as sa_delete, func
+
+        from .models.models import ExchangeRateHistory
+
+        # Wait 120 seconds on startup before first run
+        await asyncio.sleep(120)
+
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    cutoff = now - timedelta(days=30)
+
+                    # Find distinct currency pairs that have old granular rows
+                    pairs_q = (
+                        select(
+                            ExchangeRateHistory.from_currency,
+                            ExchangeRateHistory.to_currency,
+                        )
+                        .where(
+                            ExchangeRateHistory.recorded_at < cutoff,
+                            ExchangeRateHistory.source != "daily_avg",
+                        )
+                        .distinct()
+                    )
+                    pairs_result = await db.execute(pairs_q)
+                    pairs = pairs_result.all()
+
+                    total_created = 0
+
+                    for from_cur, to_cur in pairs:
+                        # Compute daily averages for old granular rows
+                        day_col = func.date_trunc("day", ExchangeRateHistory.recorded_at).label("day")
+                        avg_q = (
+                            select(
+                                day_col,
+                                func.avg(ExchangeRateHistory.rate).label("avg_rate"),
+                            )
+                            .where(
+                                ExchangeRateHistory.from_currency == from_cur,
+                                ExchangeRateHistory.to_currency == to_cur,
+                                ExchangeRateHistory.recorded_at < cutoff,
+                                ExchangeRateHistory.source != "daily_avg",
+                            )
+                            .group_by(day_col)
+                        )
+                        avg_result = await db.execute(avg_q)
+                        daily_avgs = avg_result.all()
+
+                        for day_ts, avg_rate in daily_avgs:
+                            # Skip if a daily_avg row already exists for this day+pair
+                            exists_q = select(ExchangeRateHistory.id).where(
+                                ExchangeRateHistory.from_currency == from_cur,
+                                ExchangeRateHistory.to_currency == to_cur,
+                                ExchangeRateHistory.source == "daily_avg",
+                                ExchangeRateHistory.recorded_at == day_ts,
+                            )
+                            exists_result = await db.execute(exists_q)
+                            if exists_result.scalar_one_or_none() is not None:
+                                continue
+
+                            # Insert daily average row
+                            avg_row = ExchangeRateHistory(
+                                id=_uuid.uuid4(),
+                                from_currency=from_cur,
+                                to_currency=to_cur,
+                                rate=Decimal(str(round(float(avg_rate), 8))),
+                                source="daily_avg",
+                                recorded_at=day_ts,
+                            )
+                            db.add(avg_row)
+                            total_created += 1
+
+                        # Delete old granular rows for this pair
+                        del_stmt = sa_delete(ExchangeRateHistory).where(
+                            ExchangeRateHistory.from_currency == from_cur,
+                            ExchangeRateHistory.to_currency == to_cur,
+                            ExchangeRateHistory.recorded_at < cutoff,
+                            ExchangeRateHistory.source != "daily_avg",
+                        )
+                        await db.execute(del_stmt)
+
+                    await db.commit()
+
+                    if total_created > 0 or pairs:
+                        logger.info(
+                            "Exchange rate retention: created %d daily averages, "
+                            "compacted %d currency pair(s)",
+                            total_created,
+                            len(pairs),
+                        )
+
+            except Exception as e:
+                logger.error(f"Exchange rate retention loop error: {e}", exc_info=True)
+
+            # Run once per day
+            await asyncio.sleep(86400)
+
     # Seed default scraping sources if none exist
     try:
         from .services.price_scraper import (
@@ -438,12 +544,13 @@ async def lifespan(app: FastAPI):
     scraping_task = asyncio.create_task(price_scraping_scheduler_loop())
     exchange_rate_task = asyncio.create_task(exchange_rate_scraping_scheduler_loop())
     auto_trade_task = asyncio.create_task(auto_trade_executor_loop())
+    retention_task = asyncio.create_task(exchange_rate_retention_loop())
     _background_tasks.extend(
-        [processor_task, monitoring_task, deposit_task, scraping_task, exchange_rate_task, auto_trade_task]
+        [processor_task, monitoring_task, deposit_task, scraping_task, exchange_rate_task, auto_trade_task, retention_task]
     )
     logger.info(
         "Settlement processor, monitoring, deposit hold processor, price scraping, "
-        "exchange rate scraping, and auto-trade schedulers started"
+        "exchange rate scraping, auto-trade, and retention schedulers started"
     )
 
     # Register ticket broadcast to backoffice WebSocket
