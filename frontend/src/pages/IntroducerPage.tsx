@@ -40,6 +40,7 @@ export function IntroducerPage() {
     introducerName: string;
   } | null>(null);
   const [referralCode, setReferralCode] = useState('');
+  const [codeType, setCodeType] = useState<'introducer' | 'buyer' | null>(null);
 
   // Fetch invitation info when landing with invite token
   useEffect(() => {
@@ -59,6 +60,17 @@ export function IntroducerPage() {
     }
     if (refCode) {
       setReferralCode(refCode);
+      // Detect referral code type to determine if invitee is a buyer
+      contactApi.validateCode(refCode)
+        .then(res => {
+          if (res.valid && res.type === 'introducer') {
+            // Code belongs to an introducer → the invitee is a buyer
+            setCodeType('buyer');
+          }
+        })
+        .catch(() => {
+          // Validation failed — default to introducer flow
+        });
     }
   }, [inviteToken, refCode]);
 
@@ -163,6 +175,7 @@ export function IntroducerPage() {
         position: sanitizedPosition,
         referral_code: referralCode || undefined,
         invite_token: inviteToken || undefined,
+        request_flow: codeType === 'buyer' ? 'buyer' : undefined,
       });
       setRequestSent(true);
     } catch {

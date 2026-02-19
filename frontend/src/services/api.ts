@@ -356,6 +356,7 @@ export const contactApi = {
     nda_file?: File;
     referral_code?: string;
     invite_token?: string;
+    request_flow?: string;
   }): Promise<ContactRequestResponse> => {
     const formData = new FormData();
     formData.append('entity_name', request.entity_name);
@@ -366,6 +367,7 @@ export const contactApi = {
     if (request.nda_file) formData.append('file', request.nda_file);
     if (request.referral_code) formData.append('referral_code', request.referral_code);
     if (request.invite_token) formData.append('invite_token', request.invite_token);
+    if (request.request_flow) formData.append('request_flow', request.request_flow);
 
     const { data } = await api.post('/contact/introducer-nda-request', formData);
     return data;

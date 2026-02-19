@@ -131,6 +131,7 @@ See `app_truth.md` §10. These files are locked:
 5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list
 6. **Swap market ratio**: `Order.price` = **CEA/EUA ratio** (NOT EUR price!). The ratio represents how many EUA you get per 1 CEA. Example: ratio 0.1177 means 1 CEA → 0.1177 EUA. See `app_truth.md` §5 for full specs
 7. **EUR balance display**: Dashboard, Backoffice User Assets, and Cash Market all show the same EUR (EntityHolding EUR, or Entity.balance_amount fallback). Helper: `balance_utils.get_entity_eur_balance`. See `app_truth.md` §5
+8. **init.sql**: Creates extensions (uuid-ossp) and `jurisdiction` enum only. Tables and seed data come from Alembic migrations. Do not add INSERTs into app tables—they do not exist at init time.
 
 ## Testing
 
