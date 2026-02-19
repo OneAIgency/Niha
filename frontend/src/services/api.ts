@@ -508,6 +508,31 @@ export const pricesApi = {
   },
 };
 
+// Price Alerts API
+export interface PriceAlertItem {
+  id: string;
+  certificateType: 'EUA' | 'CEA';
+  direction: 'ABOVE' | 'BELOW';
+  targetPrice: number;
+  isActive: boolean;
+  triggeredAt: string | null;
+  createdAt: string | null;
+}
+
+export const priceAlertsApi = {
+  list: async (): Promise<PriceAlertItem[]> => {
+    const { data } = await api.get('/prices/alerts');
+    return data;
+  },
+  create: async (body: { certificate_type: string; direction: string; target_price: number }): Promise<PriceAlertItem> => {
+    const { data } = await api.post('/prices/alerts', body);
+    return data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/prices/alerts/${id}`);
+  },
+};
+
 // Client Realtime Types (role_updated e.g. AML→CEA after clear deposit)
 export interface ClientWebSocketMessage {
   type: 'connected' | 'heartbeat' | 'role_updated' | 'balance_updated'
