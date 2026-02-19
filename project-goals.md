@@ -30,7 +30,7 @@ NIHA Carbon Trading Platform is functional with:
 - [x] Standardize spacing across all components
 - [x] Ensure dark mode works perfectly everywhere
 - [x] Fix any hardcoded colors/values found
-- [ ] Verify mobile responsiveness on key pages
+- [x] Verify mobile responsiveness on key pages
 
 #### 2. Cash Market Improvements
 - [x] Real-time order book updates via WebSocket
@@ -48,7 +48,7 @@ NIHA Carbon Trading Platform is functional with:
 #### 4. User Experience
 - [x] Loading skeletons for all data tables
 - [ ] Better error messages with suggested actions
-- [ ] Keyboard shortcuts for traders
+- [x] Keyboard shortcuts for traders
 - [ ] Quick actions menu
 
 #### 5. Admin Tools

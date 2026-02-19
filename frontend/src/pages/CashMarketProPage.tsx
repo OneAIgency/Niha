@@ -10,7 +10,9 @@ import {
   FileText,
   TrendingUp,
 } from 'lucide-react';
-import { Subheader, Modal, Skeleton } from '../components/common';
+import { Subheader, Modal, Skeleton, KeyboardShortcutsHelp } from '../components/common';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import type { Shortcut } from '../hooks/useKeyboardShortcuts';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi, usersApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
@@ -512,6 +514,16 @@ export function CashMarketProPage() {
   );
   const highlightAskCount = isFormExpanded && pageCalc ? pageCalc.levelsUsed : 0;
 
+  // Keyboard shortcuts for trading terminal
+  const shortcuts: Shortcut[] = useMemo(() => [
+    { key: 'r', label: 'R', description: 'Refresh order book', handler: () => { refresh(); } },
+    { key: 'Escape', label: 'Esc', description: 'Close modal', handler: () => { if (orderResult) handleModalClose(); }, global: true },
+    { key: 'd', label: 'D', description: 'Go to Dashboard', handler: () => navigate('/dashboard') },
+    { key: 's', label: 'S', description: 'Go to Swap market', handler: () => navigate('/swap') },
+  ], [refresh, orderResult, handleModalClose, navigate]);
+
+  const { helpOpen, closeHelp } = useKeyboardShortcuts(shortcuts);
+
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
     if (num === null || num === undefined) return '-';
     return num.toLocaleString(undefined, {
@@ -558,6 +570,8 @@ export function CashMarketProPage() {
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </motion.button>
+
+        <span className="hidden sm:inline text-[10px] text-navy-600 border border-navy-700 rounded px-1.5 py-0.5 font-mono cursor-default" title="Press ? for keyboard shortcuts">?</span>
       </Subheader>
 
       {/* Ticker — full width, edge-to-edge, no container */}
@@ -768,6 +782,16 @@ export function CashMarketProPage() {
           </button>
         </Modal.Footer>
       </Modal>
+
+      {/* Keyboard shortcuts help overlay */}
+      <KeyboardShortcutsHelp
+        open={helpOpen}
+        onClose={closeHelp}
+        shortcuts={[
+          ...shortcuts,
+          { key: '?', label: '?', description: 'Toggle this help', handler: () => {} },
+        ]}
+      />
     </div>
   );
 }
