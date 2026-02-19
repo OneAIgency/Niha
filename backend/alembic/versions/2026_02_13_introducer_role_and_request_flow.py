@@ -36,5 +36,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("contact_requests", "request_flow")
-    # PostgreSQL does not support removing enum values without recreating the type.
-    pass

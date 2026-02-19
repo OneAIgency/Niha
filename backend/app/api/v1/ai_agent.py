@@ -1,5 +1,4 @@
 """AI Agent admin endpoints: config, knowledge base, test chat, API keys."""
-import json
 import logging
 import os
 import shutil

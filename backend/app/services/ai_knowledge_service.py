@@ -2,8 +2,6 @@
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Optional
-
 import httpx
 import tiktoken
 from openai import AsyncOpenAI
