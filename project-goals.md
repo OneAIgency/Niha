@@ -49,7 +49,7 @@ NIHA Carbon Trading Platform is functional with:
 - [x] Loading skeletons for all data tables
 - [ ] Better error messages with suggested actions
 - [x] Keyboard shortcuts for traders
-- [ ] Quick actions menu
+- [x] Quick actions menu
 
 #### 5. Admin Tools
 - [ ] Bulk operations in user management
