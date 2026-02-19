@@ -895,9 +895,9 @@ async def create_user(
         await db.flush()
         entity_id = entity.id
 
-    # Auto-generate referral code for PREINTRODUCER (safety net)
+    # Auto-generate referral code for PREINTRODUCER and TRODUCER
     referral_code = None
-    if user_data.role == UserRole.PREINTRODUCER:
+    if user_data.role in (UserRole.PREINTRODUCER, UserRole.TRODUCER):
         from ...services.referral_codes import get_unique_referral_code
         referral_code = await get_unique_referral_code(db)
 

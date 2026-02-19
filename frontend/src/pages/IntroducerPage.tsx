@@ -40,7 +40,7 @@ export function IntroducerPage() {
     introducerName: string;
   } | null>(null);
   const [referralCode, setReferralCode] = useState('');
-  const [codeType, setCodeType] = useState<'introducer' | 'buyer' | null>(null);
+  const [codeType, setCodeType] = useState<'introducer' | 'troducer' | 'buyer' | null>(null);
 
   // Fetch invitation info when landing with invite token
   useEffect(() => {
@@ -67,6 +67,7 @@ export function IntroducerPage() {
             // Code belongs to an introducer → the invitee is a buyer
             setCodeType('buyer');
           }
+          // 'preintroducer' and 'troducer' codes → introducer registration flow (default)
         })
         .catch(() => {
           // Validation failed — default to introducer flow
