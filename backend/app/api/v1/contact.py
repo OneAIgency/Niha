@@ -361,6 +361,12 @@ async def create_introducer_nda_request(
 
         referred_by_user_id = await consume_referral_code(db, referral_code.strip())
 
+    # Determine user_role based on whether NDA was uploaded
+    if request_flow == "buyer" and not nda_file_name and referred_by_user_id:
+        contact_user_role = ContactStatus.PRE_NDA
+    else:
+        contact_user_role = ContactStatus.NDA
+
     contact = ContactRequest(
         entity_name=entity_name,
         contact_email=contact_email.lower(),
@@ -371,7 +377,7 @@ async def create_introducer_nda_request(
         nda_file_data=nda_file_data,
         nda_file_mime_type=nda_file_mime_type,
         submitter_ip=submitter_ip,
-        user_role=ContactStatus.NDA,
+        user_role=contact_user_role,
         request_flow=request_flow if request_flow in ("introducer", "buyer") else "introducer",
         referred_by_user_id=referred_by_user_id,
         referral_code_used=referral_code.strip() if referral_code and referred_by_user_id else None,
@@ -524,98 +530,6 @@ async def create_introducer_nda_request(
         except Exception:
             logger.exception(
                 "Failed to auto-create user/send NDA for %s (non-blocking)",
-                contact_email,
-            )
-
-    # Auto-create PRE_NDA user + send NDA email when buyer flow with no NDA
-    if (
-        request_flow in ("buyer",)
-        and not nda_file_name
-        and referred_by_user_id
-    ):
-        try:
-            existing = await db.execute(
-                select(User).where(User.email == contact_email.lower())
-            )
-            if not existing.scalar_one_or_none():
-                cfg_result = await db.execute(
-                    select(MailConfig).order_by(MailConfig.updated_at.desc()).limit(1)
-                )
-                mail_row = cfg_result.scalar_one_or_none()
-                invitation_expiry_days = (
-                    mail_row.invitation_token_expiry_days
-                    if mail_row and mail_row.invitation_token_expiry_days is not None
-                    else 14
-                )
-
-                invitation_token = secrets.token_urlsafe(32)
-
-                new_user = User(
-                    email=contact_email.lower(),
-                    first_name=contact_first_name,
-                    last_name=contact_last_name,
-                    role=UserRole.PRE_NDA,
-                    nda_signed=False,
-                    invitation_token=invitation_token,
-                    invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                    invitation_expires_at=(
-                        datetime.now(timezone.utc).replace(tzinfo=None)
-                        + timedelta(days=invitation_expiry_days)
-                    ),
-                    must_change_password=True,
-                    is_active=False,
-                    creation_method="invitation",
-                )
-                db.add(new_user)
-                await db.commit()
-                await db.refresh(new_user)
-
-                # Send PRE_NDA invitation email with NDA PDF attachment
-                mail_cfg = None
-                if mail_row:
-                    mail_cfg = {
-                        "provider": mail_row.provider.value,
-                        "use_env_credentials": mail_row.use_env_credentials,
-                        "from_email": mail_row.from_email,
-                        "resend_api_key": (
-                            mail_row.resend_api_key
-                            if not mail_row.use_env_credentials
-                            and mail_row.provider == MailProvider.RESEND
-                            else None
-                        ),
-                        "smtp_host": mail_row.smtp_host,
-                        "smtp_port": mail_row.smtp_port,
-                        "smtp_use_tls": mail_row.smtp_use_tls,
-                        "smtp_username": mail_row.smtp_username,
-                        "smtp_password": mail_row.smtp_password,
-                        "invitation_link_base_url": mail_row.invitation_link_base_url,
-                    }
-                nda_pdf_path = os.path.join(
-                    os.path.dirname(__file__), "..", "..", "..", "uploads", "nda", "NDA-Niha-signed.pdf"
-                )
-                await email_service.send_pre_nda_invitation(
-                    new_user.email,
-                    new_user.first_name,
-                    new_user.invitation_token,
-                    nda_pdf_path,
-                    expiry_days=invitation_expiry_days,
-                    mail_config=mail_cfg,
-                )
-
-                asyncio.create_task(
-                    backoffice_ws_manager.broadcast("request_updated", {
-                        "id": str(contact.id),
-                        "introducer_nda_status": "sent",
-                        "introducer_user_id": str(new_user.id),
-                    })
-                )
-                logger.info(
-                    "Auto-created PRE_NDA user and sent NDA for %s (referred by %s)",
-                    contact_email, referred_by_user_id,
-                )
-        except Exception:
-            logger.exception(
-                "Failed to auto-create PRE_NDA user/send NDA for %s (non-blocking)",
                 contact_email,
             )
 
