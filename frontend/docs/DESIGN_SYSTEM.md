@@ -364,6 +364,25 @@ Based on a **4px base unit** for consistent, rhythmic spacing throughout the app
 
 ---
 
+## Resize Handles (ResizablePanelGroup)
+
+When using `ResizablePanelGroup` (react-resizable-panels) for resizable layouts:
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| Border | `border-navy-700` | Handle background |
+| Hover | `bg-navy-600` | Hover state |
+| Width (vertical handle) | 4–6px | `w-1.5` (6px) for col-resize |
+| Height (horizontal handle) | 4–6px | `h-1.5` for row-resize |
+| Cursor | `col-resize` (vertical) / `row-resize` (horizontal) | Per orientation |
+| Min panel size | 15–20% | Avoid panels collapsing completely |
+
+**Accessibility**: Separator has `role="separator"` and `aria-orientation` from the library. Do not use slate/gray; use navy tokens only.
+
+**Component**: `frontend/src/components/common/ResizablePanelGroup.tsx`
+
+---
+
 ## Border Radius
 
 Rounded corners create a modern, friendly interface.

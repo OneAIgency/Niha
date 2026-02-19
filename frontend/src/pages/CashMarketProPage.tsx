@@ -10,8 +10,9 @@ import {
   FileText,
   TrendingUp,
 } from 'lucide-react';
-import { Subheader, Modal, Skeleton, KeyboardShortcutsHelp } from '../components/common';
+import { Subheader, Modal, Skeleton, KeyboardShortcutsHelp, ResizablePanelGroup } from '../components/common';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { Shortcut } from '../hooks/useKeyboardShortcuts';
 import { useCashMarket } from '../hooks/useCashMarket';
 import { cashMarketApi, usersApi } from '../services/api';
@@ -21,7 +22,6 @@ import { InlineOrderForm, calcMarketBuy } from '../components/cash-market/Inline
 import { CEAPriceChart } from '../components/cash-market/CEAPriceChart';
 import { NewsIntelligenceFeed } from '../components/cash-market/NewsIntelligenceFeed';
 import { EnvironmentalImpact } from '../components/cash-market/EnvironmentalImpact';
-import { MyOrders } from '../components/cash-market/MyOrders';
 import type {
   OrderBookLevel,
   CashMarketTrade,
@@ -88,7 +88,7 @@ function ProfessionalOrderBook({
     ? asksWithCumulativeValue[asksWithCumulativeValue.length - 1].cumQtyFromTop
     : 0;
 
-  const formatPrice = (price: number) => price.toFixed(1);
+  const formatPrice = (price: number) => price.toFixed(2);
   const formatQuantity = (qty: number) => Math.round(qty).toLocaleString();
   const formatEur = (val: number) =>
     val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -104,11 +104,11 @@ function ProfessionalOrderBook({
           <div className="flex-1 flex justify-center text-emerald-400 truncate">
             {formatQuantity(bidMaxCumQty)} CEA
           </div>
-          <div className="text-emerald-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(52,211,153,0.4)' }}>€{bestBid?.toFixed(1) || '—'}</div>
+          <div className="text-emerald-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(52,211,153,0.4)' }}>€{bestBid?.toFixed(2) || '—'}</div>
         </div>
         <div className="w-4 shrink-0" />
         <div className="flex-1 flex items-center gap-1 overflow-hidden">
-          <div className="text-red-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(248,113,113,0.4)' }}>€{_bestAsk?.toFixed(1) || '—'}</div>
+          <div className="text-red-400 font-bold text-lg tabular-nums shrink-0" style={{ textShadow: '0 0 12px rgba(248,113,113,0.4)' }}>€{_bestAsk?.toFixed(2) || '—'}</div>
           <div className="flex-1 flex justify-center text-red-400 truncate">
             {formatQuantity(askMaxCumQty)} CEA
           </div>
@@ -254,7 +254,7 @@ function RecentTradesTicker({ trades, bestBid, bestAsk }: RecentTradesTickerProp
           const priceColor = buy ? 'text-emerald-400' : 'text-red-400';
           const time = trade.executedAt ? formatTime(trade.executedAt) : '-';
           return `<div class="flex items-center gap-3 px-3 py-1 rounded shrink-0 ${bgClass}">
-            <span class="font-mono font-medium text-xs tabular-nums ${priceColor}">€${trade.price.toFixed(1)}</span>
+            <span class="font-mono font-medium text-xs tabular-nums ${priceColor}">€${trade.price.toFixed(2)}</span>
             <span class="text-xs font-mono text-white tabular-nums">${Math.round(trade.quantity).toLocaleString()}</span>
             <span class="text-xs text-navy-500 tabular-nums">${time}</span>
           </div>`;
@@ -416,7 +416,6 @@ export function CashMarketProPage() {
   const {
     orderBook,
     recentTrades,
-    myOrders,
     balances,
     loading,
     error,
@@ -478,19 +477,6 @@ export function CashMarketProPage() {
     navigate('/dashboard');
   }, [navigate]);
 
-  const [cancellingOrder, setCancellingOrder] = useState(false);
-  const handleCancelOrder = useCallback(async (orderId: string) => {
-    setCancellingOrder(true);
-    try {
-      await cashMarketApi.cancelOrder(orderId);
-      await refresh();
-    } catch (err) {
-      console.error('Failed to cancel order:', err);
-    } finally {
-      setCancellingOrder(false);
-    }
-  }, [refresh]);
-
   // Safe defaults - handle both null orderBook and undefined properties
   const safeOrderBook = {
     bids: orderBook?.bids ?? [],
@@ -523,6 +509,7 @@ export function CashMarketProPage() {
   ], [refresh, orderResult, handleModalClose, navigate]);
 
   const { helpOpen, closeHelp } = useKeyboardShortcuts(shortcuts);
+  const isMd = useMediaQuery('(min-width: 768px)');
 
   const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
     if (num === null || num === undefined) return '-';
@@ -610,10 +597,10 @@ export function CashMarketProPage() {
                   <Skeleton variant="rectangular" height={40} />
                 </div>
               </div>
-              {/* Skeleton Row 2: My Orders | Activity | News | Impact */}
+              {/* Skeleton Row 2: Activity | News | Impact */}
               <div className="grid grid-cols-12 gap-2" style={{ flex: '3 1 0%', minHeight: 0 }}>
-                {[3, 3, 3, 3].map((span, i) => (
-                  <div key={i} className={`col-span-${span} rounded-lg border border-navy-700/50 bg-navy-800/30 p-3 space-y-2`}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="col-span-4 rounded-lg border border-navy-700/50 bg-navy-800/30 p-3 space-y-2">
                     <Skeleton variant="text" width="50%" />
                     <Skeleton variant="rectangular" height={20} />
                     <Skeleton variant="rectangular" height={20} />
@@ -633,9 +620,80 @@ export function CashMarketProPage() {
                 Retry
               </button>
             </div>
+          ) : isMd ? (
+            <ResizablePanelGroup
+              direction="vertical"
+              storageKey="cash_market_pro_vertical"
+              defaultSizes={[55.5, 44.5]}
+              minSize={20}
+              className="gap-0"
+            >
+              {/* Row 1: Order Book | Chart | Order Form — resizable horizontal */}
+              <div className="flex min-w-0 min-h-0 flex-1">
+                <ResizablePanelGroup
+                  direction="horizontal"
+                  storageKey="cash_market_pro_row1"
+                  defaultSizes={[41.67, 33.33, 25]}
+                  minSize={15}
+                >
+                  <div className="h-full min-h-0 flex flex-col">
+                    <div className="rounded-lg border border-navy-700/50 bg-navy-800/30 flex-1 min-h-0 overflow-y-auto widget-accent-purple">
+                      <ProfessionalOrderBook
+                        bids={safeOrderBook.bids}
+                        asks={safeOrderBook.asks}
+                        spread={safeOrderBook.spread}
+                        bestBid={safeOrderBook.bestBid}
+                        bestAsk={safeOrderBook.bestAsk}
+                        highlightAskCount={highlightAskCount}
+                      />
+                    </div>
+                  </div>
+                  <div className="h-full min-h-0 flex flex-col">
+                    <CEAPriceChart />
+                  </div>
+                  <div className="h-full min-h-0 flex flex-col">
+                    <InlineOrderForm
+                      certificateType="CEA"
+                      availableBalance={availableEur}
+                      bestBid={safeOrderBook.bestBid}
+                      bestAsk={safeOrderBook.bestAsk}
+                      spread={safeOrderBook.spread}
+                      asks={safeOrderBook.asks}
+                      onOrderSubmit={handleMarketOrderSubmit}
+                      onRefresh={refresh}
+                      onExpandChange={handleExpandChange}
+                    />
+                  </div>
+                </ResizablePanelGroup>
+              </div>
+
+              {/* Row 2: Activity | News | Impact — resizable horizontal */}
+              <div className="flex min-w-0 min-h-0 flex-1">
+                <ResizablePanelGroup
+                  direction="horizontal"
+                  storageKey="cash_market_pro_row2"
+                  defaultSizes={[33.33, 33.33, 33.34]}
+                  minSize={15}
+                >
+                  <div className="h-full min-h-0 flex flex-col">
+                    <RecentTradesActivity
+                      trades={recentTrades}
+                      bestBid={safeOrderBook.bestBid}
+                      bestAsk={safeOrderBook.bestAsk}
+                    />
+                  </div>
+                  <div className="h-full min-h-0 flex flex-col">
+                    <NewsIntelligenceFeed />
+                  </div>
+                  <div className="h-full min-h-0 flex flex-col">
+                    <EnvironmentalImpact />
+                  </div>
+                </ResizablePanelGroup>
+              </div>
+            </ResizablePanelGroup>
           ) : (
             <div className="flex flex-col gap-2 flex-1 min-h-0">
-              {/* Row 1: Order Book (5/12) | Chart (4/12) | Order Form (3/12) */}
+              {/* Mobile: static grid */}
               <div className="grid grid-cols-12 gap-2" style={{ flex: '5 1 0%', minHeight: 0 }}>
                 <div className="col-span-5 min-h-0 flex flex-col">
                   <div className="rounded-lg border border-navy-700/50 bg-navy-800/30 flex-1 min-h-0 overflow-y-auto widget-accent-purple">
@@ -666,27 +724,18 @@ export function CashMarketProPage() {
                   />
                 </div>
               </div>
-
-              {/* Row 2: My Orders (3/12) | Activity (3/12) | News (3/12) | Impact (3/12) */}
               <div className="grid grid-cols-12 gap-2" style={{ flex: '4 1 0%', minHeight: 0 }}>
-                <div className="col-span-3 min-h-0 flex flex-col">
-                  <MyOrders
-                    orders={myOrders}
-                    onCancelOrder={handleCancelOrder}
-                    isLoading={cancellingOrder}
-                  />
-                </div>
-                <div className="col-span-3 min-h-0 flex flex-col">
+                <div className="col-span-4 min-h-0 flex flex-col">
                   <RecentTradesActivity
                     trades={recentTrades}
                     bestBid={safeOrderBook.bestBid}
                     bestAsk={safeOrderBook.bestAsk}
                   />
                 </div>
-                <div className="col-span-3 min-h-0 flex flex-col">
+                <div className="col-span-4 min-h-0 flex flex-col">
                   <NewsIntelligenceFeed />
                 </div>
-                <div className="col-span-3 min-h-0 flex flex-col">
+                <div className="col-span-4 min-h-0 flex flex-col">
                   <EnvironmentalImpact />
                 </div>
               </div>
