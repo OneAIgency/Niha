@@ -49,7 +49,7 @@ export function LoginPage() {
   const [ndaFile, setNdaFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [referralCode, setReferralCode] = useState('');
-  const [codeType, setCodeType] = useState<'preintroducer' | 'introducer' | null>(null);
+  const [codeType, setCodeType] = useState<'preintroducer' | 'troducer' | 'introducer' | null>(null);
   const [codeError, setCodeError] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
 
@@ -256,7 +256,7 @@ export function LoginPage() {
         return;
       }
       setCodeType(result.type);
-      if (result.type === 'preintroducer') {
+      if (result.type === 'preintroducer' || result.type === 'troducer') {
         setMode('introducer-form');
       } else {
         setMode('buyer-form');
@@ -651,6 +651,15 @@ export function LoginPage() {
               <p className="text-white/40 text-center text-sm font-light leading-relaxed mb-2">
                 Submit your signed NDA to request access
               </p>
+              <a
+                href="/api/v1/contact/nda-template"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/60 hover:text-white/80 text-sm font-light tracking-wider transition-all duration-300"
+              >
+                <FileText className="w-4 h-4" />
+                Download NDA
+              </a>
 
               <div className="space-y-3">
                 {/* Entity Name */}

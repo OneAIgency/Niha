@@ -554,11 +554,16 @@ async def download_nda_file(
 
     # Check for binary data in database (new storage method)
     if contact.nda_file_data:
+        from urllib.parse import quote
+
+        fname = contact.nda_file_name or "nda.pdf"
+        ascii_fname = fname.encode("ascii", "replace").decode("ascii")
+        utf8_fname = quote(fname)
         return Response(
             content=contact.nda_file_data,
             media_type=contact.nda_file_mime_type or "application/pdf",
             headers={
-                "Content-Disposition": f'attachment; filename="{contact.nda_file_name}"'
+                "Content-Disposition": f"attachment; filename=\"{ascii_fname}\"; filename*=UTF-8''{utf8_fname}"
             },
         )
 
@@ -592,11 +597,17 @@ async def download_user_nda(
     if not user.nda_file_data:
         raise HTTPException(status_code=404, detail="No NDA file uploaded")
 
+    from urllib.parse import quote
+
+    filename = user.nda_file_name or "nda.pdf"
+    # RFC 5987: use ASCII fallback + UTF-8 encoded filename for non-ASCII chars
+    ascii_filename = filename.encode("ascii", "replace").decode("ascii")
+    utf8_filename = quote(filename)
     return Response(
         content=user.nda_file_data,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{user.nda_file_name or "nda.pdf"}"'
+            "Content-Disposition": f"inline; filename=\"{ascii_filename}\"; filename*=UTF-8''{utf8_filename}"
         },
     )
 
