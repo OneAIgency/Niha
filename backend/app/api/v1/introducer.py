@@ -376,8 +376,11 @@ async def send_invitation(
     raw_base = (mail_config_row.invitation_link_base_url if mail_config_row else None) or ""
     from ...services.email_service import _strip_path
 
+    from urllib.parse import quote
+
     base_url = _strip_path(raw_base.strip()) if raw_base.strip() else "http://localhost:5173"
-    invitation_url = f"{base_url}/introducer?invite={raw_token}&ref={current_user.referral_code}"
+    safe_ref = quote(current_user.referral_code, safe="")
+    invitation_url = f"{base_url}/introducer?invite={raw_token}&ref={safe_ref}"
 
     # Send email
     from ...services.email_service import EmailService

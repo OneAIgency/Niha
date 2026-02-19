@@ -11,7 +11,7 @@ from ..models.models import User, UserRole
 
 # Code alphabet: uppercase + lowercase + digits + specials
 _ALPHA = string.ascii_letters + string.digits
-_SPECIALS = "$!@#%"
+_SPECIALS = "$!@"
 _CODE_LENGTH = 8
 
 
