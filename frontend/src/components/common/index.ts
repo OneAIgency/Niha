@@ -37,3 +37,4 @@ export { LoadingState, PageLoadingState, TableLoadingState } from './LoadingStat
 export { FormSection, FormRow, FormActions } from './FormSection';
 export { ToastContainer, showToast } from './Toast';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+export { CommandPalette } from './CommandPalette';
