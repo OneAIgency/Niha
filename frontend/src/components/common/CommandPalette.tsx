@@ -50,9 +50,8 @@ export function CommandPalette() {
     const canCashMarket = isAdmin || ['CEA', 'MM'].includes(role!);
     const canSwap = isAdmin || ['CEA', 'CEA_SETTLE', 'SWAP', 'MM'].includes(role!);
     const canOnboarding = isAdmin || ['NDA', 'KYC'].includes(role!);
-    const isIntroducer = role === 'INTRODUCER';
+    const isIntroducer = role === 'INTRODUCER' || role === 'TRODUCER';
     const isPreintroducer = role === 'PREINTRODUCER';
-    const isTroducer = role === 'TRODUCER';
 
     if (canDashboard) nav('dashboard', 'Dashboard', 'Portfolio overview', <LayoutDashboard className="w-4 h-4" />, '/dashboard', ['home', 'portfolio']);
     if (canFunding) nav('funding', 'Funding', 'Deposit & manage funds', <CreditCard className="w-4 h-4" />, '/funding', ['deposit', 'money']);
@@ -61,7 +60,6 @@ export function CommandPalette() {
     if (canOnboarding) nav('onboarding', 'Onboarding', 'Continue setup', <FileText className="w-4 h-4" />, '/onboarding');
     if (isIntroducer) nav('introducer', 'Introducer Portal', 'Referral dashboard', <Briefcase className="w-4 h-4" />, '/introducer/dashboard', ['referral']);
     if (isPreintroducer) nav('preintroducer', 'Referral Code', 'View your referral code', <Keyboard className="w-4 h-4" />, '/preintroducer');
-    if (isTroducer) nav('upload-nda', 'Upload NDA', 'Sign and upload NDA', <FileText className="w-4 h-4" />, '/introducer/sign-nda');
 
     nav('profile', 'Profile', 'Your account settings', <User className="w-4 h-4" />, '/profile', ['account']);
 

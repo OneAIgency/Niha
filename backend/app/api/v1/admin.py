@@ -901,6 +901,9 @@ async def create_user(
         from ...services.referral_codes import get_unique_referral_code
         referral_code = await get_unique_referral_code(db)
 
+    # TRODUCER created by admin: mark NDA as signed (no NDA required)
+    nda_signed = user_data.role == UserRole.TRODUCER
+
     # Create user with or without password
     if user_data.password:
         # Create user with password directly
@@ -913,6 +916,7 @@ async def create_user(
             entity_id=entity_id,
             position=user_data.position,
             referral_code=referral_code,
+            nda_signed=nda_signed,
             must_change_password=False,  # Password already set by admin
             is_active=True,
         )
@@ -927,6 +931,7 @@ async def create_user(
             entity_id=entity_id,
             position=user_data.position,
             referral_code=referral_code,
+            nda_signed=nda_signed,
             invitation_token=invitation_token,
             # Use naive UTC for TIMESTAMP WITHOUT TIME ZONE (asyncpg)
             invitation_sent_at=datetime.now(timezone.utc).replace(tzinfo=None),

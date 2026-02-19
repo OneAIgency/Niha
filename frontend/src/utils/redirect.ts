@@ -35,13 +35,8 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/preintroducer';
   }
 
-  // TRODUCER: intermediate introducer, always go to sign-nda page
-  if (role === 'TRODUCER') {
-    return '/introducer/sign-nda';
-  }
-
-  // INTRODUCER: full access to dashboard
-  if (role === 'INTRODUCER') {
+  // TRODUCER / INTRODUCER: introducer dashboard
+  if (role === 'TRODUCER' || role === 'INTRODUCER') {
     return '/introducer/dashboard';
   }
 

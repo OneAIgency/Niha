@@ -213,14 +213,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** INTRODUCER dashboard: only approved INTRODUCERs and ADMINs. TRODUCERs go to sign-nda. */
+/** INTRODUCER dashboard: TRODUCER, INTRODUCER, and ADMIN. */
 function IntroducerDashboardRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
-  if (user?.role === 'TRODUCER') {
-    return <Navigate to="/introducer/sign-nda" replace />;
-  }
   return (
-    <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
+    <RoleProtectedRoute allowedRoles={['TRODUCER', 'INTRODUCER', 'ADMIN']}>
       {children}
     </RoleProtectedRoute>
   );
