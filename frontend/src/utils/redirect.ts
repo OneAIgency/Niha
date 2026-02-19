@@ -40,6 +40,11 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/troducer';
   }
 
+  // PRE_NDA: upload signed NDA page
+  if (role === 'PRE_NDA') {
+    return '/pre-nda';
+  }
+
   // INTRODUCER: introducer dashboard
   if (role === 'INTRODUCER') {
     return '/introducer/dashboard';

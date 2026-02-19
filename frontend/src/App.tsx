@@ -51,6 +51,7 @@ const IntroducerDashboardPage = lazy(() => import('./pages/IntroducerDashboardPa
 const PreintroducerPage = lazy(() => import('./pages/PreintroducerPage').then(m => ({ default: m.PreintroducerPage })));
 const TroducerPage = lazy(() => import('./pages/TroducerPage').then(m => ({ default: m.TroducerPage })));
 const IntroducerSignNDAPage = lazy(() => import('./pages/IntroducerSignNDAPage').then(m => ({ default: m.IntroducerSignNDAPage })));
+const PreNdaPage = lazy(() => import('./pages/PreNdaPage').then(m => ({ default: m.PreNdaPage })));
 const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
@@ -429,6 +430,14 @@ function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['TRODUCER', 'ADMIN']}>
                   <TroducerPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/pre-nda"
+              element={
+                <RoleProtectedRoute allowedRoles={['PRE_NDA', 'ADMIN']}>
+                  <PreNdaPage />
                 </RoleProtectedRoute>
               }
             />

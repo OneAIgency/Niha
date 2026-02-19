@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+
+{% block content %}
+<div class="icon-header success">&#x2705;</div>
+<h1>NDA Approved, {{ name }}!</h1>
+<p>Your Non-Disclosure Agreement has been reviewed and approved.
+Your account is now active and you can continue with the onboarding process.</p>
+
+<div class="callout success">
+    <p class="callout-title">Next Steps</p>
+    <p>Log in to your account to continue with your KYC onboarding.
+    Our team will guide you through the remaining steps to get you trading.</p>
+</div>
+
+<a href="{{ login_url }}" class="btn btn-primary">Log In to Continue</a>
+{% endblock %}

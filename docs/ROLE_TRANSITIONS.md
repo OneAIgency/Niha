@@ -4,6 +4,7 @@
 
 | De la → La | Condiție / acțiune |
 |------------|--------------------|
+| **PRE_NDA → NDA** | Backoffice: Approve NDA (endpoint `PUT /admin/introducer/{user_id}/approve-nda`). User-ul PRE_NDA uploadează NDA-ul semnat, admin-ul aprobă → `user.role = NDA`, `user.nda_signed = true`, `user.is_active = true`. |
 | **NDA → KYC** | Backoffice: Approve & Create User → `user.role = KYC`, `contact_request.user_role = KYC`. |
 | **NDA (introducer) → INTRODUCER** | Backoffice: Approve & Create User cu `target_role=INTRODUCER` → `user.role = INTRODUCER`, `entity_id = null`, nu se creează Entity. Cererea NDA trebuie să aibă `request_flow='introducer'` (submit la `/contact/introducer-nda-request`). |
 | **KYC → REJECTED** | Backoffice: Reject KYC (apel `reject_user`). |
@@ -19,8 +20,9 @@
 
 ## Implicații
 
+- **PRE_NDA**: Rol auto-creat când un buyer trimite formularul `/introducer` (cu `request_flow='buyer'`) fără a uploada NDA-ul. User-ul primește email cu PDF NDA + link setup password. După setarea parolei, login → `/pre-nda` (upload NDA). Admin aprobă din backoffice → user devine NDA și intră în flow-ul normal de onboarding.
 - **MM (Market Maker)**: Rol creat și gestionat strict de admin. Nu trece prin cereri de contact sau aprobări. Admin creează useri MM din Users (Create User, rol MM) și poate modifica rolul lor (Edit User) sau orice alt câmp.
-- **INTRODUCER**: Rol creat din cereri NDA cu `request_flow='introducer'` (pagina `/introducer`, endpoint `POST /contact/introducer-nda-request`). Admin aprobă din tab-ul Introducer (Backoffice → Onboarding → Introducer) cu Approve & Create User; `create-from-request` primește `target_role=INTRODUCER` și creează user fără Entity. INTRODUCER are acces doar la `/introducer/dashboard` (conținut simplificat).
+- **INTRODUCER**: Rol creat din cereri NDA cu `request_flow='introducer'` (pagina `/introducer`, endpoint `POST /contact/introducer-nda-request`). Admin aprobă din tab-ul Introducer (Backoffice → Onboarding → Introducer) cu Approve & Create User; `create-from-request` primește `target_role=INTRODUCER` și creează user fără Entity. Admin poate crea și direct un user INTRODUCER din **Backoffice → Users → Create User** (similar MM), fără cerere de contact. INTRODUCER are acces doar la `/introducer/dashboard` (conținut simplificat).
 - **Contact request**: Starea se citește din `contact_request.user_role` (NDA, KYC, REJECTED). PUT contact-requests permite actualizarea `user_role`; când se setează REJECTED, userul legat (dacă există) devine REJECTED. Badge-ul în listă folosește `contact_request.user_role`.
 - **User role**: Nu există endpoint pentru schimbare arbitrară de role pentru userii din flow (NDA → EUA). Tranzițiile se fac doar prin: create-from-request, approve_user, reject_user, announce_deposit, confirm_deposit, clear_deposit, reject_deposit, și funcțiile din `role_transitions`. Pentru MM, admin poate seta sau schimba rolul direct (PUT /admin/users/{id}).
 - **APPROVED → FUNDING**: Doar prin primul `announce_deposit` reușit; nu există „fund user” manual.

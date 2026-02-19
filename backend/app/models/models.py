@@ -42,6 +42,7 @@ class UserRole(str, enum.Enum):
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     INTRODUCER = "INTRODUCER"  # Introducer flow; approved, NDA signed, full access
     TRODUCER = "TRODUCER"  # Intermediate introducer; NDA sent but not yet approved
+    PRE_NDA = "PRE_NDA"  # Pre-NDA buyer; registered without NDA, must upload signed NDA
     PREINTRODUCER = "PREINTRODUCER"  # Pre-introducer; registered via referral code, limited access
     NDA = "NDA"
     REJECTED = "REJECTED"

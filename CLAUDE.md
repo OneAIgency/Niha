@@ -125,7 +125,7 @@ See `app_truth.md` §10. These files are locked:
 ## Gotchas
 
 1. **PostgreSQL port**: Host uses 5434 to avoid conflicts with local Postgres
-2. **Migrations**: Current head is `2026_02_16_ai_agent` — new migrations use this as `down_revision`
+2. **Migrations**: Current head is `2026_02_19_pre_nda_role` — new migrations use this as `down_revision`
 3. **WebSocket**: Backoffice uses realtime updates - normalize payloads to snake_case
 4. **Deposits**: APPROVED→FUNDING only via first `announce_deposit` (no manual "fund user")
 5. **Contact requests**: Pending = NDA role only; KYC/REJECTED disappear from list

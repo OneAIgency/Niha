@@ -921,8 +921,8 @@ async def create_user(
         from ...services.referral_codes import get_unique_referral_code
         referral_code = await get_unique_referral_code(db)
 
-    # TRODUCER created by admin: mark NDA as signed (no NDA required)
-    nda_signed = user_data.role == UserRole.TRODUCER
+    # TRODUCER/INTRODUCER created by admin: mark NDA as signed (no NDA required)
+    nda_signed = user_data.role in (UserRole.TRODUCER, UserRole.INTRODUCER)
 
     # Create user with or without password
     if user_data.password:
@@ -4932,26 +4932,35 @@ async def approve_introducer_nda(
     admin_user: User = Depends(get_admin_user),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ):
-    """Mark a TRODUCER's NDA as signed, upgrade to INTRODUCER, activate user, update ContactRequest, send confirmation."""
+    """Mark a TRODUCER or PRE_NDA user's NDA as signed, upgrade accordingly, activate user, update ContactRequest, send confirmation."""
     result = await db.execute(
-        select(User).where(User.id == UUID(user_id), User.role == UserRole.TRODUCER)
+        select(User).where(
+            User.id == UUID(user_id),
+            User.role.in_([UserRole.TRODUCER, UserRole.PRE_NDA]),
+        )
     )
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="Troducer not found")
+        raise HTTPException(status_code=404, detail="Troducer/PRE_NDA user not found")
+
+    is_pre_nda = user.role == UserRole.PRE_NDA
+    request_flow = "buyer" if is_pre_nda else "introducer"
 
     # Find the associated contact request
     cr_result = await db.execute(
         select(ContactRequest).where(
             ContactRequest.contact_email == user.email,
-            ContactRequest.request_flow == "introducer",
+            ContactRequest.request_flow == request_flow,
         )
     )
     contact_request = cr_result.scalar_one_or_none()
 
     try:
-        user.role = UserRole.INTRODUCER
-        user.commission_rate = Decimal("0.010000")  # Default 1%
+        if is_pre_nda:
+            user.role = UserRole.NDA
+        else:
+            user.role = UserRole.INTRODUCER
+            user.commission_rate = Decimal("0.010000")  # Default 1%
         user.nda_signed = True
         user.is_active = True
         if contact_request:
@@ -4959,7 +4968,7 @@ async def approve_introducer_nda(
         await db.commit()
     except Exception as e:
         await db.rollback()
-        raise handle_database_error(e, "approving introducer NDA") from e
+        raise handle_database_error(e, "approving NDA") from e
 
     # Send confirmation email
     try:
@@ -4986,9 +4995,12 @@ async def approve_introducer_nda(
                 "smtp_password": mail_row.smtp_password,
                 "invitation_link_base_url": mail_row.invitation_link_base_url,
             }
-        await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
+        if is_pre_nda:
+            await email_service.send_pre_nda_approved(user.email, user.first_name, mail_config=mail_cfg)
+        else:
+            await email_service.send_introducer_approved(user.email, user.first_name, mail_config=mail_cfg)
     except Exception:
-        logger.exception("Failed to send introducer approval email to %s", user.email)
+        logger.exception("Failed to send NDA approval email to %s", user.email)
 
     # Broadcast WS event so request disappears from backoffice list
     if contact_request:
@@ -4996,7 +5008,7 @@ async def approve_introducer_nda(
             backoffice_ws_manager.broadcast("request_updated", {
                 "id": str(contact_request.id),
                 "user_role": "KYC",
-                "request_flow": "introducer",
+                "request_flow": request_flow,
             })
         )
 
