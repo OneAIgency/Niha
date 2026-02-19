@@ -1752,14 +1752,16 @@ async def refresh_scraping_source(
 
         if source.url and is_carboncredits_url(source.url):
             # One request updates all carboncredits.com sources (0026)
-            all_cc = await db.execute(
+            all_active = await db.execute(
                 select(ScrapingSource).where(
                     ScrapingSource.is_active.is_(True),
                     ScrapingSource.url.isnot(None),
-                    ScrapingSource.url.contains("carboncredits.com"),
                 )
             )
-            carboncredits_sources = all_cc.scalars().all()
+            carboncredits_sources = [
+                s for s in all_active.scalars().all()
+                if is_carboncredits_url(s.url)
+            ]
             await price_scraper.refresh_carboncredits_sources(
                 db, carboncredits_sources
             )
