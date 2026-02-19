@@ -188,6 +188,21 @@ export interface ExchangeRateSource {
   updatedAt: string;
 }
 
+// Exchange Rate History (public API)
+export type ExchangeRatePeriod = '24h' | '7d' | '30d' | '90d' | '1y';
+
+export interface ExchangeRateHistoryPoint {
+  rate: number;
+  recordedAt: string;
+}
+
+export interface ExchangeRateHistoryResponse {
+  pair: string;
+  period: ExchangeRatePeriod;
+  currentRate: number | null;
+  points: ExchangeRateHistoryPoint[];
+}
+
 // Mail & Auth Settings (admin Settings page)
 export type MailProvider = 'resend' | 'smtp';
 

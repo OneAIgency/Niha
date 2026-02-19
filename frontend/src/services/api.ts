@@ -70,6 +70,8 @@ import type {
   AutoTradeMarketSettings,
   AutoTradeMarketSettingsUpdate,
   AddAssetApiRequest,
+  ExchangeRatePeriod,
+  ExchangeRateHistoryResponse,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -2627,6 +2629,24 @@ export const aiAgentApi = {
 
   dualChat: async (messages: Array<{ role: string; content: string }>) => {
     const { data } = await api.post('/admin/ai-agent/dual-chat', { messages });
+    return data;
+  },
+};
+
+// ─── Exchange Rates (public, any authenticated user) ────────────────────────
+export const exchangeRatesApi = {
+  getHistory: async (params?: {
+    fromCurrency?: string;
+    toCurrency?: string;
+    period?: ExchangeRatePeriod;
+  }): Promise<ExchangeRateHistoryResponse> => {
+    const { data } = await api.get('/exchange-rates/history', {
+      params: {
+        from_currency: params?.fromCurrency,
+        to_currency: params?.toCurrency,
+        period: params?.period,
+      },
+    });
     return data;
   },
 };
