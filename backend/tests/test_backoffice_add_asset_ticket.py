@@ -4,6 +4,8 @@ Run from backend container: pytest tests/test_backoffice_add_asset_ticket.py -v
 Uses async tests and httpx.AsyncClient so DB and HTTP share the same event loop.
 """
 
+import os
+
 import pytest
 import httpx
 from httpx import ASGITransport
@@ -13,6 +15,8 @@ from app.core.database import AsyncSessionLocal
 from app.core.security import RedisManager
 from app.main import app
 from app.models.models import Entity, TicketLog
+
+ADMIN_PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD", "Admin123!")
 
 
 async def _get_first_entity_id() -> str:
@@ -46,7 +50,7 @@ async def _admin_login(client: httpx.AsyncClient) -> str:
         pass
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": "admin@nihaogroup.com", "password": "Admin123!"},
+        json={"email": "admin@nihaogroup.com", "password": ADMIN_PASSWORD},
     )
     assert resp.status_code == 200, f"Admin login failed: {resp.text}"
     return resp.json()["access_token"]

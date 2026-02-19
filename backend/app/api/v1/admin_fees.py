@@ -53,7 +53,7 @@ async def get_all_fees(
     override_result = await db.execute(
         select(EntityFeeOverride, Entity.name)
         .join(Entity, EntityFeeOverride.entity_id == Entity.id)
-        .where(EntityFeeOverride.is_active == True)
+        .where(EntityFeeOverride.is_active.is_(True))
         .order_by(Entity.name)
     )
     overrides_with_names = override_result.all()
@@ -133,7 +133,7 @@ async def get_entity_overrides(
     result = await db.execute(
         select(EntityFeeOverride, Entity.name)
         .join(Entity, EntityFeeOverride.entity_id == Entity.id)
-        .where(EntityFeeOverride.is_active == True)
+        .where(EntityFeeOverride.is_active.is_(True))
         .order_by(Entity.name)
     )
     overrides_with_names = result.all()
@@ -167,7 +167,7 @@ async def get_entity_override(
         select(EntityFeeOverride, Entity.name)
         .join(Entity, EntityFeeOverride.entity_id == Entity.id)
         .where(EntityFeeOverride.entity_id == entity_id)
-        .where(EntityFeeOverride.is_active == True)
+        .where(EntityFeeOverride.is_active.is_(True))
     )
     overrides_with_names = result.all()
 
@@ -311,7 +311,7 @@ async def get_effective_fee(
             select(EntityFeeOverride)
             .where(EntityFeeOverride.entity_id == entity_id)
             .where(EntityFeeOverride.market == MarketType(market.value))
-            .where(EntityFeeOverride.is_active == True)
+            .where(EntityFeeOverride.is_active.is_(True))
         )
         override = result.scalar_one_or_none()
 

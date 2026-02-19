@@ -447,7 +447,7 @@ async def get_commission_summary(
     """Get commission earnings summary for the current introducer."""
     from sqlalchemy import func as sqlfunc
 
-    from ...models.models import CommissionLedger, CommissionStatus
+    from ...models.models import CommissionLedger
 
     # Aggregate by status
     result = await db.execute(

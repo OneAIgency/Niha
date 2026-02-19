@@ -32,6 +32,7 @@ const DEFAULT_INTERVAL = TIME_INTERVALS[2]; // 15m
 // Chart colors (matches our navy/emerald design)
 // ─────────────────────────────────────────────────
 
+/* eslint-disable no-restricted-syntax -- chart library requires hex color values */
 const COLORS = {
   background: 'transparent',
   text: '#94a3b8',         // navy-400
@@ -41,6 +42,7 @@ const COLORS = {
   downColor: '#f87171',    // red-400
   lineColor: '#34d399',    // emerald-400
 };
+/* eslint-enable no-restricted-syntax */
 
 // ─────────────────────────────────────────────────
 // Component
@@ -160,8 +162,8 @@ export function CEAPriceChart() {
         horzLines: { color: COLORS.grid },
       },
       crosshair: {
-        vertLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' },
-        horzLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' },
+        vertLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' }, // eslint-disable-line no-restricted-syntax
+        horzLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' }, // eslint-disable-line no-restricted-syntax
       },
       rightPriceScale: {
         borderColor: 'rgba(51, 65, 85, 0.5)',

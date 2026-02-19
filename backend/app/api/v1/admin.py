@@ -647,7 +647,10 @@ async def ip_whois_lookup(
 
 
 @router.get("/dashboard")
-async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
+async def get_admin_dashboard(
+    _admin_user: User = Depends(get_admin_user),  # noqa: B008
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+):
     """
     Get admin dashboard statistics.
     """
@@ -680,6 +683,7 @@ async def get_admin_dashboard(db: AsyncSession = Depends(get_db)):  # noqa: B008
 
 @router.get("/entities")
 async def get_entities(
+    _admin_user: User = Depends(get_admin_user),  # noqa: B008
     kyc_status: Optional[str] = None,
     page: int = Query(1, ge=1),  # noqa: B008
     per_page: int = Query(20, ge=1, le=100),  # noqa: B008
@@ -2857,7 +2861,7 @@ async def refresh_cea_market(
         buyer_result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER,
                 )
             )
@@ -2867,7 +2871,7 @@ async def refresh_cea_market(
         seller_result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
                 )
             )
@@ -3011,7 +3015,6 @@ async def refresh_cea_market(
             "new_best_bid": str(best_bid),
             "mid_price_eur": str(mid_price),
             "price_deviation_pct": str(round(deviation_pct * 100, 1)),
-            "new_best_bid": str(best_bid),
             "new_best_ask": str(best_ask),
             "bid_orders_created": bid_orders_created,
             "ask_orders_created": ask_orders_created,
@@ -3093,7 +3096,7 @@ async def refresh_swap_market(
         mm_result = await db.execute(
             select(MarketMakerClient).where(
                 and_(
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
                 )
             )
@@ -3256,10 +3259,10 @@ async def place_random_order(
 
         # Active market makers (both types)
         buyers_r = await db.execute(select(MarketMakerClient).where(and_(
-            MarketMakerClient.is_active == True, MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER)))
+            MarketMakerClient.is_active.is_(True), MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER)))
         cea_buyers = list(buyers_r.scalars().all())
         sellers_r = await db.execute(select(MarketMakerClient).where(and_(
-            MarketMakerClient.is_active == True, MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER)))
+            MarketMakerClient.is_active.is_(True), MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER)))
         cea_sellers = list(sellers_r.scalars().all())
         if not cea_buyers or not cea_sellers:
             raise HTTPException(status_code=400, detail="No active CEA market makers")
@@ -3662,7 +3665,7 @@ async def _place_random_swap_order_internal(db: AsyncSession) -> dict:
     mm_r = await db.execute(
         select(MarketMakerClient).where(
             and_(
-                MarketMakerClient.is_active == True,
+                MarketMakerClient.is_active.is_(True),
                 MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
             )
         )
@@ -3835,7 +3838,7 @@ async def _delayed_swap_replenishment():
             mm_r = await db.execute(
                 select(MarketMakerClient).where(
                     and_(
-                        MarketMakerClient.is_active == True,
+                        MarketMakerClient.is_active.is_(True),
                         MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER,
                     )
                 )
@@ -4404,7 +4407,7 @@ async def credit_my_entity(
             )
 
         # Credit the entity using ADJUSTMENT type (for admin credits)
-        new_balance = await update_entity_balance(
+        await update_entity_balance(
             db=db,
             entity_id=current_user.entity_id,
             asset_type=asset_type,

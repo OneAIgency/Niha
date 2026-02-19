@@ -703,7 +703,7 @@ async def create_swap(
         result = await db.execute(
             select(MarketMakerClient)
             .where(MarketMakerClient.mm_type == MarketMakerType.EUA_OFFER)
-            .where(MarketMakerClient.is_active == True)
+            .where(MarketMakerClient.is_active.is_(True))
         )
         eua_mm = result.scalar_one_or_none()
 

@@ -147,7 +147,7 @@ class AutoTradeExecutor:
             mm_result = await db.execute(
                 select(MarketMakerClient).where(
                     MarketMakerClient.mm_type.in_(mm_types),
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                 )
             )
             market_makers = list(mm_result.scalars().all())
@@ -218,10 +218,10 @@ class AutoTradeExecutor:
             .join(MarketMakerClient)
             .where(
                 and_(
-                    AutoTradeRule.enabled == True,
-                    MarketMakerClient.is_active == True,
+                    AutoTradeRule.enabled.is_(True),
+                    MarketMakerClient.is_active.is_(True),
                     # Ready if never executed or scheduled time has passed
-                    (AutoTradeRule.next_execution_at == None) |
+                    (AutoTradeRule.next_execution_at.is_(None)) |
                     (AutoTradeRule.next_execution_at <= now)
                 )
             )
@@ -1471,7 +1471,7 @@ class AutoTradeExecutor:
                     Order.certificate_type == certificate_type,
                     Order.side == OrderSide.BUY,
                     Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
-                    Order.market_maker_id != None,  # Only MM orders
+                    Order.market_maker_id.isnot(None),  # Only MM orders
                 )
             )
             .order_by(Order.price.desc(), Order.created_at.asc())
@@ -1486,7 +1486,7 @@ class AutoTradeExecutor:
                     Order.certificate_type == certificate_type,
                     Order.side == OrderSide.SELL,
                     Order.status.in_([OrderStatus.OPEN, OrderStatus.PARTIALLY_FILLED]),
-                    Order.market_maker_id != None,  # Only MM orders
+                    Order.market_maker_id.isnot(None),  # Only MM orders
                 )
             )
             .order_by(Order.price.asc(), Order.created_at.asc())
@@ -2282,7 +2282,7 @@ async def fill_spread_with_orders(
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.mm_type == MarketMakerType.CEA_BUYER,
                 )
             )
@@ -2294,7 +2294,7 @@ async def fill_spread_with_orders(
             select(MarketMakerClient)
             .where(
                 and_(
-                    MarketMakerClient.is_active == True,
+                    MarketMakerClient.is_active.is_(True),
                     MarketMakerClient.mm_type == MarketMakerType.CEA_SELLER,
                 )
             )

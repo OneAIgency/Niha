@@ -16,7 +16,6 @@ from ..models.models import (
     InvitationStatus,
     ReferralInvitation,
     User,
-    UserRole,
 )
 
 logger = logging.getLogger(__name__)

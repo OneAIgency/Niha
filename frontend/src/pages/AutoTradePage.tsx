@@ -318,7 +318,7 @@ function SettingsInput({ label, value, onChange, suffix, min, max, step, decimal
         <button
           type="button"
           onClick={() => {
-            const num = parseFloat(hint.replace(/[^0-9.\-]/g, '').replace(/^\./, '0.'));
+            const num = parseFloat(hint.replace(/[^0-9.\-]/g, '').replace(/^\./, '0.'));  // eslint-disable-line no-useless-escape
             if (!isNaN(num)) onChange(num);
           }}
           className="text-[10px] text-navy-600 italic hover:text-emerald-400 cursor-pointer transition-colors"

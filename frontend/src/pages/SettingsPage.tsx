@@ -190,8 +190,8 @@ function PriceHistoryChart({ sourceName, currency, points, onReset }: {
 
   // Color: green if last >= first, red if down
   const trending = prices[prices.length - 1] >= prices[0];
-  const lineColor = trending ? '#10b981' : '#ef4444';
-  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)';
+  const lineColor = trending ? '#10b981' : '#ef4444'; // eslint-disable-line no-restricted-syntax -- SVG chart colors
+  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'; // eslint-disable-line no-restricted-syntax
 
   return (
     <Card className="p-4">
@@ -797,7 +797,7 @@ export function SettingsPage() {
       const html = await adminApi.getEmailTemplatePreview(selectedTemplate);
       setTemplatePreviewHtml(html);
     } catch (e) {
-      setTemplatePreviewHtml(`<html><body style="font-family:sans-serif;padding:2rem;color:#ef4444"><h2>Error loading template</h2><p>${getApiErrorMessage(e)}</p></body></html>`);
+      setTemplatePreviewHtml(`<html><body style="font-family:sans-serif;padding:2rem;color:#ef4444"><h2>Error loading template</h2><p>${getApiErrorMessage(e)}</p></body></html>`); // eslint-disable-line no-restricted-syntax -- HTML string
     } finally {
       setTemplatePreviewLoading(false);
     }

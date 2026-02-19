@@ -618,8 +618,11 @@ export const backofficeRealtimeApi = {
     };
 
     const wsUrl = getWsUrl();
+    // Append auth token for backoffice WS authentication
+    const token = getToken();
+    const authedUrl = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
     logger.debug('Connecting to backoffice WebSocket', { url: wsUrl });
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(authedUrl);
 
     ws.onopen = () => {
       logger.debug('Backoffice WebSocket connected');
