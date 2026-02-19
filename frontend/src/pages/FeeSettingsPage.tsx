@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, Building2, Plus, Pencil, Trash2, Save, RefreshCw } from 'lucide-react';
+import { Settings, Building2, Plus, Pencil, Trash2, Save, RefreshCw, Users } from 'lucide-react';
 import { feesApi, adminApi } from '../services/api';
 import { BackofficeLayout } from '../components/layout';
 import { AlertBanner, NumberInput, PageLoadingState } from '../components/common';
@@ -41,6 +41,16 @@ export function FeeSettingsPage() {
   const [overrideBidRate, setOverrideBidRate] = useState('');
   const [overrideAskRate, setOverrideAskRate] = useState('');
 
+  // Introducer fees state
+  const [introducerDefaultRate, setIntroducerDefaultRate] = useState<string | null>(null);
+  const [introducerOverrides, setIntroducerOverrides] = useState<
+    Array<{ userId: string; email: string; firstName: string; lastName: string; commissionRate: string }>
+  >([]);
+  const [editingDefaultRate, setEditingDefaultRate] = useState(false);
+  const [editDefaultRateValue, setEditDefaultRateValue] = useState('');
+  const [editingOverrideUserId, setEditingOverrideUserId] = useState<string | null>(null);
+  const [editOverrideRateValue, setEditOverrideRateValue] = useState('');
+
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -65,6 +75,27 @@ export function FeeSettingsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const fetchIntroducerData = useCallback(async () => {
+    try {
+      setError(null);
+      const [defaultsRes, overridesRes] = await Promise.all([
+        feesApi.getIntroducerDefaults(),
+        feesApi.getIntroducerOverrides(),
+      ]);
+      setIntroducerDefaultRate(defaultsRes.commissionRate);
+      setIntroducerOverrides(overridesRes);
+    } catch (err) {
+      console.error('Error fetching introducer data:', err);
+      setError('Failed to load introducer fee settings');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'introducer') {
+      fetchIntroducerData();
+    }
+  }, [activeTab, fetchIntroducerData]);
 
   const showSuccess = (message: string) => {
     setSuccessMessage(message);
@@ -174,6 +205,78 @@ export function FeeSettingsPage() {
     }
   };
 
+  // Introducer fee handlers
+  const handleEditDefaultRate = () => {
+    if (introducerDefaultRate) {
+      setEditDefaultRateValue((parseFloat(introducerDefaultRate) * 100).toFixed(2));
+    }
+    setEditingDefaultRate(true);
+  };
+
+  const handleSaveDefaultRate = async () => {
+    try {
+      const ratePercent = parseFloat(editDefaultRateValue);
+      if (isNaN(ratePercent) || ratePercent < 0) {
+        setError('Invalid commission rate. Must be a positive number.');
+        return;
+      }
+      setIsSaving('introducer-default');
+      const rateDecimal = (ratePercent / 100).toFixed(6);
+      await feesApi.updateIntroducerDefaults(rateDecimal);
+      setEditingDefaultRate(false);
+      showSuccess('Default commission rate updated successfully');
+      fetchIntroducerData();
+    } catch (err) {
+      console.error('Error saving default commission rate:', err);
+      setError('Failed to save default commission rate');
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleEditOverride = (userId: string, currentRate: string) => {
+    setEditingOverrideUserId(userId);
+    setEditOverrideRateValue((parseFloat(currentRate) * 100).toFixed(2));
+  };
+
+  const handleSaveOverrideRate = async (userId: string) => {
+    try {
+      const ratePercent = parseFloat(editOverrideRateValue);
+      if (isNaN(ratePercent) || ratePercent < 0) {
+        setError('Invalid commission rate. Must be a positive number.');
+        return;
+      }
+      setIsSaving(`introducer-override-${userId}`);
+      const rateDecimal = (ratePercent / 100).toFixed(6);
+      await feesApi.setUserCommissionRate(userId, rateDecimal);
+      setEditingOverrideUserId(null);
+      showSuccess('Commission rate updated successfully');
+      fetchIntroducerData();
+    } catch (err) {
+      console.error('Error saving commission rate override:', err);
+      setError('Failed to save commission rate override');
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
+  const handleDeleteIntroducerOverride = async (userId: string) => {
+    if (!confirm('Are you sure you want to revert this user to the default commission rate?')) {
+      return;
+    }
+    try {
+      setIsSaving(`introducer-delete-${userId}`);
+      await feesApi.deleteUserCommissionRate(userId);
+      showSuccess('Commission rate reverted to default');
+      fetchIntroducerData();
+    } catch (err) {
+      console.error('Error deleting commission rate override:', err);
+      setError('Failed to revert commission rate');
+    } finally {
+      setIsSaving(null);
+    }
+  };
+
   const formatFeeRate = (rate: number | null): string => {
     if (rate === null) return '-';
     return `${(rate * 100).toFixed(2)}%`;
@@ -208,7 +311,7 @@ export function FeeSettingsPage() {
         </div>
       }
       subSubHeader={
-        <button onClick={fetchData} className="flex items-center gap-2 px-3 py-1.5 text-sm text-navy-400 hover:text-white hover:bg-navy-700 rounded-lg transition-colors">
+        <button onClick={activeTab === 'introducer' ? fetchIntroducerData : fetchData} className="flex items-center gap-2 px-3 py-1.5 text-sm text-navy-400 hover:text-white hover:bg-navy-700 rounded-lg transition-colors">
           <RefreshCw className="w-4 h-4" />
           Refresh
         </button>
@@ -334,13 +437,211 @@ export function FeeSettingsPage() {
       </div>
       )}
 
-      {/* Introducer Fees (placeholder) */}
+      {/* Introducer Fees */}
       {activeTab === 'introducer' && (
+      <>
+        {/* Default Commission Rate Card */}
         <div className="panel panel--flush">
+          <div className="p-5 border-b border-navy-700">
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-navy-400" />
+              <h2 className="text-lg font-semibold text-white">
+                Default Commission Rate
+              </h2>
+            </div>
+            <p className="text-sm text-navy-400 mt-1">
+              Commission rate applied to all introducers unless overridden
+            </p>
+          </div>
+
           <div className="p-5">
-            <p className="text-navy-400">Introducer Fees (coming next)</p>
+            <div className="p-4 bg-navy-700/50 rounded-lg border border-navy-600 max-w-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-white">Commission Rate</h3>
+                {!editingDefaultRate && (
+                  <button
+                    onClick={handleEditDefaultRate}
+                    className="p-1.5 text-navy-400 hover:bg-navy-600 rounded-lg transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {editingDefaultRate ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-navy-400 mb-1">
+                      Rate (%)
+                    </label>
+                    <NumberInput
+                      value={editDefaultRateValue}
+                      onChange={(v) => setEditDefaultRateValue(v)}
+                      decimals={2}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveDefaultRate}
+                      disabled={isSaving === 'introducer-default'}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50 transition-colors"
+                    >
+                      {isSaving === 'introducer-default' ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingDefaultRate(false)}
+                      className="px-3 py-2 text-navy-400 hover:bg-navy-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <span className="block text-xs text-navy-400">Rate</span>
+                  <span className="text-lg font-semibold text-emerald-400">
+                    {introducerDefaultRate
+                      ? `${(parseFloat(introducerDefaultRate) * 100).toFixed(2)}%`
+                      : '-'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Custom Commission Rates Table */}
+        <div className="panel panel--flush">
+          <div className="p-5 border-b border-navy-700">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-navy-400" />
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Custom Commission Rates
+                </h2>
+                <p className="text-sm text-navy-400">
+                  Introducers with custom commission rates different from the default
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-navy-700/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-navy-400 uppercase tracking-wider">
+                    Commission Rate
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-navy-400 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-navy-700">
+                {introducerOverrides.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-navy-400">
+                      No custom commission rates configured
+                    </td>
+                  </tr>
+                ) : (
+                  introducerOverrides.map((intro) => {
+                    const isEditingThis = editingOverrideUserId === intro.userId;
+                    return (
+                      <tr key={intro.userId} className="hover:bg-navy-700/30">
+                        <td className="px-4 py-3 text-sm text-white font-medium">
+                          {intro.firstName} {intro.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-navy-400">
+                          {intro.email}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          {isEditingThis ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-28">
+                                <NumberInput
+                                  value={editOverrideRateValue}
+                                  onChange={(v) => setEditOverrideRateValue(v)}
+                                  decimals={2}
+                                />
+                              </div>
+                              <span className="text-navy-400 text-xs">%</span>
+                            </div>
+                          ) : (
+                            <span className="text-emerald-400 font-semibold">
+                              {(parseFloat(intro.commissionRate) * 100).toFixed(2)}%
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {isEditingThis ? (
+                              <>
+                                <button
+                                  onClick={() => handleSaveOverrideRate(intro.userId)}
+                                  disabled={isSaving === `introducer-override-${intro.userId}`}
+                                  className="p-1.5 text-emerald-400 hover:bg-emerald-900/30 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Save"
+                                >
+                                  {isSaving === `introducer-override-${intro.userId}` ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Save className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => setEditingOverrideUserId(null)}
+                                  className="px-2 py-1 text-xs text-navy-400 hover:bg-navy-700 rounded-lg transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleEditOverride(intro.userId, intro.commissionRate)}
+                                  className="p-1.5 text-navy-400 hover:bg-navy-700 rounded-lg transition-colors"
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteIntroducerOverride(intro.userId)}
+                                  disabled={isSaving === `introducer-delete-${intro.userId}`}
+                                  className="p-1.5 text-red-400 hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Revert to default"
+                                >
+                                  {isSaving === `introducer-delete-${intro.userId}` ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
       )}
 
       {/* Entity Fee Overrides (Special Fees) */}
