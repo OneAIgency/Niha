@@ -85,6 +85,7 @@ The swap market allows users with CEA role (or higher) to exchange CEA for EUA.
 - `GET /api/v1/swaps/orderbook` — Returns asks (EUA offers) with ratio and quantity
 - `POST /api/v1/swaps` — Create swap request
 - `POST /api/v1/swaps/{id}/execute` — Execute swap against orderbook
+- `GET /api/v1/exchange-rates/history` — Exchange rate history (authenticated, not admin). Params: `from_currency` (default EUR), `to_currency` (default CNY), `period` (24h/7d/30d/90d/1y). Short periods return raw points; 90d/1y return daily averages.
 
 **CEA and EUA volumes (integer only)**  
 CEA and EUA are certificates traded in whole units only; there are no fractional certificates. **CEA and EUA volumes/quantities/amounts are whole numbers only; no fractional certificates.** All API request fields and response fields representing CEA or EUA quantity/volume/amount must be integers; UI must accept and display only whole numbers for CEA/EUA. EUR amounts (e.g. balance_amount, deposit amount, order value in EUR) remain decimal where applicable; only certificate quantities (CEA count, EUA count) and certificate amounts in add-asset/transactions for CEA/EUA are integer.

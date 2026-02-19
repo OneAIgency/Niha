@@ -55,6 +55,8 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
     MM = "MM"  # Market Maker; created and managed only by admin, no contact requests
     INTRODUCER = "INTRODUCER"  # Introducer flow; no entity, simplified dashboard
+    TRODUCER = "TRODUCER"  # Intermediate introducer; NDA sent but not yet approved
+    PREINTRODUCER = "PREINTRODUCER"  # Pre-introducer; registered via referral code
     NDA = "NDA"
     REJECTED = "REJECTED"
     KYC = "KYC"
