@@ -436,7 +436,7 @@ async def create_introducer_request(
         raise HTTPException(status_code=400, detail="Invalid email format")
 
     code_info = await validate_referral_code(db, referral_code.strip())
-    if not code_info or code_info["type"] != "preintroducer":
+    if not code_info or code_info["type"] not in ("preintroducer", "troducer"):
         raise HTTPException(status_code=400, detail="Invalid or expired referral code")
 
     nda_file_name = None

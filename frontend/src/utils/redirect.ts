@@ -35,8 +35,13 @@ export function getPostLoginRedirect(userOrRole: UserOrRole): string {
     return '/preintroducer';
   }
 
-  // TRODUCER / INTRODUCER: introducer dashboard
-  if (role === 'TRODUCER' || role === 'INTRODUCER') {
+  // TRODUCER: referral code page (single-use code, no dashboard)
+  if (role === 'TRODUCER') {
+    return '/troducer';
+  }
+
+  // INTRODUCER: introducer dashboard
+  if (role === 'INTRODUCER') {
     return '/introducer/dashboard';
   }
 

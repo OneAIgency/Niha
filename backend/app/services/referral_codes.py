@@ -44,21 +44,25 @@ async def validate_referral_code(
 ) -> dict | None:
     """
     Validate a referral code.
-    Returns { user_id, type: 'preintroducer' | 'introducer' } or None if invalid.
+    Returns { user_id, type: 'preintroducer' | 'troducer' | 'introducer' } or None if invalid.
     """
     result = await db.execute(
         select(User).where(
             User.referral_code == code,
             User.is_active.is_(True),
-            User.role.in_([UserRole.PREINTRODUCER, UserRole.INTRODUCER]),
+            User.role.in_([UserRole.PREINTRODUCER, UserRole.TRODUCER, UserRole.INTRODUCER]),
         )
     )
     user = result.scalar_one_or_none()
     if not user:
         return None
 
-    code_type = "preintroducer" if user.role == UserRole.PREINTRODUCER else "introducer"
-    return {"user_id": user.id, "type": code_type}
+    role_to_type = {
+        UserRole.PREINTRODUCER: "preintroducer",
+        UserRole.TRODUCER: "troducer",
+        UserRole.INTRODUCER: "introducer",
+    }
+    return {"user_id": user.id, "type": role_to_type[user.role]}
 
 
 async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
@@ -66,13 +70,15 @@ async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
     Consume a referral code: return the owner's user_id and regenerate their code.
     Uses FOR UPDATE row lock to prevent concurrent consumption of the same code.
     Returns the owner's user_id, or None if code invalid/already consumed.
+
+    TRODUCER codes are single-use: set to None instead of regenerating.
     """
     result = await db.execute(
         select(User)
         .where(
             User.referral_code == code,
             User.is_active.is_(True),
-            User.role.in_([UserRole.PREINTRODUCER, UserRole.INTRODUCER]),
+            User.role.in_([UserRole.PREINTRODUCER, UserRole.TRODUCER, UserRole.INTRODUCER]),
         )
         .with_for_update()
     )
@@ -81,7 +87,11 @@ async def consume_referral_code(db: AsyncSession, code: str) -> UUID | None:
         return None
 
     owner_id = user.id
-    # Regenerate code (within the same transaction lock)
-    user.referral_code = await get_unique_referral_code(db)
+    if user.role == UserRole.TRODUCER:
+        # Single-use: clear the code (no regeneration)
+        user.referral_code = None
+    else:
+        # Regenerate code (within the same transaction lock)
+        user.referral_code = await get_unique_referral_code(db)
     # Don't commit here -- caller manages the transaction
     return owner_id

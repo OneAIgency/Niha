@@ -49,6 +49,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m
 const IntroducerPage = lazy(() => import('./pages/IntroducerPage').then(m => ({ default: m.IntroducerPage })));
 const IntroducerDashboardPage = lazy(() => import('./pages/IntroducerDashboardPage').then(m => ({ default: m.IntroducerDashboardPage })));
 const PreintroducerPage = lazy(() => import('./pages/PreintroducerPage').then(m => ({ default: m.PreintroducerPage })));
+const TroducerPage = lazy(() => import('./pages/TroducerPage').then(m => ({ default: m.TroducerPage })));
 const IntroducerSignNDAPage = lazy(() => import('./pages/IntroducerSignNDAPage').then(m => ({ default: m.IntroducerSignNDAPage })));
 const CashMarketProPage = lazy(() => import('./pages/CashMarketProPage').then(m => ({ default: m.CashMarketProPage })));
 const CeaSwapMarketPage = lazy(() => import('./pages/CeaSwapMarketPage').then(m => ({ default: m.CeaSwapMarketPage })));
@@ -213,10 +214,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** INTRODUCER dashboard: TRODUCER, INTRODUCER, and ADMIN. */
+/** INTRODUCER dashboard: INTRODUCER and ADMIN only (TRODUCER uses /troducer). */
 function IntroducerDashboardRoute({ children }: { children: React.ReactNode }) {
   return (
-    <RoleProtectedRoute allowedRoles={['TRODUCER', 'INTRODUCER', 'ADMIN']}>
+    <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
       {children}
     </RoleProtectedRoute>
   );
@@ -424,9 +425,17 @@ function App() {
               }
             />
             <Route
+              path="/troducer"
+              element={
+                <RoleProtectedRoute allowedRoles={['TRODUCER', 'ADMIN']}>
+                  <TroducerPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
               path="/introducer/sign-nda"
               element={
-                <RoleProtectedRoute allowedRoles={['TRODUCER', 'INTRODUCER', 'ADMIN']}>
+                <RoleProtectedRoute allowedRoles={['INTRODUCER', 'ADMIN']}>
                   <IntroducerSignNDAPage />
                 </RoleProtectedRoute>
               }
