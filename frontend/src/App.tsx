@@ -77,6 +77,7 @@ const LoggingPage = lazy(() => import('./pages/LoggingPage'));
 const BackofficeOnboardingPage = lazy(() => import('./pages/BackofficeOnboardingPage').then(m => ({ default: m.BackofficeOnboardingPage })));
 const FeeSettingsPage = lazy(() => import('./pages/FeeSettingsPage').then(m => ({ default: m.FeeSettingsPage })));
 const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
+import { SystemHealthPage } from './pages/SystemHealthPage';
 
 // Loading fallback component with proper semantic structure for accessibility
 const PageLoader = () => (
@@ -483,6 +484,14 @@ function App() {
               element={
                 <AdminRoute>
                   <FeeSettingsPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/backoffice/system-health"
+              element={
+                <AdminRoute>
+                  <SystemHealthPage />
                 </AdminRoute>
               }
             />
