@@ -72,6 +72,9 @@ import type {
   AddAssetApiRequest,
   ExchangeRatePeriod,
   ExchangeRateHistoryResponse,
+  ProcessorStatus,
+  SettlementMetrics,
+  SettlementAlert,
 } from '../types';
 import type { FundingInstructions } from '../types/funding';
 import type { AdminDashboardStats } from '../types/admin';
@@ -2690,6 +2693,33 @@ export const exchangeRatesApi = {
         period: params?.period,
       },
     });
+    return data;
+  },
+};
+
+// =============================================================================
+// System Health API
+// =============================================================================
+
+export const systemHealthApi = {
+  getProcessors: async (): Promise<{ processors: ProcessorStatus[] }> => {
+    const { data } = await api.get('/admin/system-health/processors');
+    return data;
+  },
+
+  getSettlementMetrics: async (): Promise<SettlementMetrics> => {
+    const { data } = await api.get('/settlement/monitoring/metrics');
+    return data;
+  },
+
+  getSettlementAlerts: async (): Promise<{
+    alerts: SettlementAlert[];
+    count: number;
+    criticalCount: number;
+    errorCount: number;
+    warningCount: number;
+  }> => {
+    const { data } = await api.get('/settlement/monitoring/alerts');
     return data;
   },
 };

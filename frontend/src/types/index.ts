@@ -1133,3 +1133,40 @@ export interface AutoTradeStatus {
     readyToExecute: number;
   };
 }
+
+// =============================================================================
+// System Health Types
+// =============================================================================
+
+export interface ProcessorStatus {
+  name: string;
+  cycleSeconds: number;
+  status: 'idle' | 'error' | 'running';
+  lastRunAt: string | null;
+  errorCount: number;
+  lastError: string | null;
+  runCount: number;
+}
+
+export interface SettlementMetrics {
+  totalPending: number;
+  totalInProgress: number;
+  totalSettledToday: number;
+  totalFailed: number;
+  totalOverdue: number;
+  avgSettlementTimeHours: number | null;
+  totalValuePendingEur: number;
+  totalValueSettledTodayEur: number;
+  oldestPendingDays: number | null;
+}
+
+export interface SettlementAlert {
+  severity: 'CRITICAL' | 'ERROR' | 'WARNING';
+  settlementId: string;
+  batchReference: string;
+  alertType: string;
+  message: string;
+  entityName: string;
+  daysOverdue: number | null;
+  totalValueEur: number | null;
+}
