@@ -653,16 +653,10 @@ export const backofficeRealtimeApi = {
       }
 
       const { protocol, hostname, port } = window.location;
-
-      // If running on Vite dev server (port 5173), use relative WebSocket URL
-      if (port === '5173') {
-        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-        return `${wsProtocol}//${hostname}:${port}/api/v1/backoffice/ws`;
-      }
-
-      // For production/other access, construct URL from current hostname
       const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-      return `${wsProtocol}//${hostname}:8000/api/v1/backoffice/ws`;
+      // WebSocket is served by backend (port 8000), not by Vite (port 5173)
+      const wsPort = port === '5173' ? '8000' : port || '8000';
+      return `${wsProtocol}//${hostname}:${wsPort}/api/v1/backoffice/ws`;
     };
 
     const wsUrl = getWsUrl();
