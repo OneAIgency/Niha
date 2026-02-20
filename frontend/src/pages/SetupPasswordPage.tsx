@@ -6,6 +6,7 @@ import { authApi, contactApi } from '../services/api';
 import { useAuthStore } from '../stores/useStore';
 import { getPostLoginRedirect } from '../utils/redirect';
 import { logger } from '../utils/logger';
+import { getApiErrorMessage } from '../utils/errors';
 
 export function SetupPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -120,8 +121,8 @@ export function SetupPasswordPage() {
       // Clear auth state — TRODUCER cannot login until admin approves
       useAuthStore.getState().logout();
       setStep('done');
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload NDA. Please try again.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setUploading(false);
     }

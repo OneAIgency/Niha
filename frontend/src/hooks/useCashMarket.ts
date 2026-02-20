@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { cashMarketApi } from '../services/api';
+import { getApiErrorMessage } from '../utils/errors';
 import type { OrderBook, Order, CashMarketTrade, CertificateType } from '../types';
 
 interface Balances {
@@ -72,10 +73,10 @@ export function useCashMarket(
         eua: balancesData.euaBalance,
       });
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMountedRef.current) {
         console.error('Cash market fetch error:', err);
-        setError(err.message || 'Failed to fetch market data');
+        setError(getApiErrorMessage(err));
       }
     } finally {
       if (isMountedRef.current) {

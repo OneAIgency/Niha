@@ -8,6 +8,7 @@ import { CreateMarketMakersModal } from '../components/backoffice/CreateMarketMa
 import { EditMarketMakerModal } from '../components/backoffice/EditMarketMakerModal';
 import { getMarketMakers, resetAllMarketMakers } from '../services/api';
 import { cn } from '../utils';
+import { getApiErrorMessage } from '../utils/errors';
 import type { MarketMaker } from '../types';
 
 export function MarketMakersPage() {
@@ -32,9 +33,9 @@ export function MarketMakersPage() {
     try {
       const data = await getMarketMakers();
       setMarketMakers(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load market makers:', err);
-      setError(err.message || 'Failed to load market makers. Please try again.');
+      setError(getApiErrorMessage(err));
       setMarketMakers([]);
     } finally {
       setLoading(false);

@@ -12,6 +12,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { onboardingApi } from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import type { KYCDocument, KYCDocumentType } from '../../types';
 
 // Document definitions matching backend REQUIRED_DOCUMENTS
@@ -143,9 +144,9 @@ export default function KycUploadModal({
       const docs = status.documents || [];
       // API response uses camelCase (documentType, fileName)
       setUploadedDocs(docs);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load documents:', err);
-      setError(err.message || 'Failed to load documents');
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

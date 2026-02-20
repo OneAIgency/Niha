@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Send, Loader2, Zap } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '../../utils';
+import { getApiErrorMessage } from '../../utils/errors';
 import { useIntroducerStore } from '../../stores/useIntroducerStore';
 import { useSectionRegistry } from './SectionRegistry';
 import { streamIntroducerChat, type StreamEvent } from '../../services/introducerChatApi';
@@ -139,9 +140,11 @@ export function ChatPanel() {
         },
         abort.signal,
       );
-    } catch (err: any) {
-      if ((err as Error).name !== 'AbortError') {
-        addChatMessage({ role: 'system', content: err.message || 'Failed to connect to AI service.' });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // User cancelled, ignore
+      } else {
+        addChatMessage({ role: 'system', content: getApiErrorMessage(err) });
       }
     } finally {
       setChatLoading(false);

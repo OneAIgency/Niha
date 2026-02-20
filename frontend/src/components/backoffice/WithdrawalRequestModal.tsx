@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { X, Loader2, CheckCircle, DollarSign, Landmark, Globe } from 'lucide-react';
 import { AlertBanner, NumberInput } from '../common';
 import { withdrawalApi } from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import type { AssetType, WithdrawalRequest } from '../../types';
 
 interface WithdrawalRequestModalProps {
@@ -133,8 +134,8 @@ export const WithdrawalRequestModal: React.FC<WithdrawalRequestModalProps> = ({
       } else {
         setError(result.error || 'Failed to submit withdrawal request');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while submitting the request');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

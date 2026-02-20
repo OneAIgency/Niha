@@ -37,6 +37,7 @@ import {
 import { EuaScrapped, CeaScrapped } from '../components/dashboard';
 import { SettlementTransactions } from '../components/dashboard/SettlementTransactions';
 import { SettlementDetails } from '../components/dashboard/SettlementDetails';
+import { getApiErrorMessage } from '../utils/errors';
 import type { Order, SettlementBatch, SwapRequest } from '../types';
 
 /**
@@ -311,9 +312,9 @@ export function DashboardPage() {
         
         setError(null);
         return true; // Success
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch balance/assets:', err);
-        setError(err.message || 'Failed to load balance');
+        setError(getApiErrorMessage(err));
         return false; // Failure
       } finally {
         isRefreshingBalanceRef.current = false;

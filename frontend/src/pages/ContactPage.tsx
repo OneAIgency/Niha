@@ -4,6 +4,7 @@ import { Mail, Building2, User, Users, CheckCircle, ArrowRight } from 'lucide-re
 import { Button, Input, Card, AlertBanner } from '../components/common';
 import { contactApi } from '../services/api';
 import { isValidEmail, isCorporateEmail, sanitizeFormData } from '../utils';
+import { getApiErrorMessage } from '../utils/errors';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
@@ -45,8 +46,8 @@ export function ContactPage() {
       const sanitizedData = sanitizeFormData(formData);
       await contactApi.submitRequest(sanitizedData);
       setSubmitted(true);
-    } catch (err: any) {
-      setErrors({ submit: err.message || 'Failed to submit request. Please try again.' });
+    } catch (err: unknown) {
+      setErrors({ submit: getApiErrorMessage(err) });
     } finally {
       setLoading(false);
     }
