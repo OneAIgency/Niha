@@ -87,8 +87,6 @@ export function CashMarketPage() {
           amount_eur: order.amountEur,
         });
 
-        console.log('Market order executed:', result);
-
         // Show success modal with order details
         if (result.success) {
           setIsOrderPanelOpen(false);

@@ -141,11 +141,7 @@ export function UserOrderEntryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit called, preview:', preview);
-    console.log('canExecute:', preview?.canExecute, 'amountEur:', amountEur, 'orderType:', orderType);
-
     if (!preview?.canExecute) {
-      console.log('Returning early: preview.canExecute is false');
       return;
     }
 
@@ -161,15 +157,12 @@ export function UserOrderEntryModal({
     }
 
     setIsSubmitting(true);
-    console.log('Calling onOrderSubmit with:', { orderType, limitPrice: price, amountEur: amount });
     try {
       await onOrderSubmit({
         orderType,
         limitPrice: price,
         amountEur: amount,
       });
-      console.log('onOrderSubmit completed successfully');
-
       // Reset form after successful submission
       setAmountEur('');
       setLimitPrice('');
