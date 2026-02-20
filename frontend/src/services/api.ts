@@ -331,20 +331,20 @@ export const contactApi = {
   },
 
   submitNDARequest: async (request: {
-    entity_name: string;
+    entity_name?: string;
     contact_email: string;
     contact_first_name: string;
     contact_last_name: string;
-    position: string;
+    position?: string;
     nda_file?: File;
     referral_code?: string;
   }): Promise<MessageResponse> => {
     const formData = new FormData();
-    formData.append('entity_name', request.entity_name);
+    if (request.entity_name) formData.append('entity_name', request.entity_name);
     formData.append('contact_email', request.contact_email);
     formData.append('contact_first_name', request.contact_first_name);
     formData.append('contact_last_name', request.contact_last_name);
-    formData.append('position', request.position);
+    if (request.position) formData.append('position', request.position);
     if (request.nda_file) formData.append('file', request.nda_file);
     if (request.referral_code) formData.append('referral_code', request.referral_code);
 

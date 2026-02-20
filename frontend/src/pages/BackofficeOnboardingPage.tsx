@@ -315,9 +315,8 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.acceptNDA(requestId);
       await refreshContactRequests();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to accept NDA';
-      console.error('Failed to accept NDA:', msg);
+    } catch (err: any) {
+      setError(err.message || 'Failed to accept NDA');
     } finally {
       setActionLoading(null);
     }
