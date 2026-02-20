@@ -225,3 +225,6 @@ export {
   isPendingContactRequest,
   PENDING_CONTACT_REQUEST_ROLES,
 } from './contactRequest';
+
+// Export API error message helper
+export { getApiErrorMessage } from './errors';
