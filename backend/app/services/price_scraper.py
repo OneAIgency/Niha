@@ -1277,7 +1277,6 @@ async def check_price_alerts(db, prices: dict) -> None:
     import asyncio
     from sqlalchemy import select, update as sa_update
 
-    from .ws_utils import get_entity_user_ids  # noqa: F811
 
     eua_price = prices.get("eua", {}).get("price")
     cea_price = prices.get("cea", {}).get("price")

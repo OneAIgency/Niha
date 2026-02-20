@@ -348,7 +348,7 @@ async def send_invitation(
             invited_first_name=body.first_name,
             personal_note=body.personal_note,
         )
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid request. Please check your input.")
 
     # Build invitation URL with token + referral code
