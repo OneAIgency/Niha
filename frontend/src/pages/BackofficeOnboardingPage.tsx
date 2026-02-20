@@ -52,6 +52,31 @@ interface IPLookupResult {
   as: string;
 }
 
+interface KycDocResponse {
+  id: string;
+  status: string;
+  createdAt: string;
+  userId: string;
+  documentType: string;
+  fileName: string;
+}
+
+interface PendingDepositResponse {
+  id: string;
+  entityId?: string;
+  entityName?: string;
+  userEmail?: string;
+  userRole: string;
+  reportedAmount?: number | null;
+  reportedCurrency?: string | null;
+  wireReference?: string | null;
+  bankReference?: string | null;
+  status: string;
+  reportedAt?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+}
+
 type OnboardingSubpage = 'requests' | 'introducer' | 'kyc' | 'deposits' | 'aml' | 'settlements';
 
 const ONBOARDING_SUBPAGES: { path: OnboardingSubpage; label: string; icon: React.ElementType }[] = [
@@ -144,8 +169,7 @@ export function BackofficeOnboardingPage() {
           createdAt: u.createdAt ?? new Date().toISOString(),
         })));
         // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setKycDocuments((docs as any[]).map((d: any) => ({
+        setKycDocuments((docs as KycDocResponse[]).map((d) => ({
           ...d,
           id: d.id,
           status: d.status,
@@ -156,8 +180,7 @@ export function BackofficeOnboardingPage() {
         })));
       } else if (activeSubpage === 'deposits') {
         const pendingRes = await backofficeApi.getPendingDeposits();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setPendingDeposits(pendingRes.map((d: any): PendingDeposit => ({
+        setPendingDeposits((pendingRes as PendingDepositResponse[]).map((d): PendingDeposit => ({
           id: d.id,
           entityId: d.entityId ?? '',
           entityName: d.entityName ?? '',
