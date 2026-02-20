@@ -7,8 +7,6 @@ Handles order preview, market orders, and limit orders with proper fee calculati
 
 import logging
 from dataclasses import dataclass
-
-logger = logging.getLogger(__name__)
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
@@ -37,6 +35,8 @@ from ..models.models import (
 from ..services.currency_service import currency_service
 from ..services.balance_utils import get_entity_eur_balance
 from ..services.settlement_service import SettlementService
+
+logger = logging.getLogger(__name__)
 
 # Default platform fee rate: 0.5% (fallback if no config exists)
 DEFAULT_FEE_RATE = Decimal("0.005")
