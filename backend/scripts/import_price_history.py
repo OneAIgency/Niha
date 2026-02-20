@@ -256,7 +256,7 @@ def main():
             "certificate_type": "CEA",
             "price": Decimal(str(price)),
             "currency": "CNY",
-            "source": "carboncredits.com CEA",
+            "source": "CarbonCredits CEA",
             "recorded_at": recorded_at,
         })
     print(f"  CEA records prepared: {len(cea_records)}")
