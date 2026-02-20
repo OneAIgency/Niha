@@ -195,11 +195,11 @@ async def create_contact_request(
 @router.post("/nda-request", response_model=ContactRequestResponse)
 async def create_nda_request(
     request: Request,
-    entity_name: str = Form(...),  # noqa: B008
+    entity_name: str = Form(""),  # noqa: B008  # Optional for PRE_NDA/NDA
     contact_email: str = Form(...),  # noqa: B008
     contact_first_name: str = Form(...),  # noqa: B008
     contact_last_name: str = Form(...),  # noqa: B008
-    position: str = Form(...),  # noqa: B008
+    position: str = Form(""),  # noqa: B008  # Optional for early roles
     file: Optional[UploadFile] = File(None),  # noqa: B008
     referral_code: Optional[str] = Form(None),  # noqa: B008
     invite_token: Optional[str] = Form(None),  # noqa: B008
@@ -247,7 +247,7 @@ async def create_nda_request(
 
     # Create contact request - store PDF binary in database
     contact = ContactRequest(
-        entity_name=entity_name,
+        entity_name=entity_name or f"{contact_first_name} {contact_last_name}",
         contact_email=contact_email.lower(),
         contact_first_name=contact_first_name,
         contact_last_name=contact_last_name,

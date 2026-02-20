@@ -5220,11 +5220,11 @@ async def accept_contact_request_nda(
         user_result = await db.execute(
             select(User).where(
                 User.email == contact_request.contact_email.lower(),
-                User.role == UserRole.PRE_NDA,
+                User.nda_file_data.isnot(None),
             )
         )
         linked_user = user_result.scalar_one_or_none()
-        if linked_user and linked_user.nda_file_data:
+        if linked_user:
             has_nda = True
 
     if not has_nda:
