@@ -254,7 +254,7 @@ const SCRAPE_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: '1h' },
 ];
 
-/** Preset for Trading Economics EU Carbon Permits (feature 0041). */
+/** Preset for Trading Economics EU Carbon Permits (feature 0041). Uses href-anchored XPath for robustness. */
 const TRADING_ECONOMICS_EUA_PRESET = {
   name: 'Trading Economics EUA',
   url: 'https://tradingeconomics.com/commodity/carbon',
@@ -262,7 +262,7 @@ const TRADING_ECONOMICS_EUA_PRESET = {
   scrape_library: 'HTTPX' as ScrapeLibrary,
   scrape_interval_minutes: 5,
   xpath_selector:
-    "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']",
+    "//a[@href='/commodity/carbon']/ancestor::tr/td[@id='p']",
 };
 
 type SettingsTab = 'scraping' | 'exchange' | 'mail' | 'ai-agent';

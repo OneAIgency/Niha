@@ -18,7 +18,7 @@ For sources whose URL does not contain `carboncredits.com`, the system fetches t
 3. **regex_pattern** — Regex with one capture group for the price.
 4. Default — common price patterns (€, $, ¥, EUR, USD, etc.).
 
-Example: to scrape EUA from Trading Economics, set URL to `https://tradingeconomics.com/commodity/carbon` and config to `{"xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"}`. The row `tr[3]` corresponds to the EU Carbon Permits price cell. Alternative CSS: `form#aspnetForm table.table tbody tr:nth-of-type(3) td#p`.
+Example: to scrape EUA from Trading Economics, set URL to `https://tradingeconomics.com/commodity/carbon` and config to `{"xpath_selector": "//a[@href='/commodity/carbon']/ancestor::tr/td[@id='p']"}`. This XPath anchors to the unique `/commodity/carbon` link in the EU Carbon Permits row, making it robust against table reordering. Note: `td#p` is NOT unique on this page (97 occurrences), so positional XPaths like `tr[N]` will target the wrong row. HTTPX works fine — no Playwright needed.
 
 ## Carboncredits.com behaviour (0026)
 
@@ -71,11 +71,11 @@ Cookie: access_token=...
   "name": "Trading Economics EUA",
   "url": "https://tradingeconomics.com/commodity/carbon",
   "certificate_type": "EUA",
-  "scrape_library": "httpx",
+  "scrape_library": "playwright",
   "scrape_interval_minutes": 5,
   "is_primary": false,
   "config": {
-    "xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"
+    "xpath_selector": "//a[@href='/commodity/carbon']/ancestor::tr/td[@id='p']"
   }
 }
 ```
@@ -102,12 +102,12 @@ Body: any subset of updatable fields (all optional). When `is_primary` is set to
   "is_primary": true,
   "scrape_interval_minutes": 10,
   "config": {
-    "xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"
+    "xpath_selector": "//a[@href='/commodity/carbon']/ancestor::tr/td[@id='p']"
   }
 }
 ```
 
-**Config options** (for non-carboncredits.com sources): `xpath_selector`, `css_selector`, `regex_pattern`. XPath takes precedence over CSS, then regex. Use Chrome DevTools (Elements → right-click → Copy → Copy XPath) to obtain XPath expressions.
+**Config options** (for non-carboncredits.com sources): `xpath_selector`, `css_selector`, `regex_pattern`. XPath takes precedence over CSS, then regex. Prefer href-anchored XPaths (e.g. `//a[@href='...']/ancestor::tr/td[@id='p']`) over positional ones (`tr[N]`) for robustness.
 
 **Response (200)** — Updated scraping source object.
 
