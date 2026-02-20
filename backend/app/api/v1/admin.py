@@ -1973,11 +1973,15 @@ async def delete_scraping_source(
 @router.get("/scraping-sources/{source_id}/history")
 async def get_scraping_source_history(
     source_id: str,
-    hours: int = Query(24, ge=1, le=168),
+    hours: int = Query(24, ge=1, le=8760),
     _admin_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get price history for a specific scraping source."""
+    """Get price history for a specific scraping source.
+
+    For periods <= 168h (7d): returns raw data points.
+    For periods > 168h: returns daily averages for performance.
+    """
     result = await db.execute(
         select(ScrapingSource).where(ScrapingSource.id == UUID(source_id))
     )
@@ -1986,28 +1990,54 @@ async def get_scraping_source_history(
         raise HTTPException(status_code=404, detail="Scraping source not found")
 
     since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
-    history_result = await db.execute(
-        select(PriceHistory)
-        .where(
-            PriceHistory.source == source.name,
-            PriceHistory.recorded_at >= since,
+    use_daily = hours > 168
+
+    if use_daily:
+        day_col = func.date_trunc("day", PriceHistory.recorded_at)
+        history_result = await db.execute(
+            select(
+                day_col.label("day"),
+                func.avg(PriceHistory.price).label("avg_price"),
+            )
+            .where(
+                PriceHistory.source == source.name,
+                PriceHistory.recorded_at >= since,
+            )
+            .group_by(day_col)
+            .order_by(day_col.asc())
         )
-        .order_by(PriceHistory.recorded_at.asc())
-    )
-    records = history_result.scalars().all()
+        rows = history_result.all()
+        points = [
+            {
+                "price": round(float(row.avg_price), 4),
+                "recorded_at": row.day.isoformat() + "Z",
+            }
+            for row in rows
+        ]
+    else:
+        history_result = await db.execute(
+            select(PriceHistory)
+            .where(
+                PriceHistory.source == source.name,
+                PriceHistory.recorded_at >= since,
+            )
+            .order_by(PriceHistory.recorded_at.asc())
+        )
+        records = history_result.scalars().all()
+        points = [
+            {
+                "price": float(r.price),
+                "recorded_at": r.recorded_at.isoformat() + "Z",
+            }
+            for r in records
+        ]
 
     return {
         "source_id": source_id,
         "source_name": source.name,
         "certificate_type": source.certificate_type.value,
         "currency": "EUR" if source.certificate_type == CertificateType.EUA else "CNY",
-        "points": [
-            {
-                "price": float(r.price),
-                "recorded_at": r.recorded_at.isoformat() + "Z",
-            }
-            for r in records
-        ],
+        "points": points,
     }
 
 
