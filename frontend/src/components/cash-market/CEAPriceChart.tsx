@@ -4,6 +4,7 @@ import { createChart, CandlestickSeries, LineSeries, ColorType } from 'lightweig
 import type { IChartApi, ISeriesApi, CandlestickData, LineData, Time } from 'lightweight-charts';
 import { cashMarketApi } from '../../services/api';
 import type { CashMarketTrade } from '../../types';
+import { CANDLESTICK_COLORS as COLORS, CHART_NAVY } from '../../constants/chartColors';
 
 // ─────────────────────────────────────────────────
 // Time intervals
@@ -29,20 +30,8 @@ const TIME_INTERVALS: TimeInterval[] = [
 const DEFAULT_INTERVAL = TIME_INTERVALS[2]; // 15m
 
 // ─────────────────────────────────────────────────
-// Chart colors (matches our navy/emerald design)
+// Chart colors (imported from constants/chartColors)
 // ─────────────────────────────────────────────────
-
-/* eslint-disable no-restricted-syntax -- chart library requires hex color values */
-const COLORS = {
-  background: 'transparent',
-  text: '#94a3b8',         // navy-400
-  grid: 'rgba(51, 65, 85, 0.3)', // navy-700 @ 30%
-  crosshair: '#64748b',   // navy-500
-  upColor: '#34d399',      // emerald-400
-  downColor: '#f87171',    // red-400
-  lineColor: '#34d399',    // emerald-400
-};
-/* eslint-enable no-restricted-syntax */
 
 // ─────────────────────────────────────────────────
 // Component
@@ -162,8 +151,8 @@ export function CEAPriceChart() {
         horzLines: { color: COLORS.grid },
       },
       crosshair: {
-        vertLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' }, // eslint-disable-line no-restricted-syntax
-        horzLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: '#1e293b' }, // eslint-disable-line no-restricted-syntax
+        vertLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: CHART_NAVY[800] },
+        horzLine: { color: COLORS.crosshair, width: 1, style: 3, labelBackgroundColor: CHART_NAVY[800] },
       },
       rightPriceScale: {
         borderColor: 'rgba(51, 65, 85, 0.5)',

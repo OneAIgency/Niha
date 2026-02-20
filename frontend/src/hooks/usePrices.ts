@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePricesStore } from '../stores/useStore';
 import { pricesApi } from '../services/api';
 import { logger } from '../utils/logger';
+import { getApiErrorMessage } from '../utils/errors';
 import type { PriceHistory } from '../types';
 
 export function usePrices() {
@@ -21,9 +22,9 @@ export function usePrices() {
           setPrices(data);
         }
         return true; // Success
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (isMounted) {
-          setError(err.message || 'Failed to fetch prices');
+          setError(getApiErrorMessage(err));
         }
         console.error('Price fetch error:', err);
         return false; // Failed

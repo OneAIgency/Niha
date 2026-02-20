@@ -23,6 +23,7 @@ import {
 } from '../components/backoffice';
 import { adminApi, backofficeApi } from '../services/api';
 import { cn } from '../utils';
+import { getApiErrorMessage } from '../utils/errors';
 import { useBackofficeRealtime } from '../hooks/useBackofficeRealtime';
 import { isPendingContactRequest } from '../utils/contactRequest';
 import { logger } from '../utils/logger';
@@ -49,6 +50,31 @@ interface IPLookupResult {
   isp: string;
   org: string;
   as: string;
+}
+
+interface KycDocResponse {
+  id: string;
+  status: string;
+  createdAt: string;
+  userId: string;
+  documentType: string;
+  fileName: string;
+}
+
+interface PendingDepositResponse {
+  id: string;
+  entityId?: string;
+  entityName?: string;
+  userEmail?: string;
+  userRole: string;
+  reportedAmount?: number | null;
+  reportedCurrency?: string | null;
+  wireReference?: string | null;
+  bankReference?: string | null;
+  status: string;
+  reportedAt?: string | null;
+  notes?: string | null;
+  createdAt?: string;
 }
 
 type OnboardingSubpage = 'requests' | 'introducer' | 'kyc' | 'deposits' | 'aml' | 'settlements';
@@ -143,8 +169,7 @@ export function BackofficeOnboardingPage() {
           createdAt: u.createdAt ?? new Date().toISOString(),
         })));
         // API response is camelCase; normalize so getUserDocuments and KYCReviewPanel work
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setKycDocuments((docs as any[]).map((d: any) => ({
+        setKycDocuments((docs as KycDocResponse[]).map((d) => ({
           ...d,
           id: d.id,
           status: d.status,
@@ -155,8 +180,7 @@ export function BackofficeOnboardingPage() {
         })));
       } else if (activeSubpage === 'deposits') {
         const pendingRes = await backofficeApi.getPendingDeposits();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setPendingDeposits(pendingRes.map((d: any): PendingDeposit => ({
+        setPendingDeposits((pendingRes as PendingDepositResponse[]).map((d): PendingDeposit => ({
           id: d.id,
           entityId: d.entityId ?? '',
           entityName: d.entityName ?? '',
@@ -178,9 +202,9 @@ export function BackofficeOnboardingPage() {
         const res = await adminApi.getAdminPendingSettlements();
         setSettlementBatches(res.data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to load data', err);
-      setError(err.message || 'Failed to load data. Please try again.');
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -247,10 +271,10 @@ export function BackofficeOnboardingPage() {
     try {
       const data = await adminApi.lookupIP(ip);
       setIpLookupData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to lookup IP', err);
       setIpLookupData(null);
-      setError(err.message || 'Failed to lookup IP address');
+      setError(getApiErrorMessage(err));
     } finally {
       setIpLookupLoading(false);
     }
@@ -276,9 +300,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.sendIntroducerNDA(requestId);
       refreshContactRequests();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to send NDA', err);
-      setError(err.message || 'Failed to send NDA to introducer');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -289,9 +313,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.approveIntroducerNDA(userId);
       refreshContactRequests();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to approve introducer', err);
-      setError(err.message || 'Failed to approve introducer');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -315,8 +339,8 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.acceptNDA(requestId);
       await refreshContactRequests();
-    } catch (err: any) {
-      setError(err.message || 'Failed to accept NDA');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -339,9 +363,9 @@ export function BackofficeOnboardingPage() {
     setActionLoading(`delete-${requestId}`);
     try {
       await adminApi.deleteContactRequest(requestId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to delete request', err);
-      setError(err.message || 'Failed to delete contact request');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -352,9 +376,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.confirmDeposit(depositId, amount, currency, notes);
       setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to confirm deposit', err);
-      setError(err.message || 'Failed to confirm deposit');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -365,9 +389,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.rejectDeposit(depositId);
       setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to reject deposit', err);
-      setError(err.message || 'Failed to reject deposit');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -379,9 +403,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.clearDeposit(depositId, { forceClear: true, adminNotes: 'AML cleared by admin' });
       setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to clear AML deposit', err);
-      setError(err.message || 'Failed to clear AML deposit');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -392,9 +416,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.rejectDeposit(depositId);
       setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to reject AML deposit', err);
-      setError(err.message || 'Failed to reject AML deposit');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -408,9 +432,9 @@ export function BackofficeOnboardingPage() {
       const blob = await backofficeApi.getDocumentContent(documentId);
       const url = URL.createObjectURL(blob);
       setDocumentContentUrl(url);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to load document', err);
-      setDocumentError(err.message || 'Failed to load document preview');
+      setDocumentError(getApiErrorMessage(err));
     } finally {
       setDocumentLoading(false);
     }
@@ -486,9 +510,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.settleSettlementBatch(batchId);
       setSettlementBatches(prev => prev.filter(b => b.id !== batchId));
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to settle batch', err);
-      setError(err.message || 'Failed to settle batch');
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(null);
     }

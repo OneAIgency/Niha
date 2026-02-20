@@ -10,15 +10,6 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-
-def is_carboncredits_url(url: str) -> bool:
-    """Safely check if a URL belongs to carboncredits.com (exact domain match)."""
-    try:
-        host = urlparse(url).hostname or ""
-        return host == "carboncredits.com" or host.endswith(".carboncredits.com")
-    except Exception:
-        return False
-
 from ..core.security import RedisManager
 from ..models.models import (
     AlertDirection,
@@ -34,6 +25,15 @@ from ..models.models import (
 from .currency_service import currency_service
 
 logger = logging.getLogger(__name__)
+
+
+def is_carboncredits_url(url: str) -> bool:
+    """Safely check if a URL belongs to carboncredits.com (exact domain match)."""
+    try:
+        host = urlparse(url).hostname or ""
+        return host == "carboncredits.com" or host.endswith(".carboncredits.com")
+    except Exception:
+        return False
 
 
 class PriceScraper:
@@ -432,14 +432,37 @@ class PriceScraper:
         result.append(current)
         return result
 
+    def _extract_via_xpath(self, content: str, xpath: str) -> Optional[float]:
+        """Extract price from HTML using XPath. Uses lxml for XPath support."""
+        if not content or not xpath or not xpath.strip():
+            return None
+        try:
+            from lxml import html as lxml_html
+
+            tree = lxml_html.fromstring(content)
+            elements = tree.xpath(xpath.strip())
+            if elements and len(elements) > 0:
+                text = elements[0].text_content() if hasattr(elements[0], "text_content") else str(elements[0])
+                return self._parse_price(text)
+        except Exception as e:
+            logger.warning("XPath extraction failed: %s", e)
+        return None
+
     async def _extract_price(
         self, result: Dict, source: ScrapingSource, config: Dict
     ) -> Optional[float]:
         """
         Extract price from scraped content using config or default patterns.
+        Supports xpath_selector, css_selector, regex_pattern in config.
         """
         content = result.get("content", "")
         soup = result.get("soup")
+
+        # Check for XPath selector in config (highest priority for precise extraction)
+        if config.get("xpath_selector"):
+            price = self._extract_via_xpath(content, config["xpath_selector"])
+            if price is not None:
+                return price
 
         # Check for CSS selector in config (auto-parse HTML if soup not available)
         if config.get("css_selector"):
@@ -1025,6 +1048,12 @@ class PriceScraper:
         content = result.get("content", "")
         soup = result.get("soup")
 
+        # Check for XPath selector in config
+        if config.get("xpath_selector"):
+            rate = self._extract_via_xpath(content, config["xpath_selector"])
+            if rate is not None:
+                return rate
+
         # Check for CSS selector in config (auto-parse HTML if soup not available)
         if config.get("css_selector"):
             if soup is None and content:
@@ -1277,7 +1306,6 @@ async def check_price_alerts(db, prices: dict) -> None:
     import asyncio
     from sqlalchemy import select, update as sa_update
 
-    from .ws_utils import get_entity_user_ids  # noqa: F811
 
     eua_price = prices.get("eua", {}).get("price")
     cea_price = prices.get("cea", {}).get("price")

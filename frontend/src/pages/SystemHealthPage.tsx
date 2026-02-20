@@ -4,6 +4,7 @@ import { systemHealthApi } from '../services/api';
 import { BackofficeLayout } from '../components/layout';
 import { AlertBanner, PageLoadingState } from '../components/common';
 import { cn, formatCurrency } from '../utils';
+import { getApiErrorMessage } from '../utils/errors';
 import type { ProcessorStatus, SettlementMetrics, SettlementAlert } from '../types';
 
 type TabKey = 'overview' | 'settlements' | 'alerts' | 'processors';
@@ -103,9 +104,9 @@ export function SystemHealthPage() {
       setSettlementMetrics(metricsRes);
       setSettlementAlerts(alertsRes.alerts ?? []);
       setProcessors(processorsRes.processors ?? []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching system health data:', err);
-      setError(err.message || 'Failed to load system health data');
+      setError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

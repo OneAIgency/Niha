@@ -2,14 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Card, Skeleton } from '../common';
 import { exchangeRatesApi } from '../../services/api';
-import type { ExchangeRatePeriod, ExchangeRateHistoryResponse } from '../../types';
+import type { ChartPoint, ExchangeRatePeriod, ExchangeRateHistoryResponse } from '../../types';
+import { TREND_COLORS } from '../../constants/chartColors';
 
 const PERIODS: ExchangeRatePeriod[] = ['24h', '7d', '30d'];
-
-interface ChartPoint {
-  price: number;
-  recordedAt: string;
-}
 
 export function ExchangeRateCard() {
   const [period, setPeriod] = useState<ExchangeRatePeriod>('24h');
@@ -89,10 +85,8 @@ export function ExchangeRateCard() {
     }
   };
 
-  // eslint-disable-next-line no-restricted-syntax -- SVG chart requires direct color values
-  const lineColor = trending ? '#10b981' : '#ef4444';
-  // eslint-disable-next-line no-restricted-syntax -- SVG chart requires direct color values
-  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)';
+  const lineColor = trending ? TREND_COLORS.up : TREND_COLORS.down;
+  const fillColor = trending ? TREND_COLORS.upFill : TREND_COLORS.downFill;
 
   // Loading state
   if (loading) {

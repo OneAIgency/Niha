@@ -17,6 +17,7 @@ import { Card, Button, formatNumberWithSeparators, AlertBanner } from '../compon
 import { BackofficeLayout } from '../components/layout';
 import { adminApi } from '../services/api';
 import { useAutoOrdersStore } from '../stores/useAutoOrdersStore';
+import { getApiErrorMessage } from '../utils/errors';
 import type { AutoTradeMarketSettings, AutoTradeMarketSettingsUpdate } from '../types';
 
 // ============================================================================
@@ -148,18 +149,6 @@ function formatEuro(value: number | null | undefined): string {
 function fmtInput(value: number | null | undefined, decimals = 0): string {
   if (value === null || value === undefined) return '';
   return formatNumberWithSeparators(value, 'en-US', decimals);
-}
-
-function getApiErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as { response?: { data?: { detail?: string | { msg?: string }[]; message?: string } } }).response;
-    const d = res?.data?.detail;
-    if (typeof d === 'string') return d;
-    if (Array.isArray(d) && d[0]?.msg) return String(d[0].msg);
-    const m = res?.data?.message;
-    if (typeof m === 'string') return m;
-  }
-  return (err as Error)?.message ?? 'Something went wrong.';
 }
 
 // ============================================================================

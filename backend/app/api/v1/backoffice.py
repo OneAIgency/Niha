@@ -113,8 +113,9 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
     Events are pushed when contact requests or other backoffice data changes.
     Requires a valid admin JWT token via ?token= query param.
     """
-    # Authenticate: require valid admin JWT
-    from ...core.security import verify_token
+    from ...core.database import AsyncSessionLocal
+    from ...core.security import RedisManager, verify_token
+
     token = websocket.query_params.get("token")
     if not token:
         await websocket.close(code=4001, reason="Missing token")
@@ -123,7 +124,20 @@ async def backoffice_websocket_endpoint(websocket: WebSocket):
     if not payload:
         await websocket.close(code=4001, reason="Invalid token")
         return
-    if payload.get("role") != "ADMIN":
+    user_id = payload.get("sub")
+    if not user_id:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+    if await RedisManager.is_token_blacklisted(token):
+        await websocket.close(code=4001, reason="Token invalidated")
+        return
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+    if user.role != UserRole.ADMIN:
         await websocket.close(code=4003, reason="Admin access required")
         return
 

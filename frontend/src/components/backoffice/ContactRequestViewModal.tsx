@@ -2,9 +2,14 @@
  * Modal that shows all contact request form data in a polished card layout.
  * Supports NDA viewing for both buyer (ContactRequest NDA) and introducer (User NDA) flows.
  * Focus trap, Escape to close, exit animation, optional IP lookup.
+ *
+ * Renders via createPortal into document.body to isolate from the list DOM and prevent
+ * click-through (clicks on NDA buttons were previously reaching list items). NDA buttons
+ * use handleNDAClick with stopPropagation/preventDefault for additional event isolation.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { X, ExternalLink, FileText, Building2, Clock, Globe, User, Hash, Tag, Mail, Briefcase } from 'lucide-react';
 import { Badge } from '../common';
@@ -170,6 +175,16 @@ export function ContactRequestViewModal({
     return () => el.removeEventListener('keydown', onKeyDown);
   }, [isVisible]);
 
+  const handleNDAClick = useCallback(
+    async (e: React.MouseEvent, fn: () => Promise<void>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await fn();
+      setNdaViewed(true);
+    },
+    []
+  );
+
   if (!isVisible || !showingRequest) return null;
 
   const isIntroducer = showingRequest.requestFlow === 'introducer';
@@ -188,7 +203,7 @@ export function ContactRequestViewModal({
   const hasBuyerUploadedNDA = showingRequest.requestFlow === 'buyer' && !!showingRequest.buyerUserId && showingRequest.buyerNdaStatus === 'uploaded';
   const showNDASection = hasBuyerNDA || hasIntroducerNDA || introducerNDAPending || hasBuyerUploadedNDA || !!showingRequest.ndaAccepted;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
@@ -282,7 +297,7 @@ export function ContactRequestViewModal({
               {hasBuyerNDA && (
                 <button
                   type="button"
-                  onClick={async () => { await onOpenNDA(showingRequest.id); setNdaViewed(true); }}
+                  onClick={(e) => handleNDAClick(e, () => onOpenNDA(showingRequest.id))}
                   disabled={openNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-navy-600 bg-navy-900/50 text-navy-200 hover:bg-navy-700/50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={`Open NDA ${showingRequest.ndaFileName}`}
@@ -299,7 +314,7 @@ export function ContactRequestViewModal({
               {hasIntroducerNDA && onOpenUserNDA && showingRequest.introducerUserId && (
                 <button
                   type="button"
-                  onClick={async () => { await onOpenUserNDA(showingRequest.introducerUserId!); setNdaViewed(true); }}
+                  onClick={(e) => handleNDAClick(e, () => onOpenUserNDA!(showingRequest.introducerUserId!))}
                   disabled={openUserNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-600/40 bg-emerald-900/10 text-emerald-300 hover:bg-emerald-900/20 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="View Signed NDA"
@@ -316,7 +331,7 @@ export function ContactRequestViewModal({
               {hasIntroducerNDA && !showingRequest.introducerUserId && (
                 <button
                   type="button"
-                  onClick={async () => { await onOpenNDA(showingRequest.id); setNdaViewed(true); }}
+                  onClick={(e) => handleNDAClick(e, () => onOpenNDA(showingRequest.id))}
                   disabled={openNDALoading}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-600/40 bg-emerald-900/10 text-emerald-300 hover:bg-emerald-900/20 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="View Attached NDA"
@@ -341,7 +356,7 @@ export function ContactRequestViewModal({
               {showingRequest.requestFlow === 'buyer' && showingRequest.buyerUserId && showingRequest.buyerNdaStatus === 'uploaded' && onOpenUserNDA && (
                 <button
                   type="button"
-                  onClick={async () => { await onOpenUserNDA(showingRequest.buyerUserId!); setNdaViewed(true); }}
+                  onClick={(e) => handleNDAClick(e, () => onOpenUserNDA(showingRequest.buyerUserId!))}
                   disabled={openUserNDALoading}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors text-sm"
                 >
@@ -355,7 +370,7 @@ export function ContactRequestViewModal({
               {showingRequest.userRole === 'NDA' && !showingRequest.ndaAccepted && ndaViewed && onAcceptNDA && (
                 <button
                   type="button"
-                  onClick={() => onAcceptNDA(showingRequest.id)}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAcceptNDA(showingRequest.id); }}
                   disabled={acceptNDALoading}
                   className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors text-sm font-medium disabled:opacity-50"
                 >
@@ -418,4 +433,6 @@ export function ContactRequestViewModal({
       </motion.div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

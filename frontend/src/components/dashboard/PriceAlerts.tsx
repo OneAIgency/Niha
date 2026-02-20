@@ -3,6 +3,7 @@ import { Bell, Plus, Trash2, ArrowUp, ArrowDown, CheckCircle2 } from 'lucide-rea
 import { Card } from '../common';
 import { priceAlertsApi, type PriceAlertItem } from '../../services/api';
 import { showToast } from '../common';
+import { getApiErrorMessage } from '../../utils/errors';
 
 export function PriceAlerts() {
   const [alerts, setAlerts] = useState<PriceAlertItem[]>([]);
@@ -70,8 +71,8 @@ export function PriceAlerts() {
     try {
       await priceAlertsApi.remove(id);
       setAlerts(prev => prev.filter(a => a.id !== id));
-    } catch (err: any) {
-      showToast('error', err.message || 'Failed to delete alert');
+    } catch (err: unknown) {
+      showToast('error', getApiErrorMessage(err));
     }
   };
 

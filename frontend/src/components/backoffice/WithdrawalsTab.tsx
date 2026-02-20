@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AlertBanner, LoadingState } from '../common';
 import { withdrawalApi } from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import type {
   Withdrawal,
   WithdrawalStats,
@@ -76,8 +77,8 @@ export const WithdrawalsTab: React.FC = () => {
       setPendingWithdrawals(pending);
       setProcessingWithdrawals(processing);
       setStats(statsData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load withdrawals');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
       console.error(err);
     } finally {
       setLoading(false);
@@ -101,8 +102,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to approve withdrawal');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to approve withdrawal');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -122,8 +123,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to complete withdrawal');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to complete withdrawal');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -143,8 +144,8 @@ export const WithdrawalsTab: React.FC = () => {
       } else {
         setError(result.error || 'Failed to reject withdrawal');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to reject withdrawal');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err));
     } finally {
       setActionLoading(false);
     }

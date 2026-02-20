@@ -25,23 +25,9 @@ import { Button, Card, Badge, AlertBanner, NumberInput, PageLoadingState } from 
 import { BackofficeLayout } from '../components/layout';
 import { AIAgentTab } from '../components/settings/AIAgentTab';
 import { adminApi, exchangeRatesApi } from '../services/api';
-import type { ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
-
-/**
- * Extract a user-facing message from an API error (e.g. axios).
- * Prefers response.data.detail (FastAPI), then message, then Error.message.
- */
-function getApiErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const res = (err as { response?: { data?: { detail?: string | { msg?: string }[]; message?: string } } }).response;
-    const d = res?.data?.detail;
-    if (typeof d === 'string') return d;
-    if (Array.isArray(d) && d[0]?.msg) return String(d[0].msg);
-    const m = res?.data?.message;
-    if (typeof m === 'string') return m;
-  }
-  return (err as Error)?.message ?? 'Something went wrong.';
-}
+import { getApiErrorMessage } from '../utils/errors';
+import { TREND_COLORS } from '../constants/chartColors';
+import type { ChartPoint, ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
 interface ActionItem {
   label: string;
@@ -136,8 +122,6 @@ function ActionsDropdown({ actions }: { actions: ActionItem[] }) {
 // Price History Chart (SVG)
 // ============================================================================
 
-interface ChartPoint { price: number; recordedAt: string }
-
 function PriceHistoryChart({ sourceName, currency, points, onReset }: {
   sourceName: string; currency: string; points: ChartPoint[]; onReset?: () => void;
 }) {
@@ -190,8 +174,8 @@ function PriceHistoryChart({ sourceName, currency, points, onReset }: {
 
   // Color: green if last >= first, red if down
   const trending = prices[prices.length - 1] >= prices[0];
-  const lineColor = trending ? '#10b981' : '#ef4444'; // eslint-disable-line no-restricted-syntax -- SVG chart colors
-  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'; // eslint-disable-line no-restricted-syntax
+  const lineColor = trending ? TREND_COLORS.up : TREND_COLORS.down;
+  const fillColor = trending ? TREND_COLORS.upFill : TREND_COLORS.downFill;
 
   return (
     <Card className="p-4">
@@ -294,6 +278,7 @@ export function SettingsPage() {
     certificate_type: 'EUA' as 'EUA' | 'CEA',
     scrape_library: 'HTTPX' as ScrapeLibrary,
     scrape_interval_minutes: 5,
+    xpath_selector: '',
   });
 
   // Price Scraping edit state
@@ -302,7 +287,8 @@ export function SettingsPage() {
     name: string; url: string; certificate_type: 'EUA' | 'CEA';
     scrape_library: ScrapeLibrary; scrape_interval_minutes: number;
     is_primary: boolean; is_active: boolean;
-  }>({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5, is_primary: false, is_active: true });
+    xpath_selector: string;
+  }>({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5, is_primary: false, is_active: true, xpath_selector: '' });
 
   // Price history charts
   const [priceHistories, setPriceHistories] = useState<Record<string, { points: Array<{ price: number; recordedAt: string }>; currency: string }>>({});
@@ -550,10 +536,14 @@ export function SettingsPage() {
   const handleAddSource = async () => {
     setError(null);
     try {
-      const created = await adminApi.createScrapingSource(newSource);
+      const { xpath_selector, ...rest } = newSource;
+      const config = xpath_selector?.trim()
+        ? { xpath_selector: xpath_selector.trim() }
+        : undefined;
+      const created = await adminApi.createScrapingSource({ ...rest, config });
       setSources([...sources, created]);
       setShowAddModal(false);
-      setNewSource({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5 });
+      setNewSource({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5, xpath_selector: '' });
     } catch (e) {
       console.error('Failed to create source:', e);
       setError(getApiErrorMessage(e));
@@ -562,6 +552,7 @@ export function SettingsPage() {
 
   const handleOpenEditSource = (source: ScrapingSource) => {
     setEditingSource(source);
+    const cfg = source.config as Record<string, unknown> | undefined;
     setEditSourceForm({
       name: source.name,
       url: source.url,
@@ -570,6 +561,7 @@ export function SettingsPage() {
       scrape_interval_minutes: source.scrapeIntervalMinutes,
       is_primary: source.isPrimary ?? false,
       is_active: source.isActive,
+      xpath_selector: (cfg?.xpath_selector as string) ?? '',
     });
   };
 
@@ -595,6 +587,12 @@ export function SettingsPage() {
     if (!editingSource) return;
     setError(null);
     try {
+      const config: Record<string, unknown> = { ...(editingSource.config as Record<string, unknown> || {}) };
+      if (editSourceForm.xpath_selector.trim()) {
+        config.xpath_selector = editSourceForm.xpath_selector.trim();
+      } else {
+        delete config.xpath_selector;
+      }
       await adminApi.updateScrapingSource(editingSource.id, {
         name: editSourceForm.name,
         url: editSourceForm.url,
@@ -602,6 +600,7 @@ export function SettingsPage() {
         scrapeIntervalMinutes: editSourceForm.scrape_interval_minutes,
         isPrimary: editSourceForm.is_primary,
         isActive: editSourceForm.is_active,
+        config,
       } as Partial<ScrapingSource>);
       setSources(prev => prev.map(s =>
         s.id === editingSource.id
@@ -614,6 +613,7 @@ export function SettingsPage() {
               scrapeIntervalMinutes: editSourceForm.scrape_interval_minutes,
               isPrimary: editSourceForm.is_primary,
               isActive: editSourceForm.is_active,
+              config,
             }
           : editSourceForm.is_primary && s.certificateType === editSourceForm.certificate_type
             ? { ...s, isPrimary: false }
@@ -1587,6 +1587,21 @@ export function SettingsPage() {
                 />
               </div>
               <div>
+                <label htmlFor="edit_source_xpath" className="block text-sm font-medium text-navy-300 mb-1">XPath selector (optional)</label>
+                <input
+                  id="edit_source_xpath"
+                  type="text"
+                  value={editSourceForm.xpath_selector}
+                  onChange={(e) => setEditSourceForm({ ...editSourceForm, xpath_selector: e.target.value })}
+                  className="w-full form-input font-mono text-xs"
+                  placeholder="e.g. //table/tbody/tr[4]/td[2]"
+                  aria-describedby="edit_source_xpath_hint"
+                />
+                <p id="edit_source_xpath_hint" className="text-[10px] text-navy-400 mt-0.5">
+                  Use Chrome DevTools: right-click element → Copy → Copy XPath.
+                </p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-navy-300 mb-1">Scraping Library</label>
                 <select
                   value={editSourceForm.scrape_library}
@@ -1673,6 +1688,21 @@ export function SettingsPage() {
                   className="w-full form-input"
                   placeholder="https://example.com/prices"
                 />
+              </div>
+              <div>
+                <label htmlFor="add_source_xpath" className="block text-sm font-medium text-navy-300 mb-1">XPath selector (optional)</label>
+                <input
+                  id="add_source_xpath"
+                  type="text"
+                  value={newSource.xpath_selector}
+                  onChange={(e) => setNewSource({ ...newSource, xpath_selector: e.target.value })}
+                  className="w-full form-input font-mono text-xs"
+                  placeholder="e.g. //table/tbody/tr[4]/td[2]"
+                  aria-describedby="add_source_xpath_hint"
+                />
+                <p id="add_source_xpath_hint" className="text-[10px] text-navy-400 mt-0.5">
+                  Chrome DevTools → right-click element → Copy → Copy XPath.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-300 mb-1">Certificate Type</label>

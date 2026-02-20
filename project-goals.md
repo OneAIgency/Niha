@@ -58,7 +58,7 @@ NIHA Carbon Trading Platform is functional with:
 - [ ] Report generation
 
 #### 6. Documentation
-- [ ] API documentation (OpenAPI/Swagger polish)
+- [x] API documentation (OpenAPI/Swagger polish)
 - [ ] User guide for traders
 - [ ] Admin manual
 - [ ] Deployment guide

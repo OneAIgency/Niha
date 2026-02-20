@@ -1,3 +1,11 @@
+// Chart Types
+
+/** A data point for SVG price/rate line charts. */
+export interface ChartPoint {
+  price: number;
+  recordedAt: string;
+}
+
 // Certificate Types
 export type CertificateType = 'EUA' | 'CEA';
 

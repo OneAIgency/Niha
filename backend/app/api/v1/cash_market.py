@@ -8,24 +8,9 @@ Trade CEA certificates with EUR.
 import asyncio
 import logging
 import uuid
-
-logger = logging.getLogger(__name__)
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import List, Optional
-
-# Price step for CEA cash market (0.01 EUR)
-PRICE_STEP = Decimal("0.01")
-
-
-def validate_price_step(price: Decimal) -> bool:
-    """
-    Validate that price respects the quote step of 0.01 EUR.
-    Returns True if price is a valid multiple of 0.01.
-    """
-    # Check if price divided by step is a whole number
-    remainder = price % PRICE_STEP
-    return remainder == Decimal("0")
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -80,6 +65,22 @@ from ...services.order_matching import (
     get_real_orderbook,
     preview_buy_order,
 )
+
+logger = logging.getLogger(__name__)
+
+# Price step for CEA cash market (0.01 EUR)
+PRICE_STEP = Decimal("0.01")
+
+
+def validate_price_step(price: Decimal) -> bool:
+    """
+    Validate that price respects the quote step of 0.01 EUR.
+    Returns True if price is a valid multiple of 0.01.
+    """
+    # Check if price divided by step is a whole number
+    remainder = price % PRICE_STEP
+    return remainder == Decimal("0")
+
 
 router = APIRouter(prefix="/cash-market", tags=["CEA Cash"])
 

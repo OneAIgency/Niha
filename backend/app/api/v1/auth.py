@@ -15,7 +15,7 @@ from ...core.security import (
     verify_password,
     verify_token,
 )
-from ...models.models import AuthenticationAttempt, AuthMethod, TicketStatus, User, UserRole
+from ...models.models import AuthenticationAttempt, AuthMethod, TicketStatus, User
 from ...schemas.schemas import (
     MagicLinkRequest,
     MagicLinkVerify,
