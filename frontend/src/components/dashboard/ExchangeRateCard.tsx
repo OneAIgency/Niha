@@ -2,14 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Card, Skeleton } from '../common';
 import { exchangeRatesApi } from '../../services/api';
-import type { ExchangeRatePeriod, ExchangeRateHistoryResponse } from '../../types';
+import type { ChartPoint, ExchangeRatePeriod, ExchangeRateHistoryResponse } from '../../types';
 
 const PERIODS: ExchangeRatePeriod[] = ['24h', '7d', '30d'];
-
-interface ChartPoint {
-  price: number;
-  recordedAt: string;
-}
 
 export function ExchangeRateCard() {
   const [period, setPeriod] = useState<ExchangeRatePeriod>('24h');
