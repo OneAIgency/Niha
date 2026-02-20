@@ -26,6 +26,7 @@ import { BackofficeLayout } from '../components/layout';
 import { AIAgentTab } from '../components/settings/AIAgentTab';
 import { adminApi, exchangeRatesApi } from '../services/api';
 import { getApiErrorMessage } from '../utils/errors';
+import { TREND_COLORS } from '../constants/chartColors';
 import type { ChartPoint, ScrapingSource, ScrapeLibrary, ExchangeRateSource, MailSettings, MailSettingsUpdate } from '../types';
 
 interface ActionItem {
@@ -173,8 +174,8 @@ function PriceHistoryChart({ sourceName, currency, points, onReset }: {
 
   // Color: green if last >= first, red if down
   const trending = prices[prices.length - 1] >= prices[0];
-  const lineColor = trending ? '#10b981' : '#ef4444'; // eslint-disable-line no-restricted-syntax -- SVG chart colors
-  const fillColor = trending ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'; // eslint-disable-line no-restricted-syntax
+  const lineColor = trending ? TREND_COLORS.up : TREND_COLORS.down;
+  const fillColor = trending ? TREND_COLORS.upFill : TREND_COLORS.downFill;
 
   return (
     <Card className="p-4">
