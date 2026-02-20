@@ -32,9 +32,9 @@ export function MarketMakersPage() {
     try {
       const data = await getMarketMakers();
       setMarketMakers(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load market makers:', err);
-      setError('Failed to load market makers. Please try again.');
+      setError(err.message || 'Failed to load market makers. Please try again.');
       setMarketMakers([]);
     } finally {
       setLoading(false);

@@ -82,9 +82,9 @@ export function FeeSettingsPage() {
       setMarketFees(feesRes.marketFees || []);
       setEntityOverrides(feesRes.entityOverrides || []);
       setEntities(entitiesRes || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching fee data:', err);
-      setError('Failed to load fee settings');
+      setError(err.message || 'Failed to load fee settings');
     } finally {
       setIsLoading(false);
     }
@@ -103,9 +103,9 @@ export function FeeSettingsPage() {
       ]);
       setIntroducerDefaultRate(defaultsRes.commissionRate);
       setIntroducerOverrides(overridesRes);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching introducer data:', err);
-      setError('Failed to load introducer fee settings');
+      setError(err.message || 'Failed to load introducer fee settings');
     }
   }, []);
 
@@ -206,9 +206,9 @@ export function FeeSettingsPage() {
       setEditingClientCommission(false);
       setSelectedClient({ ...selectedClient, commissionRate: rateDecimal });
       showSuccess('Commission rate updated successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving commission rate:', err);
-      setError('Failed to save commission rate');
+      setError(err.message || 'Failed to save commission rate');
     } finally {
       setIsSaving(null);
     }
@@ -224,9 +224,9 @@ export function FeeSettingsPage() {
       await feesApi.deleteUserCommissionRate(selectedClient.id);
       setSelectedClient({ ...selectedClient, commissionRate: null });
       showSuccess('Commission rate reverted to default');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting commission rate:', err);
-      setError('Failed to revert commission rate');
+      setError(err.message || 'Failed to revert commission rate');
     } finally {
       setIsSaving(null);
     }
@@ -273,9 +273,9 @@ export function FeeSettingsPage() {
       setEditingMarket(null);
       showSuccess(`${MARKET_NAMES[market]} fees updated successfully`);
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving market fee:', err);
-      setError('Failed to save market fees');
+      setError(err.message || 'Failed to save market fees');
     } finally {
       setIsSaving(null);
     }
@@ -325,9 +325,9 @@ export function FeeSettingsPage() {
       setShowOverrideModal(false);
       showSuccess('Entity fee override saved successfully');
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving override:', err);
-      setError('Failed to save entity override');
+      setError(err.message || 'Failed to save entity override');
     } finally {
       setIsSaving(null);
     }
@@ -343,9 +343,9 @@ export function FeeSettingsPage() {
       await feesApi.deleteEntityOverride(entityId, market);
       showSuccess('Fee override deleted successfully');
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting override:', err);
-      setError('Failed to delete fee override');
+      setError(err.message || 'Failed to delete fee override');
     } finally {
       setIsSaving(null);
     }
@@ -372,9 +372,9 @@ export function FeeSettingsPage() {
       setEditingDefaultRate(false);
       showSuccess('Default commission rate updated successfully');
       fetchIntroducerData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving default commission rate:', err);
-      setError('Failed to save default commission rate');
+      setError(err.message || 'Failed to save default commission rate');
     } finally {
       setIsSaving(null);
     }
@@ -398,9 +398,9 @@ export function FeeSettingsPage() {
       setEditingOverrideUserId(null);
       showSuccess('Commission rate updated successfully');
       fetchIntroducerData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving commission rate override:', err);
-      setError('Failed to save commission rate override');
+      setError(err.message || 'Failed to save commission rate override');
     } finally {
       setIsSaving(null);
     }
@@ -415,9 +415,9 @@ export function FeeSettingsPage() {
       await feesApi.deleteUserCommissionRate(userId);
       showSuccess('Commission rate reverted to default');
       fetchIntroducerData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting commission rate override:', err);
-      setError('Failed to revert commission rate');
+      setError(err.message || 'Failed to revert commission rate');
     } finally {
       setIsSaving(null);
     }

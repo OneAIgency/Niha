@@ -114,9 +114,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
     try {
       const data = await getAutoTradeRules(marketMaker.id);
       setRules(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load auto trade rules:', err);
-      setError('Failed to load auto trade rules');
+      setError(err.message || 'Failed to load auto trade rules');
       setRules([]);
     } finally {
       setIsLoading(false);
@@ -151,9 +151,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
       const result = await createAutoTradeRule(marketMaker.id, newRuleData);
       await loadRules();
       setSelectedRuleId(result.id);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create rule:', err);
-      setError('Failed to create rule');
+      setError(err.message || 'Failed to create rule');
     } finally {
       setIsSaving(false);
     }
@@ -171,9 +171,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
       setRules(prev => prev.map(r => r.id === ruleId ? { ...r, ...sanitizedUpdates } : r));
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update rule:', err);
-      setError('Failed to update rule');
+      setError(err.message || 'Failed to update rule');
     } finally {
       setIsSaving(false);
     }
@@ -186,9 +186,9 @@ export function MarketMakerAutoTradeTab({ marketMaker }: MarketMakerAutoTradeTab
       await deleteAutoTradeRule(marketMaker.id, ruleId);
       setRules(prev => prev.filter(r => r.id !== ruleId));
       if (selectedRuleId === ruleId) setSelectedRuleId(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete rule:', err);
-      setError('Failed to delete rule');
+      setError(err.message || 'Failed to delete rule');
     } finally {
       setIsSaving(false);
     }

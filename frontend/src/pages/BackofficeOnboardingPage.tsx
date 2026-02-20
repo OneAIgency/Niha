@@ -178,9 +178,9 @@ export function BackofficeOnboardingPage() {
         const res = await adminApi.getAdminPendingSettlements();
         setSettlementBatches(res.data || []);
       }
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to load data', err);
-      setError('Failed to load data. Please try again.');
+      setError(err.message || 'Failed to load data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -247,10 +247,10 @@ export function BackofficeOnboardingPage() {
     try {
       const data = await adminApi.lookupIP(ip);
       setIpLookupData(data);
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to lookup IP', err);
       setIpLookupData(null);
-      setError('Failed to lookup IP address');
+      setError(err.message || 'Failed to lookup IP address');
     } finally {
       setIpLookupLoading(false);
     }
@@ -276,9 +276,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.sendIntroducerNDA(requestId);
       refreshContactRequests();
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to send NDA', err);
-      setError('Failed to send NDA to introducer');
+      setError(err.message || 'Failed to send NDA to introducer');
     } finally {
       setActionLoading(null);
     }
@@ -289,9 +289,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.approveIntroducerNDA(userId);
       refreshContactRequests();
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to approve introducer', err);
-      setError('Failed to approve introducer');
+      setError(err.message || 'Failed to approve introducer');
     } finally {
       setActionLoading(null);
     }
@@ -339,9 +339,9 @@ export function BackofficeOnboardingPage() {
     setActionLoading(`delete-${requestId}`);
     try {
       await adminApi.deleteContactRequest(requestId);
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to delete request', err);
-      setError('Failed to delete contact request');
+      setError(err.message || 'Failed to delete contact request');
     } finally {
       setActionLoading(null);
     }
@@ -352,9 +352,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.confirmDeposit(depositId, amount, currency, notes);
       setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to confirm deposit', err);
-      setError('Failed to confirm deposit');
+      setError(err.message || 'Failed to confirm deposit');
     } finally {
       setActionLoading(null);
     }
@@ -365,9 +365,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.rejectDeposit(depositId);
       setPendingDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to reject deposit', err);
-      setError('Failed to reject deposit');
+      setError(err.message || 'Failed to reject deposit');
     } finally {
       setActionLoading(null);
     }
@@ -379,9 +379,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.clearDeposit(depositId, { forceClear: true, adminNotes: 'AML cleared by admin' });
       setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to clear AML deposit', err);
-      setError('Failed to clear AML deposit');
+      setError(err.message || 'Failed to clear AML deposit');
     } finally {
       setActionLoading(null);
     }
@@ -392,9 +392,9 @@ export function BackofficeOnboardingPage() {
     try {
       await backofficeApi.rejectDeposit(depositId);
       setAmlDeposits(prev => prev.filter(d => d.id !== depositId));
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to reject AML deposit', err);
-      setError('Failed to reject AML deposit');
+      setError(err.message || 'Failed to reject AML deposit');
     } finally {
       setActionLoading(null);
     }
@@ -408,9 +408,9 @@ export function BackofficeOnboardingPage() {
       const blob = await backofficeApi.getDocumentContent(documentId);
       const url = URL.createObjectURL(blob);
       setDocumentContentUrl(url);
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to load document', err);
-      setDocumentError('Failed to load document preview');
+      setDocumentError(err.message || 'Failed to load document preview');
     } finally {
       setDocumentLoading(false);
     }
@@ -486,9 +486,9 @@ export function BackofficeOnboardingPage() {
     try {
       await adminApi.settleSettlementBatch(batchId);
       setSettlementBatches(prev => prev.filter(b => b.id !== batchId));
-    } catch (err) {
+    } catch (err: any) {
       logger.error('Failed to settle batch', err);
-      setError('Failed to settle batch');
+      setError(err.message || 'Failed to settle batch');
     } finally {
       setActionLoading(null);
     }

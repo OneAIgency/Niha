@@ -139,9 +139,9 @@ export function ChatPanel() {
         },
         abort.signal,
       );
-    } catch (err) {
+    } catch (err: any) {
       if ((err as Error).name !== 'AbortError') {
-        addChatMessage({ role: 'system', content: 'Failed to connect to AI service.' });
+        addChatMessage({ role: 'system', content: err.message || 'Failed to connect to AI service.' });
       }
     } finally {
       setChatLoading(false);

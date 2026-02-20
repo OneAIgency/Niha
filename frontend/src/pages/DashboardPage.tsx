@@ -311,9 +311,9 @@ export function DashboardPage() {
         
         setError(null);
         return true; // Success
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to fetch balance/assets:', err);
-        setError('Failed to load balance');
+        setError(err.message || 'Failed to load balance');
         return false; // Failure
       } finally {
         isRefreshingBalanceRef.current = false;

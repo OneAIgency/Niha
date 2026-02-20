@@ -624,7 +624,7 @@ async def confirm_deposit(
     except DepositNotFoundError as e:
         raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail="Invalid request. Please check your input.") from e
 
 
 @router.post("/{deposit_id}/clear", response_model=DepositDetailResponse)
@@ -717,7 +717,7 @@ async def clear_deposit(
     except DepositNotFoundError as e:
         raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail="Invalid request. Please check your input.") from e
 
 
 @router.post("/{deposit_id}/reject", response_model=DepositDetailResponse)
@@ -785,7 +785,7 @@ async def reject_deposit(
     except DepositNotFoundError as e:
         raise HTTPException(status_code=404, detail="Deposit not found") from e
     except InvalidDepositStateError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail="Invalid request. Please check your input.") from e
 
 
 @router.post("/process-expired-holds", response_model=MessageResponse)

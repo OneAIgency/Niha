@@ -70,8 +70,8 @@ export function PriceAlerts() {
     try {
       await priceAlertsApi.remove(id);
       setAlerts(prev => prev.filter(a => a.id !== id));
-    } catch {
-      showToast('error', 'Failed to delete alert');
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to delete alert');
     }
   };
 

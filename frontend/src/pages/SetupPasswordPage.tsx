@@ -120,8 +120,8 @@ export function SetupPasswordPage() {
       // Clear auth state — TRODUCER cannot login until admin approves
       useAuthStore.getState().logout();
       setStep('done');
-    } catch {
-      setError('Failed to upload NDA. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload NDA. Please try again.');
     } finally {
       setUploading(false);
     }
