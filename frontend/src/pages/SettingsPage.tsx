@@ -1109,17 +1109,27 @@ export function SettingsPage() {
                     Price History
                   </h3>
                   <div className="flex items-center gap-1.5">
-                    {[6, 12, 24, 48, 72, 168].map(h => (
+                    {([
+                      { label: '6h', hours: 6 },
+                      { label: '12h', hours: 12 },
+                      { label: '1d', hours: 24 },
+                      { label: '2d', hours: 48 },
+                      { label: '3d', hours: 72 },
+                      { label: '7d', hours: 168 },
+                      { label: '30d', hours: 720 },
+                      { label: '90d', hours: 2160 },
+                      { label: '1y', hours: 8760 },
+                    ] as const).map(({ label, hours }) => (
                       <button
-                        key={h}
-                        onClick={() => setHistoryHours(h)}
+                        key={label}
+                        onClick={() => setHistoryHours(hours)}
                         className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                          historyHours === h
+                          historyHours === hours
                             ? 'bg-blue-500 text-white'
                             : 'bg-navy-700 text-navy-300 hover:bg-navy-600'
                         }`}
                       >
-                        {h < 24 ? `${h}h` : `${h / 24}d`}
+                        {label}
                       </button>
                     ))}
                   </div>
