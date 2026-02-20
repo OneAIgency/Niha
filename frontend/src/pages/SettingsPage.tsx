@@ -254,6 +254,17 @@ const SCRAPE_INTERVAL_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: '1h' },
 ];
 
+/** Preset for Trading Economics EU Carbon Permits (feature 0041). */
+const TRADING_ECONOMICS_EUA_PRESET = {
+  name: 'Trading Economics EUA',
+  url: 'https://tradingeconomics.com/commodity/carbon',
+  certificate_type: 'EUA' as const,
+  scrape_library: 'HTTPX' as ScrapeLibrary,
+  scrape_interval_minutes: 5,
+  xpath_selector:
+    "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']",
+};
+
 type SettingsTab = 'scraping' | 'exchange' | 'mail' | 'ai-agent';
 const SETTINGS_TABS: { key: SettingsTab; label: string; icon: typeof Database }[] = [
   { key: 'scraping', label: 'Price Scraping', icon: Database },
@@ -904,9 +915,31 @@ export function SettingsPage() {
                   <Database className="w-5 h-5 text-blue-500" />
                   Price Scraping Sources
                 </h2>
-                <Button variant="outline" size="sm" onClick={() => setShowAddModal(true)} icon={<Plus className="w-4 h-4" />}>
-                  Add Source
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setNewSource({ ...TRADING_ECONOMICS_EUA_PRESET });
+                      setShowAddModal(true);
+                    }}
+                    icon={<TrendingUp className="w-4 h-4" />}
+                    aria-label="Add Trading Economics EUA preset and open form"
+                  >
+                    Add Trading Economics EUA
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setNewSource({ name: '', url: '', certificate_type: 'EUA', scrape_library: 'HTTPX', scrape_interval_minutes: 5, xpath_selector: '' });
+                      setShowAddModal(true);
+                    }}
+                    icon={<Plus className="w-4 h-4" />}
+                  >
+                    Add Source
+                  </Button>
+                </div>
               </div>
 
               <div className="w-full overflow-x-auto">

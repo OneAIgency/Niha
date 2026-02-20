@@ -1227,6 +1227,7 @@ export const adminApi = {
     certificate_type: 'EUA' | 'CEA';
     scrape_library?: ScrapeLibrary;
     scrape_interval_minutes: number;
+    config?: Record<string, unknown>;
   }): Promise<ScrapingSource> => {
     const { data } = await api.post('/admin/scraping-sources', source);
     return data;

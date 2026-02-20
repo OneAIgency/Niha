@@ -258,6 +258,6 @@ The frontend normalizes to camelCase (`executedAt`) and dispatches `nihao:tradeE
 
 ## Other API docs
 
-- **Price scraping (EUA/CEA):** `docs/ADMIN_SCRAPING.md` — GET/POST/PUT scraping-sources, test, refresh, 429 backoff, `is_primary`.
+- **Price scraping (EUA/CEA):** `docs/ADMIN_SCRAPING.md` — GET/POST/PUT scraping-sources, test, refresh, 429 backoff, `is_primary`, config (`xpath_selector`, `css_selector`, `regex_pattern`).
 - **Auto-trade market settings:** `app_truth.md` § Auto Trade & Liquidity Engine — GET/PUT auto-trade-market-settings, `avg_spread`, `tick_size`, response builder.
 - **Deposits, backoffice, swap, cash market, auth:** `app_truth.md` §5, §8 and related sections.

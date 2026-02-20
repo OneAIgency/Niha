@@ -704,6 +704,8 @@ For **table row actions** (Edit, Delete, Test, etc.) use a compact **ellipsis bu
 
 Reference: `frontend/src/pages/SettingsPage.tsx` — `ActionsDropdown` component used in Price Scraping and Exchange Rate tables.
 
+**Preset buttons (quick-add):** For sources or configs with well-known defaults, use a preset button that pre-fills the Add form and opens the modal. Example: **Add Trading Economics EUA** in Price Scraping (TrendingUp icon, `aria-label` for accessibility). The generic Add button resets the form to empty; the preset button sets known values.
+
 ---
 
 ### Badges
