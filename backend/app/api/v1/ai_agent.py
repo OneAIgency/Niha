@@ -40,6 +40,7 @@ async def list_configs(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """List all AI agent configurations, ordered by role. Auth: ADMIN."""
     result = await db.execute(select(AIAgentConfig).order_by(AIAgentConfig.role))
     return result.scalars().all()
 
@@ -51,6 +52,7 @@ async def update_config(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """Update AI agent config (system prompt, model, max_tokens) for a given role. Auth: ADMIN."""
     role = role.upper()
     if role not in ("INTRODUCER", "ADMIN"):
         raise HTTPException(status_code=400, detail="Role must be INTRODUCER or ADMIN")
@@ -78,6 +80,7 @@ async def list_knowledge_sources(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """List all knowledge sources (files, URLs) for the AI agent, newest first. Auth: ADMIN."""
     result = await db.execute(
         select(AIKnowledgeSource).order_by(AIKnowledgeSource.created_at.desc())
     )
@@ -92,6 +95,7 @@ async def upload_knowledge_file(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """Upload a PDF/TXT/MD file as a knowledge source and start background ingestion. Auth: ADMIN."""
     allowed_types = {".pdf", ".txt", ".md"}
     ext = Path(file.filename or "").suffix.lower()
     if ext not in allowed_types:
@@ -126,6 +130,7 @@ async def add_url_source(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """Add a URL as a knowledge source and start background ingestion. Auth: ADMIN."""
     source = AIKnowledgeSource(
         name=body.name,
         source_type="url",
@@ -146,6 +151,7 @@ async def delete_knowledge_source(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """Delete a knowledge source and its uploaded file from disk. Auth: ADMIN."""
     result = await db.execute(
         select(AIKnowledgeSource).where(AIKnowledgeSource.id == source_id)
     )
@@ -168,6 +174,7 @@ async def reindex_source(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """Re-ingest a knowledge source, regenerating its chunks in the background. Auth: ADMIN."""
     result = await db.execute(
         select(AIKnowledgeSource).where(AIKnowledgeSource.id == source_id)
     )
@@ -188,6 +195,7 @@ async def get_source_chunks(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_admin_user),
 ):
+    """List all text chunks for a knowledge source, ordered by index. Auth: ADMIN."""
     result = await db.execute(
         select(AIKnowledgeChunk)
         .where(AIKnowledgeChunk.source_id == source_id)
@@ -202,6 +210,7 @@ async def get_source_chunks(
 async def get_api_keys(
     _: User = Depends(get_admin_user),
 ):
+    """Return masked Anthropic and OpenAI API keys with env-source flags. Auth: ADMIN."""
     anthropic_key = settings.ANTHROPIC_API_KEY
     openai_key = settings.OPENAI_API_KEY
 

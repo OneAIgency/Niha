@@ -611,6 +611,97 @@ async def lifespan(app: FastAPI):
     await RedisManager.close()
 
 
+tags_metadata = [
+    {
+        "name": "Authentication",
+        "description": "Login, magic links, token refresh, and password management",
+    },
+    {
+        "name": "Users",
+        "description": "User profile, settings, and account management",
+    },
+    {
+        "name": "Admin",
+        "description": "Admin-only endpoints: contact requests, user creation, entity/KYC, settings, market controls",
+    },
+    {
+        "name": "Fee Configuration",
+        "description": "Fee configuration: global defaults, entity overrides, introducer commission rates",
+    },
+    {
+        "name": "Logging & Audit",
+        "description": "Audit log viewer for admin actions",
+    },
+    {
+        "name": "Backoffice",
+        "description": "Backoffice operations: user approval, KYC review, deposit management, asset adjustments",
+    },
+    {
+        "name": "Contact",
+        "description": "Public contact request and NDA submission endpoints",
+    },
+    {
+        "name": "Onboarding",
+        "description": "User onboarding flow: KYC document upload and status checks",
+    },
+    {
+        "name": "CEA Cash",
+        "description": "CEA cash market: order book, market depth, OHLC data, order placement and management",
+    },
+    {
+        "name": "Deposits",
+        "description": "Deposit lifecycle: announce, hold period, confirm, clear, and admin management",
+    },
+    {
+        "name": "withdrawals",
+        "description": "Withdrawal requests and admin approval workflow",
+    },
+    {
+        "name": "Swap",
+        "description": "CEA/EUA swap operations: rates, previews, execution, and history",
+    },
+    {
+        "name": "Market Makers",
+        "description": "Market maker management: orders, inventory, auto-trade rules, and market settings",
+    },
+    {
+        "name": "Assets",
+        "description": "Asset holdings and transaction history",
+    },
+    {
+        "name": "Marketplace",
+        "description": "Public marketplace listings (anonymous)",
+    },
+    {
+        "name": "Prices",
+        "description": "Carbon credit price data: current prices, historical, and scraping sources",
+    },
+    {
+        "name": "exchange-rates",
+        "description": "EUR/CNY exchange rate sources and current rates",
+    },
+    {
+        "name": "Settlement",
+        "description": "T+3 settlement system: metrics, alerts, and management",
+    },
+    {
+        "name": "System Health",
+        "description": "Background processor status and system health monitoring",
+    },
+    {
+        "name": "introducer",
+        "description": "Introducer portal: referrals, invitations, commissions, and chat",
+    },
+    {
+        "name": "ai-agent",
+        "description": "AI chat assistant configuration: knowledge sources, API keys, and conversation management",
+    },
+    {
+        "name": "Client Realtime",
+        "description": "WebSocket endpoints for real-time client notifications and price updates",
+    },
+]
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -636,6 +727,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=tags_metadata,
 )
 
 # CORS: restrict origins in production, allow all in development

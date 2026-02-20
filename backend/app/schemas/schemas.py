@@ -137,12 +137,12 @@ class ScrapeLibrary(str, Enum):
 
 # Contact Request Schemas
 class ContactRequestCreate(BaseModel):
-    entity_name: str = Field(..., min_length=2, max_length=255)
+    entity_name: str = Field(..., min_length=2, max_length=255, description="Legal name of the company")
     contact_email: EmailStr
-    contact_name: Optional[str] = Field(None, max_length=255)  # Deprecated
-    contact_first_name: Optional[str] = Field(None, max_length=128)
-    contact_last_name: Optional[str] = Field(None, max_length=128)
-    position: Optional[str] = Field(None, max_length=100)
+    contact_name: Optional[str] = Field(None, max_length=255, description="Full name (deprecated, use first/last)")  # Deprecated
+    contact_first_name: Optional[str] = Field(None, max_length=128, description="Contact person first name")
+    contact_last_name: Optional[str] = Field(None, max_length=128, description="Contact person last name")
+    position: Optional[str] = Field(None, max_length=100, description="Job title or position")
 
     @field_validator(
         "entity_name", "contact_name", "contact_first_name", "contact_last_name", "position",
@@ -204,10 +204,10 @@ class UserDetailResponse(UserResponse):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
+    first_name: str = Field(..., min_length=1, max_length=100, description="User first name")
+    last_name: str = Field(..., min_length=1, max_length=100, description="User last name")
     password: Optional[str] = Field(
-        None, min_length=8
+        None, min_length=8, description="Password; omit to send invitation email"
     )  # Optional - if not provided, send invitation
     role: UserRole = UserRole.NDA
     entity_id: Optional[UUID] = None
@@ -221,10 +221,10 @@ class UserCreate(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
-    phone: Optional[str] = Field(None, max_length=50)
-    position: Optional[str] = Field(None, max_length=100)
+    first_name: Optional[str] = Field(None, max_length=100, description="User first name")
+    last_name: Optional[str] = Field(None, max_length=100, description="User last name")
+    phone: Optional[str] = Field(None, max_length=50, description="Phone number")
+    position: Optional[str] = Field(None, max_length=100, description="Job title or position")
 
     @field_validator("first_name", "last_name", "phone", "position", mode="before")
     @classmethod
@@ -234,8 +234,8 @@ class UserProfileUpdate(BaseModel):
 
 
 class PasswordChange(BaseModel):
-    current_password: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=8)
+    current_password: str = Field(..., min_length=1, description="Current password for verification")
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
 
 
 class UserRoleUpdate(BaseModel):
@@ -253,14 +253,14 @@ class MagicLinkVerify(BaseModel):
 
 class PasswordLoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1, description="User password")
 
 
 class SetupPasswordRequest(BaseModel):
     """Request body for password setup from invitation link."""
     token: str
-    password: str = Field(..., min_length=8)
-    confirm_password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+    confirm_password: str = Field(..., min_length=8, description="Must match password field")
 
 
 class ResetPasswordRequest(BaseModel):
@@ -297,8 +297,8 @@ class EntityResponse(BaseModel):
 class CertificateCreate(BaseModel):
     certificate_type: CertificateType
     quantity: int = Field(..., gt=0, description="Whole certificates only")
-    unit_price: float = Field(..., gt=0)
-    vintage_year: Optional[int] = Field(None, ge=2020, le=2030)
+    unit_price: float = Field(..., gt=0, description="Price per certificate in EUR")
+    vintage_year: Optional[int] = Field(None, ge=2020, le=2030, description="Certificate vintage year (2020-2030)")
 
     @field_validator("quantity", mode="before")
     @classmethod
@@ -332,7 +332,7 @@ class MarketplaceListing(BaseModel):
 # Trade Schemas (CEA/EUA quantities are integers only)
 class TradeCreate(BaseModel):
     certificate_id: UUID
-    quantity: int = Field(..., gt=0)
+    quantity: int = Field(..., gt=0, description="Number of certificates to trade")
 
     @field_validator("quantity", mode="before")
     @classmethod
@@ -358,8 +358,8 @@ class TradeResponse(BaseModel):
 class SwapCreate(BaseModel):
     from_type: CertificateType
     to_type: CertificateType
-    quantity: int = Field(..., gt=0)
-    desired_rate: Optional[float] = Field(None, gt=0)
+    quantity: int = Field(..., gt=0, description="Number of certificates to swap")
+    desired_rate: Optional[float] = Field(None, gt=0, description="Desired CEA/EUA exchange ratio")
 
     @field_validator("quantity", mode="before")
     @classmethod
@@ -538,34 +538,34 @@ class ScrapingSourceUpdate(BaseModel):
 
 
 class ScrapingSourceCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    url: str = Field(..., min_length=1, max_length=500)
+    name: str = Field(..., min_length=1, max_length=100, description="Display name for the scraping source")
+    url: str = Field(..., min_length=1, max_length=500, description="URL to scrape prices from")
     certificate_type: CertificateType
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
-    scrape_interval_minutes: int = Field(5, ge=1, le=60)
+    scrape_interval_minutes: int = Field(5, ge=1, le=60, description="Minutes between scrape attempts")
     is_primary: bool = False
     config: Optional[Dict[str, Any]] = None
 
 
 # Exchange Rate Source Schemas
 class ExchangeRateSourceCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    from_currency: str = Field(..., min_length=3, max_length=3)
-    to_currency: str = Field(..., min_length=3, max_length=3)
-    url: str = Field(..., min_length=1, max_length=500)
+    name: str = Field(..., min_length=1, max_length=100, description="Display name for the rate source")
+    from_currency: str = Field(..., min_length=3, max_length=3, description="Source currency code (e.g. CNY)")
+    to_currency: str = Field(..., min_length=3, max_length=3, description="Target currency code (e.g. EUR)")
+    url: str = Field(..., min_length=1, max_length=500, description="URL to scrape exchange rates from")
     scrape_library: ScrapeLibrary = ScrapeLibrary.HTTPX
-    scrape_interval_minutes: int = Field(60, ge=1, le=1440)
+    scrape_interval_minutes: int = Field(60, ge=1, le=1440, description="Minutes between scrape attempts")
     is_primary: bool = False
     config: Optional[Dict[str, Any]] = None
 
 
 class ExchangeRateSourceUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    url: Optional[str] = Field(None, min_length=1, max_length=500)
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Display name for the rate source")
+    url: Optional[str] = Field(None, min_length=1, max_length=500, description="URL to scrape exchange rates from")
     scrape_library: Optional[ScrapeLibrary] = None
     is_active: Optional[bool] = None
     is_primary: Optional[bool] = None
-    scrape_interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    scrape_interval_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Minutes between scrape attempts")
     config: Optional[Dict[str, Any]] = None
 
 
@@ -602,19 +602,19 @@ class MailConfigResponse(BaseModel):
 class MailConfigUpdate(BaseModel):
     provider: Optional[MailProvider] = None
     use_env_credentials: Optional[bool] = None
-    from_email: Optional[str] = Field(None, max_length=255)
-    resend_api_key: Optional[str] = Field(None, max_length=500)
-    smtp_host: Optional[str] = Field(None, max_length=255)
-    smtp_port: Optional[int] = Field(None, ge=1, le=65535)
+    from_email: Optional[str] = Field(None, max_length=255, description="Sender email address")
+    resend_api_key: Optional[str] = Field(None, max_length=500, description="API key for Resend mail provider")
+    smtp_host: Optional[str] = Field(None, max_length=255, description="SMTP server hostname")
+    smtp_port: Optional[int] = Field(None, ge=1, le=65535, description="SMTP server port number")
     smtp_use_tls: Optional[bool] = None
-    smtp_username: Optional[str] = Field(None, max_length=255)
-    smtp_password: Optional[str] = Field(None, max_length=500)
-    invitation_subject: Optional[str] = Field(None, max_length=255)
+    smtp_username: Optional[str] = Field(None, max_length=255, description="SMTP authentication username")
+    smtp_password: Optional[str] = Field(None, max_length=500, description="SMTP authentication password")
+    invitation_subject: Optional[str] = Field(None, max_length=255, description="Email subject for invitation emails")
     invitation_body_html: Optional[str] = None
-    invitation_link_base_url: Optional[str] = Field(None, max_length=500)
-    invitation_token_expiry_days: Optional[int] = Field(None, ge=1, le=365)
-    verification_method: Optional[str] = Field(None, max_length=50)
-    auth_method: Optional[str] = Field(None, max_length=50)
+    invitation_link_base_url: Optional[str] = Field(None, max_length=500, description="Base URL for invitation links")
+    invitation_token_expiry_days: Optional[int] = Field(None, ge=1, le=365, description="Days before invitation token expires")
+    verification_method: Optional[str] = Field(None, max_length=50, description="Email verification method")
+    auth_method: Optional[str] = Field(None, max_length=50, description="Email authentication method")
 
     @field_validator("invitation_link_base_url")
     @classmethod
@@ -680,7 +680,7 @@ class PaginatedResponse(BaseModel):
 class OrderCreate(BaseModel):
     certificate_type: CertificateType
     side: OrderSide
-    price: float = Field(..., gt=0)
+    price: float = Field(..., gt=0, description="Order price in EUR per certificate")
     quantity: int = Field(..., gt=0, description="Whole CEA certificates only")
 
     @field_validator("quantity", mode="before")
@@ -950,10 +950,10 @@ class AdminUserUpdate(BaseModel):
     """Schema for admin to update any user field"""
 
     email: Optional[EmailStr] = None
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
-    position: Optional[str] = Field(None, max_length=100)
-    phone: Optional[str] = Field(None, max_length=50)
+    first_name: Optional[str] = Field(None, max_length=100, description="User first name")
+    last_name: Optional[str] = Field(None, max_length=100, description="User last name")
+    position: Optional[str] = Field(None, max_length=100, description="Job title or position")
+    phone: Optional[str] = Field(None, max_length=50, description="Phone number")
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
     entity_id: Optional[UUID] = None
@@ -962,7 +962,7 @@ class AdminUserUpdate(BaseModel):
 class AdminPasswordReset(BaseModel):
     """Admin can reset user password"""
 
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
     force_change: bool = True  # Force user to change on next login
 
 
@@ -1003,9 +1003,9 @@ class DepositCreate(BaseModel):
     """Backoffice creates deposit when confirming wire transfer"""
 
     entity_id: UUID
-    amount: float = Field(..., gt=0)
+    amount: float = Field(..., gt=0, description="Deposit amount in specified currency")
     currency: Currency
-    wire_reference: Optional[str] = Field(None, max_length=100)
+    wire_reference: Optional[str] = Field(None, max_length=100, description="Bank wire reference number")
     notes: Optional[str] = None
 
 
@@ -1367,7 +1367,7 @@ class EntityAssetsResponse(BaseModel):
 
 
 class MarketMakerCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=100, description="Market maker display name")
     email: EmailStr
     description: Optional[str] = None
     mm_type: MarketMakerTypeEnum = MarketMakerTypeEnum.CEA_SELLER
@@ -1382,7 +1382,7 @@ class MarketMakerCreate(BaseModel):
 
 
 class MarketMakerUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Market maker display name")
     description: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -1423,7 +1423,7 @@ class MarketMakerResponse(BaseModel):
 class AssetTransactionCreate(BaseModel):
     certificate_type: str  # CEA, EUA
     transaction_type: str  # DEPOSIT, WITHDRAWAL
-    amount: Decimal = Field(..., gt=0)  # Integer for CEA/EUA
+    amount: Decimal = Field(..., gt=0, description="Amount (integer for CEA/EUA certificates)")
     notes: Optional[str] = None
 
 
@@ -1462,26 +1462,26 @@ class AutoTradeQuantityMode(str, Enum):
 
 
 class AutoTradeRuleCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=100, description="Rule display name")
     enabled: bool = False
     side: OrderSide
-    order_type: str = Field(default="LIMIT", pattern="^(LIMIT|MARKET)$")
+    order_type: str = Field(default="LIMIT", pattern="^(LIMIT|MARKET)$", description="Order type: LIMIT or MARKET")
 
     # Price settings
     price_mode: AutoTradePriceMode = AutoTradePriceMode.SPREAD_FROM_BEST
-    fixed_price: Optional[Decimal] = Field(None, gt=0)
-    spread_from_best: Optional[Decimal] = Field(None, ge=0)
-    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
-    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
-    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
-    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)  # Max % deviation from scraped price
+    fixed_price: Optional[Decimal] = Field(None, gt=0, description="Fixed price in EUR per certificate")
+    spread_from_best: Optional[Decimal] = Field(None, ge=0, description="Spread from best price in EUR")
+    spread_min: Optional[Decimal] = Field(None, ge=0, description="Min spread for random_spread mode")
+    spread_max: Optional[Decimal] = Field(None, ge=0, description="Max spread for random_spread mode")
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0, description="Percentage offset from market price")
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50, description="Max % deviation from scraped price")
 
     # Quantity settings (CEA/EUA: whole numbers only)
     quantity_mode: AutoTradeQuantityMode = AutoTradeQuantityMode.FIXED
-    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
-    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
-    min_quantity: Optional[Decimal] = Field(None, gt=0)
-    max_quantity: Optional[Decimal] = Field(None, gt=0)
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0, description="Fixed quantity of certificates")
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100, description="Percentage of available balance to use")
+    min_quantity: Optional[Decimal] = Field(None, gt=0, description="Minimum certificates per order")
+    max_quantity: Optional[Decimal] = Field(None, gt=0, description="Maximum certificates per order")
 
     @field_validator("fixed_quantity", "min_quantity", "max_quantity", mode="before")
     @classmethod
@@ -1494,41 +1494,41 @@ class AutoTradeRuleCreate(BaseModel):
         return d
 
     # Timing
-    interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$")
-    interval_minutes: int = Field(default=5, ge=1, le=1440)  # Used when interval_mode='fixed' (legacy)
-    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Min interval when mode='random' (legacy)
-    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)  # Max interval when mode='random' (legacy)
+    interval_mode: str = Field(default="fixed", pattern="^(fixed|random)$", description="Interval mode: fixed or random")
+    interval_minutes: int = Field(default=5, ge=1, le=1440, description="Fixed interval in minutes (legacy)")
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Min random interval in minutes (legacy)")
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Max random interval in minutes (legacy)")
     # Seconds-based intervals (preferred for high-frequency trading)
-    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)  # 5 sec to 24 hours
-    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
-    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Fixed interval in seconds")
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Min random interval in seconds")
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Max random interval in seconds")
 
     # Conditions
-    min_balance: Optional[Decimal] = Field(None, ge=0)
-    max_active_orders: Optional[int] = Field(None, ge=1)
+    min_balance: Optional[Decimal] = Field(None, ge=0, description="Minimum balance required to execute")
+    max_active_orders: Optional[int] = Field(None, ge=1, description="Max open orders before pausing")
 
 
 class AutoTradeRuleUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Rule display name")
     enabled: Optional[bool] = None
     side: Optional[OrderSide] = None
-    order_type: Optional[str] = Field(None, pattern="^(LIMIT|MARKET)$")
+    order_type: Optional[str] = Field(None, pattern="^(LIMIT|MARKET)$", description="Order type: LIMIT or MARKET")
 
     # Price settings
     price_mode: Optional[AutoTradePriceMode] = None
-    fixed_price: Optional[Decimal] = Field(None, gt=0)
-    spread_from_best: Optional[Decimal] = Field(None, ge=0)
-    spread_min: Optional[Decimal] = Field(None, ge=0)  # Min spread for random_spread mode
-    spread_max: Optional[Decimal] = Field(None, ge=0)  # Max spread for random_spread mode
-    percentage_from_market: Optional[Decimal] = Field(None, ge=0)
-    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50)
+    fixed_price: Optional[Decimal] = Field(None, gt=0, description="Fixed price in EUR per certificate")
+    spread_from_best: Optional[Decimal] = Field(None, ge=0, description="Spread from best price in EUR")
+    spread_min: Optional[Decimal] = Field(None, ge=0, description="Min spread for random_spread mode")
+    spread_max: Optional[Decimal] = Field(None, ge=0, description="Max spread for random_spread mode")
+    percentage_from_market: Optional[Decimal] = Field(None, ge=0, description="Percentage offset from market price")
+    max_price_deviation: Optional[Decimal] = Field(None, ge=0, le=50, description="Max % deviation from scraped price")
 
     # Quantity settings (CEA/EUA: whole numbers only)
     quantity_mode: Optional[AutoTradeQuantityMode] = None
-    fixed_quantity: Optional[Decimal] = Field(None, gt=0)
-    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100)
-    min_quantity: Optional[Decimal] = Field(None, gt=0)
-    max_quantity: Optional[Decimal] = Field(None, gt=0)
+    fixed_quantity: Optional[Decimal] = Field(None, gt=0, description="Fixed quantity of certificates")
+    percentage_of_balance: Optional[Decimal] = Field(None, gt=0, le=100, description="Percentage of available balance to use")
+    min_quantity: Optional[Decimal] = Field(None, gt=0, description="Minimum certificates per order")
+    max_quantity: Optional[Decimal] = Field(None, gt=0, description="Maximum certificates per order")
 
     @field_validator("fixed_quantity", "min_quantity", "max_quantity", mode="before")
     @classmethod
@@ -1541,18 +1541,18 @@ class AutoTradeRuleUpdate(BaseModel):
         return d
 
     # Timing
-    interval_mode: Optional[str] = Field(None, pattern="^(fixed|random)$")
-    interval_minutes: Optional[int] = Field(None, ge=1, le=1440)
-    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440)
-    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440)
+    interval_mode: Optional[str] = Field(None, pattern="^(fixed|random)$", description="Interval mode: fixed or random")
+    interval_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Fixed interval in minutes (legacy)")
+    interval_min_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Min random interval in minutes (legacy)")
+    interval_max_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Max random interval in minutes (legacy)")
     # Seconds-based intervals (preferred for high-frequency trading)
-    interval_seconds: Optional[int] = Field(None, ge=5, le=86400)
-    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400)
-    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400)
+    interval_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Fixed interval in seconds")
+    interval_min_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Min random interval in seconds")
+    interval_max_seconds: Optional[int] = Field(None, ge=5, le=86400, description="Max random interval in seconds")
 
     # Conditions
-    min_balance: Optional[Decimal] = Field(None, ge=0)
-    max_active_orders: Optional[int] = Field(None, ge=1)
+    min_balance: Optional[Decimal] = Field(None, ge=0, description="Minimum balance required to execute")
+    max_active_orders: Optional[int] = Field(None, ge=1, description="Max open orders before pausing")
 
 
 class AutoTradeRuleResponse(BaseModel):
@@ -1634,8 +1634,8 @@ class AutoTradeSettingsResponse(BaseModel):
 
 class AutoTradeSettingsUpdate(BaseModel):
     """Update auto trade global settings"""
-    target_ask_liquidity: Optional[Decimal] = Field(None, ge=0)
-    target_bid_liquidity: Optional[Decimal] = Field(None, ge=0)
+    target_ask_liquidity: Optional[Decimal] = Field(None, ge=0, description="Target EUR value of sell-side liquidity")
+    target_bid_liquidity: Optional[Decimal] = Field(None, ge=0, description="Target EUR value of buy-side liquidity")
     liquidity_limit_enabled: Optional[bool] = None
 
 
@@ -1705,34 +1705,34 @@ class AutoTradeMarketSettingsResponse(BaseModel):
 class AutoTradeMarketSettingsUpdate(BaseModel):
     """Update per-market-side auto trade settings"""
     enabled: Optional[bool] = None
-    target_liquidity: Optional[Decimal] = Field(None, ge=0)
-    price_deviation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-    avg_order_count: Optional[int] = Field(None, ge=1, le=1000)
-    min_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
-    volume_variety: Optional[int] = Field(None, ge=1, le=10)
-    avg_order_count_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-    max_orders_per_price_level: Optional[int] = Field(None, ge=1, le=100)
-    max_orders_per_level_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-    min_order_value_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-    interval_seconds: Optional[int] = Field(None, ge=5, le=3600)  # 5 sec to 1 hour
-    order_interval_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100)
-    max_order_volume_eur: Optional[Decimal] = Field(None, ge=0)
-    max_liquidity_threshold: Optional[Decimal] = Field(None, ge=0)
-    internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600)  # 10 sec to 1 hour
-    internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0)
-    internal_trade_volume_max: Optional[Decimal] = Field(None, ge=0)
-    avg_spread: Optional[Decimal] = Field(None, ge=0)
-    tick_size: Optional[Decimal] = Field(None, gt=0)
+    target_liquidity: Optional[Decimal] = Field(None, ge=0, description="Target liquidity in EUR")
+    price_deviation_pct: Optional[Decimal] = Field(None, ge=0, le=100, description="Max % deviation from best price")
+    avg_order_count: Optional[int] = Field(None, ge=1, le=1000, description="Average number of orders to maintain")
+    min_order_volume_eur: Optional[Decimal] = Field(None, ge=0, description="Minimum order volume in EUR")
+    volume_variety: Optional[int] = Field(None, ge=1, le=10, description="Volume diversity scale (1-10)")
+    avg_order_count_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100, description="Order count variation percentage")
+    max_orders_per_price_level: Optional[int] = Field(None, ge=1, le=100, description="Max orders at same price level")
+    max_orders_per_level_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100, description="Per-level order count variation %")
+    min_order_value_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100, description="Min order value variation percentage")
+    interval_seconds: Optional[int] = Field(None, ge=5, le=3600, description="Order placement interval in seconds")
+    order_interval_variation_pct: Optional[Decimal] = Field(None, ge=0, le=100, description="Interval variation percentage")
+    max_order_volume_eur: Optional[Decimal] = Field(None, ge=0, description="Maximum order volume in EUR")
+    max_liquidity_threshold: Optional[Decimal] = Field(None, ge=0, description="Threshold to trigger internal trades")
+    internal_trade_interval: Optional[int] = Field(None, ge=10, le=3600, description="Seconds between internal trades")
+    internal_trade_volume_min: Optional[Decimal] = Field(None, ge=0, description="Min volume per internal trade in EUR")
+    internal_trade_volume_max: Optional[Decimal] = Field(None, ge=0, description="Max volume per internal trade in EUR")
+    avg_spread: Optional[Decimal] = Field(None, ge=0, description="Average spread (EUR for cash, ratio for swap)")
+    tick_size: Optional[Decimal] = Field(None, gt=0, description="Price increment per tick")
 
 
 # Market Order (Admin) Schemas
 class MarketOrderCreate(BaseModel):
     market_maker_id: UUID
     certificate_type: str  # CEA, EUA
-    side: str = Field(..., pattern="^(BID|ASK)$")  # BID (buy) or ASK (sell)
+    side: str = Field(..., pattern="^(BID|ASK)$", description="Order side: BID (buy) or ASK (sell)")
     order_type: str = "LIMIT"
-    price: Decimal = Field(..., gt=0)
-    quantity: Decimal = Field(..., gt=0)
+    price: Decimal = Field(..., gt=0, description="Price in EUR per certificate")
+    quantity: Decimal = Field(..., gt=0, description="Number of certificates to order")
 
 
 # Ticket Log Schemas
@@ -1778,7 +1778,7 @@ class ProvisionAction(str, Enum):
 class ProvisionRequest(BaseModel):
     action: ProvisionAction
     mm_type: MarketMakerTypeEnum
-    amount: Decimal = Field(..., gt=0)
+    amount: Decimal = Field(..., gt=0, description="Amount to provision (EUR or certificates)")
     mm_ids: Optional[List[UUID]] = None
     count: Optional[int] = None
 
@@ -1824,8 +1824,8 @@ class EntityFeeOverrideResponse(BaseModel):
     entity_id: UUID
     entity_name: Optional[str] = None  # Populated from join
     market: MarketTypeEnum
-    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
-    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    bid_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom buyer fee rate (0-1)")
+    ask_fee_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="Custom seller fee rate (0-1)")
     is_active: bool
     created_at: datetime
 
