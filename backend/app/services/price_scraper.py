@@ -305,19 +305,19 @@ class PriceScraper:
                         market = parts[0].strip().lower()
                         price_str = parts[1].strip()
 
+                        # Use FIRST match only: "European Union" (spot) comes before
+                        # "EU ETS December 2025" (futures); we want the main spot price.
                         if (
-                            "european" in market
-                            or "eu" in market
-                            or "eua" in market
+                            ("european" in market or "eu" in market or "eua" in market)
+                            and CertificateType.EUA not in prices
                         ):
                             price = self._parse_price(price_str)
                             if price is not None:
                                 prices[CertificateType.EUA] = price
                                 logger.info(f"Found EUA price: {price}")
                         elif (
-                            "china" in market
-                            or "cea" in market
-                            or "chinese" in market
+                            ("china" in market or "cea" in market or "chinese" in market)
+                            and CertificateType.CEA not in prices
                         ):
                             price = self._parse_price(price_str)
                             if price is not None:

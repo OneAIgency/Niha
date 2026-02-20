@@ -36,6 +36,9 @@ redis_data/
 # Claude
 .claude/
 
+# Serena
+.serena/
+
 # Cursor
 .cursor/
 

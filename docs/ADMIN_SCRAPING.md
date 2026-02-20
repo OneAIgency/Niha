@@ -4,10 +4,21 @@ This document describes how EUA and CEA price scraping works, the admin API, and
 
 ## Overview
 
-- **Settings → Price Scraping Sources** (admin-only): configure name, URL, certificate type (EUA/CEA), scrape interval, library (httpx, BeautifulSoup, etc.), and **is_primary**. At most one source per certificate type can be primary; the primary flag is used when multiple sources exist (e.g. for display or default selection).
+- **Settings → Price Scraping Sources** (admin-only): configure name, URL, certificate type (EUA/CEA), scrape interval, library (httpx, BeautifulSoup, etc.), and **is_primary**. Each source has an optional **config** (JSON) with `xpath_selector`, `css_selector`, or `regex_pattern` to extract the price from the scraped HTML. At most one source per certificate type can be primary; the primary flag is used when multiple sources exist (e.g. for display or default selection).
 - **Scheduler**: runs every 60 seconds; for each active source whose interval has elapsed, it triggers a refresh. Carboncredits.com sources are refreshed as a **group** with one HTTP request per cycle.
 - **Test** (per source): runs a single scrape and returns the extracted price; no DB update. For carboncredits.com this uses the same single-fetch path (one request, returns price for that source’s certificate type).
 - **Refresh** (per source): updates DB from the source. For carboncredits.com, refreshing any carboncredits.com source refreshes **all** active carboncredits.com sources in one request.
+
+## Generic scraping (non-carboncredits.com)
+
+For sources whose URL does not contain `carboncredits.com`, the system fetches the page and extracts the price using the source's **config** (in order of precedence):
+
+1. **xpath_selector** — XPath expression (e.g. `/html/body/.../tr[4]/td[2]`). Use Chrome DevTools to copy XPath.
+2. **css_selector** — CSS selector (e.g. `#price`, `.value`).
+3. **regex_pattern** — Regex with one capture group for the price.
+4. Default — common price patterns (€, $, ¥, EUR, USD, etc.).
+
+Example: to scrape EUA from Trading Economics, set URL to `https://tradingeconomics.com/commodity/carbon` and config to `{"xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"}`. The row `tr[3]` corresponds to the EU Carbon Permits price cell. Alternative CSS: `form#aspnetForm table.table tbody tr:nth-of-type(3) td#p`.
 
 ## Carboncredits.com behaviour (0026)
 
@@ -19,6 +30,7 @@ This document describes how EUA and CEA price scraping works, the admin API, and
 | **Scheduler** | If any carboncredits.com source is due by interval, `refresh_carboncredits_sources(db, list_of_carboncredits_sources)` is called once; other sources are refreshed individually. |
 | **Admin Refresh** | Calling **Refresh** on one carboncredits.com source triggers refresh for all active carboncredits.com sources. |
 | **Admin Test** | Test still runs one logical “scrape” for that source; for carboncredits.com it uses the shared fetch and returns the price for that source’s certificate type (no duplicate request). |
+| **First match** | When the API returns multiple EU-related rows (e.g. "European Union" and "EU ETS December 2025"), the parser uses the **first** matching row (main spot price) rather than the last. |
 
 ## 429 rate limit and backoff
 
@@ -56,17 +68,21 @@ Cookie: access_token=...
 
 ```json
 {
-  "name": "CarbonCredits EU",
-  "url": "https://carboncredits.com/carbon-prices-today/",
+  "name": "Trading Economics EUA",
+  "url": "https://tradingeconomics.com/commodity/carbon",
   "certificate_type": "EUA",
   "scrape_library": "httpx",
   "scrape_interval_minutes": 5,
-  "is_primary": true,
-  "is_active": true
+  "is_primary": false,
+  "config": {
+    "xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"
+  }
 }
 ```
 
-**Response (200)** — Same shape as a list item (id, name, url, certificate_type, is_primary, last_price, etc.).
+For carboncredits.com sources, omit `config` — the system uses the shared CSV API. For other sources, optional `config` can include `xpath_selector`, `css_selector`, or `regex_pattern` (see [Generic scraping](#generic-scraping-non-carboncreditscom) above).
+
+**Response (200)** — Same shape as a list item (id, name, url, certificate_type, is_primary, last_price, config, etc.).
 
 ### Example: Update source
 
@@ -84,9 +100,14 @@ Body: any subset of updatable fields (all optional). When `is_primary` is set to
 {
   "name": "CarbonCredits EU (primary)",
   "is_primary": true,
-  "scrape_interval_minutes": 10
+  "scrape_interval_minutes": 10,
+  "config": {
+    "xpath_selector": "//form[@id='aspnetForm']//table[contains(@class,'table')]//tbody/tr[3]/td[@id='p']"
+  }
 }
 ```
+
+**Config options** (for non-carboncredits.com sources): `xpath_selector`, `css_selector`, `regex_pattern`. XPath takes precedence over CSS, then regex. Use Chrome DevTools (Elements → right-click → Copy → Copy XPath) to obtain XPath expressions.
 
 **Response (200)** — Updated scraping source object.
 
@@ -197,11 +218,21 @@ Cookie: access_token=...
 - **Redis down**  
   Backoff is not applied (fail open); 429 from the remote is still returned. After Redis is back, the next 429 will set backoff again.
 
+## Settings UI
+
+**Settings → Price Scraping** (admin-only) exposes:
+
+- **Add Trading Economics EUA** preset button: pre-fills the Add Source form with URL, XPath, and config for `tradingeconomics.com/commodity/carbon` EU Carbon Permits. Click **Add Source** (submit) to save to the database.
+- **Add Source** and **Edit Source** modals: both include an optional **XPath selector** field. Use Chrome DevTools (right-click element → Copy → Copy XPath) to obtain the path. Config is stored in the source's `config` object.
+- **Test** and **Refresh** actions per source.
+- Price history charts per source.
+
 ## Key files
 
 | Purpose | File |
 |---------|------|
-| Shared fetch, backoff check/set, refresh group | `backend/app/services/price_scraper.py` |
+| Shared fetch, backoff check/set, refresh group, XPath extraction | `backend/app/services/price_scraper.py` |
+| Unit tests for XPath extraction | `backend/tests/test_price_scraper.py` |
 | Scheduler (carboncredits group vs others) | `backend/app/main.py` → `price_scraping_scheduler_loop` |
 | Admin endpoints, error mapping | `backend/app/api/v1/admin.py` |
-| Settings UI (test/refresh, error display) | `frontend/src/pages/SettingsPage.tsx` |
+| Settings UI (Add/Edit modals with XPath, test/refresh, error display) | `frontend/src/pages/SettingsPage.tsx` |

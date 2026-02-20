@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import RedisManager
@@ -50,6 +51,12 @@ class TicketService:
         return ticket_id
 
     @staticmethod
+    def _is_ticket_id_collision(exc: IntegrityError) -> bool:
+        """Check if IntegrityError is duplicate ticket_id (Redis counter behind DB)."""
+        err_msg = str(exc.orig) if hasattr(exc, "orig") and exc.orig else str(exc)
+        return "ix_ticket_logs_ticket_id" in err_msg or "UniqueViolation" in err_msg
+
+    @staticmethod
     async def create_ticket(
         db: AsyncSession,
         action_type: str,
@@ -68,35 +75,49 @@ class TicketService:
         related_ticket_ids: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
     ) -> TicketLog:
-        """Create audit ticket"""
-        ticket_id = await TicketService.generate_ticket_id()
+        """Create audit ticket. Retries on ticket_id collision (Redis counter behind DB)."""
+        max_retries = 3
 
-        # Naive UTC for Column(DateTime) / TIMESTAMP WITHOUT TIME ZONE (asyncpg)
-        ticket = TicketLog(
-            ticket_id=ticket_id,
-            timestamp=datetime.now(timezone.utc).replace(tzinfo=None),
-            user_id=user_id,
-            market_maker_id=market_maker_id,
-            action_type=action_type,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            status=status,
-            request_payload=request_payload,
-            response_data=response_data,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            session_id=session_id,
-            before_state=before_state,
-            after_state=after_state,
-            related_ticket_ids=related_ticket_ids or [],
-            tags=tags or [],
-        )
+        for attempt in range(max_retries):
+            ticket_id = await TicketService.generate_ticket_id()
+            ticket = TicketLog(
+                ticket_id=ticket_id,
+                timestamp=datetime.now(timezone.utc).replace(tzinfo=None),
+                user_id=user_id,
+                market_maker_id=market_maker_id,
+                action_type=action_type,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                status=status,
+                request_payload=request_payload,
+                response_data=response_data,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                session_id=session_id,
+                before_state=before_state,
+                after_state=after_state,
+                related_ticket_ids=related_ticket_ids or [],
+                tags=tags or [],
+            )
+            db.add(ticket)
 
-        db.add(ticket)
-        await db.flush()  # Flush to get ID, but don't commit yet
-        await db.refresh(ticket)
+            try:
+                async with db.begin_nested():
+                    await db.flush()
+                    await db.refresh(ticket)
+            except IntegrityError as e:
+                if TicketService._is_ticket_id_collision(e) and attempt < max_retries - 1:
+                    logger.warning(
+                        "Ticket ID collision %s (attempt %d/%d), retrying with new ID",
+                        ticket_id,
+                        attempt + 1,
+                        max_retries,
+                    )
+                    continue
+                raise
 
-        logger.info(f"Created ticket {ticket_id} for {action_type} on {entity_type}")
+            logger.info(f"Created ticket {ticket_id} for {action_type} on {entity_type}")
+            break
 
         # Broadcast to backoffice WebSocket (fire-and-forget)
         if TicketService._broadcast_callback:
