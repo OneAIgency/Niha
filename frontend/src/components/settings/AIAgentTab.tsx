@@ -5,6 +5,32 @@ import { aiAgentApi } from '../../services/api';
 
 type SubTab = 'keys' | 'config' | 'knowledge' | 'test';
 
+interface AgentConfig {
+  role: string;
+  model: string;
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  allowInternet: boolean;
+  allowOffKnowledge: boolean;
+  enabled: boolean;
+}
+
+interface KnowledgeSource {
+  id: string;
+  name: string;
+  sourceType: string;
+  chunkCount: number;
+  status: string;
+  filePath?: string;
+  url?: string;
+  contentHash?: string;
+  errorMessage?: string;
+  indexedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const SUB_TABS: { key: SubTab; label: string; icon: typeof Key }[] = [
   { key: 'keys', label: 'API Keys', icon: Key },
   { key: 'config', label: 'Agent Config', icon: Brain },
@@ -118,8 +144,7 @@ function APIKeysSection({ onError }: { onError: (msg: string) => void }) {
 
 // -- Agent Config Sub-tab -------------------------------------------------
 function AgentConfigSection({ onError }: { onError: (msg: string) => void }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [configs, setConfigs] = useState<any[]>([]);
+  const [configs, setConfigs] = useState<AgentConfig[]>([]);
   const [selectedRole, setSelectedRole] = useState('INTRODUCER');
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -133,13 +158,12 @@ function AgentConfigSection({ onError }: { onError: (msg: string) => void }) {
     try {
       const data = await aiAgentApi.getConfigs();
       setConfigs(data);
-      const current = data.find((c: { role: string }) => c.role === selectedRole);
+      const current = data.find((c: AgentConfig) => c.role === selectedRole);
       if (current) syncForm(current);
     } catch (e) { onError((e as Error).message); }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const syncForm = (c: any) => {
+  const syncForm = (c: AgentConfig) => {
     setEditForm({
       model: c.model, systemPrompt: c.systemPrompt, temperature: c.temperature,
       maxTokens: c.maxTokens, allowInternet: c.allowInternet,
@@ -148,7 +172,7 @@ function AgentConfigSection({ onError }: { onError: (msg: string) => void }) {
   };
 
   useEffect(() => {
-    const current = configs.find((c: { role: string }) => c.role === selectedRole);
+    const current = configs.find((c) => c.role === selectedRole);
     if (current) syncForm(current);
   }, [selectedRole, configs]);
 
@@ -242,8 +266,7 @@ function AgentConfigSection({ onError }: { onError: (msg: string) => void }) {
 
 // -- Knowledge Base Sub-tab -----------------------------------------------
 function KnowledgeBaseSection({ onError }: { onError: (msg: string) => void }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [sources, setSources] = useState<any[]>([]);
+  const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [showAddUrl, setShowAddUrl] = useState(false);
   const [uploadName, setUploadName] = useState('');
@@ -327,7 +350,7 @@ function KnowledgeBaseSection({ onError }: { onError: (msg: string) => void }) {
           {sources.length === 0 && (
             <tr><td colSpan={5} className="py-8 text-center text-navy-400 text-sm">No knowledge sources yet.</td></tr>
           )}
-          {sources.map((s: { id: string; name: string; sourceType: string; chunkCount: number; status: string }) => (
+          {sources.map((s) => (
             <tr key={s.id} className="hover:bg-navy-800/50">
               <td className="py-2 px-2 text-sm text-white">{s.name}</td>
               <td className="py-2 px-2"><Badge variant="info" className="text-[10px]">{s.sourceType}</Badge></td>
