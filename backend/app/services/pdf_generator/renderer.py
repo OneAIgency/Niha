@@ -1,7 +1,7 @@
 """
 NIHA PDF Renderer — central WeasyPrint + Jinja2 rendering utility.
 
-All PDF generation in the platform flows through render_pdf().
+New PDF generation uses render_pdf(). Existing ReportLab generators are being migrated to this pipeline.
 Static documents: called by generate_static_docs.py
 Dynamic documents: called by individual *_generator.py wrappers
 """

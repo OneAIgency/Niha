@@ -6,13 +6,13 @@ from pathlib import Path
 FONTS_DIR = Path(__file__).parent.parent / "app/services/pdf_generator/styles/fonts"
 FONTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Inter static subset (Latin) woff2 files — from Google Fonts static CDN
-# These are the stable, versioned static URLs for Inter v3/v4
+# Inter static subset (Latin) woff2 files — from jsDelivr/fontsource CDN
+# These are the correct, distinct URLs for each weight
 FONTS = {
-    "Inter-Light.woff2": "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
-    "Inter-Regular.woff2": "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
-    "Inter-Medium.woff2": "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2",
-    "Inter-SemiBold.woff2": "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
+    "Inter-Light.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-300-normal.woff2",
+    "Inter-Regular.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-400-normal.woff2",
+    "Inter-Medium.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-500-normal.woff2",
+    "Inter-SemiBold.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-600-normal.woff2",
 }
 
 # Alternative: download from fontsource CDN
