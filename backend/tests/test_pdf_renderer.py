@@ -63,5 +63,4 @@ def test_nda_generator_signature_preserved():
     expected = ["client_entity_name", "client_entity_type", "client_jurisdiction",
                 "client_representative", "client_email", "effective_date",
                 "doc_ref", "output_path"]
-    for p in expected:
-        assert p in params, f"Missing parameter: {p}"
+    assert params == expected, f"Signature changed — got {params}, expected {expected}"

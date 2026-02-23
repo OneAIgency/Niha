@@ -10,21 +10,25 @@ Usage (new pipeline):
     from app.services.pdf_generator.renderer import render_pdf
     pdf_bytes = render_pdf("board_resolution", {"doc_ref": "NIHA-BR-2026-001"})
 
-Usage (legacy ReportLab — requires reportlab installed):
+Usage (migrated WeasyPrint generators):
     from app.services.pdf_generator import generate_nda_pdf
+
+Usage (remaining ReportLab generators — requires reportlab installed):
+    from app.services.pdf_generator import generate_msa_pdf
 """
 
 from .renderer import render_pdf
+from .nda_generator import generate_nda_pdf  # migrated to WeasyPrint
 
 __all__ = [
     "render_pdf",
+    "generate_nda_pdf",
 ]
 
 
 def __getattr__(name):
-    """Lazy-load legacy ReportLab generators only when explicitly accessed."""
+    """Lazy-load remaining ReportLab generators only when explicitly accessed."""
     _legacy = {
-        "generate_nda_pdf": (".nda_generator", "generate_nda_pdf"),
         "generate_msa_pdf": (".msa_generator", "generate_msa_pdf"),
         "generate_custody_pdf": (".custody_generator", "generate_custody_pdf"),
         "generate_fee_schedule_pdf": (".fee_schedule_generator", "generate_fee_schedule_pdf"),
