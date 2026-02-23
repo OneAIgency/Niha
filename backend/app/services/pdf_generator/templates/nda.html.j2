@@ -1,0 +1,768 @@
+{% extends "_base.html.j2" %}
+{% set doc_ref = doc_ref or ("NIHA-NDA-" ~ doc_date[-4:] ~ "-001") %}
+{% block content %}
+
+<!-- ── COVER ──────────────────────────────────────────────── -->
+<div class="cover-meta">
+  <div class="cover-meta-left">NIHA Carbon</div>
+  <div class="cover-meta-right">
+    {{ doc_ref }}<br>{{ doc_date }}<br>Strictly Confidential
+  </div>
+</div>
+
+<div class="cover-title">
+  <span class="cover-title-line1">Non-Disclosure &amp;</span>
+  <span class="cover-title-line2">Non-Circumvention Agreement</span>
+</div>
+<div class="cover-divider"></div>
+<p class="cover-abstract">
+  (Mutual Confidentiality, Non-Solicitation &amp; Non-Circumvention Agreement)<br><br>
+  This Agreement is entered into between <strong>Italy Nihao Group Limited</strong>
+  and <strong>{{ client_entity_name or "________________________________" }}</strong>{% if client_entity_type %} ({{ client_entity_type }}){% endif %}{% if client_jurisdiction %}, incorporated in {{ client_jurisdiction }}{% endif %}.
+</p>
+
+<!-- ── PARTIES ──────────────────────────────────────────── -->
+<div class="highlight-line" style="margin-left:0; margin-top: 32px;">
+  <div class="highlight-label">Parties</div>
+  <div class="highlight-body">
+    <table class="data-table">
+      <tr>
+        <td>Disclosing Party</td>
+        <td><strong>Italy Nihao Group Limited</strong><br>
+            Hong Kong SAR</td>
+      </tr>
+      <tr>
+        <td>Receiving Party</td>
+        <td>
+          <strong>{{ client_entity_name or "________________________________" }}</strong>{% if client_entity_type %}<br>{{ client_entity_type }}{% endif %}{% if client_jurisdiction %}<br>{{ client_jurisdiction }}{% endif %}
+          {% if client_representative %}<br>{{ client_representative }}{% endif %}
+          {% if client_email %}<br>{{ client_email }}{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Effective Date</td>
+        <td>{{ doc_date }}</td>
+      </tr>
+      <tr>
+        <td>Reference</td>
+        <td>{{ doc_ref }}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ── KEY TERMS ─────────────────────────────────────────── -->
+<div class="highlight-line" style="margin-left:0; margin-top: 24px;">
+  <div class="highlight-label">Key Terms</div>
+  <div class="highlight-body">
+    <table class="data-table">
+      <tr>
+        <td>Purpose</td>
+        <td>Potential engagement in cross-border carbon credit trading, related services and commercial activities</td>
+      </tr>
+      <tr>
+        <td>Governing Law</td>
+        <td>Laws of Hong Kong Special Administrative Region</td>
+      </tr>
+      <tr>
+        <td>Dispute Resolution</td>
+        <td>HKIAC Administered Arbitration Rules</td>
+      </tr>
+      <tr>
+        <td>Agreement Duration</td>
+        <td>2 years from execution (auto-renewal for successive 1-year periods)</td>
+      </tr>
+      <tr>
+        <td>Confidentiality Survival</td>
+        <td>5 years post-termination</td>
+      </tr>
+      <tr>
+        <td>Non-Circumvention</td>
+        <td>2 years post-termination</td>
+      </tr>
+      <tr>
+        <td>Non-Solicitation</td>
+        <td>1 year post-termination</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ── TABLE OF CONTENTS ──────────────────────────────────── -->
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <div class="toc-row">
+    <span class="toc-num">§1</span>
+    <span class="toc-name">Definitions and Interpretation</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§2</span>
+    <span class="toc-name">Exclusions</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§3</span>
+    <span class="toc-name">Obligations of Confidentiality</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§4</span>
+    <span class="toc-name">Permitted Disclosures</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§5</span>
+    <span class="toc-name">Return and Destruction of Materials</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§6</span>
+    <span class="toc-name">Intellectual Property</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§7</span>
+    <span class="toc-name">Non-Circumvention</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§8</span>
+    <span class="toc-name">Non-Solicitation</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§9</span>
+    <span class="toc-name">Market Conduct and Trading Restrictions</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§10</span>
+    <span class="toc-name">No Obligation to Proceed</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§11</span>
+    <span class="toc-name">Term and Survival</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§12</span>
+    <span class="toc-name">Remedies</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§13</span>
+    <span class="toc-name">Limitation of Liability and Disclaimer</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§14</span>
+    <span class="toc-name">Data Protection</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§15</span>
+    <span class="toc-name">Governing Law and Dispute Resolution</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§16</span>
+    <span class="toc-name">General Provisions</span>
+    <span class="toc-dots"></span>
+  </div>
+  <div class="toc-row">
+    <span class="toc-num">§17</span>
+    <span class="toc-name">Execution</span>
+    <span class="toc-dots"></span>
+  </div>
+</div>
+
+<!-- ── RECITALS ───────────────────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">Recitals</span>
+    <span class="chapter-title"></span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      <p>(A) Italy Nihao Group Limited (&ldquo;NIHA&rdquo;) is a company incorporated under the laws of Hong Kong SAR, engaged in cross-border carbon credit trading and related services, operating across the European Union Emissions Trading System (EU ETS) and the People&rsquo;s Republic of China emissions trading schemes, with established relationships with institutional counterparties.</p>
+      <br>
+      <p>(B) <strong>{{ client_entity_name or "[Counterparty Full Legal Name]" }}</strong> (&ldquo;Counterparty&rdquo;) is a {{ client_entity_type or "[type of entity]" }} incorporated/established under the laws of {{ client_jurisdiction or "[jurisdiction]" }}, interested in exploring a potential business relationship with NIHA.</p>
+      <br>
+      <p>(C) In the course of evaluating a potential business relationship, the parties anticipate exchanging Confidential Information relating to their respective businesses, operations, and strategies.</p>
+      <br>
+      <p>(D) The parties wish to establish mutual obligations to protect such Confidential Information, to restrict its use to the Purpose defined herein, and to prevent circumvention, solicitation, and misuse of proprietary relationships.</p>
+      <br>
+      <p><strong>NOW, THEREFORE,</strong> in consideration of the mutual covenants contained herein, the parties agree as follows:</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 1: DEFINITIONS ──────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 1</span>
+    <span class="chapter-title">Definitions and Interpretation</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">1.1</span>
+    </div>
+    <div class="article-body">
+      <strong>&ldquo;Confidential Information&rdquo;</strong> means all information, whether written, oral, electronic, or visual, disclosed by or on behalf of one party (the &ldquo;Disclosing Party&rdquo;) to the other party (the &ldquo;Receiving Party&rdquo;) in connection with the Purpose, including but not limited to:
+      <br><br>
+      (a) business plans, strategies, financial information, projections, and fee structures;<br>
+      (b) trading strategies, pricing methodologies, conversion ratios, spread calculations, and market intelligence;<br>
+      (c) client lists, counterparty relationships, introducer networks, and transaction histories;<br>
+      (d) proprietary software, algorithms, platform architecture, API specifications, and technical documentation;<br>
+      (e) regulatory filings, compliance procedures, licensing applications, and internal policies;<br>
+      (f) carbon credit portfolio compositions, serial numbers, vintage details, registry account identifiers, SAFE approval details, CEEX foreign investor credentials, and custody arrangements;<br>
+      (g) banking arrangements, account details, segregated account structures, and settlement procedures;<br>
+      (h) any information marked or designated as &ldquo;confidential&rdquo;, &ldquo;proprietary&rdquo;, or with similar designation;<br>
+      (i) any information that a reasonable person would consider confidential given its nature and the circumstances of disclosure.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">1.2</span>
+    </div>
+    <div class="article-body">
+      <strong>&ldquo;Affiliated Company&rdquo;</strong> means, in respect of either party, any entity that directly or indirectly controls, is controlled by, or is under common control with that party, where &ldquo;control&rdquo; means the ownership of more than 50% of the voting rights or equivalent ownership interest.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">1.3</span>
+    </div>
+    <div class="article-body">
+      <strong>&ldquo;Protected Relationship&rdquo;</strong> means any client, counterparty, supplier, introducer, registry, exchange, bank, or other business relationship of the Disclosing Party that becomes known to the Receiving Party through access to Confidential Information or through introductions made in connection with the Purpose.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 2: EXCLUSIONS ────────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 2</span>
+    <span class="chapter-title">Exclusions</span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      Confidential Information does not include information that the Receiving Party can demonstrate by contemporaneous written records:
+      <br><br>
+      (a) was already in the public domain at the time of disclosure, or subsequently enters the public domain through no fault of the Receiving Party;<br>
+      (b) was already in the Receiving Party&rsquo;s lawful possession prior to disclosure, free of any obligation of confidentiality;<br>
+      (c) was independently developed by the Receiving Party without reference to, use of, or reliance upon the Confidential Information;<br>
+      (d) was received from a third party who was not, to the Receiving Party&rsquo;s knowledge, bound by any obligation of confidentiality in respect of such information.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 3: OBLIGATIONS ───────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 3</span>
+    <span class="chapter-title">Obligations of Confidentiality</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">3.1</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall keep all Confidential Information strictly confidential and shall not disclose, publish, or disseminate any Confidential Information to any third party without the prior written consent of the Disclosing Party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">3.2</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall use the Confidential Information solely for the Purpose and for no other purpose whatsoever.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">3.3</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall protect the Confidential Information with at least the same degree of care it uses to protect its own confidential information of similar nature and importance, but in no event less than reasonable care.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">3.4</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall limit access to the Confidential Information to those of its directors, officers, employees, professional advisers, and Affiliated Companies (&ldquo;Authorised Recipients&rdquo;) who have a genuine need to know for the Purpose, and shall ensure that all such Authorised Recipients are bound by obligations of confidentiality no less onerous than those contained in this Agreement. The Receiving Party shall be liable for any breach of this Agreement by its Authorised Recipients.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">3.5</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall promptly notify the Disclosing Party in writing upon becoming aware of any unauthorised disclosure, use, or loss of Confidential Information.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 4: PERMITTED DISCLOSURES ────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 4</span>
+    <span class="chapter-title">Permitted Disclosures</span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      The Receiving Party may disclose Confidential Information:
+      <br><br>
+      (a) to the extent required by applicable law, regulation, or order of a court or governmental authority of competent jurisdiction, provided that the Receiving Party shall (to the extent legally permissible) give the Disclosing Party prompt written notice of such requirement prior to disclosure and cooperate with the Disclosing Party&rsquo;s efforts to obtain a protective order or other appropriate remedy;<br>
+      (b) to its legal counsel, auditors, and professional advisers on a need-to-know basis, provided they are bound by professional duties of confidentiality;<br>
+      (c) to regulatory authorities where required for the purpose of obtaining or maintaining any licence, authorisation, or registration;<br>
+      (d) to bona fide potential investors, acquirers, or merger partners of the Receiving Party in connection with a potential corporate transaction, provided such persons execute confidentiality undertakings no less restrictive than this Agreement.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 5: RETURN AND DESTRUCTION ───────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 5</span>
+    <span class="chapter-title">Return and Destruction of Materials</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">5.1</span>
+    </div>
+    <div class="article-body">
+      Upon written request by the Disclosing Party, or upon termination of this Agreement, the Receiving Party shall within fourteen (14) days return or destroy (at the Disclosing Party&rsquo;s election) all documents, files, copies, and other materials containing Confidential Information.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">5.2</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party shall certify in writing, by an authorised officer, that all such materials have been returned or destroyed, save for copies retained in accordance with Clause 5.3.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">5.3</span>
+    </div>
+    <div class="article-body">
+      The obligation to return or destroy shall not apply to Confidential Information retained in the Receiving Party&rsquo;s professional advisers&rsquo; files in accordance with their regulatory requirements, or in automated backup systems, provided such copies remain subject to the confidentiality obligations of this Agreement.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 6: INTELLECTUAL PROPERTY ────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 6</span>
+    <span class="chapter-title">Intellectual Property</span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      Nothing in this Agreement shall be construed as granting any licence, right, title, or interest in or to any Confidential Information, intellectual property, or other proprietary rights of either party. All Confidential Information remains the exclusive property of the Disclosing Party.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 7: NON-CIRCUMVENTION ────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 7</span>
+    <span class="chapter-title">Non-Circumvention</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">7.1</span>
+    </div>
+    <div class="article-body">
+      Each party undertakes that, during the term of this Agreement and for a period of <strong>two (2) years</strong> following its termination or expiry, it shall not, directly or indirectly, contact, deal with, transact with, or otherwise engage any Protected Relationship of the other party for the purpose of conducting business that would compete with, substitute for, or otherwise circumvent the business relationship between the parties, without the prior written consent of the other party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">7.2</span>
+    </div>
+    <div class="article-body">
+      Without limiting the generality of Clause 7.1, the Receiving Party shall not:
+      <br><br>
+      (a) use the Confidential Information to identify, approach, or solicit any client, counterparty, or introducer of the Disclosing Party;<br>
+      (b) attempt to replicate, disintermediate, or bypass the Disclosing Party&rsquo;s business model, trading infrastructure, or market access using knowledge obtained through Confidential Information;<br>
+      (c) introduce any third party to a Protected Relationship of the Disclosing Party without the Disclosing Party&rsquo;s prior written consent;<br>
+      (d) establish or assist in the establishment of any competing carbon credit trading, custody, or conversion service that utilises Confidential Information of the Disclosing Party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">7.3</span>
+    </div>
+    <div class="article-body">
+      This Clause 7 shall not restrict either party from conducting business with any person or entity with whom it had a pre-existing relationship prior to the date of this Agreement.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 8: NON-SOLICITATION ─────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 8</span>
+    <span class="chapter-title">Non-Solicitation</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">8.1</span>
+    </div>
+    <div class="article-body">
+      During the term of this Agreement and for a period of <strong>one (1) year</strong> following its termination or expiry, neither party shall, without the prior written consent of the other party, directly or indirectly solicit, recruit, or hire any employee, officer, director, or consultant of the other party who was involved in the activities contemplated by this Agreement.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">8.2</span>
+    </div>
+    <div class="article-body">
+      This restriction shall not apply to general recruitment advertising not specifically targeted at the other party&rsquo;s personnel, or to unsolicited applications made by such persons without any encouragement by the recruiting party.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 9: MARKET CONDUCT ───────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 9</span>
+    <span class="chapter-title">Market Conduct and Trading Restrictions</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">9.1</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party acknowledges that Confidential Information may include material non-public information relating to the carbon credit markets, including pricing data, inventory positions, and anticipated trading volumes.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">9.2</span>
+    </div>
+    <div class="article-body">
+      The Receiving Party undertakes not to use any Confidential Information relating to the Disclosing Party&rsquo;s market positions, trading strategies, or anticipated transactions to trade in carbon credits or related instruments for its own account or for the account of any third party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">9.3</span>
+    </div>
+    <div class="article-body">
+      This Clause 9 does not restrict either party from conducting its ordinary course trading activities, provided that such activities are not informed by, and do not make use of, the other party&rsquo;s Confidential Information.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 10: NO OBLIGATION ────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 10</span>
+    <span class="chapter-title">No Obligation to Proceed</span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      This Agreement does not create any obligation on either party to enter into any further agreement, transaction, or business relationship. Either party may withdraw from discussions at any time without liability, provided that all obligations of confidentiality, non-circumvention, and non-solicitation shall continue to apply in accordance with their respective terms.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 11: TERM AND SURVIVAL ────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 11</span>
+    <span class="chapter-title">Term and Survival</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">11.1</span>
+    </div>
+    <div class="article-body">
+      This Agreement shall become effective on the date of execution by both parties and shall remain in force for a period of <strong>two (2) years</strong> from the date of execution (the &ldquo;Initial Term&rdquo;), unless terminated earlier in accordance with Clause 11.3.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">11.2</span>
+    </div>
+    <div class="article-body">
+      The Agreement shall automatically renew for successive <strong>one (1) year</strong> periods unless either party gives the other not less than <strong>sixty (60) days&rsquo;</strong> written notice of its intention not to renew, such notice to be given prior to the expiry of the then-current term.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">11.3</span>
+    </div>
+    <div class="article-body">
+      Either party may terminate this Agreement by giving <strong>sixty (60) days&rsquo;</strong> written notice to the other party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">11.4</span>
+    </div>
+    <div class="article-body">
+      Notwithstanding termination or expiry, the following obligations shall survive:
+      <br><br>
+      (a) confidentiality obligations (Clause 3): <strong>five (5) years</strong> from the date of termination or expiry, or for such longer period as may be required to protect trade secrets;<br>
+      (b) non-circumvention (Clause 7): <strong>two (2) years</strong> from the date of termination or expiry;<br>
+      (c) non-solicitation (Clause 8): <strong>one (1) year</strong> from the date of termination or expiry;<br>
+      (d) return/destruction of materials (Clause 5), intellectual property (Clause 6), limitation of liability (Clause 13), and dispute resolution (Clause 15) shall survive indefinitely or as otherwise provided.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 12: REMEDIES ─────────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 12</span>
+    <span class="chapter-title">Remedies</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">12.1</span>
+    </div>
+    <div class="article-body">
+      The parties acknowledge that a breach of this Agreement, and in particular a breach of Clauses 3, 7, 8, or 9, may cause irreparable harm that cannot be adequately compensated by monetary damages alone.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">12.2</span>
+    </div>
+    <div class="article-body">
+      Accordingly, in addition to any other remedies available at law or in equity, the Disclosing Party shall be entitled to seek injunctive relief, specific performance, or other equitable remedies without the need to prove actual damages or post a bond or other security.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">12.3</span>
+    </div>
+    <div class="article-body">
+      The rights and remedies provided in this Agreement are cumulative and not exclusive of any rights or remedies provided by law.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 13: LIMITATION OF LIABILITY ─────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 13</span>
+    <span class="chapter-title">Limitation of Liability and Disclaimer</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">13.1</span>
+    </div>
+    <div class="article-body">
+      All Confidential Information is provided &ldquo;as is&rdquo; and without any representation or warranty, express or implied, as to its accuracy, completeness, or fitness for any particular purpose.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">13.2</span>
+    </div>
+    <div class="article-body">
+      Neither party shall be liable to the other for any indirect, consequential, incidental, or special damages arising out of or in connection with this Agreement or the use of or reliance on any Confidential Information.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">13.3</span>
+    </div>
+    <div class="article-body">
+      Nothing in this Agreement shall exclude or limit either party&rsquo;s liability for fraud, wilful default, or any liability that cannot be excluded or limited by applicable law.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 14: DATA PROTECTION ─────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 14</span>
+    <span class="chapter-title">Data Protection</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">14.1</span>
+    </div>
+    <div class="article-body">
+      To the extent that any Confidential Information includes personal data within the meaning of the Personal Data (Privacy) Ordinance (applicable data protection legislation) (&ldquo;PDPO&rdquo;) or the General Data Protection Regulation (EU) 2016/679 (&ldquo;GDPR&rdquo;), the Receiving Party shall process such personal data only for the Purpose and in compliance with all applicable data protection legislation.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">14.2</span>
+    </div>
+    <div class="article-body">
+      Each party shall be an independent data controller in respect of any personal data received under this Agreement. Neither party shall process personal data received from the other party for any purpose other than the Purpose without obtaining all necessary consents and authorisations.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 15: GOVERNING LAW ───────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 15</span>
+    <span class="chapter-title">Governing Law and Dispute Resolution</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">15.1</span>
+    </div>
+    <div class="article-body">
+      This Agreement shall be governed by and construed in accordance with the laws of <strong>Hong Kong Special Administrative Region</strong>.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">15.2</span>
+    </div>
+    <div class="article-body">
+      Any dispute arising out of or in connection with this Agreement shall be resolved by arbitration administered by the <strong>Hong Kong International Arbitration Centre (HKIAC)</strong> in accordance with the HKIAC Administered Arbitration Rules then in force. The seat of arbitration shall be Hong Kong. The language of arbitration shall be English (with translation facilities available where required by either party). The arbitral tribunal shall consist of a sole arbitrator appointed in accordance with the HKIAC Rules.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">15.3</span>
+    </div>
+    <div class="article-body">
+      Notwithstanding Clause 15.2, either party may apply to a court of competent jurisdiction for interim or conservatory measures, including injunctive relief, pending the constitution of the arbitral tribunal.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 16: GENERAL PROVISIONS ──────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 16</span>
+    <span class="chapter-title">General Provisions</span>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.1</span>
+    </div>
+    <div class="article-body">
+      <strong>Entire Agreement:</strong> This Agreement constitutes the entire agreement between the parties regarding the subject matter hereof and supersedes all prior agreements, understandings, and discussions, whether written or oral.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.2</span>
+    </div>
+    <div class="article-body">
+      <strong>Amendment:</strong> No amendment to this Agreement shall be effective unless made in writing and signed by an authorised representative of each party.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.3</span>
+    </div>
+    <div class="article-body">
+      <strong>Assignment:</strong> Neither party may assign its rights or obligations under this Agreement without the prior written consent of the other party, save that either party may assign to an Affiliated Company provided that the assigning party remains liable for the performance of its obligations hereunder.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.4</span>
+    </div>
+    <div class="article-body">
+      <strong>Severability:</strong> If any provision of this Agreement is held to be invalid or unenforceable by a court of competent jurisdiction, the remaining provisions shall continue in full force and effect, and the parties shall negotiate in good faith to replace the invalid provision with a valid provision that most closely reflects the original intent.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.5</span>
+    </div>
+    <div class="article-body">
+      <strong>Waiver:</strong> No failure or delay by either party in exercising any right under this Agreement shall constitute a waiver of that right, nor shall any single or partial exercise of any right preclude any further exercise of that right or any other right.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.6</span>
+    </div>
+    <div class="article-body">
+      <strong>Notices:</strong> All notices under this Agreement shall be in writing and shall be deemed duly given when delivered personally, sent by registered mail (postage prepaid), or sent by internationally recognised courier service to the addresses set out in the signature block below, or to such other address as either party may notify in writing. Notices sent by email shall be valid only if followed by a copy sent by one of the foregoing methods within five (5) business days.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.7</span>
+    </div>
+    <div class="article-body">
+      <strong>Counterparts:</strong> This Agreement may be executed in counterparts, each of which shall constitute an original and all of which together shall constitute one and the same agreement.
+    </div>
+  </div>
+  <div class="article">
+    <div class="article-head">
+      <span class="article-n">16.8</span>
+    </div>
+    <div class="article-body">
+      <strong>No Partnership or Agency:</strong> Nothing in this Agreement shall be construed as creating a partnership, joint venture, agency, or employment relationship between the parties.
+    </div>
+  </div>
+</div>
+
+<!-- ── CLAUSE 17: EXECUTION ────────────────────────────────── -->
+<div class="chapter">
+  <div class="chapter-head">
+    <span class="chapter-n">§ 17</span>
+    <span class="chapter-title">Execution</span>
+  </div>
+  <div class="article">
+    <div class="article-body">
+      IN WITNESS WHEREOF the parties have executed this Agreement as of the date first written above.
+      <br><br>
+      <table style="width:100%; border-collapse: collapse;">
+        <tr>
+          <td style="width:50%; vertical-align:top; padding-right: 24px;">
+            <div style="font-size: 0.58rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #999999; margin-bottom: 12px;">FOR AND ON BEHALF OF</div>
+            <div style="font-size: 0.78rem; font-weight: 500; margin-bottom: 4px;">ITALY NIHAO GROUP LIMITED</div>
+            <div class="sig-line"></div>
+            <div class="sig-label">Signature</div>
+            <br>
+            <div class="sig-line" style="margin-top: 24px;"></div>
+            <div class="sig-label">Name &nbsp;·&nbsp; Title</div>
+            <br>
+            <div class="sig-line" style="margin-top: 24px;"></div>
+            <div class="sig-label">Date &nbsp;·&nbsp; Address</div>
+            <br><br>
+            <div style="font-size: 0.58rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #999999; margin-bottom: 8px;">WITNESS</div>
+            <div class="sig-line" style="margin-top: 12px;"></div>
+            <div class="sig-label">Signature &nbsp;·&nbsp; Name &nbsp;·&nbsp; Occupation</div>
+          </td>
+          <td style="width:50%; vertical-align:top; padding-left: 24px;">
+            <div style="font-size: 0.58rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #999999; margin-bottom: 12px;">FOR AND ON BEHALF OF</div>
+            <div style="font-size: 0.78rem; font-weight: 500; margin-bottom: 4px;">{{ client_entity_name or "________________________________" }}</div>
+            <div class="sig-line"></div>
+            <div class="sig-label">Signature</div>
+            <br>
+            <div class="sig-line" style="margin-top: 24px;"></div>
+            <div class="sig-label">
+              {{ client_representative or "Name &nbsp;·&nbsp; Title" }}
+            </div>
+            <br>
+            <div class="sig-line" style="margin-top: 24px;"></div>
+            <div class="sig-label">Date &nbsp;·&nbsp; Address</div>
+            <br><br>
+            <div style="font-size: 0.58rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #999999; margin-bottom: 8px;">WITNESS</div>
+            <div class="sig-line" style="margin-top: 12px;"></div>
+            <div class="sig-label">Signature &nbsp;·&nbsp; Name &nbsp;·&nbsp; Occupation</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

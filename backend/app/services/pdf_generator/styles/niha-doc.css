@@ -1,0 +1,414 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NIHA DOCUMENT CSS — generated from Document Design System v1.0
+   Used by WeasyPrint for PDF rendering.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── FONTS ──────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Inter';
+  font-weight: 300;
+  font-style: normal;
+  src: url('fonts/Inter-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-weight: 400;
+  font-style: normal;
+  src: url('fonts/Inter-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-weight: 500;
+  font-style: normal;
+  src: url('fonts/Inter-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-weight: 600;
+  font-style: normal;
+  src: url('fonts/Inter-SemiBold.woff2') format('woff2');
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DESIGN TOKENS  —  sursa de adevăr pentru toate documentele
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  /* Culori de cerneală */
+  --ink:        #0f0f0f;   /* text principal, titluri, elemente de impact */
+  --ink-mid:    #444444;   /* corpul articolelor, text de lectură */
+  --ink-light:  #999999;   /* etichete, numere, metadate */
+  --ink-faint:  #cccccc;   /* separatori subtili, footer */
+
+  /* Linii și reguli */
+  --rule:       #e8e8e8;   /* separator standard (orizontal, tabel) */
+  --rule-strong:#0f0f0f;   /* separator de capitol (bold, negru) */
+
+  /* Fonduri */
+  --page:       #ffffff;   /* pagina albă */
+  --bg-lift:    #f7f6f3;   /* highlight block — contrast garantat la printare */
+
+  /* Accent pentru linii verticale / chenare */
+  --accent-line:#0f0f0f;   /* linie verticală de accent — neutru / negru */
+  --accent-warm:#c8a96e;   /* linie verticală caldă — utilizare ocazională */
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LAYOUT PAGINA DEMO
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+body {
+  background: #c8c8c8;
+  padding: 40px 24px;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DOCUMENT — containerul principal
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.doc {
+  flex: 1;
+  max-width: 700px;
+  background: var(--page);
+  padding: 88px 96px;
+  color: var(--ink);
+  box-shadow: 0 2px 40px rgba(0,0,0,0.12);
+}
+
+/* Cod inline */
+code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  background: #f0f0ed;
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: var(--ink-mid);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ╔══════════════════════════════════════════════════════╗
+   ║   COMPONENTELE SISTEMULUI — clasele reutilizabile   ║
+   ╚══════════════════════════════════════════════════════╝
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── COVER PAGE ─────────────────────────────────────────── */
+.cover-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 88px;
+}
+
+.cover-meta-left {
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cover-meta-right {
+  text-align: right;
+  font-size: 0.62rem;
+  font-weight: 300;
+  color: var(--ink-light);
+  line-height: 2;
+  letter-spacing: 0.3px;
+}
+
+.cover-title { margin-bottom: 72px; }
+
+.cover-title-line1 {
+  display: block;
+  font-size: 2.8rem;
+  font-weight: 300;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.cover-title-line2 {
+  display: block;
+  font-size: 2.8rem;
+  font-weight: 600;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.cover-divider {
+  height: 1px;
+  background: var(--ink);
+  margin-bottom: 24px;
+}
+
+.cover-abstract {
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: var(--ink-mid);
+  line-height: 1.8;
+  max-width: 380px;
+}
+
+/* ── TABLE OF CONTENTS ──────────────────────────────────── */
+.toc {
+  margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+}
+
+.toc-title {
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 20px;
+}
+
+.toc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.72rem;
+}
+
+.toc-row:last-child { border-bottom: none; }
+
+.toc-num {
+  font-weight: 500;
+  color: var(--ink-light);
+  font-size: 0.62rem;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.toc-name {
+  font-weight: 400;
+  color: var(--ink-mid);
+  flex: 1;
+  padding: 0 12px;
+}
+
+.toc-dots {
+  flex: 1;
+  border-bottom: 1px dotted var(--rule);
+  margin: 0 8px;
+  position: relative;
+  top: -3px;
+}
+
+/* ── CHAPTER ────────────────────────────────────────────── */
+.chapter {
+  margin-top: 72px;
+  padding-top: 32px;
+  border-top: 1px solid var(--ink);   /* separator negru — marchează capitol nou */
+}
+
+.chapter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.chapter-n {
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--ink-light);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.chapter-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* ── ARTICLE ────────────────────────────────────────────── */
+.article {
+  margin-bottom: 44px;
+}
+
+.article:last-child { margin-bottom: 0; }
+
+.article-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.article-n {
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--ink-light);
+  flex-shrink: 0;
+  width: 32px;
+}
+
+.article-title {
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+.article-body {
+  font-size: 0.86rem;
+  font-weight: 300;
+  line-height: 1.85;
+  color: var(--ink-mid);
+  padding-left: 44px;
+}
+
+.article-body strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ── HIGHLIGHT BLOCKS ───────────────────────────────────── */
+
+/* Varianta A — fundal cald (cea mai frecventă) */
+.highlight {
+  background: var(--bg-lift);
+  padding: 20px 24px;
+  margin: 14px 0 0 44px;
+}
+
+/* Varianta B — linie verticală stângă (accent neutru) */
+.highlight-line {
+  border-left: 2px solid var(--accent-line);
+  padding: 14px 0 14px 20px;
+  margin: 14px 0 0 44px;
+  background: transparent;
+}
+
+/* Varianta C — linie verticală caldă (pentru citate, atenționări) */
+.highlight-line-warm {
+  border-left: 2px solid var(--accent-warm);
+  padding: 14px 0 14px 20px;
+  margin: 14px 0 0 44px;
+  background: transparent;
+}
+
+/* Varianta D — chenar complet (pentru notificări critice) */
+.highlight-box {
+  border: 1px solid var(--rule-strong);
+  padding: 20px 24px;
+  margin: 14px 0 0 44px;
+}
+
+/* Varianta E — linie + fundal (combinat, maximă vizibilitate) */
+.highlight-line-filled {
+  border-left: 2px solid var(--accent-line);
+  background: var(--bg-lift);
+  padding: 20px 24px;
+  margin: 14px 0 0 44px;
+}
+
+.highlight-label {
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.highlight-body {
+  font-size: 0.8rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.highlight-body strong { font-weight: 500; }
+
+/* ── DATA TABLE (în interiorul highlight) ───────────────── */
+.data-table {
+  margin-top: 12px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table td {
+  padding: 7px 0;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-mid);
+  font-weight: 300;
+}
+
+.data-table td:first-child {
+  color: var(--ink-light);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  width: 40%;
+  padding-right: 16px;
+  vertical-align: top;
+  padding-top: 9px;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table strong { font-weight: 500; color: var(--ink); }
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+.footer {
+  margin-top: 80px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.58rem;
+  font-weight: 300;
+  letter-spacing: 0.8px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WEASYPRINT ADDITIONS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* WeasyPrint: prevent orphan chapter headings */
+.chapter { page-break-inside: avoid; }
+.article { page-break-inside: avoid; }
+.keep-together { page-break-inside: avoid; }
+
+/* Signature lines for legal documents */
+.sig-line {
+  border-top: 1px solid var(--ink);
+  width: 280px;
+  margin-top: 48px;
+  margin-bottom: 4px;
+}
+.sig-label {
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: var(--ink-light);
+}
+
+/* ── WeasyPrint paged media overrides ───────────────────── */
+/* @page margins (defined in _base.html.j2) handle all spacing.
+   Reset .doc browser-preview padding and max-width constraints. */
+body {
+  background: white;
+  padding: 0;
+  margin: 0;
+}
+.doc {
+  max-width: none;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+}
