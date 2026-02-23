@@ -12,6 +12,14 @@ def test_render_pdf_returns_valid_pdf():
 
 
 def test_render_pdf_with_doc_ref():
-    """doc_ref is injected into context and should not raise."""
+    """doc_ref context variable is accepted without errors."""
     result = render_pdf("board_resolution", {"doc_ref": "NIHA-BR-2026-001"})
     assert result[:4] == b"%PDF"
+    assert len(result) > 5_000
+
+
+def test_render_pdf_with_explicit_doc_date():
+    """Explicit doc_date overrides the default today() value without errors."""
+    result = render_pdf("board_resolution", {"doc_date": "01 January 2026"})
+    assert result[:4] == b"%PDF"
+    assert len(result) > 5_000
