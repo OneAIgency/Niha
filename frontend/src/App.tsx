@@ -123,6 +123,7 @@ const LoggingPage = lazy(() => import('./pages/LoggingPage'));
 const BackofficeOnboardingPage = lazy(() => import('./pages/BackofficeOnboardingPage').then(m => ({ default: m.BackofficeOnboardingPage })));
 const FeeSettingsPage = lazy(() => import('./pages/FeeSettingsPage').then(m => ({ default: m.FeeSettingsPage })));
 const AutoTradePage = lazy(() => import('./pages/AutoTradePage').then(m => ({ default: m.AutoTradePage })));
+const DocumentLibraryPage = lazy(() => import('./pages/DocumentLibraryPage'));
 import { SystemHealthPage } from './pages/SystemHealthPage';
 
 // Loading fallback component with proper semantic structure for accessibility
@@ -505,6 +506,16 @@ function App() {
               element={
                 <RoleProtectedRoute allowedRoles={['CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'ADMIN', 'MM']}>
                   <CeaSwapMarketPage />
+                </RoleProtectedRoute>
+              }
+            />
+
+            {/* Document Library: NDA+ (all authenticated clients and admin) */}
+            <Route
+              path="/documents"
+              element={
+                <RoleProtectedRoute allowedRoles={['NDA', 'KYC', 'APPROVED', 'FUNDING', 'AML', 'CEA', 'CEA_SETTLE', 'SWAP', 'EUA_SETTLE', 'EUA', 'MM', 'ADMIN']}>
+                  <DocumentLibraryPage />
                 </RoleProtectedRoute>
               }
             />

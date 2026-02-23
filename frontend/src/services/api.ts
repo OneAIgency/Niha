@@ -2735,4 +2735,25 @@ export const systemHealthApi = {
   },
 };
 
+// =============================================================================
+// Document Library API
+// =============================================================================
+
+export const documentLibraryApi = {
+  getLibrary: async (params?: { phase?: string; category?: string }) => {
+    const { data } = await api.get('/documents/library', { params });
+    return data;
+  },
+
+  downloadDocument: async (documentId: string): Promise<{ blob: Blob; filename: string }> => {
+    const response = await api.get(`/documents/download/${documentId}`, {
+      responseType: 'blob',
+    });
+    const disposition = response.headers['content-disposition'] ?? '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : `${documentId}.pdf`;
+    return { blob: response.data as Blob, filename };
+  },
+};
+
 export default api;
