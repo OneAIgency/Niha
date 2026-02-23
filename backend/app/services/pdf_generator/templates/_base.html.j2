@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="niha-doc.css">
+  <style>
+    @page {
+      size: A4;
+      margin: 22mm 24mm 20mm 24mm;
+      @bottom-left {
+        content: "NIHA Carbon — Confidential";
+        font-family: 'Inter', sans-serif;
+        font-size: 0.52rem;
+        font-weight: 300;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: #cccccc;
+      }
+      @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.52rem;
+        font-weight: 300;
+        color: #cccccc;
+      }
+      @bottom-right {
+        content: "{{ doc_ref }}";
+        font-family: 'Inter', sans-serif;
+        font-size: 0.52rem;
+        font-weight: 300;
+        letter-spacing: 0.5px;
+        color: #cccccc;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
