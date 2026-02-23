@@ -64,3 +64,60 @@ def test_nda_generator_signature_preserved():
                 "client_representative", "client_email", "effective_date",
                 "doc_ref", "output_path"]
     assert params == expected, f"Signature changed — got {params}, expected {expected}"
+
+
+_has_reportlab = False
+try:
+    import reportlab  # noqa: F401
+    _has_reportlab = True
+except ImportError:
+    pass
+
+_skip_reportlab = pytest.mark.skipif(not _has_reportlab, reason="ReportLab not installed")
+
+
+@_skip_reportlab
+def test_msa_generator_returns_pdf():
+    from app.services.pdf_generator.msa_generator import generate_msa_pdf
+    result = generate_msa_pdf(
+        client_entity_name="Test Corp Ltd",
+        client_representative="John Smith",
+        client_email="john@testcorp.com",
+    )
+    assert result[:4] == b"%PDF"
+    assert len(result) > 10_000
+
+
+@_skip_reportlab
+def test_msa_generator_signature_preserved():
+    import inspect
+    from app.services.pdf_generator.msa_generator import generate_msa_pdf
+    sig = inspect.signature(generate_msa_pdf)
+    params = list(sig.parameters.keys())
+    expected = ["client_entity_name", "client_entity_type", "client_jurisdiction",
+                "client_representative", "client_email", "effective_date",
+                "doc_ref", "output_path"]
+    assert params == expected, f"Signature changed: {params}"
+
+
+@_skip_reportlab
+def test_fee_schedule_generator_returns_pdf():
+    from app.services.pdf_generator.fee_schedule_generator import generate_fee_schedule_pdf
+    result = generate_fee_schedule_pdf(
+        client_entity_name="Test Corp Ltd",
+        client_representative="John Smith",
+        client_email="john@testcorp.com",
+    )
+    assert result[:4] == b"%PDF"
+    assert len(result) > 10_000
+
+
+@_skip_reportlab
+def test_fee_schedule_generator_signature_preserved():
+    import inspect
+    from app.services.pdf_generator.fee_schedule_generator import generate_fee_schedule_pdf
+    sig = inspect.signature(generate_fee_schedule_pdf)
+    params = list(sig.parameters.keys())
+    expected = ["client_entity_name", "client_representative", "client_email",
+                "effective_date", "doc_ref", "output_path"]
+    assert params == expected, f"Signature changed: {params}"
