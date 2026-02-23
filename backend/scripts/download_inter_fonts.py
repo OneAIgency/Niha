@@ -15,12 +15,12 @@ FONTS = {
     "Inter-SemiBold.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-600-normal.woff2",
 }
 
-# Alternative: download from fontsource CDN
+# Fallback: Google Fonts static CDN (different host from primary)
 FONTS_ALT = {
-    "Inter-Light.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-300-normal.woff2",
-    "Inter-Regular.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-400-normal.woff2",
-    "Inter-Medium.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-500-normal.woff2",
-    "Inter-SemiBold.woff2": "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/files/inter-latin-600-normal.woff2",
+    "Inter-Light.woff2":   "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2",
+    "Inter-Regular.woff2": "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2",
+    "Inter-Medium.woff2":  "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiA.woff2",
+    "Inter-SemiBold.woff2":"https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiA.woff2",
 }
 
 for filename, url in FONTS.items():
