@@ -1178,3 +1178,38 @@ export interface SettlementAlert {
   daysOverdue: number | null;
   totalValueEur: number | null;
 }
+
+// =============================================================================
+// Document Library
+// =============================================================================
+
+export type DocumentCategory = 'legal' | 'compliance' | 'operational' | 'trading' | 'reporting' | 'internal';
+export type DocumentPhase = 'F0' | 'F1' | 'F2' | 'F3' | 'F4' | 'F5' | 'F6' | 'F7';
+
+export interface PlatformDocument {
+  id: string;
+  title: string;
+  titleRo: string;
+  filename: string;
+  phase: DocumentPhase;
+  phaseName: string;
+  category: DocumentCategory;
+  description: string;
+  descriptionRo: string;
+  adminOnly: boolean;
+  trigger: string;
+  audience: string;
+  downloadUrl: string;
+}
+
+export interface DocumentPhaseInfo {
+  code: DocumentPhase;
+  name: string;
+}
+
+export interface DocumentLibraryResponse {
+  documents: PlatformDocument[];
+  totalCount: number;
+  userRole: string;
+  phases: DocumentPhaseInfo[];
+}
